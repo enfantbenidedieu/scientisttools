@@ -8,7 +8,7 @@
 
 * It performs **classical principal component methods** : 
     * Principal Components Analysis (PCA)
-    * Principa Components Analysis with partial correlation matrix (PPCA)
+    * Principal Components Analysis with partial correlation matrix (PPCA)
     * Weighted Principal Components Analysis (WPCA)
     * Expectation-Maximization Principal Components Analysis (EMPCA)
     * Exploratory Factor Analysis (EFA)
