@@ -1,0 +1,8 @@
+LICENSE.txt
+README.md
+setup.py
+scientisttools.egg-info/PKG-INFO
+scientisttools.egg-info/SOURCES.txt
+scientisttools.egg-info/dependency_links.txt
+scientisttools.egg-info/requires.txt
+scientisttools.egg-info/top_level.txt
