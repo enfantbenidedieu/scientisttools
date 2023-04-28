@@ -8,7 +8,7 @@ import warnings
 from sklearn.utils import check_symmetric
 from scientisttools.utils import sim_dist
 from sklearn.base import BaseEstimator, TransformerMixin
-from scientisttools import plotMDS, plotCMDS
+from scientisttools.pyplot import plotMDS, plotCMDS
 from sklearn import manifold
 
 #################################################################################"

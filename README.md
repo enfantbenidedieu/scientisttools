@@ -21,3 +21,9 @@
 * It provides a geometrical point of view, a lot of graphical outputs.
 * It provides efficient implementations, using a scikit-learn API.
 
+## Installation
+
+### Dependencies
+
+scientisttools
+

@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 DESCRIPTION = 'Python library for multidimensional analysis'
 LONG_DESCRIPTION = 'A python package dedicated to multivariate Exploratory Data Analysis'
 

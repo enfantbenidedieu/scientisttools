@@ -17,7 +17,7 @@ import scipy as sp
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_array
 from sklearn.metrics import mean_squared_error
-from scientisttools import plotPPCA,plotCA,plotPCA,plotMCA
+from scientisttools.pyplot import plotPPCA,plotCA,plotPCA,plotMCA
 from scientisttools.utils import (
     orthonormalize,
     random_orthonormal, 
