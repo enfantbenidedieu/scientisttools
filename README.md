@@ -48,7 +48,17 @@ pip install scientisttools
 Tutorial are available
 
 ````
-https://github.com/enfantbenidedieu/scientisttools/blob/master/pca_example.ipynb
+https://github.com/enfantbenidedieu/scientisttools/blob/master/ca_example2.ipynb
+https://github.com/enfantbenidedieu/scientisttools/blob/master/classic_mds.ipynb
+https://github.com/enfantbenidedieu/scientisttools/blob/master/efa_example.ipynb
+https://github.com/enfantbenidedieu/scientisttools/blob/master/famd_example.ipynb
+https://github.com/enfantbenidedieu/scientisttools/blob/master/ggcorrplot.ipynb
+https://github.com/enfantbenidedieu/scientisttools/blob/master/mca_example.ipynb
+https://github.com/enfantbenidedieu/scientisttools/blob/master/mds_example.ipynb
 https://github.com/enfantbenidedieu/scientisttools/blob/master/partial_pca.ipynb
-
+https://github.com/enfantbenidedieu/scientisttools/blob/master/pca_example.ipynb
 ````
+
+## Author
+
+Duvérier DJIFACK ZEBAZE [duverierdjifack@gmail.com](duverierdjifack@gmail.com)
