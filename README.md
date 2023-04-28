@@ -25,5 +25,30 @@
 
 ### Dependencies
 
-scientisttools
+scientisttools requires 
 
+```{python}
+Python 3
+Numpy >= 1.24.3
+Matplotlib >= 3.5.3
+Scikit-learn >=  1.2.2
+Pandas >= 2.0.0
+Plotnine >= 0.10.1
+Plydata >= 0.4.3
+```
+
+### User installation
+
+You can install scientisttools using `pip` :
+
+```
+pip install scientisttools
+```
+
+Tutorial are available
+
+````
+https://github.com/enfantbenidedieu/scientisttools/blob/master/pca_example.ipynb
+https://github.com/enfantbenidedieu/scientisttools/blob/master/partial_pca.ipynb
+
+````
