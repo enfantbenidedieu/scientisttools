@@ -61,4 +61,4 @@ https://github.com/enfantbenidedieu/scientisttools/blob/master/pca_example.ipynb
 
 ## Author
 
-Duvérier DJIFACK ZEBAZE [duverierdjifack@gmail.com](duverierdjifack@gmail.com)
+Duvérier DJIFACK ZEBAZE ([duverierdjifack@gmail.com](duverierdjifack@gmail.com))
