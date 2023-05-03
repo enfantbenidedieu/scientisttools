@@ -1,28 +1,30 @@
-from setuptools import setup, find_packages
+import setuptools
 
-VERSION = '0.0.3'
-DESCRIPTION = 'Python library for multidimensional analysis'
-LONG_DESCRIPTION = 'A python package dedicated to multivariate Exploratory Data Analysis'
+with open("README.md", "r",encoding="utf-8") as fh:
+    long_description = fh.read()
 
 # Setting up
-setup(
+setuptools.setup(
     name="scientisttools",
-    version=VERSION,
+    version="0.0.4",
     author="Duverier DJIFACK ZEBAZE",
     author_email="duverierdjifack@gmail.com",
-    description=DESCRIPTION,
+    description="Python library for multidimensional analysis",
     long_description_content_type="text/markdown",
-    long_description=LONG_DESCRIPTION,
-    packages=find_packages(),
-    install_requires=["numpy>=1.11.0",
-                      "matplotlib>=2.0.0",
-                      "scikit-learn>=0.18.0",
-                      "pandas>=0.19.0"],
-    python_requires=">=3",
+    long_description=long_description,
+    packages=setuptools.find_packages(),
+    install_requires=["numpy>=1.23.5",
+                      "matplotlib>=3.5.3",
+                      "scikit-learn>=1.2.2",
+                      "pandas>=1.5.3",
+                      "mapply>=0.1.21",
+                      "plotnine>=0.10.1",
+                      "plydata>=0.4.3"],
+    python_requires=">=3.10",
     package_data={"": ["*.txt"]},
-    classifiers=(
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-    )
+    ]
 )

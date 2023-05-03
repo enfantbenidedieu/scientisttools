@@ -21,18 +21,23 @@
 * It provides a geometrical point of view, a lot of graphical outputs.
 * It provides efficient implementations, using a scikit-learn API.
 
+Those statistical methods can be used in two ways :
+* as descriptive methods ("datamining approach")
+* as reduction methods in scikit-learn pipelines ("machine learning approach")
+
 ## Installation
 
 ### Dependencies
 
 scientisttools requires 
 
-```{python}
-Python 3
-Numpy >= 1.24.3
+```
+Python >=3.10
+Numpy >= 1.23.5
 Matplotlib >= 3.5.3
 Scikit-learn >=  1.2.2
-Pandas >= 2.0.0
+Pandas >= 1.5.3
+mapply >= 0.1.21
 Plotnine >= 0.10.1
 Plydata >= 0.4.3
 ```

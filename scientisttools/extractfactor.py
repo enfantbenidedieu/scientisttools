@@ -288,7 +288,9 @@ def get_famd_ind(self) -> dict:
         })
     if self.row_sup_labels_ is not None:
         df["ind_sup"] = dict({
-            "coord" :   pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_)
+            "dist"  :   pd.DataFrame(self.row_sup_disto_,index = self.row_sup_labels_,columns=["Dist"]),
+            "coord" :   pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_),
+            "cos2"  :   pd.DataFrame(self.row_sup_cos2_,index=self.row_sup_labels_,columns=self.dim_index_)
             })
     return df
 
@@ -557,6 +559,7 @@ def get_mca_mod(self) -> dict:
         "corrected_coord"   :   pd.DataFrame(self.corrected_mod_coord_,index=self.mod_labels_,columns=self.dim_index_),
         "cos2"              :   pd.DataFrame(self.mod_cos2_,index=self.mod_labels_,columns=self.dim_index_),
         "contrib"           :   pd.DataFrame(self.mod_contrib_,index=self.mod_labels_,columns=self.dim_index_),
+        "vtest"             :   pd.DataFrame(self.mod_vtest_,index = self.mod_labels_,columns=self.dim_index_),
         "infos"             :   pd.DataFrame(self.mod_infos_,columns= ["d(k,G)","p(k)","I(k,G)"],index=self.mod_labels_)
         })
     if self.quali_sup_labels_ is not None:
@@ -1212,15 +1215,22 @@ def summaryFAMD(self,
 
     # Add supplementary individuals
     if self.row_sup_labels_ is not None:
-        print(f"\nSupplementary Individuals\n")
-        row_sup_coord = row["ind_sup"]["coord"].iloc[:,:ncp].round(decimals=digits)
+        print(f"\nSupplementary individuals\n")
+        row_sup = row["ind_sup"]
+        row_sup_infos = row_sup["dist"]
+        for i in np.arange(0,ncp,1):
+            row_sup_coord = row_sup["coord"].iloc[:,i]
+            row_sup_cos2 = row_sup["cos2"].iloc[:,i]
+            row_sup_cos2.name = "cos2"
+            row_sup_infos = pd.concat([row_sup_infos,row_sup_coord,row_sup_cos2],axis=1)
+        row_sup_infos = row_sup_infos.round(decimals=digits)
         if to_markdown:
-            print(row_sup_coord.to_markdown(tablefmt=tablefmt,**kwargs))
+            print(row_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
-            print(row_sup_coord)
+            print(row_sup_infos)
 
     # Add variables informations
-    print(f"\nContinues variables\n")
+    print(f"\nContinuous variables\n")
     col_infos = pd.DataFrame(index=self.col_labels_).astype("float")
     for i in np.arange(0,ncp,1):
         col_coord = col["coord"].iloc[:,i]
@@ -1261,8 +1271,10 @@ def summaryFAMD(self,
         mod_cos2.name = "cos2"
         mod_ctr = mod["contrib"].iloc[:,i]
         mod_ctr.name = "ctr"
-        mod_infos = pd.concat([mod_infos,mod_coord,mod_ctr,mod_cos2],axis=1)
-    mod_infos = mod_infos.iloc[:nb_element,:].round(decimals=digits)
+        mod_vtest = mod["vtest"].iloc[:,i]
+        mod_vtest.name = "vtest"
+        mod_infos = pd.concat([mod_infos,mod_coord,mod_ctr,mod_cos2,mod_vtest],axis=1)
+    mod_infos = mod_infos.round(decimals=digits)
     if to_markdown:
         print(mod_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -1277,7 +1289,7 @@ def summaryFAMD(self,
         var_cos2 = var["cos2"].iloc[:,i]
         var_cos2.name = "cos2." +str(i+1)
         var_infos = pd.concat([var_infos,var_eta2,var_cos2],axis=1)
-    var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
+    var_infos = var_infos.round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -1388,7 +1400,9 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         mod_cos2.name = "cos2"
         mod_ctr = mod["contrib"].iloc[:,i]
         mod_ctr.name = "ctr"
-        mod_infos = pd.concat([mod_infos,mod_coord,mod_ctr,mod_cos2],axis=1)
+        mod_vtest = mod["vtest"].iloc[:,i]
+        mod_vtest.name = "vtest"
+        mod_infos = pd.concat([mod_infos,mod_coord,mod_ctr,mod_cos2,mod_vtest],axis=1)
     mod_infos = mod_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(mod_infos.to_markdown(tablefmt=tablefmt,**kwargs))

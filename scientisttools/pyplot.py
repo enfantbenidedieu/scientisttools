@@ -273,7 +273,7 @@ def plot_contrib(self,
     ----------
     choice : {'ind','var','mod'}.
             'ind' :   individuals
-            'var' :   continues variables
+            'var' :   continues/categorical variables
             'mod' :   categories
         
     axis : None or int.
@@ -335,6 +335,9 @@ def plot_contrib(self,
         name = "continues variables"
         contrib = self.col_contrib_[:,axis]
         labels  = self.col_labels_
+        if self.model_ == "famd":
+            contrib = np.append(contrib,self.var_contrib_[:,axis],axis=0)
+            labels = labels + self.quali_labels_
     elif choice == "mod" and self.model_ in ["mca","famd"]:
         name = "categories"
         contrib = self.mod_contrib_[:,axis]
@@ -355,7 +358,7 @@ def plot_contrib(self,
     r = np.arange(n_labels)
     ax.barh(r,cos2_sorted,height=bar_width,color=color,align="edge")
     ax.set_yticks([x + bar_width/2 for x in r], labels_sort)
-    ax.set(title=f"Contribution of {name} to Dim-{axis+1}",xlabel=xlabel,ylabel=name,xlim=(0,100))
+    ax.set(title=f"Contribution of {name} to Dim-{axis+1}",xlabel=xlabel,ylabel=name)
     ax.grid(visible=add_grid)
 
 
@@ -904,6 +907,9 @@ def plotFAMD(self,
             repel=False,
             ax=None,
             **kwargs):
+    """
+    
+    """
 
     if self.model_ != "famd":
         raise ValueError("Error : 'self' must be an instance of class FAMD.")
@@ -946,6 +952,7 @@ def plotFAMD(self,
             title = "Graph of the categories - FAMD"
     elif choice == "var":
         coord = self.col_cos2_[:,axis]
+        contrib = np.append(self.col_contrib_[:,axis],self.var_contrib_[:,axis],axis=0)
         if title is None:
             title = "Graphe of variables - FAMD"
     else:
@@ -967,14 +974,14 @@ def plotFAMD(self,
         xlim = (-1.1,1.1)
         ylim = (-1.1,1.1)
 
-    if choice in ["ind","mod","col"]:
-        if color == "cos2":
-            c = np.sum(cos2,axis=1)
-        elif color == "contrib":
-            c = np.sum(contrib,axis=1)
-        if color in ["cos2","contrib"]:
-            cNorm  = mcolors.Normalize(vmin=np.min(c), vmax=np.max(c))
-            scalarMap = cm.ScalarMappable(norm=cNorm,cmap=plt.get_cmap(color_map))
+    #if choice in ["ind","mod","col"]:
+    if color == "cos2" and choice != "var":
+        c = np.sum(cos2,axis=1)
+    elif color == "contrib":
+        c = np.sum(contrib,axis=1)
+    if color in ["cos2","contrib"]:
+        cNorm  = mcolors.Normalize(vmin=np.min(c), vmax=np.max(c))
+        scalarMap = cm.ScalarMappable(norm=cNorm,cmap=plt.get_cmap(color_map))
     
     if choice == "ind":
         if habillage is None:
@@ -1147,24 +1154,47 @@ def plotFAMD(self,
                     for i,lab in enumerate(self.mod_sup_labels_):
                         ax.text(xxs[i],yys[i],lab,ha=ha,va=va,color=color_sup)
     else:
+        # Add qualitative correlation ratio
         xxs = self.var_eta2_[:,axis[0]]
         yys = self.var_eta2_[:,axis[1]]
-        ax.scatter(xs,ys, color="blue",marker=">")
-        ax.scatter(xxs,yys, color="red",marker = "^")
-        if repel:
-            texts1 = list()
-            for i, lab in enumerate(self.quanti_labels_):
-                texts1.append(ax.text(xs[i],ys[i],lab,ha=ha,va=va,color="blue"))
-            adjust_text(texts1,x=xs,y=ys,arrowprops=dict(arrowstyle="->",color="blue",lw=1.0),ax=ax)
-            texts2 = list()
-            for j,lab in enumerate(self.quali_labels_):
-                texts2.append(ax.text(xxs[j],yys[j],lab,ha=ha,va=va,color="red"))
-            adjust_text(texts2,x=xxs,y=yys,arrowprops=dict(arrowstyle="->",color="red",lw=1.0),ax=ax)
+        if color == "contrib":
+            # Append all informations
+            xs = np.append(xs,xxs,axis=0)
+            ys = np.append(ys,yys,axis=0)
+            # Labels
+            labels = self.quanti_labels_ + self.quali_labels_
+            # Scatter plot
+            p = ax.scatter(xs,ys,c=c,s=len(c),marker=marker,cmap=plt.get_cmap(color_map),**kwargs)
+            plt.colorbar(p).ax.set_title(label=color,weight='bold')
+            if repel:
+                texts = list()
+                for i, lab in enumerate(labels):
+                    colorVal = scalarMap.to_rgba(c[i])
+                    texts.append(ax.text(xs[i],ys[i],lab,ha=ha,va=va,color=colorVal))
+                adjust_text(texts,x=xs,y=ys,arrowprops=dict(arrowstyle="->",color=colorVal,lw=1.0),ax=ax)
+            else:
+                for i, lab in enumerate(labels):
+                    colorVal = scalarMap.to_rgba(c[i])
+                    ax.text(xs[i],ys[i],lab,ha=ha,va=va,color=colorVal)
+        elif color == "cos2":
+            raise ValueError("Error : 'cos2' is not allowed.")
         else:
-            for i, lab in enumerate(self.quanti_labels_):
-                ax.text(xs[i],ys[i],lab,ha=ha,va=va,color="blue")
-            for j, lab in enumerate(self.quali_labels_):
-                ax.text(xxs[j],yys[j],lab,ha=ha,va=va,color="red")
+            ax.scatter(xs,ys, color="blue",marker=">")
+            ax.scatter(xxs,yys, color="red",marker = "^")
+            if repel:
+                texts1 = list()
+                for i, lab in enumerate(self.quanti_labels_):
+                    texts1.append(ax.text(xs[i],ys[i],lab,ha=ha,va=va,color="blue"))
+                adjust_text(texts1,x=xs,y=ys,arrowprops=dict(arrowstyle="->",color="blue",lw=1.0),ax=ax)
+                texts2 = list()
+                for j,lab in enumerate(self.quali_labels_):
+                    texts2.append(ax.text(xxs[j],yys[j],lab,ha=ha,va=va,color="red"))
+                adjust_text(texts2,x=xxs,y=yys,arrowprops=dict(arrowstyle="->",color="red",lw=1.0),ax=ax)
+            else:
+                for i, lab in enumerate(self.quanti_labels_):
+                    ax.text(xs[i],ys[i],lab,ha=ha,va=va,color="blue")
+                for j, lab in enumerate(self.quali_labels_):
+                    ax.text(xxs[j],yys[j],lab,ha=ha,va=va,color="red")
                 
     # Add elements
     proportion = self.eig_[2]
