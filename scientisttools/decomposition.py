@@ -2608,6 +2608,9 @@ class MCA(BaseEstimator,TransformerMixin):
         self.row_sup_coord_ = np.array(row_sup_profil)
         self.row_sup_cos2_ = np.apply_along_axis(lambda x : x**2/np.linalg.norm(self.row_sup_coord_,axis=1)**2,
                                                     axis=0,arr=self.row_sup_coord_)
+        
+        dict({"coord"    :   self.row_sup_coord_,
+              "cos2"     :   self.row_sup_cos2_})
     
     def _compute_quali_sup_stats(self,X,y=None):
         """Find the supplementary categorical columns factor
