@@ -1,11 +1,13 @@
 Data_Methodes_Factorielles.xlsx
 LICENSE.txt
 README.md
+Tennis_Players_AFDM.xlsx
 ca_example.ipynb
 ca_example2.ipynb
 classic_mds.ipynb
 efa_example.ipynb
 famd_example.ipynb
+famd_example2.ipynb
 ggcorrplot.ipynb
 mca_example.ipynb
 mds_example.ipynb
@@ -15,6 +17,8 @@ setup.py
 utils.ipynb
 dist/scientisttools-0.0.2-py3-none-any.whl
 dist/scientisttools-0.0.2.tar.gz
+dist/scientisttools-0.0.3-py3-none-any.whl
+dist/scientisttools-0.0.3.tar.gz
 scientisttools/__init__.py
 scientisttools/clustering.py
 scientisttools/dashboard.py
@@ -32,3 +36,9 @@ scientisttools.egg-info/SOURCES.txt
 scientisttools.egg-info/dependency_links.txt
 scientisttools.egg-info/requires.txt
 scientisttools.egg-info/top_level.txt
+scientisttools/__pycache__/__init__.cpython-310.pyc
+scientisttools/__pycache__/decomposition.cpython-310.pyc
+scientisttools/__pycache__/extractfactor.cpython-310.pyc
+scientisttools/__pycache__/manifold.cpython-310.pyc
+scientisttools/__pycache__/pyplot.cpython-310.pyc
+scientisttools/__pycache__/utils.cpython-310.pyc

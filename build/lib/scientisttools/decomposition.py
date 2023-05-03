@@ -35,6 +35,8 @@ from scientisttools.utils import (
 class PCA(BaseEstimator,TransformerMixin):
     """Principal Component Analysis
 
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
     This is a standard Principal Component Analysis implementation
     bases on the Singular Value Decomposition
 
@@ -107,13 +109,13 @@ class PCA(BaseEstimator,TransformerMixin):
     quanti_sup_labels_ : arrays f strings or None
         Labels of quantitative supplementary variables
     
-    quali_sup_labels
-    
-    col_labels_short_ : array of strings
-        Short labels for the columns.
-        Useful only for MCA, which inherits from Base class. In that
-        case, the short labels for the columns at not prefixed by the
-        names of the variables.
+    quali_sup_labels_ :
+
+    mod_sup_labels_ : list of strings
+                        labels for the categories supplementary
+
+    short_sup_labels_ : list of strings
+                        Short labels for the categories supplementary 
     
     eig_ : array of float
         A 4 x n_components_ matrix containing all the eigenvalues
@@ -924,9 +926,11 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
 class WPCA(BaseEstimator, TransformerMixin):
     """Weighted Principal Component Analysis
+
     This is a direct implementation of weighted PCA based on the eigenvalue
     decomposition of the weighted covariance matrix following
     Delchambre (2014) [1]_.
+
     Parameters
     ----------
     n_components : int (optional)
@@ -1133,6 +1137,7 @@ class WPCA(BaseEstimator, TransformerMixin):
 
 class EMPCA(BaseEstimator, TransformerMixin):
     """Expectation-Maximization PCA
+
     This is an iterative implementation of weighted PCA based on an
     Expectation-Maximization approach, following Bailey (2012) [1]_.
     
@@ -1334,6 +1339,47 @@ class EMPCA(BaseEstimator, TransformerMixin):
 
 class EFA(BaseEstimator,TransformerMixin):
     """Exploratory Factor Analysis
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
+    EFA performs a Exploratory Factor Analysis, given a table of
+    numeric variables; shape = n_rows x n_columns
+
+    Parameters
+    ----------
+    normalize : bool
+        - If true : the data are scaled to unit variance
+        - If False : the data are not scaled to unit variance
+    
+    n_components: int or None
+        number of components to keep
+    
+    row_labels : list of string or None
+        The list provides the row labels
+    
+    col_labels : list of strings or None
+        The list provides the columns labels
+    
+    method : {"principal","harris"}
+        - If method = "principal" : performs Exploratory Factor Analyis using principal approach
+        - If method = "harris" : performs Exploratory Factor Analysis using Harris approach
+    
+    row_sup_labels : list of strings or None
+        The list provides the supplementary row labels
+    
+    quanti_sup_labels : list of strings or None
+        The list provides the supplementary continuous columns
+    
+    quali_sup_labels : list of strings or None
+        The list provides the supplementary categorical variables
+    
+    graph : bool or None
+        - If True : return graph
+    
+    figsize = tuple of int or None
+
+    Returns:
+    --------
     
     """
     def __init__(self,
@@ -1681,11 +1727,12 @@ def which(self):
 class CA(BaseEstimator,TransformerMixin):
     """ Correspondence Analysis (CA)
     
-    This class inherits from the Base class.
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
     
     CA performs a Correspondence Analysis, given a contingency table
     containing absolute frequencies ; shape= n_rows x n_columns.
-    This implementation only works for dense arrays.
+    This implementation only works for dense dataframe.
+
     Parameters
     ----------
     n_components : int, float or None
@@ -1700,16 +1747,16 @@ class CA(BaseEstimator,TransformerMixin):
             - If n_components is float, select the higher number of
               components lower than n_components.
         
-    row_labels : array of strings or None
-        - If row_labels is an array of strings : this array provides the
+    row_labels : list of strings or None
+        - If row_labels is a list of strings : this array provides the
           row labels.
               If the shape of the array doesn't match with the number of
               rows : labels are automatically computed for each row.
         - If row_labels is None : labels are automatically computed for
           each row.
     
-    col_labels : array of strings or None
-        - If col_labels is an array of strings : this array provides the
+    col_labels : list of strings or None
+        - If col_labels is a list of strings : this array provides the
           column labels.
               If the shape of the array doesn't match with the number of 
               columns : labels are automatically computed for each
@@ -1717,14 +1764,14 @@ class CA(BaseEstimator,TransformerMixin):
         - If col_labels is None : labels are automatically computed for
           each column.
 
-    row_sup_labels : array of strings or None
-        - If row_sup_labels is an array of strings : this array provides the
+    row_sup_labels : list of strings or None
+        - If row_sup_labels is a list of strings : this array provides the
           supplementary row labels.
     
-    col_sup_labels : array of strings or None
-        - If col_sup_labels is an array of strings : this array provides the
+    col_sup_labels :  list of strings or None
+        - If col_sup_labels is a list of strings : this array provides the
           supplementary columns labels.
-
+    
     Attributes
     ----------
     n_components_ : int
@@ -2108,6 +2155,16 @@ def _mul(*args):
     return functools.reduce(np.dot,args)
 
 class MCA(BaseEstimator,TransformerMixin):
+    """Multiple Correspondence Analysis (MCA)
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
+    This class performs Multiple Correspondence Analysis (MCA) with supplementary 
+    individuals, supplementary quantitative variables and supplementary
+    categorical variables.
+    
+    """
+    
 
     def __init__(self,n_components=None,
                  row_labels=None,
@@ -2551,6 +2608,9 @@ class MCA(BaseEstimator,TransformerMixin):
         self.row_sup_coord_ = np.array(row_sup_profil)
         self.row_sup_cos2_ = np.apply_along_axis(lambda x : x**2/np.linalg.norm(self.row_sup_coord_,axis=1)**2,
                                                     axis=0,arr=self.row_sup_coord_)
+        
+        dict({"coord"    :   self.row_sup_coord_,
+              "cos2"     :   self.row_sup_cos2_})
     
     def _compute_quali_sup_stats(self,X,y=None):
         """Find the supplementary categorical columns factor
@@ -2659,8 +2719,24 @@ class MCA(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-        self._compute_row_sup_stats(X)
-        return self.row_sup_coord_
+        #self._compute_row_sup_stats(X)
+        if self.matrix_type == "completed":
+            n_rows = X.shape[0]
+            n_cols = len(self.mod_labels_)
+            Y = np.zeros((n_rows,n_cols))
+            for i in np.arange(0,n_rows,1):
+                values = [self.var_labels_[k] +"_"+str(X.iloc[i,k]) for k in np.arange(0,self.n_vars_)]
+                for j in np.arange(0,n_cols,1):
+                    if self.mod_labels_[j] in values:
+                        Y[i,j] = 1
+            row_sup_dummies = pd.DataFrame(Y,columns=self.mod_labels_,index=X.index)
+        else:
+            row_sup_dummies = X
+        row_sup_coord = (mapply(row_sup_dummies,lambda x : x/np.sum(x),axis=1,progressbar=False)
+                                .dot(self.mod_coord_)/np.sqrt(self.eig_[0]))
+        
+        row_sup_coord = np.array(row_sup_coord)
+        return row_sup_coord
     
     def fit_transform(self,X,y=None):
         """Fit the model with X and apply the dimensionality reduction on X.
@@ -2694,6 +2770,10 @@ class FAMD(BaseEstimator,TransformerMixin):
     Performs Factor Analysis of Mixed Data (FAMD) with supplementary 
     individuals, supplementary quantitative variables and supplementary
     categorical variables.
+
+    Parameters:
+    -----------
+    see scientisttools.decomposition.PCA and scientisttools.decomposition.MCA
     
     """
     def __init__(self,
@@ -2719,6 +2799,10 @@ class FAMD(BaseEstimator,TransformerMixin):
         self.figsize= figsize
     
     def fit(self,X):
+        """
+        
+        
+        """
         if not isinstance(X,pd.DataFrame):
             raise ValueError("Error : 'X' must be a data.frame")
         
@@ -2882,6 +2966,11 @@ class FAMD(BaseEstimator,TransformerMixin):
         return self
 
     def _compute_svd(self,X,Xq,Iq):
+        """Compute Singular Value Decomposition
+        
+        
+        
+        """
 
         f_max = X.shape[1] - len(self.quali_labels_)
 
@@ -2969,6 +3058,10 @@ class FAMD(BaseEstimator,TransformerMixin):
         self.model_ = "famd"
 
     def _correct_modality(self,X):
+        """
+        
+        
+        """
         # Test if X is a DataFrame
         if isinstance(X,pd.Series):
             X = X.to_frame()
@@ -3026,7 +3119,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         n_cols = len(self.mod_labels_)
         Y = np.zeros((n_rows,n_cols))
         for i in np.arange(0,n_rows,1):
-            values = [self.quali_labels_[k] +"_"+str(X.iloc[i,k]) for k in np.arange(0,len(self.quali_labels_))]
+            values = [self.quali_labels_[k] +"_"+str(X_sup_qual.iloc[i,k]) for k in np.arange(0,len(self.quali_labels_))]
             for j in np.arange(0,n_cols,1):
                 if self.mod_labels_[j] in values:
                     Y[i,j] = 1
@@ -3034,10 +3127,21 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         # New normalized Data
         Z2 = mapply(row_sup_dummies,lambda x : (x - self.dummies_means_)/self.dummies_std_,axis=1,progressbar=False)
+
+        # Supplementary individuals coordinates
         row_sup_coord = np.dot(pd.concat([Z1,Z2],axis=1),self.eigen_vectors_)
+
+        # Supplementary individuals distance to inertia
+        row_sup_disto = (mapply(Z1,lambda x:np.sum(x**2),axis=1,progressbar=False) + 
+                            mapply(row_sup_dummies,lambda x:np.sum(1/self.dummies_means_.values*(x-self.dummies_means_.values)**2),
+                            axis=1,progressbar=False))
+        
+        row_sup_cos2 = np.apply_along_axis(func1d=lambda x : x**2/(row_sup_disto),axis=0,arr=row_sup_coord)
 
         # Save
         self.row_sup_coord_ = row_sup_coord[:,:self.n_components_]
+        self.row_sup_disto_ = np.sqrt(np.array(row_sup_disto))
+        self.row_sup_cos2_ = row_sup_cos2
     
     def _compute_quanti_sup_stats(self,X,y=None):
         """Comupute supplementary continuous variables statistics
@@ -3239,7 +3343,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         n_cols = len(self.mod_labels_)
         Y = np.zeros((n_rows,n_cols))
         for i in np.arange(0,n_rows,1):
-            values = [self.quali_labels_[k] +"_"+str(X.iloc[i,k]) for k in np.arange(0,len(self.quali_labels_))]
+            values = [self.quali_labels_[k] +"_"+str(X_sup_qual.iloc[i,k]) for k in np.arange(0,len(self.quali_labels_))]
             for j in np.arange(0,n_cols,1):
                 if self.mod_labels_[j] in values:
                     Y[i,j] = 1
