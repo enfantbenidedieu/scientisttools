@@ -3239,7 +3239,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         n_cols = len(self.mod_labels_)
         Y = np.zeros((n_rows,n_cols))
         for i in np.arange(0,n_rows,1):
-            values = [self.quali_labels_[k] +"_"+str(X.iloc[i,k]) for k in np.arange(0,len(self.quali_labels_))]
+            values = [self.quali_labels_[k] +"_"+str(X_sup_qual.iloc[i,k]) for k in np.arange(0,len(self.quali_labels_))]
             for j in np.arange(0,n_cols,1):
                 if self.mod_labels_[j] in values:
                     Y[i,j] = 1
@@ -3251,7 +3251,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         # Supplementary individuals coordinates
         row_sup_coord = np.dot(np.array(pd.concat([Z1,Z2],axis=1)),self.eigen_vectors_)
         
-        return  row_sup_coord[:,:self.n_components_]
+        return  row_sup_coord[:,:self.n_components_],row_sup_dummies
     
     def fit_transform(self,X,y=None):
         """Fit the model with X and apply the dimensionality reduction on X.
