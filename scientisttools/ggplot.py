@@ -132,7 +132,9 @@ def fviz_eigenvalue(self,**kwargs):
 def fviz_eig(self,**kwargs):
     return fviz_screeplot(self,**kwargs)
 
-###### PCA plotnine
+####################################################################################
+#       Principal Components Analysis (PCA)
+####################################################################################
 
 def fviz_pca_ind(self,
                  axis=[0,1],
