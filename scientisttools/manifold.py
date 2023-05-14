@@ -10,6 +10,8 @@ from scientisttools.utils import sim_dist
 from sklearn.base import BaseEstimator, TransformerMixin
 from scientisttools.pyplot import plotMDS, plotCMDS
 from sklearn import manifold
+from mapply.mapply import mapply
+from scipy.spatial.distance import euclidean
 
 #################################################################################"
 #       SMACOF ALGORITHM
@@ -166,17 +168,96 @@ def SMACOF(
 
 class CMDSCALE(BaseEstimator,TransformerMixin):
     """Classic Muldimensional Scaling (CMDSCALE)
+
+    This is a classical multidimensional scaling also 
+    known as Principal Coordinates Analysis (PCoA).
+
+    Performs Classical Multidimensional Scaling (MDS) with supplementary 
+    rows points.
+
+    Parameters
+    ----------
+    n_components : int, default=None
+        Number of dimensions in which to immerse the dissimilarities.
+    
+    labels : list of string,   default : None
+        Labels for the rows.
+    
+    sup_labels : list of string, default = None
+        Labels of supplementary rows.
+    
+    proximity :  {'euclidean','precomputed','similarity'}, default = 'euclidean'
+        Dissmilarity measure to use :
+        - 'euclidean':
+            Pairwise Euclidean distances between points in the dataset
+        
+        - 'precomputed':
+            Pre-computed dissimilarities are passed disrectly to ``fit`` and ``fit_transform``.
+        
+        - `similarity`:
+            Similarity matrix is transform to dissimilarity matrix before passed to ``fit`` and ``fit_transform``.
+
+    normalized_stress : bool, default = True
+        Whether use and return normed stress value (Stress-1) instead of raw
+        stress calculated by default.
+    
+    graph : bool, default = True
+        if True a graph is displayed
+
+    figsize : tuple of int, default = None
+        Width, height in inches.
+
+    Returns
+    -------
+    n_components_ : int
+        The estimated number of components.
+    
+    labels_ : array of strings
+        Labels for the rows.
+    
+    nobs_ : int
+        number of rows
+    
+    dist_ : ndarray of shape -n_rows, nr_ows)
+        Eulidean distances matrix.
+        
+    eig_ : array of float
+        A 4 x n_components_ matrix containing all the eigenvalues
+        (1st row), difference (2nd row) the percentage of variance (3rd row) and the
+        cumulative percentage of variance (4th row).
+    
+    eigen_vector_ : array of float:
+        A matrix containing eigenvectors
+    
+    coord_ : ndarray of shape (n_rows,n_components_)
+        A n_rows x n_components_ matrix containing the row coordinates.
+    
+    res_dist_ : ndarray of shape (n_rows,n_rows_)
+        A n_rows x n_rows_ matrix containing the distances based on coordinates.
+    
+    stress_ : float
+
+    inertia_ : 
+
+    dim_index_ : 
+    
+    centered_matrix_ : ndarray of shape
+    
+    model_ : string
+        The model fitted = 'cmds'
     
     """
     def __init__(self,
                 n_components=None,
                 labels = None,
+                sup_labels = None,
                 proximity="euclidean",
                 normalized_stress=True,
                 graph=True,
                 figsize=None):
         self.n_components = n_components
         self.labels = labels
+        self.sup_labels = sup_labels
         self.proximity = proximity
         self.normalized_stress = normalized_stress
         self.graph = graph
@@ -204,19 +285,36 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        self.nobs_ = X.shape[0]
+        # Extract supplementary data
+        self.sup_labels_ = self.sup_labels
+        if self.sup_labels_ is not None:
+            _X = X.drop(index = self.sup_labels_)
+            row_sup = X.loc[self.sup_labels_,:]
+        else:
+            _X = X
+
+        self.data_ = X
+        self.active_data_ = _X
+        
+        # Initialize
+        self.sup_coord_ = None
+        
+        self.nobs_ = _X.shape[0]
         self.centering_matrix_ = np.identity(self.nobs_) - (1/self.nobs_)*np.ones(shape=(self.nobs_,self.nobs_))
         
-        self._compute_stats(X)
+        self._compute_stats(_X)
 
         if self.graph:
             fig, axe = plt.subplots(figsize=self.figsize)
             plotCMDS(self,repel=True,ax=axe)
         
+        if self.sup_labels_ is not None:
+            self.sup_coord_ = self.transform(row_sup)
+        
         return self
     
     def _is_euclidean(self,X):
-        """
+        """Compute eigenvalue and eigenvalue for euclidean matrix
         
         """
         self.dist_ = squareform(pdist(X,metric="euclidean"))
@@ -225,7 +323,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         return np.real(value), np.real(vector)
     
     def _is_precomputed(self,X):
-        """
+        """Return eigenvalue and eigenvector for precomputed matrix
         
         """
         self.dist_ = check_symmetric(X.values, raise_exception=True)
@@ -235,7 +333,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         return np.real(value), np.real(vector)
     
     def _is_similarity(self,X):
-        """
+        """Return eigenvalue
         
         """
         D = sim_dist(X)
@@ -246,7 +344,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         return np.real(value), np.real(vector)
     
     def _compute_stats(self,X):
-        """
+        """Compute statistic
         
         """
         if X.shape[0] == X.shape[1] and self.proximity != "precomputed":
@@ -254,7 +352,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
                 "The ClassicMDS API has changed. ``fit`` now constructs an"
                 " dissimilarity matrix from data. To use a custom "
                 "dissimilarity matrix, set "
-                "``dissimilary='precomputed'``."
+                "``proximity='precomputed'``."
             )
 
         # Compute euclidean
@@ -265,7 +363,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         elif self.proximity == "similarity" :
             eigen_value, eigen_vector = self._is_similarity(X)
         else:
-            raise ValueError("You must pass a valid 'proximity'.")
+            raise ValueError("Error : You must pass a valid 'proximity'.")
         
         proportion = 100*eigen_value/np.sum(eigen_value)
         difference = np.insert(-np.diff(eigen_value),len(eigen_value)-1,np.nan)
@@ -339,9 +437,24 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        raise NotImplementedError("Error : This method is not implemented yet.")
-
-
+        
+        d2 = np.sum(self.dist_**2,axis=1)/self.nobs_
+        d3 = np.sum(self.dist_**2)/(self.nobs_**2)
+        
+        if self.proximity == "precomputed":
+            sup_coord = mapply(X,lambda x : -(1/2)*(x**2 - np.sum(x**2)-d2+d3),axis=1,progressbar=False).dot(self.coord_)/self.eig_[0]
+        elif self.proximity == "euclidean":
+            n_supp_obs = X.shape[0]
+            sup_dist = np.zeros((n_supp_obs,self.nobs_))
+            for i in np.arange(0,n_supp_obs):
+                for j in np.arange(0,self.nobs_):
+                    sup_dist[i,j] = euclidean(X.iloc[i,:],self.active_data_.iloc[j,:]) 
+            sup_coord = np.apply_along_axis(arr=sup_dist,axis=1,func1d=lambda x : -(1/2)*(x**2 - np.sum(x**2)-d2+d3)).dot(self.coord_)/self.eig_[0]
+        elif self.proximity == "similarity":
+            raise NotImplementedError("Error : This method is not implemented yet.")
+        
+        return np.array(sup_coord)
+        
     def fit_transform(self,X,y=None):
         """Fit the model with X and apply the dimensionality reduction on X.
         
@@ -367,6 +480,93 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
 
 class MDS(BaseEstimator,TransformerMixin):
     """Metric and Non - Metric Multidimensional Scaling (MDS)
+
+    This is a metric and non - metric multidimensional scaling
+
+    Performs metric and non - metric Multidimensional Scaling (MDS) 
+    with supplementary rows points.
+
+
+    Parameters
+    ----------
+    n_components : int, default=2
+        Number of dimensions in which to immerse the dissimilarities.
+    
+    proximity :  {'euclidean','precomputed','similarity'}, default = 'euclidean'
+        Dissmilarity measure to use :
+        - 'euclidean':
+            Pairwise Euclidean distances between points in the dataset
+        
+        - 'precomputed':
+            Pre-computed dissimilarities are passed disrectly to ``fit`` and ``fit_transform``.
+        
+        - `similarity`:
+            Similarity matrix is transform to dissimilarity matrix before passed to ``fit`` and ``fit_transform``.
+
+    metric : bool, default=True
+        If ``True``, perform metric MDS; otherwise, perform nonmetric MDS.
+        When ``False`` (i.e. non-metric MDS), dissimilarities with 0 are considered as
+        missing values.
+
+    n_init : int, default=4
+        Number of times the SMACOF algorithm will be run with different
+        initializations. The final results will be the best output of the runs,
+        determined by the run with the smallest final stress.
+
+    max_iter : int, default=300
+        Maximum number of iterations of the SMACOF algorithm for a single run.
+
+    verbose : int, default=0
+        Level of verbosity.
+
+    eps : float, default=1e-3
+        Relative tolerance with respect to stress at which to declare
+        convergence. The value of `eps` should be tuned separately depending
+        on whether or not `normalized_stress` is being used.
+
+    n_jobs : int, default=None
+        The number of jobs to use for the computation. If multiple
+        initializations are used (``n_init``), each run of the algorithm is
+        computed in parallel.
+
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+        for more details.
+
+    random_state : int, RandomState instance or None, default=None
+        Determines the random number generator used to initialize the centers.
+        Pass an int for reproducible results across multiple function calls.
+        See :term:`Glossary <random_state>`.
+
+    normalized_stress : bool, default=True
+        Whether use and return normed stress value (Stress-1) instead of raw
+        stress calculated by default.
+
+    Attributes
+    ----------
+    coord_ : ndarray of shape (n_samples, n_components)
+        Stores the position of the dataset in the embedding space.
+
+    stress_ : float
+        The final value of the stress (sum of squared distance of the
+        disparities and the distances for all constrained points).
+        If `normalized_stress=True`, and `metric=False` returns Stress-1.
+        A value of 0 indicates "perfect" fit, 0.025 excellent, 0.05 good,
+        0.1 fair, and 0.2 poor [1]_.
+
+    dist_ : ndarray of shape (n_samples, n_samples)
+        Pairwise dissimilarities between the points. Symmetric matrix that:
+
+        - either uses a custom dissimilarity matrix by setting `proximity`
+          to 'precomputed';
+        - or constructs a dissimilarity matrix from data using
+          Euclidean distances.
+
+    res_dist_ : ndarray of shape (n_samples, n_samples)
+        Pairwise dissimilarities between the points based of coordinates
+    
+    model_ : string
+        The model fitted = 'mds'
     
     """
     def __init__(self,
@@ -380,6 +580,7 @@ class MDS(BaseEstimator,TransformerMixin):
                 n_jobs=None,
                 random_state=None,
                 labels = None,
+                sup_labels = None,
                 normalized_stress=True,
                 graph =True,
                 figsize=(10,10)):
@@ -393,6 +594,7 @@ class MDS(BaseEstimator,TransformerMixin):
         self.n_jobs = n_jobs
         self.random_state = random_state
         self.labels = labels
+        self.sup_labels = sup_labels
         self.normalized_stress =normalized_stress
         self.graph = graph
         self.figsize = figsize
@@ -419,25 +621,38 @@ class MDS(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+         # Extract supplementary data
+        self.sup_labels_ = self.sup_labels
+        if self.sup_labels_ is not None:
+            _X = X.drop(index = self.sup_labels_)
+            row_sup = X.loc[self.sup_labels_,:]
+        else:
+            _X = X
+    
+        self.active_data_ = _X
+        self.data_ = X
+
+        self.nobs_ = _X.shape[0]
+        
 
         if self.proximity == "euclidean":
-            self.dist_ = squareform(pdist(X,metric="euclidean"))
+            self.dist_ = squareform(pdist(_X,metric="euclidean"))
         elif self.proximity == "precomputed":
-            self.dist_ = check_symmetric(X.values, raise_exception=True)
+            self.dist_ = check_symmetric(_X.values, raise_exception=True)
         elif self.proximity == "similarity":
-            self.dist_ = sim_dist(X)
+            self.dist_ = sim_dist(_X)
 
         #Set Labels
         self.labels_ = self.labels
         if self.labels_ is None:
-            self.labels_ = ["label_"+str(i+1) for i in range(0,X.shape[0])]
+            self.labels_ = ["label_"+str(i+1) for i in range(0,self.nobs_)]
         
         if self.metric:
             self.title_ = "Metric multidimensional scaling (mMDS)"
         else:
             self.title_ = "Non-metric multidimensional scaling (NMDS)"
 
-        self.fit_transform(X,init=init)
+        self.fit_transform(_X,init=init)
 
         self.res_dist_ = squareform(pdist(self.coord_,metric="euclidean"))
 
@@ -456,9 +671,17 @@ class MDS(BaseEstimator,TransformerMixin):
         return self
     
     def fit_transform(self,X, y=None, init=None):
-        """
+        """Fit the model with X and apply the dimensionality reduction on X.
         
+        Parameters
+        ----------
+        X : pd.DataFrame, shape (n_samples, n_features)
+            New data, where n_samples in the number of samples
+            and n_features is the number of features.
         
+        Returns
+        -------
+        X_new : array-like, shape (n_samples, n_components)
         """
 
         if not isinstance(X,pd.DataFrame):
