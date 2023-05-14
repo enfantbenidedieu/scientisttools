@@ -111,7 +111,7 @@ def plotCA(self,
         if add_sup:
             if self.col_sup_labels_ is not None:
                 sup_labels = self.col_sup_labels_
-                sup_coord = self.col_sup_coord[:,axis]
+                sup_coord = self.col_sup_coord_[:,axis]
         
 
     # Extract coordinates
@@ -212,7 +212,7 @@ def plotCMDS(self,
             ax=None) -> plt:
     
     if self.model_ != "cmds":
-        raise ValueError("Error : 'self' must be an instance of class Classic MDS.")
+        raise ValueError("Error : 'self' must be an instance of class CMDSCALE.")
      
     if ((len(axis) !=2) or 
             (axis[0] < 0) or 
@@ -353,10 +353,10 @@ def plot_contrib(self,
         n_labels = top_contrib
         
     limit = n - n_labels
-    cos2_sorted = np.sort(contrib)[limit:n]
+    contrib_sorted = np.sort(contrib)[limit:n]
     labels_sort = pd.Series(labels)[np.argsort(contrib)][limit:n]
     r = np.arange(n_labels)
-    ax.barh(r,cos2_sorted,height=bar_width,color=color,align="edge")
+    ax.barh(r,contrib_sorted,height=bar_width,color=color,align="edge")
     ax.set_yticks([x + bar_width/2 for x in r], labels_sort)
     ax.set(title=f"Contribution of {name} to Dim-{axis+1}",xlabel=xlabel,ylabel=name)
     ax.grid(visible=add_grid)
@@ -705,7 +705,7 @@ def plotEFA(self,
                 for i, lab in enumerate(labels):
                     ax.text(xs[i],ys[i],lab,ha=ha,va=va,color=color)
     else:
-        if color in ["contrib"]:
+        if color == "contrib":
             if repel:
                 texts = list()
                 for j, lab in enumerate(labels):
@@ -939,7 +939,7 @@ def plotFAMD(self,
         contrib = self.col_contrib_[:,axis]
         labels = self.col_labels_
         if title is None:
-            title = "Graph of quantitatives variables - FAMD"
+            title = "Graph of continuous variables - FAMD"
     elif choice == "mod":
         coord = self.mod_coord_[:,axis]
         cos2 = self.mod_cos2_[:,axis]
@@ -1805,7 +1805,7 @@ def plotPPCA(self,
     Parameters
     ----------
     self : aninstance of class PCA
-    choice : str 
+    choice : {'ind', 'var'}, default = 'ind'
     axis : tuple or list of two elements
     xlim : tuple or list of two elements
     ylim : tuple or list of two elements
@@ -1977,7 +1977,7 @@ def plot_shepard(self,
     """
 
     if self.model_ not in ["cmds","mds"]:
-        raise ValueError("Error : 'Method' is allowed only for multidimensional scalling.")
+        raise ValueError("Error : 'Method' is allowed only for multidimensional scaling.")
     if ax is None:
         ax =plt.gca()
 
