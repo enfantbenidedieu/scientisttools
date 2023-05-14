@@ -19,9 +19,10 @@ dist/scientisttools-0.0.2-py3-none-any.whl
 dist/scientisttools-0.0.2.tar.gz
 dist/scientisttools-0.0.3-py3-none-any.whl
 dist/scientisttools-0.0.3.tar.gz
+dist/scientisttools-0.0.4-py3-none-any.whl
+dist/scientisttools-0.0.4.tar.gz
 scientisttools/__init__.py
 scientisttools/clustering.py
-scientisttools/dashboard.py
 scientisttools/datasets.py
 scientisttools/decomposition.py
 scientisttools/discriminant_analysis.py
@@ -31,6 +32,7 @@ scientisttools/ggplot.py
 scientisttools/manifold.py
 scientisttools/pyplot.py
 scientisttools/utils.py
+scientisttools/version.py
 scientisttools.egg-info/PKG-INFO
 scientisttools.egg-info/SOURCES.txt
 scientisttools.egg-info/dependency_links.txt
@@ -39,6 +41,7 @@ scientisttools.egg-info/top_level.txt
 scientisttools/__pycache__/__init__.cpython-310.pyc
 scientisttools/__pycache__/decomposition.cpython-310.pyc
 scientisttools/__pycache__/extractfactor.cpython-310.pyc
+scientisttools/__pycache__/ggplot.cpython-310.pyc
 scientisttools/__pycache__/manifold.cpython-310.pyc
 scientisttools/__pycache__/pyplot.cpython-310.pyc
 scientisttools/__pycache__/utils.cpython-310.pyc

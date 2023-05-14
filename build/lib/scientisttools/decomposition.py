@@ -88,9 +88,12 @@ class PCA(BaseEstimator,TransformerMixin):
     quali_sup_labels : array of strings or None, default = None
         This array provides the categorical supplementary variables labels
     
-    graph : boolean
+    graph : bool, default = True
+        if True a graph is displayed
 
-    figsize : tuple or None
+    figsize : tuple of int, default = None
+        Width, height in inches.
+
     
     Attributes
     ----------
@@ -106,10 +109,10 @@ class PCA(BaseEstimator,TransformerMixin):
     row_sup_labels_ : array of strings or None
         Labels of supplementary individuals labels
     
-    quanti_sup_labels_ : arrays f strings or None
+    quanti_sup_labels_ : arrays of strings or None
         Labels of quantitative supplementary variables
     
-    quali_sup_labels_ :
+    quali_sup_labels_ : arrays of strings or None
 
     mod_sup_labels_ : list of strings
                         labels for the categories supplementary
