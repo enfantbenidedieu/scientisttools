@@ -236,7 +236,7 @@ def get_eig(self) -> pd.DataFrame:
     -------
     eigenvalue, difference, variance percent and cumulative variance of percent
     """
-    if self.model_ in ["pca","ppca","ca","mca","famd","mfa","cmds"]:
+    if self.model_ in ["pca","ppca","ca","mca","famd","mfa","cmds","candisc"]:
         eig = pd.DataFrame(self.eig_.T,columns=["eigenvalue","difference","proportion","cumulative"],index = self.dim_index_)
         return eig
     else:
@@ -1625,7 +1625,7 @@ def summaryPPCA(self,
     ncp = min(ncp,self.n_components_)
     nb_element = min(nb_element,len(self.row_labels_))
 
-    # Principal Components Analysis Results
+    # Partial Principal Components Analysis Results
     print("                     Partial Principal Component Analysis - Results                     \n")
 
     # Add eigenvalues informations
@@ -1670,4 +1670,159 @@ def summaryPPCA(self,
         print(col_infos)
 
 
+###############################################################################################
+#       Canonical Discriminant Analysis (CANDISC)
+###############################################################################################
 
+
+def get_candisc_row(self):
+    if self.model_ != "candisc":
+        raise ValueError("Error : 'self' must be an instance of class CANDISC.")
+
+    df = dict({
+        "coord" : pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_)
+    })
+    return df
+
+
+def get_candisc_var(self):
+
+    if self.model_ != "candisc":
+        raise ValueError("Error : 'self' must be an instance of class CANDISC.")
+    
+    df = dict({
+        "tcorr" : self.tcorr_,
+        "bcorr" : self.bcorr_,
+        "wcorr" : self.wcorr_
+    })
+
+    return df
+
+def get_candisc(self,choice = "row"):
+    """
+    self. : an instance of class CANDISC
+
+    Returns
+    -------
+    Correspondence Analysis - Results for rows
+    =========================================================
+        Name        Description
+    1   "coord"     "coordinates for the rows"
+    2   "cos2"      "cos2 for the rows"
+    3   "constrib"  "contributions of the rows"
+    4   "dist"      "Rows distance"
+    5   "res.dist"  "Restitued distance"
+    6   "infos"     "additionnal informations for the rows:"
+                        - distance between rows and inertia
+                        - weight for the rows
+                        - inertia for the rows
+    """
+
+    if choice == "row":
+        return get_candisc_row(self)
+    elif choice == "var":
+        return get_candisc_var(self)
+    else:
+        raise ValueError("Error : Allowed values are either 'row' or 'var'.")
+   
+def get_candisc_coef(self,choice="absolute"):
+
+    """
+    
+    """
+    if self.model_ != "candisc":
+        raise ValueError("Error : 'self' must be an instance of class CANDISC.")
+    
+    if choice == "absolute":
+        coef = pd.concat([pd.DataFrame(self.coef_,index=self.features_labels_,columns=self.dim_index_),
+                         pd.DataFrame(self.intercept_.T,columns=["Intercept"],index=self.dim_index_).T],axis=0)
+    elif choice == "score":
+        coef = pd.concat([pd.DataFrame(self.score_coef_,index=self.features_labels_,columns=self.classes_),
+                          pd.DataFrame(self.score_intercept_,index=["Intercept"],columns=self.classes_)],axis=0)
+    return coef
+
+
+def summaryCANDISC(self,digits=3,
+                   nb_element=10,
+                   ncp=3,
+                   to_markdown=False,
+                   tablefmt = "pipe",
+                   **kwargs):
+    row = get_candisc(self,choice="row")
+    var = get_candisc(self,choice="var")
+    coef = get_candisc_coef(self,choice="absolute").round(decimals=digits)
+    score_coef = get_candisc_coef(self,choice="score").round(decimals=digits)
+    gmean = self.gmean_.round(decimals=digits)
+
+
+    ncp = min(ncp,self.n_components_)
+    nb_element = min(nb_element,len(self.row_labels_))
+
+    # Partial Principal Components Analysis Results
+    print("                     Canonical Discriminant Analysis - Results                     \n")
+
+    print("\nSummary Information")
+    summary = self.summary_information_.T
+    if to_markdown:
+        print(summary.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(summary)
+    
+    print("\nClass Level information")
+    class_level_infos = self.class_level_information_
+    if to_markdown:
+        print(class_level_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(class_level_infos)
+
+    # Add eigenvalues informations
+    print("\nImportance of components")
+    eig = pd.DataFrame(self.eig_,columns=self.dim_index_,
+                       index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
+    if to_markdown:
+        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(eig)
+    
+    print("\nGroup means:")
+    if to_markdown:
+        print(gmean.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(gmean)
+    
+    print("\nCoefficients of canonical discriminants:")
+    if to_markdown:
+        print(coef.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(coef)
+    
+    print("\nClassification functions coefficients:")
+    if to_markdown:
+        print(score_coef.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(score_coef)
+
+    # Add individuals informations
+    print(f"\nIndividuals (the {nb_element} first)\n")
+    row_infos = row["coord"].iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(row_infos)
+    
+    # Add variables informations
+    print(f"\nContinues variables\n")
+    var_infos = pd.DataFrame(index=self.features_labels_).astype("float")
+    for i in np.arange(0,ncp,1):
+        tcorr = var["tcorr"].iloc[:,i]
+        tcorr.name ="tcorr."+str(i+1)
+        bcorr = var["bcorr"].iloc[:,i]
+        bcorr.name ="bcorr."+str(i+1)
+        wcorr = var["wcorr"].iloc[:,i]
+        wcorr.name ="wcorr."+str(i+1)
+        var_infos = pd.concat([var_infos,tcorr,bcorr,wcorr],axis=1)
+    var_infos = var_infos.round(decimals=digits)
+    if to_markdown:
+        print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(var_infos)
