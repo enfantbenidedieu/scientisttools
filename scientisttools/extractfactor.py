@@ -1676,6 +1676,16 @@ def summaryPPCA(self,
 
 
 def get_candisc_row(self):
+    """
+    self. : an instance of class CANDISC
+
+    Returns
+    -------
+    Canonical Discriminant Analysis Analysis - Results for rows
+    =========================================================
+        Name        Description
+    1   "coord"     "coordinates for the rows"
+    """
     if self.model_ != "candisc":
         raise ValueError("Error : 'self' must be an instance of class CANDISC.")
 
@@ -1686,6 +1696,15 @@ def get_candisc_row(self):
 
 
 def get_candisc_var(self):
+    """
+    self. : an instance of class CANDISC
+
+    Returns
+    -------
+    Canonical Discriminant Analysis Analysis - Results for rows
+    =========================================================
+        Name        Description
+    """
 
     if self.model_ != "candisc":
         raise ValueError("Error : 'self' must be an instance of class CANDISC.")
@@ -1704,18 +1723,10 @@ def get_candisc(self,choice = "row"):
 
     Returns
     -------
-    Correspondence Analysis - Results for rows
+    Canonical Discriminant Analysis Analysis - Results for rows
     =========================================================
         Name        Description
     1   "coord"     "coordinates for the rows"
-    2   "cos2"      "cos2 for the rows"
-    3   "constrib"  "contributions of the rows"
-    4   "dist"      "Rows distance"
-    5   "res.dist"  "Restitued distance"
-    6   "infos"     "additionnal informations for the rows:"
-                        - distance between rows and inertia
-                        - weight for the rows
-                        - inertia for the rows
     """
 
     if choice == "row":
@@ -1726,7 +1737,6 @@ def get_candisc(self,choice = "row"):
         raise ValueError("Error : Allowed values are either 'row' or 'var'.")
    
 def get_candisc_coef(self,choice="absolute"):
-
     """
     
     """
@@ -1748,6 +1758,19 @@ def summaryCANDISC(self,digits=3,
                    to_markdown=False,
                    tablefmt = "pipe",
                    **kwargs):
+    """Printing summaries of Canonical Discriminant Analysis model
+
+    Parameters
+    ----------
+    self        :   an obect of class CANDISC.
+    digits      :   int, default=3. Number of decimal printed
+    nb_element  :   int, default = 10. Number of element
+    ncp         :   int, default = 3. Number of componennts
+    to_markdown :   Print DataFrame in Markdown-friendly format.
+    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    **kwargs    :   These parameters will be passed to tabulate.
+    """
+    
     row = get_candisc(self,choice="row")
     var = get_candisc(self,choice="var")
     coef = get_candisc_coef(self,choice="absolute").round(decimals=digits)

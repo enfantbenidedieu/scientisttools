@@ -676,9 +676,9 @@ class DISCRIM(BaseEstimator,TransformerMixin):
      Develops a discriminant criterion to classify each observation into groups
     
     """
-    def __init__(self,feature_columns,target_columns):
-        self.feature_columns = feature_columns
-        self.target_columns = target_columns
+    def __init__(self,features_labels=None,target=None):
+        self.features_labels = features_labels
+        self.target = target
     
     def fit(self,X,y):
         raise NotImplementedError("Error : This method is not implemented yet.")
