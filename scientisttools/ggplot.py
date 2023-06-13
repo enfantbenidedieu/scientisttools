@@ -2432,3 +2432,118 @@ def fviz_cosines(self,
 
     return p+ggtheme
 
+
+
+#################################################################################################################
+#                   Hierarchical Clustering on Principal Components (HCPC)
+#################################################################################################################
+
+def fviz_hcpc_cluster(self,
+                      axis=(0,1),
+                      xlabel=None,
+                      ylabel=None,
+                      title=None,
+                      legend_title = None,
+                      xlim=None,
+                      ylim=None,
+                      show_clust_cent = False, 
+                      cluster = None,
+                      center_marker_size=5,
+                      marker = None,
+                      repel=True,
+                      ha = "center",
+                      va = "center",
+                      point_size = 1.5,
+                      text_size = 8,
+                      text_type = "text",
+                      add_grid=True,
+                      add_hline=True,
+                      add_vline=True,
+                      hline_color="black",
+                      vline_color="black",
+                      hline_style = "dashed",
+                      vline_style = "dashed",
+                      add_ellipse=True,
+                      ellipse_type = "t",
+                      confint_level = 0.95,
+                      geom_ellipse = "polygon",
+                      ggtheme = pn.theme_minimal()):
+    """
+    
+    
+    
+    """
+
+    if self.model_ != "hcpc":
+        raise ValueError("Error : 'self' must be an object of class HCPC.")
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.n_components_-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("Error : You must pass a valid 'axis'.")
+    
+    if legend_title is None:
+        legend_title = "cluster"
+
+    coord = pd.DataFrame(self.row_coord_,index = self.row_labels_,columns=self.dim_index_)
+
+    if cluster is None:
+        coord = pd.concat([coord,self.cluster_],axis=1)
+    else:
+        coord = pd.concat([coord,cluster],axis=1)
+        
+    # Rename last columns
+    coord.columns = [*coord.columns[:-1], legend_title]
+
+     # Extract coordinates
+     # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
+
+    p = p + pn.geom_point(pn.aes(color = "cluster"),size=point_size,shape=marker)
+    if repel:
+        p = p + pn.geom_text(pn.aes(color="cluster"),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '->','lw':1.0}})
+    else:
+        p = p + pn.geom_text(pn.aes(color="cluster"),size=text_size,va=va,ha=ha)
+    if add_ellipse:
+        p = p + pn.geom_point(pn.aes(color = "cluster"))
+        p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill="cluster"),type = ellipse_type,alpha = 0.25,level=confint_level)
+    
+    if show_clust_cent:
+        cluster_center = self.cluster_centers_
+        p = p + pn.geom_point(cluster_center,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=cluster_center.index,color=cluster_center.index),
+                              size=center_marker_size)
+    
+    # Add additionnal        
+    proportion = self.eig_[2]
+    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+
+    if title is None:
+        title = "Individuals factor map - HCPC"
+    
+    if xlim is not None:
+        p = p + pn.xlim(xlim)
+    if ylim is not None:
+        p = p + pn.ylim(ylim)
+   
+    p = p + pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
+
+    if add_hline:
+        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
+    
+    if add_vline:
+        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
+    
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
+    
+    p = p + pn.labs(color = legend_title)
+
+    p = p + ggtheme
+
+    return p
+    
+
+
+

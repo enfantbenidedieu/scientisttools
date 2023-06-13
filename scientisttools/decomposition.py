@@ -3379,8 +3379,40 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         self.fit(X)
         return self.row_coord_
+
+
+
+######################################################################################################
+#               Multiple Factor Analysis
+#####################################################################################################
+
+class MFA(BaseEstimator,TransformerMixin):
+
+
+    def __init__(self,n_components=None):
+        self.n_components =n_components
     
+
+    def fit(self,X,y=None):
+        raise ValueError("Error : This method is not yet implemented.")
+
+
+
+
+########################################################################################################
+#       Hierarchical Multiple Factor Analysis (HMFA)
+#######################################################################################################
+
+class HMFA(BaseEstimator,TransformerMixin):
+
+
+    def __init__(self,n_components=None):
+        self.n_components = n_components
     
+
+    def fit(self,X,y=None):
+        raise ValueError("Error : This method is not yet implemented.")
+
  
         
 

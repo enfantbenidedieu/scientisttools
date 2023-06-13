@@ -12,6 +12,7 @@ from factor_analyzer.factor_analyzer import calculate_bartlett_sphericity
 import pingouin as pg
 from functools import partial
 import itertools
+import scipy.stats as st
 
 def get_melt(X,level=- 1, dropna=True):
     """Stack the prescribed level(s) from columns to index.
@@ -548,3 +549,29 @@ def paste(*args, sep = " ", collapse = None):
     if collapse is not None:
         l = collapse.join(l)
     return l
+
+# Load R datasets in Python
+def load_rdatasets(packages=str,data_name=str):
+    from rpy2.robjects.packages import importr, data
+    import pandas as pd
+    import numpy as np
+    r_df = data(importr(packages)).fetch(data_name)[data_name]
+    py_df = pd.DataFrame.from_dict({ key : np.asarray(r_df.rx2(key)) for key in r_df.names })
+    py_df.index = r_df.rownames
+    return py_df
+
+
+def cramer_v(x,y):
+    #create 2x2 table
+    tab =pd.crosstab(x,y)
+    #Chi-squared test statistic, sample size, and minimum of rows and columns
+    chi2 = st.chi2_contingency(tab,correction=False)[0]
+    n = np.sum(tab)
+    minDim = min(tab.shape)-1
+    #calculate Cramer's V 
+    return  np.sqrt((chi2/n) / minDim)
+
+def tschuprow_t(x,y):
+    pass
+
+
