@@ -1429,8 +1429,8 @@ class STEPDISC(BaseEstimator,TransformerMixin):
         return self
     
     def _compute_forward(self,clf):
-        raise ValueError("Error : This method is not yet implemented.")
-
+        raise NotImplementedError("Error : This method is not implemented yet.")
+    
     def _compute_backward(self,clf):
         """Backward Elimination
 
@@ -1464,7 +1464,7 @@ class STEPDISC(BaseEstimator,TransformerMixin):
             # FValue
             fvalue = ddlsuppden/ddlsuppnum * (lwVar/lw-1)
             # Récupération des résultats
-            return np.array([lwVar,lw/lwVar,fvalue,1 - st.f.cdf(fvalue, ddlsuppnum, ddlsuppden)])
+            return np.array([lwVar,lw/lwVar,fvalue,st.f.sf(fvalue, ddlsuppnum, ddlsuppden)])
         
         # Matrix V et W utilisées
         biased_V = ((clf.n_samples_ - 1)/clf.n_samples_)*clf.tcov_
@@ -1531,7 +1531,7 @@ class STEPDISC(BaseEstimator,TransformerMixin):
         return resultat
         
     def _compute_stepwise(self,clf):
-        raise ValueError("Error : This method is not yet implemented.")
+        raise NotImplementedError("Error : This method is not implemented yet.")
 
     def _compute_stats(self,clf):
         """
@@ -1551,13 +1551,15 @@ class STEPDISC(BaseEstimator,TransformerMixin):
         # Entraînement d'un modèle
         if self.model_train:
             # New features
-            new_features = list(set(clf.features_labels_).symmetric_difference(set(features_remove)))
-            if clf.model_ == "lineardisc":
+            new_features = [x for x in clf.features_labels_ if x not in set(features_remove)]
+            if clf.model_ == "lda":
                 model = LINEARDISC(features_labels = new_features,target=clf.target_,distribution="homoscedastik",
-                                row_labels=clf.row_labels_).fit(clf.data_)
+                                   row_labels=clf.row_labels_).fit(clf.data_)
+                self.train_model_ = model
             elif clf.model_ == "candisc":
                 model = CANDISC(features_labels=new_features,target=clf.target_,row_labels=clf.row_labels_)
-            self.train_result_ = model
+                self.train_model_ = model
+            
 
         
         self.overall_remove_ = overall_remove
