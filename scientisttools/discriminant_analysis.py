@@ -7,6 +7,7 @@ import pandas as pd
 from plydata import *
 from functools import reduce, partial
 from scientisttools.utils import eta2,paste
+from scientisttools.decomposition import MCA
 from scipy.spatial.distance import pdist,squareform
 from statsmodels.multivariate.manova import MANOVA
 import statsmodels.stats.multicomp as mc
@@ -1359,16 +1360,71 @@ class DISCQUAL(BaseEstimator,TransformerMixin):
                  n_components = None,
                  target = list[str],
                  features_labels=None,
+                 row_labels = None,
                  priors=None):
         
         self.n_components = n_components
         self.target = target
         self.features_labels = features_labels
+        self.row_labels = row_labels
         self.priors = priors
     
 
     def fit(self,X,y=None):
-        pass
+        """
+        
+        
+        """
+
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        self.target_ = self.target
+        if self.target_ is None:
+            raise ValueError("Error :'target' must be assigned.")
+
+
+        self._compute_stats(X=X)
+        
+
+        return self
+        
+
+    
+    def _compute_stats(self,X):
+        """
+        
+        
+        """
+
+        # Continuous variables
+        x = X.drop(columns=self.target_)
+        # Qualitative variables - target
+        y = X[self.target_]
+
+        # Features columns
+        self.features_labels_ = self.features_labels
+        if self.features_labels_ is None:
+            self.features_labels_ = x.columns
+        # Update x
+        x = x[self.features_labels_]
+        # New data
+        X = pd.concat([x,y],axis=1)
+
+
+        # Analyse des correspondances multiples (MCA)
+        mca = MCA(n_components=self.n_components,row_labels=self.row_labels,var_labels=x.columns,
+                  mod_labels=None,matrix_type="completed",benzecri=False,greenacre=False,
+                  row_sup_labels=None,quali_sup_labels=None,quanti_sup_labels=None,graph=False,
+                  figsize=(20,8)).fit(x)
+        
+        self.row_coord_ = mca.row_coord_
+        self.mod_coord_ = mca.mod_coord_
+        self.mod_infos_ = mca.mod_infos_
+        self.mod_labels_ = mca.mod_labels_
 
 
 
