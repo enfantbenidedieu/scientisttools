@@ -1996,6 +1996,62 @@ def plot_shepard(self,
     
     ax.set(xlabel = xlabel, ylabel =ylabel,title= title)
     ax.grid(visible=add_grid)
+
+
+######################################################################################
+#           Canonical Discriminant Analysis (CANDISC)
+######################################################################################
+
+def plotCANDISC(self,
+                axis = [0,1],
+                xlabel = None,
+                ylabel = None,
+                title = None,
+                add_grid = True,
+                color="blue",
+                marker="o",
+                add_hline = True,
+                add_vline=True,
+                show_group_center=True,
+                hline_color="black",
+                hline_style="dashed",
+                vline_color="black",
+                vline_style ="dashed",
+                ax=None) -> plt:
+    
+    """
+    
+    """
+    if self.model_ != "candisc":
+        raise ValueError("Error : 'self' must be an instance of class 'candisc'.")
+    if ax is None:
+        ax = plt.gca()
+    
+    coord = self.row_coord_[:,axis]
+    xs = coord[:,axis[0]]
+    ys = coord[:,axis[1]]
+   
+    color = dict({ x : name for x,name in enumerate(self.classes_)})
+
+    ax.scatter(xs,ys,c=[*color])
+
+    if xlabel is None:
+        xlabel = f"Canonical {axis[0]}"
+    
+    if ylabel is None:
+        ylabel = f"Canonical {axis[1]}"
+    
+    if title is None:
+        title = "Canonical Discriminant Analysis"
+
+    ax.set(xlabel=xlabel,ylabel=ylabel,title=title)
+    ax.grid(visible=add_grid)
+    if add_hline:
+        ax.axhline(y=0,color=hline_color,linestyle=hline_style)
+    if add_vline:
+        ax.axvline(x=0,color=vline_color,linestyle=vline_style)   
+
+
     
 
 
