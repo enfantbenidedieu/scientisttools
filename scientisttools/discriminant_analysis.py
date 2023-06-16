@@ -90,6 +90,8 @@ class CANDISC(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        self.data_ = X
+        
         self.target_ = self.target
         if self.target_ is None:
             raise ValueError("Error :'target' must be assigned.")
@@ -1367,6 +1369,9 @@ class DISQUAL(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+
+        self.data_ = X
+        
         self.target_ = self.target
         if self.target_ is None:
             raise ValueError("Error :'target' must be assigned.")
@@ -1614,6 +1619,13 @@ class DISQUAL(BaseEstimator,TransformerMixin):
 #           Discriminant Corrrespondence Analysis (DISCA)
 ##########################################################################################
 
+# https://bookdown.org/teddyswiebold/multivariate_statistical_analysis_using_r/discriminant-correspondence-analysis.html
+# https://search.r-project.org/CRAN/refmans/TExPosition/html/tepDICA.html
+# http://pbil.univ-lyon1.fr/ADE-4/ade4-html/discrimin.coa.html
+# https://rdrr.io/cran/ade4/man/discrimin.coa.html
+# https://stat.ethz.ch/pipermail/r-help/2010-December/263170.html
+# https://www.sciencedirect.com/science/article/pii/S259026012200011X
+
 class DISCA(BaseEstimator,TransformerMixin):
     """Discriminant Correspondence Analysis (DISCA)
 
@@ -1641,12 +1653,135 @@ class DISCA(BaseEstimator,TransformerMixin):
     def fit(self,X):
 
 
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        self.data_ = X
+        
+        self.target_ = self.target
+        if self.target_ is None:
+            raise ValueError("Error :'target' must be assigned.")
+
+        self._computed_stats(X=X)
+        
+
         return self
+    
+    def _global_stats(self,X,y):
+        """Compute global statistiques of relations between two categorical variables
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_samples, n_features)
+            Feature
+
+        y : DataFrame of shape (n_samples,)
+            Target
+        """
+
+        # Chi2 squared test - Tschuprow's T
+        chi2_test = loglikelihood_test = pd.DataFrame(columns=["statistic","df","pvalue"],index=X.columns).astype("float")
+        cramers_v = tschuprow_t = pearson= pd.DataFrame(columns=["value"],index=X.columns).astype("float")
+        for cols in X.columns:
+            # Crosstab
+            tab = pd.crosstab(y[self.target_[0]],X[cols])
+
+            # Chi2 - test
+            chi2 = st.chi2_contingency(tab,correction=False)
+            chi2_test.loc[cols,:] = np.array([chi2.statistic,chi2.dof,chi2.pvalue])
+
+            # log-likelihood test
+            loglikelihood = st.chi2_contingency(tab,lambda_="log-likelihood")
+            loglikelihood_test.loc[cols,:] = np.array([loglikelihood.statistic,loglikelihood.dof,loglikelihood.pvalue])
+
+            # Cramer's V
+            cramers_v.loc[cols,:] = st.contingency.association(tab,method="cramer")
+
+            # Tschuprow T statistic
+            tschuprow_t.loc[cols,:] = st.contingency.association(tab,method="tschuprow")
+
+            # Pearson
+            pearson.loc[cols,:] = st.contingency.association(tab,method="pearson")
+        
+        quali_test = dict({"chi2" : chi2_test,
+                           "log-likelihood-test":loglikelihood_test,
+                           "cramer's V":cramers_v,
+                           "tschuprow's T":tschuprow_t,
+                           "pearson":pearson})
+        
+        return quali_test
+    
+
     
 
 
     def _is_completed(self,X):
-        pass
+        """
+        
+        """
+
+        # Continuous variables
+        x = X.drop(columns=self.target_)
+        # Qualitative variables - target
+        y = X[self.target_]
+
+        # Features columns
+        self.features_labels_ = self.features_labels
+        if self.features_labels_ is None:
+            self.features_labels_ = x.columns
+
+        # Update x
+        x = x[self.features_labels_]
+        # New data
+        X = pd.concat([x,y],axis=1)
+
+        #self.n_rows_, self.n_cols_ = x.shape
+
+        ## Qualitatives tests
+        self.statistics_test_ = self._global_stats(X=x,y=y)
+
+        # Tableau des indicatrices
+        dummies = pd.concat((pd.get_dummies(X[cols],prefix=cols,prefix_sep='_') for cols in (X.columns if self.features_labels_ is None else self.features_labels_)),axis=1)
+
+        # tableau de contingence
+        base = pd.concat([y,dummies],axis=1).groupby(self.target_).sum()
+
+        return base
+
+    
+    def _is_dummies(self,X):
+
+        return X.groupby(self.target_).sum()
+
+    
+
+    def _computed_stats(self,X):
+
+
+        if self.matrix_type == "completed":
+            base = self._is_completed(X)
+        elif self.matrix_type == "dummies":
+            base = self._is_dummies(X)
+        
+        # Calcul des profils
+        n_k = base.sum(axis=0)
+        p_k = n_k/np.sum(n_k)
+        
+        mod_stats = pd.concat([n_k, p_k],axis=1)
+        mod_stats.columns = ["n(k)","p(k)"]
+        print(mod_stats)
+
+        # Tableau des profils
+        row_prof = mapply(base,lambda x : x/np.sum(x),axis=1,progressbar=False)
+        
+        # Distance entre un groupe et l'origine
+        row_disto = mapply(row_prof, lambda x : np.sum((x-p_k.values)**2/p_k.values))
+        
+
+        # 
 
 
 ##################################################################################################
@@ -1713,6 +1848,8 @@ class DISMIX(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        self.data_ = X
         
         self.target_ = self.target
         if self.target_ is None:

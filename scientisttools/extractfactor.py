@@ -240,7 +240,7 @@ def get_eig(self) -> pd.DataFrame:
         eig = pd.DataFrame(self.eig_.T,columns=["eigenvalue","difference","proportion","cumulative"],index = self.dim_index_)
         return eig
     else:
-        raise ValueError("Eroor : 'self' must be an instance of class PCA, PPCA, CA, MCA, FAMD, MFA, CMDS")
+        raise ValueError("Error : 'self' must be an instance of class PCA, PPCA, CA, MCA, FAMD, MFA, CMDS")
 
 def get_eigenvalue(self) -> pd.DataFrame:
 

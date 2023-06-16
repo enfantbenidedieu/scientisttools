@@ -828,7 +828,7 @@ def plot_eigenvalues(self,
     if choice == "eigenvalue":
         eig = self.eig_[0][:ncp]
         text_labels = list([str(np.around(x,3)) for x in eig])
-        if self.model_ not in ["famd","cmds","disqual","mixdisc"]:
+        if self.model_ not in ["famd","cmds","disqual","dismix"]:
             kaiser = self.kaiser_threshold_
         if self.model_ in ["pca","ppca","efa"]:
             kss = self.kss_threshold_
@@ -838,7 +838,7 @@ def plot_eigenvalues(self,
     elif choice == "proportion":
         eig = self.eig_[2][:ncp]
         text_labels = list([str(np.around(x,1))+"%" for x in eig])
-        if self.model_ not in ["famd","cmds","disqual","mixdisc"]:
+        if self.model_ not in ["famd","cmds","disqual","dismix"]:
             kaiser = self.kaiser_proportion_threshold_
     else:
         raise ValueError("Error : 'choice' variable must be 'eigenvalue' or 'proportion'.")
@@ -2023,15 +2023,20 @@ def plotCANDISC(self,
                 ylabel = None,
                 title = None,
                 add_grid = True,
-                color="blue",
-                marker="o",
                 add_hline = True,
                 add_vline=True,
-                show_group_center=True,
+                marker = None,
+                color = None,
+                repel = False,
+                show_text = False, 
+                legend_title = None,
                 hline_color="black",
                 hline_style="dashed",
                 vline_color="black",
                 vline_style ="dashed",
+                ha = "center",
+                va = "center",
+                random_state= 0,
                 ax=None) -> plt:
     
     """
@@ -2039,22 +2044,64 @@ def plotCANDISC(self,
     """
     if self.model_ != "candisc":
         raise ValueError("Error : 'self' must be an instance of class 'candisc'.")
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.n_components_-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("Error : You must pass a valid 'axis'.")
+    
     if ax is None:
         ax = plt.gca()
     
+
     coord = self.row_coord_[:,axis]
     xs = coord[:,axis[0]]
     ys = coord[:,axis[1]]
-   
-    color = dict({ x : name for x,name in enumerate(self.classes_)})
 
-    ax.scatter(xs,ys,c=[*color])
+    labels = self.row_labels_
+    color_list=list([x[4:] for x in list(mcolors.TABLEAU_COLORS.keys())])
+    marker_list = list(['.', 'o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X'])
+    classe = self.data_[self.target_]
+    modality_list = list(np.unique(classe))
+
+    if color is None:
+        random.seed(random_state)
+        color_dict = dict(zip(modality_list,random.sample(color_list,len(modality_list))))
+    else:
+        color_dict = dict(zip(modality_list,color))
+    
+    if marker is None:
+        random.seed(random_state)
+        marker_dict = dict(zip(modality_list,random.sample(marker_list,len(modality_list))))
+    else:
+        marker_dict = dict(zip(modality_list,marker))
+
+    for group in modality_list:
+        idx = np.where(classe==group)
+        ax.scatter(xs[idx[0]],ys[idx[0]],label=group,c= color_dict[group],marker = marker_dict[group])
+        if show_text:
+            if repel:
+                texts=list()
+                for i in idx[0]:
+                    texts.append(ax.text(xs[i],ys[i],labels[i],c=color_dict[group],ha=ha,va=va))
+                adjust_text(texts,x=xs,y=ys,arrowprops=dict(arrowstyle="->",color=color_dict[group],lw=1.0),ax=ax)
+            else:
+                for i in idx[0]:
+                    ax.text(xs[i],ys[i],labels[i],c=color_dict[group],ha=ha,va=va)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    # Put a legend to the right of the current axis
+    if legend_title is None:
+        legend_title = "Classe"
+
+    ax.legend(title=legend_title, bbox_to_anchor=(1, 0.5),fancybox=True, shadow=True)
 
     if xlabel is None:
-        xlabel = f"Canonical {axis[0]}"
+        xlabel = f"Canonical {axis[0]+1}"
     
     if ylabel is None:
-        ylabel = f"Canonical {axis[1]}"
+        ylabel = f"Canonical {axis[1]+1}"
     
     if title is None:
         title = "Canonical Discriminant Analysis"

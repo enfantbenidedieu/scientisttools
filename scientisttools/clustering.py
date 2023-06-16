@@ -384,7 +384,7 @@ class VARCLUST(BaseEstimator,TransformerMixin):
 
 
     def fit(self,X,y=None):
-        pass
+        raise NotImplementedError("Error : This method is not yet implemented.")
 
 
 
