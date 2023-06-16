@@ -12,7 +12,10 @@ from statsmodels.multivariate.manova import MANOVA
 import statsmodels.stats.multicomp as mc
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
+from sklearn.model_selection import KFold,GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.pipeline import Pipeline
 from mapply.mapply import mapply
 from sklearn.metrics import accuracy_score
 from functools import partial
@@ -35,8 +38,6 @@ class CANDISC(BaseEstimator,TransformerMixin):
 
     target : 
 
-    row_labels :
-
     row_labels : array of strings or None, default = None
         - If row_labels is an array of strings : this array provides the
           row labels.
@@ -45,13 +46,13 @@ class CANDISC(BaseEstimator,TransformerMixin):
         - If row_labels is None : labels are automatically computed for
           each row.
      
-    col_labels : array of strings or None, default = None
-        - If col_labels is an array of strings : this array provides the
+    features_labels : array of strings or None, default = None
+        - If features_labels is an array of strings : this array provides the
           column labels.
               If the shape of the array doesn't match with the number of 
               columns : labels are automatically computed for each
               column.
-        - If col_labels is None : labels are automatically computed for
+        - If features_labels is None : labels are automatically computed for
           each column.
 
 
@@ -63,11 +64,13 @@ class CANDISC(BaseEstimator,TransformerMixin):
                  n_components=None,
                  target=list[str],
                  row_labels=None,
-                 features_labels=None):
+                 features_labels=None,
+                 priors = None):
         self.n_components = n_components
         self.target = target
         self.row_labels = row_labels
         self.features_labels = features_labels
+        self.priors = priors
 
     def fit(self,X,y=None):
         """Fit the Canonical Discriminant Analysis model
@@ -325,7 +328,10 @@ class CANDISC(BaseEstimator,TransformerMixin):
         I_k = y.value_counts(normalize=False)
 
         # Initial prior - proportion of each element
-        p_k = y.value_counts(normalize=True)
+        if self.priors is None:
+            p_k = y.value_counts(normalize=True)
+        else:
+            p_k = pd.Series(self.priors,index=self.classes_)
 
         # Class level information
         class_level_information = pd.concat([I_k,p_k],axis=1,ignore_index=False)
@@ -1272,71 +1278,7 @@ class LINEARDISC(BaseEstimator,TransformerMixin):
 
         return accuracy_score(y, self.predict(X), sample_weight=sample_weight)
 
-    
 
-
-
-######################################################################################
-#           QUADRATIC DISCRIMINANT ANALYSIS (QDA)
-#####################################################################################
-
-class QUADISC(BaseEstimator,TransformerMixin):
-    """Quadratic Discriminant Analysis
-    
-    """
-    def __init__(self,features_columns, target_columns,priors=None):
-        self.features_columns = features_columns
-        self.target_columns = target_columns
-        self.priors_ = priors
-    
-    def fit(self,X,y=None):
-        raise NotImplementedError("Error : This method is not implemented yet.")
-
-#####################################################################################
-#           LOCAL FISHER DISCRIMINANT ANALYSIS (LFDA)
-######################################################################################
- 
- # Démarche géométrique
- # https://plainenglish.io/blog/fischers-linear-discriminant-analysis-in-python-from-scratch-bbe480497504
- # https://stackoverflow.com/questions/62610782/fishers-linear-discriminant-in-python
- # https://goelhardik.github.io/2016/10/04/fishers-lda/
- # https://www.freecodecamp.org/news/an-illustrative-introduction-to-fishers-linear-discriminant-9484efee15ac/
- #https://github.com/prathmachowksey/Fisher-Linear-Discriminant-Analysis
-class LOCALFISHERDISC(BaseEstimator,TransformerMixin):
-    """Local Fisher Discriminant Analysis
-    
-    """
-    def __init__(self,feature_columns,target_columns):
-        self.feature_columns = feature_columns
-        self.target_columns = target_columns
-
-    def fit(self,X,y=None):
-        raise NotImplementedError("Error : This method is not implemented yet.")
-    
-
-##########################################################################################
-#           Mixture Discriminant Analysis (MDA)
-###########################################################################################
-
-
-
-class MIXDISC(BaseEstimator,TransformerMixin):
-    """Mixture Discriminant Analysis
-    
-    
-    """
-
-
-
-
-    def __init__(self,target=list[str],features_labels=None):
-
-        self.target = target
-        self.features_labels = features_labels
-    
-
-    def fit(self,X,y=None):
-        pass
 
 
 
@@ -1422,8 +1364,6 @@ class DISQUAL(BaseEstimator,TransformerMixin):
         self._compute_stats(X=X)
         
         return self
-        
-
     
     def _compute_stats(self,X):
         """
@@ -1468,7 +1408,6 @@ class DISQUAL(BaseEstimator,TransformerMixin):
         # Stockage des résultats de l'ACM
         mod = get_mca_mod(mca)
         row = get_mca_ind(mca)
-        eig = get_eig(mca)
 
         # Fonction de projection
         fproj = mapply(mod["coord"],lambda x : x/(self.n_features_*np.sqrt(mca.eig_[0])),axis=1,progressbar=False)
@@ -1493,9 +1432,6 @@ class DISQUAL(BaseEstimator,TransformerMixin):
         coef = pd.DataFrame(np.dot(fproj,lda_coef),index=fproj.index,columns=lda_coef.columns)
         
         # Sortie de l'ACM
-        self.row_ = row
-        self.mod_ = mod
-        self.eig_ = eig
         self.projection_function_ = fproj
         self.n_components_ = mca.n_components_
 
@@ -1534,7 +1470,7 @@ class DISQUAL(BaseEstimator,TransformerMixin):
 
         self.fit(X)
 
-        return self.row_["coord"]
+        return self.mca_model_.row_coord_
     
     def transform(self,X):
         """Project data to maximize class separation
@@ -1616,6 +1552,44 @@ class DISQUAL(BaseEstimator,TransformerMixin):
         """
         
         return accuracy_score(y, self.predict(X), sample_weight=sample_weight)
+
+##########################################################################################
+#           Linear Discriminant Analysis under Continuous and Categorical variables (MIXDISC)
+###########################################################################################
+
+
+
+class MIXDISC(BaseEstimator,TransformerMixin):
+    """Discriminant Analysis under Continuous and Categorical variables (MIXDISC)
+
+    Performs linear discriminant analysis with both continuous and catogericals variables
+
+    Parameters:
+    -----------
+    n_components
+    target :
+    quanti_features_labels :
+    quali_features_labels:
+    row_labels :
+    prioirs:
+    grid_search : 
+
+    
+    
+    """
+
+
+
+
+    def __init__(self,target=list[str],features_labels=None):
+
+        self.target = target
+        self.features_labels = features_labels
+    
+
+    def fit(self,X,y=None):
+        pass
+
 
 
 #######################################################################################################
@@ -1810,5 +1784,146 @@ class STEPDISC(BaseEstimator,TransformerMixin):
         
         self.overall_remove_ = overall_remove
         self.features_remove = features_remove
+    
+######################################################################################
+#           QUADRATIC DISCRIMINANT ANALYSIS (QDA)
+#####################################################################################
 
+class QUADISC(BaseEstimator,TransformerMixin):
+    """Quadratic Discriminant Analysis
+    
+    """
+    def __init__(self,features_columns, target_columns,priors=None):
+        self.features_columns = features_columns
+        self.target_columns = target_columns
+        self.priors_ = priors
+    
+    def fit(self,X,y=None):
+        raise NotImplementedError("Error : This method is not implemented yet.")
+
+
+#######################################################################################################
+#           Mixture Discriminant Analysis (MIXTUREDISC)
+#######################################################################################################
+
+
+class MIXTUREDISC(BaseEstimator, TransformerMixin):
+    """Mixture Discriminant Analysis (MIXTUREDISC)
+
+    Performs mixture discriminant analysis
+
+
+
+
+    Note
+    ----
+    The Linear Discriminant Analysis classifier assumes that each class comes from a single normal (or Gaussian)
+    distribuition. This is too restrictive. 
+    For Mixture Discriminant Analysis, there are classes, and each class is assumed to be a Gaussian mixture of 
+    subclasses, where each data point has a probability of belonging to each class. Equality of covariance matrix,
+    among classes, is still assumed.
+    
+    
+    """
+
+
+
+
+    def __init__(self):
+
+
+        pass
+
+    def fit(self,X):
+        raise NotImplementedError("Error : This method is not yet implemented.")
+    
+
+#####################################################################################
+#           LOCAL FISHER DISCRIMINANT ANALYSIS (LFDA)
+######################################################################################
+ 
+ # Démarche géométrique
+ # https://plainenglish.io/blog/fischers-linear-discriminant-analysis-in-python-from-scratch-bbe480497504
+ # https://stackoverflow.com/questions/62610782/fishers-linear-discriminant-in-python
+ # https://goelhardik.github.io/2016/10/04/fishers-lda/
+ # https://www.freecodecamp.org/news/an-illustrative-introduction-to-fishers-linear-discriminant-9484efee15ac/
+ #https://github.com/prathmachowksey/Fisher-Linear-Discriminant-Analysis
+class LOCALFISHERDISC(BaseEstimator,TransformerMixin):
+    """Local Fisher Discriminant Analysis
+    
+    """
+    def __init__(self,feature_columns,target_columns):
+        self.feature_columns = feature_columns
+        self.target_columns = target_columns
+
+    def fit(self,X,y=None):
+        raise NotImplementedError("Error : This method is not implemented yet.")
+    
+
+
+###############################################################################################################
+#               Flexible Discriminant Analysis (FDA)
+###############################################################################################################
+
+
+class FLEXIBLEDISC(BaseEstimator,TransformerMixin):
+    """Flexible Discriminant Analysis
+
+
+
+    Note:
+    ----
+    Flexible Discriminant Analyis is a flexible extension of Lienar Discriminant Analysis that uses non - linear
+    combinations of predictors as splines. Flexible Discriminant Analysis is useful to model multivariate non - 
+    normality or non - linear relationships among variables within each group, allowing for a more accurate classi-
+    fication.
+    
+    """
+    def __init__(self,feature_columns,target_columns):
+        self.feature_columns = feature_columns
+        self.target_columns = target_columns
+
+    def fit(self,X,y=None):
+        raise NotImplementedError("Error : This method is not implemented yet.")
+
+
+###############################################################################################################
+#               Regularized Discriminant Analysis (RDA)
+###############################################################################################################
+
+
+class FLEXIBLEDISC(BaseEstimator,TransformerMixin):
+    """Regularized Discriminant Analysis
+
+
+
+    Note:
+    ----
+    RDA builds a classification rule by regularizing the group covariance matrices (Friedman 1989) allowing a 
+    more robust model against multicollinearity in the data. This might be very useful for a large multivariate 
+    data set containing highly correlated predictors.
+    
+    Regularized discriminant analysis is a kind of a trade-off between LDA and QDA. Recall that, in LDA we assume 
+    equality of covariance matrix for all of the classes. QDA assumes different covariance matrices for all the 
+    classes. Regularized discriminant analysis is an intermediate between LDA and QDA.
+
+    RDA shrinks the separate covariances of QDA toward a common covariance as in LDA. This improves the estimate of 
+    the covariance matrices in situations where the number of predictors is larger than the number of samples in 
+    the training data, potentially leading to an improvement of the model accuracy.
+
+    link : https://www.tandfonline.com/doi/abs/10.1080/01621459.1989.10478752
+    
+    
+    """
+    def __init__(self,feature_columns,target_columns):
+        self.feature_columns = feature_columns
+        self.target_columns = target_columns
+
+    def fit(self,X,y=None):
+        raise NotImplementedError("Error : This method is not implemented yet.")
+
+
+
+    
+    
 
