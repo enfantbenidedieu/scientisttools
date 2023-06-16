@@ -5,17 +5,14 @@ import pandas as pd
 from plydata import *
 from functools import reduce, partial
 from scientisttools.utils import eta2,paste
-from scientisttools.decomposition import MCA, FAMD
+from scientisttools.decomposition import MCA, FAMD, CA
 from scientisttools.extractfactor import get_mca_mod,get_mca_ind,get_famd_ind,get_famd_col,get_famd_mod
 from scipy.spatial.distance import pdist,squareform
 from statsmodels.multivariate.manova import MANOVA
 import statsmodels.stats.multicomp as mc
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-from sklearn.model_selection import KFold,GridSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.pipeline import Pipeline
 from mapply.mapply import mapply
 from sklearn.metrics import accuracy_score
 from functools import partial
