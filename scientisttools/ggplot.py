@@ -58,7 +58,7 @@ def fviz_screeplot(self,
     
     """
         
-    if self.model_ not in ["pca","ca","mca","famd","mfa","cmds","disqual"]:
+    if self.model_ not in ["pca","ca","mca","famd","mfa","cmds","disqual","mixdisc"]:
         raise ValueError("'res' must be an object of class PCA, CA, MCA, FAMD, MFA, CMDS, DISQUAL, MIXDISC")
 
     eig = get_eigenvalue(self)

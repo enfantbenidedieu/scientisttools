@@ -758,10 +758,25 @@ def plotEFA(self,
 #               Plot Eigenvalues
 ###############################################################################################
 
-def plot_eigenvalues(self,choice ="proportion",n_components=10,title=None,xlabel=None,ylabel=None,bar_fill="steelblue",
-                     bar_color = "steelblue",line_color="black",line_style="dashed",bar_width=None,
-                     add_kaiser=False, add_kss = False, add_broken_stick = False,add_grid=True,
-                     add_labels=False, ha = "center",va = "bottom",ax=None):
+def plot_eigenvalues(self,
+                     choice ="proportion",
+                     n_components=10,
+                     title=None,
+                     xlabel=None,
+                     ylabel=None,
+                     bar_fill="steelblue",
+                     bar_color = "steelblue",
+                     line_color="black",
+                     line_style="dashed",
+                     bar_width=None,
+                     add_kaiser=False,
+                     add_kss = False,
+                     add_broken_stick = False,
+                     add_grid=True,
+                     add_labels=False,
+                     ha = "center",
+                     va = "bottom",
+                     ax=None):
         
     """ Plot the eigen values graph
         
@@ -813,7 +828,7 @@ def plot_eigenvalues(self,choice ="proportion",n_components=10,title=None,xlabel
     if choice == "eigenvalue":
         eig = self.eig_[0][:ncp]
         text_labels = list([str(np.around(x,3)) for x in eig])
-        if self.model_ != "cmds":
+        if self.model_ not in ["famd","cmds","disqual","mixdisc"]:
             kaiser = self.kaiser_threshold_
         if self.model_ in ["pca","ppca","efa"]:
             kss = self.kss_threshold_
@@ -823,7 +838,7 @@ def plot_eigenvalues(self,choice ="proportion",n_components=10,title=None,xlabel
     elif choice == "proportion":
         eig = self.eig_[2][:ncp]
         text_labels = list([str(np.around(x,1))+"%" for x in eig])
-        if self.model_ != "cmds":
+        if self.model_ not in ["famd","cmds","disqual","mixdisc"]:
             kaiser = self.kaiser_proportion_threshold_
     else:
         raise ValueError("Error : 'choice' variable must be 'eigenvalue' or 'proportion'.")
