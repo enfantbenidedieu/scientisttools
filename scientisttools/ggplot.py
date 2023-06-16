@@ -58,8 +58,8 @@ def fviz_screeplot(self,
     
     """
         
-    if self.model_ not in ["pca","ca","mca","famd","mfa","cmds"]:
-        raise ValueError("'res' must be an object of class PCA, CA, MCA, FAMD, MFA, CMDS")
+    if self.model_ not in ["pca","ca","mca","famd","mfa","cmds","disqual"]:
+        raise ValueError("'res' must be an object of class PCA, CA, MCA, FAMD, MFA, CMDS, DISQUAL, MIXDISC")
 
     eig = get_eigenvalue(self)
     eig = eig.iloc[:min(n_components,self.n_components_),:]
