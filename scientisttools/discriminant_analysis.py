@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-import matplotlib.pyplot as plt
-import seaborn as sns
 import scipy.stats as st
 import numpy as np
 import pandas as pd
 from plydata import *
 from functools import reduce, partial
 from scientisttools.utils import eta2,paste
-from scientisttools.decomposition import MCA
+from scientisttools.decomposition import MCA, FAMD
 from scientisttools.extractfactor import get_eig,get_mca_mod,get_mca_ind
 from scipy.spatial.distance import pdist,squareform
 from statsmodels.multivariate.manova import MANOVA
@@ -1487,6 +1485,7 @@ class DISQUAL(BaseEstimator,TransformerMixin):
                          row_labels=self.row_labels_,
                          priors=self.priors).fit(new_X)
         
+        # LDA coefficients and intercepts
         lda_coef = lda.coef_
         lda_intercept = lda.intercept_ 
 
