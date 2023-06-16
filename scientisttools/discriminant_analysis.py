@@ -19,7 +19,7 @@ from functools import partial
 
 
 ##########################################################################################
-#                       CANONICAL DISCRIMINANT ANALYSIS
+#                       CANONICAL DISCRIMINANT ANALYSIS (CANDISC)
 ##########################################################################################
 
 class CANDISC(BaseEstimator,TransformerMixin):
@@ -1474,11 +1474,11 @@ class DISQUAL(BaseEstimator,TransformerMixin):
         new_X = pd.concat([y,row_coord],axis=1)
 
         # Analyse Discriminante Linéaire
-        lda = LINEARDISC(target=self.target_,
-                         distribution="homoscedastik",
-                         features_labels=row_coord.columns,
-                         row_labels=self.row_labels_,
-                         priors=self.priors).fit(new_X)
+        lda = LDA(target=self.target_,
+                  distribution="homoscedastik",
+                  features_labels=row_coord.columns,
+                  row_labels=self.row_labels_,
+                  priors=self.priors).fit(new_X)
         
         # LDA coefficients and intercepts
         lda_coef = lda.coef_
@@ -1617,7 +1617,7 @@ class DISQUAL(BaseEstimator,TransformerMixin):
 class DISCA(BaseEstimator,TransformerMixin):
     """Discriminant Correspondence Analysis (DISCA)
 
-    Par
+    Performa
     
     
     """
@@ -1645,7 +1645,7 @@ class DISCA(BaseEstimator,TransformerMixin):
     
 
 
-    def _is_compled(self,X):
+    def _is_completed(self,X):
         pass
 
 
@@ -1790,11 +1790,11 @@ class DISMIX(BaseEstimator,TransformerMixin):
         new_X = pd.concat([y,row_coord],axis=1)
 
         # Analyse Discriminante Linéaire
-        lda = LINEARDISC(target=self.target_,
-                         distribution="homoscedastik",
-                         features_labels=row_coord.columns,
-                         row_labels=self.row_labels_,
-                         priors=self.priors).fit(new_X)
+        lda = LDA(target=self.target_,
+                  distribution="homoscedastik",
+                  features_labels=row_coord.columns,
+                  row_labels=self.row_labels_,
+                  priors=self.priors).fit(new_X)
         
         # LDA coefficients and intercepts
         lda_coef = lda.coef_
@@ -1821,7 +1821,7 @@ class DISMIX(BaseEstimator,TransformerMixin):
         self.famd_model_ = famd
         self.lda_model_ = lda
 
-        self.model_ = "mixdisc"
+        self.model_ = "dismix"
     
     def fit_transform(self,X):
         """
@@ -2109,8 +2109,10 @@ class STEPDISC(BaseEstimator,TransformerMixin):
             # New features
             new_features = [x for x in clf.features_labels_ if x not in set(features_remove)]
             if clf.model_ == "lda":
-                model = LINEARDISC(features_labels = new_features,target=clf.target_,distribution="homoscedastik",
-                                   row_labels=clf.row_labels_).fit(clf.data_)
+                model = LDA(features_labels = new_features,
+                            target=clf.target_,
+                            distribution="homoscedastik",
+                            row_labels=clf.row_labels_).fit(clf.data_)
                 self.train_model_ = model
             elif clf.model_ == "candisc":
                 model = CANDISC(features_labels=new_features,target=clf.target_,row_labels=clf.row_labels_)
@@ -2129,7 +2131,10 @@ class QUADISC(BaseEstimator,TransformerMixin):
     """Quadratic Discriminant Analysis
     
     """
-    def __init__(self,features_columns, target_columns,priors=None):
+    def __init__(self,
+                 features_columns,
+                 target_columns,
+                 priors=None):
         self.features_columns = features_columns
         self.target_columns = target_columns
         self.priors_ = priors
@@ -2139,12 +2144,13 @@ class QUADISC(BaseEstimator,TransformerMixin):
 
 
 #######################################################################################################
-#           Mixture Discriminant Analysis (MIXTUREDISC)
+#           Mixture Discriminant Analysis (DA)
 #######################################################################################################
 
+# 
 
-class MIXTUREDISC(BaseEstimator, TransformerMixin):
-    """Mixture Discriminant Analysis (MIXTUREDISC)
+class MDA(BaseEstimator, TransformerMixin):
+    """Mixture Discriminant Analysis (MDA)
 
     Performs mixture discriminant analysis
 
@@ -2202,8 +2208,8 @@ class LOCALFISHERDISC(BaseEstimator,TransformerMixin):
 ###############################################################################################################
 
 
-class FLEXIBLEDISC(BaseEstimator,TransformerMixin):
-    """Flexible Discriminant Analysis
+class FDA(BaseEstimator,TransformerMixin):
+    """Flexible Discriminant Analysis (FDA)
 
 
 
@@ -2215,7 +2221,9 @@ class FLEXIBLEDISC(BaseEstimator,TransformerMixin):
     fication.
     
     """
-    def __init__(self,feature_columns,target_columns):
+    def __init__(self,
+                 feature_columns,
+                 target_columns):
         self.feature_columns = feature_columns
         self.target_columns = target_columns
 
@@ -2227,9 +2235,12 @@ class FLEXIBLEDISC(BaseEstimator,TransformerMixin):
 #               Regularized Discriminant Analysis (RDA)
 ###############################################################################################################
 
+# http://www.leg.ufpr.br/~eferreira/CE064/Regularized%20Discriminant%20Analysis.pdf
+# https://analyticsindiamag.com/a-guide-to-regularized-discriminant-analysis-in-python/
+# https://colab.research.google.com/drive/17LW2Or96ajCsy0fwQJ6mc6kXK9Sell0R?usp=sharing
 
-class FLEXIBLEDISC(BaseEstimator,TransformerMixin):
-    """Regularized Discriminant Analysis
+class RDA(BaseEstimator,TransformerMixin):
+    """Regularized Discriminant Analysis (RDA)
 
 
 
@@ -2251,12 +2262,22 @@ class FLEXIBLEDISC(BaseEstimator,TransformerMixin):
     
     
     """
-    def __init__(self,feature_columns,target_columns):
+    def __init__(self,
+                 feature_columns,
+                 target_columns):
         self.feature_columns = feature_columns
         self.target_columns = target_columns
 
     def fit(self,X,y=None):
         raise NotImplementedError("Error : This method is not implemented yet.")
+    
+
+
+#################################################################################################################
+#       Penalized Linear Discriminant Analysis (PLDA)
+#################################################################################################################
+
+# https://github.com/RyanCarey/penalized_lda_python
 
 
 
