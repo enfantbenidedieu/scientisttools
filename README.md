@@ -25,6 +25,11 @@ Those statistical methods can be used in two ways :
 * as descriptive methods ("datamining approach")
 * as reduction methods in scikit-learn pipelines ("machine learning approach")
 
+* It also performs **clustering**:
+    * Hierarchical Clustering on Principal Components (HCPC)
+* **Discriminant Analysis**
+    * Canonical 
+
 ## Installation
 
 ### Dependencies
