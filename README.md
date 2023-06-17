@@ -25,10 +25,19 @@ Those statistical methods can be used in two ways :
 * as descriptive methods ("datamining approach")
 * as reduction methods in scikit-learn pipelines ("machine learning approach")
 
-* It also performs **clustering**:
+`scientisttools` also performs some algorithms such as `clustering analysis` and `discriminant analysis`.
+
+* **Clustering analysis**:
     * Hierarchical Clustering on Principal Components (HCPC)
 * **Discriminant Analysis**
-    * Canonical 
+    * Canonical Discriminant Analysis (CANDISC)
+    * Linear Discriminant Analysis (LDA)
+    * Discriminant with qualitatives variables (DISQUAL)
+    * Discriminant Correspondence Analysis (DISCA)
+    * Discriminant with mixed data (DISMIX)
+    * Stepwise Discriminant Analysis (STEPDISC) (only `backward` elimination is available).
+
+Notebooks are availabled.
 
 ## Installation
 
