@@ -51,8 +51,8 @@ class HCPC(BaseEstimator,TransformerMixin):
 
     def fit(self,res,):
 
-        if res.model_ not in ["pca","ca","mca","famd"]:
-            raise ValueError("Error : 'res' must be an objet of class 'PCA','CA','MCA' or 'FAMD'.")
+        if res.model_ not in ["pca","mca"]:
+            raise ValueError("Error : 'res' must be an objet of class 'PCA','MCA'.")
 
         self._compute_global_stats(res=res)
         
@@ -98,14 +98,12 @@ class HCPC(BaseEstimator,TransformerMixin):
         
         # Coupure de l'arbre
         cutree = (hierarchy.cut_tree(link_mat,n_clusters=self.n_clusters_)+1).reshape(-1, )
-        print(len(cutree))
-        cutree = list([f"cluster {x}" for x in cutree])
+        cutree = list(["cluster_"+str(x) for x in cutree])
 
         # Class information
         cluster = pd.DataFrame(cutree, index = labels,columns = ["cluster"])
 
         ## Description des cluster
-        # Parangons
         row_coord = pd.DataFrame(res.row_coord_,index=labels,columns=res.dim_index_)
         coord_classe = pd.concat([row_coord, cluster], axis=1)
         cluster_infos = coord_classe.groupby("cluster").size().to_frame("n(k)")
@@ -114,50 +112,46 @@ class HCPC(BaseEstimator,TransformerMixin):
         cluster_centers = coord_classe.groupby("cluster").mean()
 
         # Store First informations
-
         self.cluster_ = cluster
         self.cluster_infos_ = cluster_infos
-        self.cluster_labels_ = list([f"cluster {x+1}" for x in np.arange(self.n_clusters_)])
+        self.cluster_labels_ = list(["cluster_"+str(x+1) for x in np.arange(self.n_clusters_)])
         self.cluster_centers_ = cluster_centers
 
-        
-        """
-        
+        # Paarongons
         parangons = pd.DataFrame(columns=["parangons","distance"])
-        disto_class = pd.DataFrame(columns=["distance"]).astype("float")
+        disto_far = dict()
+        disto_near = dict()
         for k in np.unique(cluster):
-            group = coord_classe.query(f"classe == {k}")[res.dim_index_]
-            disto = (group.apply(lambda x : np.sum((x-group.mean())**2),axis=1)
-                        .to_frame()
-                        .rename(columns={0: "distance"}))
-            parangon = pd.DataFrame({
-                "parangons": ply(disto,query(f"distance == {disto.distance.min()}")).index,
-                "distance" : disto.distance.min()},index = ["classe "+str(k)])
-            parangons = pd.concat([parangons, parangon],axis=0,ignore_index=False)
-            disto_class = pd.concat([disto_class,disto],axis=0,ignore_index=False)
-        
-        """
-
-        
-       
-
+            group = coord_classe[coord_classe["cluster"] == k].drop(columns=["cluster"])
+            disto = mapply(group.sub(cluster_centers.loc[k,:],axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False).to_frame("distance").reset_index()
+            disto_near[k] = disto.sort_values(by="distance")
+            disto_far[k] = disto.sort_values(by="distance",ascending=False)
+            # Identification du parangon
+            id = np.argmin(disto.iloc[:,1])
+            parangon = pd.DataFrame({"parangons" : disto.iloc[id,0],"distance" : disto.iloc[id,1]},index=[k])
+            parangons = pd.concat([parangons,parangon],axis=0)
         
         #Rapport de corrélation entre les axes et les cluster
         desc_axes = self._compute_quantitative(X=row_coord)
 
         # Informations globales
         self.linkage_matrix_ = link_mat
-        #self.parangons_ = parangons
-        #self.distance_classe_ = disto_class
+        self.parangons_ = parangons
+        # Individuals closest to their cluster's center
+        self.disto_near_ = pd.concat(disto_near,axis=0)
+        # Individuals the farest from other clusters' center
+        self.disto_far_ = pd.concat(disto_far,axis=0)
         self.desc_axes_gmean_ = desc_axes[0]
         self.desc_axes_correlation_ratio_ = desc_axes[1]
-        self.desc_axes_infos_ = desc_axes[2]
+        self.desc_axes_infos_ = pd.concat(desc_axes[2],axis=0)
         self.row_labels_ = res.row_labels_
         self.row_coord_ = res.row_coord_
         self.n_components_ = res.n_components_
         self.dim_index_ = res.dim_index_
         self.data_cluster_ = pd.concat([active_data,cluster],axis=1)
         self.eig_ = res.eig_
+
+        # Modèle
         self.model_ = "hcpc"
 
     def _compute_stats_pca(self,res):
@@ -190,14 +184,14 @@ class HCPC(BaseEstimator,TransformerMixin):
         
         self.gmean_ = res1[0]
         self.correlation_ratio_ =res1[1]
-        self.desc_var_quanti_ = res1[2]
+        self.desc_var_quanti_ = pd.concat(res1[2],axis=0)
 
         if res.quanti_sup_labels_ is not None:
             quanti_sup_data = data[res.quanti_sup_labels_]
             quanti_sup_res = self._compute_quantitative(X=quanti_sup_data)
             self.gmean_quanti_sup_ = quanti_sup_res[0]
             self.correlation_ratio_quanti_sup_ = quanti_sup_res[1]
-            self.desc_var_quanti_sup_ = quanti_sup_res[2]
+            self.desc_var_quanti_sup_ = pd.concat(quanti_sup_res[2],axis=0)
         
         if res.quali_sup_labels_ is not None:
             quali_sup_data = data[res.quali_sup_labels_]
@@ -255,7 +249,7 @@ class HCPC(BaseEstimator,TransformerMixin):
             df.columns = ["vtest","pvalue","mean in category","overall mean","sd in categorie","overall sd"]
             df = df.sort_values(by=['vtest'],ascending=False)
             df["significant"] =np.where(df["pvalue"]<0.001,"***",np.where(df["pvalue"]<0.05,"**",np.where(df["pvalue"]<0.1,"*"," ")))
-            quanti[f"cluster {i+1}"] = df
+            quanti[f"cluster_{i+1}"] = df
         
         # Add columns
         gmean.columns = self.cluster_labels_
@@ -296,8 +290,8 @@ class HCPC(BaseEstimator,TransformerMixin):
             # Pearson
             pearson.loc[cols,:] = st.contingency.association(tab,method="pearson")
         
-        quali_test = dict({"chi-square-test" : chi2_test,"log-likelihood-test":loglikelihood_test,"cramer's-v":cramers_v,
-                           "tschuprow's-t":tschuprow_t,"pearson":pearson})
+        quali_test = dict({"chi2" : chi2_test,"log-likelihood-test":loglikelihood_test,"cramer's V":cramers_v,
+                           "tschuprow's T":tschuprow_t,"pearson":pearson})
         
         return quali_test
     
@@ -326,7 +320,7 @@ class HCPC(BaseEstimator,TransformerMixin):
             quanti_sup_res = self._compute_quantitative(X=quanti_sup_data)
             self.gmean_quanti_sup_ = quanti_sup_res[0]
             self.correlation_ratio_quanti_sup_ = quanti_sup_res[1]
-            self.desc_var_quanti_sup_ = quanti_sup_res[2]
+            self.desc_var_quanti_sup_ = pd.concat(quanti_sup_res[2],axis=0)
         
         if res.quali_sup_labels_ is not None:
             quali_sup_data = data[res.quali_sup_labels_]
@@ -350,12 +344,12 @@ class HCPC(BaseEstimator,TransformerMixin):
         for i,name in enumerate(self.cluster_labels_):
             df =pd.concat([class_mod.iloc[:,i],mod_class.iloc[:,i],dummies_stats["n(s)"]],axis=1)
             df.columns = ["Class/Mod","Mod/Class","Global"]
-            var_category[f"cluster {i+1}"] = df
+            var_category[f"cluster_{i+1}"] = df
 
 
         self.desc_var_quali_ = res1
         self.var_quali_infos_ = dummies_stats
-        self.desc_var_category_ = var_category
+        self.desc_var_category_ = pd.concat(var_category,axis=0)
 
 
 

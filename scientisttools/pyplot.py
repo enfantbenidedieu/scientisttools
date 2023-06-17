@@ -2114,9 +2114,6 @@ def plotCANDISC(self,
         ax.axvline(x=0,color=vline_color,linestyle=vline_style)   
 
 
-    
-
-
 #######################################################################################
 #               Hierarchical Clustering on Principal Components
 #######################################################################################

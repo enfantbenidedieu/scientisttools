@@ -1695,7 +1695,7 @@ def get_candisc_row(self):
     return df
 
 
-def get_candisc_var(self):
+def get_candisc_var(self,choice="correlation"):
     """
     self. : an instance of class CANDISC
 
@@ -1709,11 +1709,18 @@ def get_candisc_var(self):
     if self.model_ != "candisc":
         raise ValueError("Error : 'self' must be an instance of class CANDISC.")
     
-    df = dict({
-        "tcorr" : self.tcorr_,
-        "bcorr" : self.bcorr_,
-        "wcorr" : self.wcorr_
-    })
+    if choice == "correlation":
+        df = dict({
+            "Total" : self.tcorr_,
+            "Between" : self.bcorr_,
+            "Within" : self.wcorr_
+        })
+    elif choice == "covariance":
+        df = dict({
+            "Total" : self.tcov_,
+            "Between" : self.bcov_,
+            "Within" : self.wcov_
+        })
 
     return df
 
@@ -1837,12 +1844,12 @@ def summaryCANDISC(self,digits=3,
     print(f"\nContinues variables\n")
     var_infos = pd.DataFrame(index=self.features_labels_).astype("float")
     for i in np.arange(0,ncp,1):
-        tcorr = var["tcorr"].iloc[:,i]
-        tcorr.name ="tcorr."+str(i+1)
-        bcorr = var["bcorr"].iloc[:,i]
-        bcorr.name ="bcorr."+str(i+1)
-        wcorr = var["wcorr"].iloc[:,i]
-        wcorr.name ="wcorr."+str(i+1)
+        tcorr = var["Total"].iloc[:,i]
+        tcorr.name ="total."+str(i+1)
+        bcorr = var["Between"].iloc[:,i]
+        bcorr.name ="between."+str(i+1)
+        wcorr = var["Within"].iloc[:,i]
+        wcorr.name ="within."+str(i+1)
         var_infos = pd.concat([var_infos,tcorr,bcorr,wcorr],axis=1)
     var_infos = var_infos.round(decimals=digits)
     if to_markdown:

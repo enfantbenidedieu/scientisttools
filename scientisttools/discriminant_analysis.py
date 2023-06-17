@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 from plydata import *
 from functools import reduce, partial
-from scientisttools.utils import eta2,paste
+from scientisttools.utils import eta2,paste,from_dummies
 from scientisttools.decomposition import MCA, FAMD, CA
-from scientisttools.extractfactor import get_mca_mod,get_mca_ind,get_famd_ind,get_famd_col,get_famd_mod
+from scientisttools.extractfactor import get_mca_mod,get_mca_ind,get_famd_ind,get_ca_row,get_ca_col
 from scipy.spatial.distance import pdist,squareform
 from statsmodels.multivariate.manova import MANOVA
 import statsmodels.stats.multicomp as mc
@@ -469,6 +469,7 @@ class CANDISC(BaseEstimator,TransformerMixin):
         self.coef_ = u_l
         # Intercept
         self.intercept_ = u_l0
+
         self.row_coord_ = row_coord
 
         # Fonction de classement - coefficient
@@ -487,7 +488,7 @@ class CANDISC(BaseEstimator,TransformerMixin):
         self.univariate_test_statistis_ = univariate_test
         self.gmean_coord_ = gmean_coord
 
-        self.anova_ = univariate_anova
+        self.anova_ = pd.concat(univariate_anova,axis=0) 
         self.manova_ = manova
         self.tukey_ = tukey_test
         self.bonferroni_correction_ = bonf_test
@@ -535,8 +536,8 @@ class CANDISC(BaseEstimator,TransformerMixin):
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
         scores = X.dot(self.score_coef_).add(self.score_intercept_,axis="columns")
+        scores.columns = self.classes_
         return scores
-
 
     def transform(self,X):
         """Project data to maximize class separation.
@@ -876,7 +877,7 @@ class LDA(BaseEstimator,TransformerMixin):
         self.summary_information_ = summary_infos
         self.class_level_information_ = class_level_information
         self.univariate_test_statistis_ = univariate_test
-        self.anova_ = univariate_anova
+        self.anova_ = pd.concat(univariate_anova,axis=0) 
         self.manova_ = manova
         self.tukey_ = tukey_test
         self.bonferroni_correction_ = bonf_test
@@ -1640,6 +1641,7 @@ class DISCA(BaseEstimator,TransformerMixin):
                  n_components = None,
                  target = list[str],
                  features_labels=None,
+                 mod_labels = None,
                  matrix_type = "completed",
                  priors = None,
                  ):
@@ -1647,6 +1649,7 @@ class DISCA(BaseEstimator,TransformerMixin):
         self.n_components = n_components
         self.target = target
         self.features_labels = features_labels
+        self.mod_labels = mod_labels
         self.matrix_type = matrix_type
         self.priors = priors
     
@@ -1658,8 +1661,6 @@ class DISCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        self.data_ = X
         
         self.target_ = self.target
         if self.target_ is None:
@@ -1738,7 +1739,14 @@ class DISCA(BaseEstimator,TransformerMixin):
         # New data
         X = pd.concat([x,y],axis=1)
 
-        #self.n_rows_, self.n_cols_ = x.shape
+        # Dimension normale
+        self.n_rows_, self.n_features_ = x.shape
+
+        # Initial prior - proportion of each element
+        if self.priors is None:
+            p_k = y.value_counts(normalize=True)
+        else:
+            p_k = pd.Series(self.priors,index=self.classes_)
 
         ## Qualitatives tests
         self.statistics_test_ = self._global_stats(X=x,y=y)
@@ -1746,43 +1754,314 @@ class DISCA(BaseEstimator,TransformerMixin):
         # Tableau des indicatrices
         dummies = pd.concat((pd.get_dummies(X[cols],prefix=cols,prefix_sep='_') for cols in (X.columns if self.features_labels_ is None else self.features_labels_)),axis=1)
 
-        # tableau de contingence
-        base = pd.concat([y,dummies],axis=1).groupby(self.target_).sum()
+        # Labels des modalités
+        self.mod_labels_ = self.mod_labels
+        if self.mod_labels_ is None:
+            self.mod_labels_ = dummies.columns
 
-        return base
+        # 
+        self.priors_ = p_k
+        self.dummies_ = dummies
+        # Données originales
+        self.data_ = X
+
+        # tableau de contingence
+        return pd.concat([y,dummies],axis=1).groupby(self.target_).sum()
 
     
     def _is_dummies(self,X):
+        """
+        
+        
+        """
 
+        # Suppression de la colonne target
+        x = X.drop(columns=self.target_)
+
+        # Labels des modalités
+        self.mod_labels_ = self.mod_labels
+        if self.mod_labels_ is None:
+            self.mod_labels_ = x.columns
+
+        # Qualitative variables - target
+        y = X[self.target_]
+
+        # Reconstitution de la matrice initiale
+        data = from_dummies(data=x,sep="_")
+
+        # Number of rows and features
+        self.n_rows_, self.n_features_ = data.shape
+
+        ## Qualitatives tests
+        self.statistics_test_ = self._global_stats(X=data,y=y)
+
+        # Labels des modalités
+        self.features_labels_ = self.features_labels
+        if self.features_labels_ is None:
+            self.features_labels_ = data.columns
+
+        # Initial prior - proportion of each element
+        if self.priors is None:
+            p_k = y.value_counts(normalize=True)
+        else:
+            p_k = pd.Series(self.priors,index=self.classes_)
+        
+        self.priors_ = p_k
+        self.dummies_ = X.drop(columns=self.target_)
+
+        # Données originales
+        self.data_ = pd.concat([y,data],axis=1)
+
+        # Matrice de contingence
         return X.groupby(self.target_).sum()
 
     
 
     def _computed_stats(self,X):
 
+        """
+        
+        
+        """
 
         if self.matrix_type == "completed":
-            base = self._is_completed(X)
+            M = self._is_completed(X)
         elif self.matrix_type == "dummies":
-            base = self._is_dummies(X)
+            M = self._is_dummies(X)
+        else:
+            raise ValueError("Error : You must pass a valid 'matrix_type'.")
         
-        # Calcul des profils
-        n_k = base.sum(axis=0)
-        p_k = n_k/np.sum(n_k)
-        
-        mod_stats = pd.concat([n_k, p_k],axis=1)
-        mod_stats.columns = ["n(k)","p(k)"]
-        print(mod_stats)
 
-        # Tableau des profils
-        row_prof = mapply(base,lambda x : x/np.sum(x),axis=1,progressbar=False)
+        
+        # Les classes - groupes
+        self.classes_ = M.index
+        self.n_classes_ = len(self.classes_)
+        #self.mod_labels_ = M.columns
+        
+        # Calcul des profils - Effectifs par classes (pour chaque descripteurs)
+        n_l = M.sum(axis=0)
+        # Profil marginal
+        G = n_l/np.sum(n_l)
+        
+        mod_stats = pd.concat([n_l,G],axis=1)
+        mod_stats.columns = ["n(l)","p(l)"]
+
+        # Tableau des profils - Matric des profils
+        profils = mapply(M,lambda x : x/np.sum(x),axis=1,progressbar=False)
         
         # Distance entre un groupe et l'origine
-        row_disto = mapply(row_prof, lambda x : np.sum((x-p_k.values)**2/p_k.values))
+        row_disto = mapply(profils,lambda x : np.sum((x-G.values)**2/G.values),axis=1,progressbar=False).to_frame("disto(k)")
+
+        # Distance entre les groupes - Mtrice des distances par paires de classes
+        row_dist = pd.DataFrame(squareform(pdist(profils,metric="seuclidean",V=G)**2),index=self.classes_,columns=self.classes_)
+
+        # Inertie totale
+        IT = np.sum([row_disto.loc[k]*self.priors_.loc[k,] for k in self.classes_])
+
+        # Mise en oeuvre de l'AFC
+        ca = CA(n_components=None,
+                row_labels=M.index,
+                col_labels=M.columns,
+                row_sup_labels=None,
+                col_sup_labels=None,
+                graph=False).fit(M)
         
+        # Stockage des résultats de l'ACM
+        col = get_ca_col(ca)
 
-        # 
+        # Coefficient des fonctions discriminantes canoniques
+        coef = mapply(col["coord"],lambda x : x/(len(self.features_labels_)*np.sqrt(ca.eig_[0])),axis=1,progressbar=False)
+        
+        # Coordonnées des individus à partir du tableau des indicatrices
+        row_coord = self.dummies_.dot(coef)
+        
+        # Somme des carrés totales - totla sum of squared
+        tss = mapply(row_coord,lambda x : x**2,axis=0,progressbar=False).sum(axis=0)
+        
+        # Rapport de corrélation
+        eta2 = ((self.n_rows_*ca.eig_[0])/tss).to_frame("correl. ratio").T
 
+        # All informations
+        self.mod_stats = mod_stats
+        self.row_dist_ = row_dist
+        self.row_disto_ = row_disto
+        self.gcoord_ = pd.DataFrame(ca.row_coord_,index=ca.row_labels_,columns=ca.dim_index_)
+        self.ca_model_ = ca
+        
+        self.inertia_ = IT
+        self.coef_ = coef
+        self.row_coord_ = row_coord
+        self.correlation_ratio_ = eta2
+
+        
+    def fit_transform(self,X):
+        """
+        
+        
+        
+        """
+
+
+
+        self.fit(X)
+
+
+        return self.row_coord_
+    
+
+    def transform(self,X,y=None):
+        """ Apply the dimensionality reduction on X. X is projected on
+        the first axes previous extracted from a training set.
+        Parameters
+        ----------
+        X : array of string, int or float, shape (n_rows_sup, n_vars)
+            New data, where n_rows_sup is the number of supplementary
+            row points and n_vars is the number of variables.
+            X is a data table containing a category in each cell.
+            Categories can be coded by strings or numeric values.
+            X rows correspond to supplementary row points that are
+            projected onto the axes.
+        
+        y : None
+            y is ignored.
+        Returns
+        -------
+        X_new : array of float, shape (n_rows_sup, n_components_)
+            X_new : coordinates of the projections of the supplementary
+            row points onto the axes.
+        """
+        if not isinstance(X,pd.DataFrame):
+           raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
+        #self._compute_row_sup_stats(X)
+        if self.matrix_type == "completed":
+            n_rows = X.shape[0]
+            n_cols = len(self.mod_labels_)
+            Y = np.zeros((n_rows,n_cols))
+            for i in np.arange(0,n_rows,1):
+                values = [self.features_labels_[k] +"_"+str(X.iloc[i,k]) for k in np.arange(0,self.n_features_)]
+                for j in np.arange(0,n_cols,1):
+                    if self.mod_labels_[j] in values:
+                        Y[i,j] = 1
+            row_sup_dummies = pd.DataFrame(Y,columns=self.mod_labels_,index=X.index)
+        elif self.matrix_type == "dummies":
+            row_sup_dummies = X
+        else:
+            raise ValueError("Error : You must pass a valid 'matrix_type'.")
+        
+        return row_sup_dummies.dot(self.coef_)
+    
+    def decision_function(self,X):
+
+        """Apply decision function to an array of samples.
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_samples_, n_features)
+            DataFrame of samples (test vectors).
+
+        Returns
+        -------
+        C : DataFrame of shape (n_samples_,) or (n_samples_, n_classes)
+            Decision function values related to each class, per sample.
+        """
+
+        # Coordonnées des individus
+        coord = self.transform(X)
+
+        # Distance euclidiennes aux centres de classes
+        scores = pd.concat((mapply(self.gcoord_.sub(coord.loc[i,:].values,axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False).to_frame(i).rename_axis(None).T 
+                            for i in coord.index),axis=0)
+
+        return scores
+
+
+
+    def predict_proba(self,X):
+        """Estimate probability
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_samples_,n_features_)
+            Input data.
+        
+        Returns:
+        --------
+        C : DataFrame of shape (n_samples_,n_classes_)
+            Estimated probabilities.
+        
+        """
+
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Decision
+        scores = self.decision_function(X)
+
+        # Distance généralisée : scores - 2*log(p_k)
+        DG = scores.sub((2*np.log(self.priors_.to_frame(name="p(k)").T.loc[:,scores.columns].values)),axis="columns")
+    
+        # Probabilité d'appartenance - transformation 
+        C = mapply(mapply(DG,lambda x : np.exp(-0.5*x),axis=0,progressbar=False),lambda x : x/np.sum(x),axis=1,progressbar=False)
+        return C
+    
+    def predict(self,X):
+        """Predict class labels for samples in X
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_samples_, n_features_)
+            The data matrix for which we want to get the predictions.
+        
+        Returns:
+        --------
+        y_pred : ndarray of shape (n_samples)
+            Vectors containing the class labels for each sample
+        """
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        predict_proba = self.predict_proba(X)
+        predict = np.unique(self.classes_)[np.argmax(predict_proba.values,axis=1)]
+        predict = pd.DataFrame(predict,columns=["predict"],index=X.index)
+        return predict
+    
+    def score(self, X, y, sample_weight=None):
+
+        """
+        Return the mean accuracy on the given test data and labels.
+
+        In multi-label classification, this is the subset accuracy
+        which is a harsh metric since you require for each sample that
+        each label set be correctly predicted.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Test samples.
+
+        y : array-like of shape (n_samples,) or (n_samples, n_outputs)
+            True labels for `X`.
+
+        sample_weight : array-like of shape (n_samples,), default=None
+            Sample weights.
+
+        Returns
+        -------
+        score : float
+            Mean accuracy of ``self.predict(X)`` w.r.t. `y`.
+        """
+        
+        return accuracy_score(y, self.predict(X), sample_weight=sample_weight)
 
 ##################################################################################################
 #           Linear Discriminant Analysis with both Continuous and Categorical variables (DISMIX)
@@ -2252,7 +2531,7 @@ class STEPDISC(BaseEstimator,TransformerMixin):
                             row_labels=clf.row_labels_).fit(clf.data_)
                 self.train_model_ = model
             elif clf.model_ == "candisc":
-                model = CANDISC(features_labels=new_features,target=clf.target_,row_labels=clf.row_labels_)
+                model = CANDISC(features_labels=new_features,target=clf.target_,row_labels=clf.row_labels_).fit(clf.data_)
                 self.train_model_ = model
             
 
