@@ -336,7 +336,6 @@ class CANDISC(BaseEstimator,TransformerMixin):
         class_level_information = pd.concat([I_k,p_k],axis=1,ignore_index=False)
         class_level_information.columns = ["n(k)","p(k)"]
         
-
         # Mean by group
         g_k = X.groupby(self.target_).mean()
 
@@ -359,12 +358,12 @@ class CANDISC(BaseEstimator,TransformerMixin):
         # First Matrix - French approach
         M1 = B.dot(np.linalg.inv(V)).T
         eigen1, _ = np.linalg.eig(M1)
-        eigen_values1 = eigen1[:self.n_components_]
+        eigen_values1 = np.real(eigen1[:self.n_components_])
 
         # Second Matrix - Anglosaxonne approach
         M2 = B.dot(np.linalg.inv(W)).T
         eigen2, _ = np.linalg.eig(M2)
-        eigen_values2 = eigen2[:self.n_components_]
+        eigen_values2 = np.real(eigen2[:self.n_components_])
 
         # Eigenvalue informations
         eigen_values = eigen_values2
@@ -377,8 +376,13 @@ class CANDISC(BaseEstimator,TransformerMixin):
         C = pd.concat(list(map(lambda k : np.sqrt(p_k.loc[k,])*(g_k.loc[k,]-xmean),self.classes_)),axis=1)
         C.columns = self.classes_
         
+        # Diagonalisation de la matrice M
         M3 = np.dot(np.dot(C.T,np.linalg.inv(V)),C)
         eigen3, vector3 = np.linalg.eig(M3)
+        # Gestion des nombres complexes
+        eigen3 = np.real(eigen3)
+        vector3 = np.real(vector3)
+
         # Reverse sort eigenvalues - Eigenvalues aren't in best order
         new_eigen = np.array(sorted(eigen3,reverse=True))
         idx = [list(eigen3).index(x) for x in new_eigen]
