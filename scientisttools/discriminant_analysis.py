@@ -2394,11 +2394,15 @@ class STEPDISC(BaseEstimator,TransformerMixin):
         ---------
         clf : an instance of class LINEARDISC or CANDISC
         
-        
         """
 
         if clf.model_ not in ["candisc","lda"]:
             raise ValueError("Error : 'clf' must be and instance of class 'LINEARDISC' or 'CANDISC'.")
+        
+        isMethodValid = ["forward", "backward","stepwise"]
+        method = method.lower()
+        if method not in isMethodValid:
+            raise ValueError("Error : 'method' must be either 'backward','forward' or 'stepwise'.")
         
         self._compute_stats(clf)
         
