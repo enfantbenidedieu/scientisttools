@@ -2118,43 +2118,34 @@ def plotCANDISC(self,
 #               Hierarchical Clustering on Principal Components
 #######################################################################################
 
-def plot_hcpc_dendrogram(self,**kwargs):
+def plot_dendrogram(self,**kwargs):
     """
     
     
     """
-    if self.model_ != "hcpc":
+    if self.model_ not in ["hcpc","varqualhca"]:
         raise ValueError("Error : 'self' must be an object of class HCPC.")
     
     max_d = kwargs.pop('max_d', None)
     if max_d and 'color_threshold' not in kwargs:
         kwargs['color_threshold'] = max_d
     annotate_above = kwargs.pop('annotate_above', 0)
-    ddata = dendrogram(self.linkage_matrix_,labels=self.row_labels_,**kwargs)
+
+    if self.model_ == "hcpc":
+        label = self.row_labels_
+    elif self.model_ == "varqualhca":
+        label = self.labels_
+
+    ddata = dendrogram(self.linkage_matrix_,labels=label,**kwargs)
     if not kwargs.get('no_plot', False):
         for i, d, c in zip(ddata['icoord'],ddata['dcoord'], ddata['color_list']):
             x = 0.5 * sum(i[1:3])
             y = d[1]
             if y > annotate_above:
-                plt.plot(x, y, 'o',c=c);
+                plt.plot(x, y,'o',c=c);
                 plt.annotate("%.3g" % y,(x,y),xytext=(0, -5),textcoords='offset points',va='top', ha='center');
         if max_d:
           plt.axhline(y=max_d, c = "k");
-    # Add color in
-    lb = pd.DataFrame(fcluster(self.linkage_matrix_,t=max_d,criterion='distance'),index=self.row_labels_,columns=["cluster"])
-    lb["cluster"] = pd.Categorical(lb["cluster"])
-    my_color=lb['cluster'].cat.codes
-    # Apply the right color to each label
-    my_palette = plt.cm.get_cmap("Accent", len(np.unique(lb["cluster"])))
-    ax =  kwargs["ax"]
-    xlbls = ax.get_ymajorticklabels()
-    num =-1
-    for lbl in xlbls:
-        num+=1
-        val=my_color[num]
-        lbl.set_color(my_palette(val))
-   
-    return ddata
 
 def rgb_hex(color):
     '''converts a (r,g,b) color (either 0-1 or 0-255) to its hex representation.

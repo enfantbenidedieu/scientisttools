@@ -175,6 +175,7 @@ class PCA(BaseEstimator,TransformerMixin):
                  row_sup_labels =None,
                  quanti_sup_labels = None,
                  quali_sup_labels = None,
+                 parallelize=False,
                  graph=False,
                  figsize=None):
         self.normalize = normalize
@@ -184,6 +185,7 @@ class PCA(BaseEstimator,TransformerMixin):
         self.row_sup_labels = row_sup_labels
         self.quanti_sup_labels = quanti_sup_labels
         self.quali_sup_labels = quali_sup_labels
+        self.parallelize = parallelize
         self.graph = graph
         self.figsize = figsize
 
@@ -325,6 +327,12 @@ class PCA(BaseEstimator,TransformerMixin):
         -------
         None
         """
+
+        # Parallel option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
 
         self.n_rows_, self.n_cols_ = X.shape
 
@@ -569,14 +577,14 @@ class PCA(BaseEstimator,TransformerMixin):
                                       .groupby(cols).mean().iloc[1,:].to_frame(name=cols).T for cols in dummies.columns),axis=0)
         
         # Rapport de corrélation
-        quali_sup_eta2 = pd.concat(((mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False).mul(p_k,axis="index")
+        quali_sup_eta2 = pd.concat(((mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_).mul(p_k,axis="index")
                                                   .loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index),:]
                                                   .sum(axis=0).to_frame(name=cols).T.div(self.eig_[0])) for cols in X.columns),axis=0)
         
         # Supplementary categories v-test
         mod_sup_vtest = mapply(mapply(mod_sup_coord,lambda x : x/np.sqrt((self.n_rows_-n_k)/((self.n_rows_-1)*n_k)),
-                                        axis=0,progressbar=False),
-                                 lambda x : x/np.sqrt(self.eig_[0]),axis=1,progressbar=False)
+                                        axis=0,progressbar=False,n_workers=self.n_workers_),
+                                 lambda x : x/np.sqrt(self.eig_[0]),axis=1,progressbar=False,n_workers=self.n_workers_)
         
         # Moyennes conditionnelles sur la variable Z
         mz_g = pd.concat((pd.concat((pd.DataFrame(self.normalized_data_,index=self.row_labels_,
@@ -584,14 +592,14 @@ class PCA(BaseEstimator,TransformerMixin):
                                     .groupby(cols).mean().iloc[1,:].to_frame(name=cols).T for cols in dummies.columns),axis=0)
 
         # Distance des modalités à  l'origine
-        mod_sup_disto = mapply(mz_g,lambda x : np.sum(x**2),axis=1,progressbar=False)
+        mod_sup_disto = mapply(mz_g,lambda x : np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_)
 
         # Supplementary categories cos2
-        mod_sup_cos2 = mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False).div(mod_sup_disto,axis="index")
+        mod_sup_cos2 = mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_).div(mod_sup_disto,axis="index")
 
         # Supplementary categories eta2 - correlation
         quali_sup_eta2 = pd.concat((mapply(mod_sup_coord.loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index),:],
-                                           lambda x : x**2,axis=1,progressbar=False)
+                                           lambda x : x**2,axis=1,progressbar=False,n_workers=self.n_workers_)
                                            .mul(p_k.loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index)],axis="index")
                                            .div(self.eig_[0],axis="columns")
                                            .sum(axis=0).to_frame(name=cols).T for cols in X.columns),axis=0)
@@ -738,6 +746,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
                 row_labels=None,
                 col_labels=None,
                 partial_labels=None,
+                parallelize = False,
                 graph = False,
                 figsize=None):
         self.n_components = n_components
@@ -745,6 +754,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         self.row_labels = row_labels
         self.col_labels = col_labels
         self.partial_labels = partial_labels
+        self.parallelize = parallelize
         self.graph = graph
         self.figsize = figsize
     
@@ -776,6 +786,13 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         
         
         """
+
+        # Parallel option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
 
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
@@ -822,7 +839,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
             E.loc[:,lab] = res.resid
         
         # Coefficients normalisés
-        normalized_data = mapply(self.data_,lambda x : (x - x.mean())/x.std(),axis=0,progressbar=False)
+        normalized_data = mapply(self.data_,lambda x : (x - x.mean())/x.std(),axis=0,progressbar=False,n_workers=self.n_workers_)
         normalized_coef = pd.DataFrame(np.zeros((len(self.partial_labels_),X.shape[1])),
                                        index = self.partial_labels_,columns=X.columns)
         for lab in X.columns:
@@ -1825,6 +1842,7 @@ class CA(BaseEstimator,TransformerMixin):
                  col_labels=None,
                  row_sup_labels=None,
                  col_sup_labels=None,
+                 parallelize = False,
                  graph=True,
                  figsize=None):
         self.n_components = n_components
@@ -1832,6 +1850,7 @@ class CA(BaseEstimator,TransformerMixin):
         self.col_labels = col_labels
         self.row_sup_labels = row_sup_labels
         self.col_sup_labels = col_sup_labels
+        self.parallelize = parallelize
         self.graph = graph
         self.figsize = figsize
     
@@ -1925,8 +1944,15 @@ class CA(BaseEstimator,TransformerMixin):
     def _compute_indicators(self,X):
         """
         """
+
+        # Parallel option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         # 
-        prob_conj = mapply(X,lambda x : x/self.total_,axis=0,progressbar=False)
+        prob_conj = mapply(X,lambda x : x/self.total_,axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # probabilité marginale de V1 - marge colonne
         row_prob = prob_conj.sum(axis = 1)
@@ -1951,24 +1977,24 @@ class CA(BaseEstimator,TransformerMixin):
 
         standardized_resid = pd.DataFrame(self.standardized_resid_,index=self.row_labels_,columns=self.col_labels_)
 
-        adjusted_resid = mapply(mapply(standardized_resid,lambda x : x/np.sqrt(1 - col_prob),axis=1,progressbar=False),
-                                lambda x : x/np.sqrt(1-row_prob),axis=0,progressbar=False)
+        adjusted_resid = mapply(mapply(standardized_resid,lambda x : x/np.sqrt(1 - col_prob),axis=1,progressbar=False,n_workers=self.n_workers_),
+                                lambda x : x/np.sqrt(1-row_prob),axis=0,progressbar=False,n_workers=self.n_workers_)
         
-        chi2_contribution = mapply(standardized_resid,lambda x : 100*(x**2)/statistic,axis=0,progressbar=False)
+        chi2_contribution = mapply(standardized_resid,lambda x : 100*(x**2)/statistic,axis=0,progressbar=False,n_workers=self.n_workers_)
         # 
         attraction_repulsion_index = X/self.expected_freq_
 
         # Profils lignes
-        row_prof = mapply(prob_conj,lambda x : x/np.sum(x), axis=1,progressbar=False)
+        row_prof = mapply(prob_conj,lambda x : x/np.sum(x), axis=1,progressbar=False,n_workers=self.n_workers_)
         
         ## Profils colonnes
-        col_prof = mapply(prob_conj,lambda x : x/np.sum(x), axis=0,progressbar=False)
+        col_prof = mapply(prob_conj,lambda x : x/np.sum(x), axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Row distance
         row_dist = squareform(pdist(row_prof,metric= "seuclidean",V=col_prob)**2)
         
         # Distance entre individus et l'origine
-        row_disto = mapply(row_prof,lambda x :np.sum((x-col_prob)**2/col_prob),axis = 1,progressbar=False)
+        row_disto = mapply(row_prof,lambda x :np.sum((x-col_prob)**2/col_prob),axis = 1,progressbar=False,n_workers=self.n_workers_)
 
         # Poids des observations
         row_weight = row_sum/np.sum(row_sum)
@@ -1984,7 +2010,7 @@ class CA(BaseEstimator,TransformerMixin):
         col_dist = squareform(pdist(col_prof.T,metric= "seuclidean",V=row_prob)**2)
 
         # Distance à l'origine
-        col_disto = mapply(col_prof.T,lambda x : np.sum((x-row_prob)**2/row_prob),axis = 1,progressbar=False)
+        col_disto = mapply(col_prof.T,lambda x : np.sum((x-row_prob)**2/row_prob),axis = 1,progressbar=False,n_workers=self.n_workers_)
 
         # Poids des colonnes
         col_weight = col_sum/np.sum(col_sum)
@@ -2181,6 +2207,7 @@ class MCA(BaseEstimator,TransformerMixin):
                  row_sup_labels = None,
                  quali_sup_labels = None,
                  quanti_sup_labels=None,
+                 parallelize = False,
                  graph=True,
                  figsize=None):
         self.n_components = n_components
@@ -2195,6 +2222,7 @@ class MCA(BaseEstimator,TransformerMixin):
         self.row_sup_labels = row_sup_labels
         self.quali_sup_labels = quali_sup_labels
         self.quanti_sup_labels = quanti_sup_labels
+        self.parallelize = parallelize
         self.graph = graph
         self.figsize = figsize
 
@@ -2262,8 +2290,13 @@ class MCA(BaseEstimator,TransformerMixin):
         
         if self.n_components == 1:
             raise ValueError("n_components must be grather than 1.")
+    
+        # Parallel option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
         
-
         self._compute_svds(X_)
         
         # Compute supplementary quantitatives variables statistics
@@ -2303,8 +2336,7 @@ class MCA(BaseEstimator,TransformerMixin):
             Dummy-coded data. If data contains other columns than the dummy-coded
             one(s), these will be prepended, unaltered, to the result.
         """
-        dummies = (pd.get_dummies(X[cols],prefix=cols,prefix_sep='_') for cols 
-                        in (X.columns if self.var_labels_ is None else self.var_labels_))
+        dummies = (pd.get_dummies(X[cols],prefix=cols,prefix_sep='_') for cols in (X.columns if self.var_labels_ is None else self.var_labels_))
         return pd.concat(dummies,axis=1)
 
     def _compute_disjonctif_table(self,X):
@@ -2425,14 +2457,14 @@ class MCA(BaseEstimator,TransformerMixin):
         # Qualitative informations
         mod_coord_df = pd.DataFrame(mod_coord,index=self.mod_labels_,columns=self.dim_index_)
         dummies_mean = self.disjonctif_.mean(axis=0)
-        var_eta2 = mapply(mod_coord_df,lambda x : x**2,axis=0,progressbar=False).mul(dummies_mean, axis='index')
+        var_eta2 = mapply(mod_coord_df,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_).mul(dummies_mean, axis='index')
         var_eta2 = pd.concat((mapply(var_eta2.loc[filter(lambda x: x.startswith(cols),var_eta2.index),:],lambda x : np.sum(x),
-                             axis=0,progressbar=False).to_frame(name=cols).T for cols in  self.var_labels_),axis=0)
+                             axis=0,progressbar=False,n_workers=self.n_workers_).to_frame(name=cols).T for cols in  self.var_labels_),axis=0)
     
         # Cosinus carrés des variables qualitatives
         denom = np.array([len(np.unique(self.original_data_[[col]]))-1 for col in self.var_labels_])
         var_cos2 = var_eta2.div(denom,axis="index")
-        var_contrib = mapply(var_eta2,lambda x : 100*x/self.eig_[0],axis=1,progressbar=False)
+        var_contrib = mapply(var_eta2,lambda x : 100*x/self.eig_[0],axis=1,progressbar=False,n_workers=self.n_workers_)
 
         # Store all informations
         self.row_coord_ = row_coord
@@ -2488,7 +2520,7 @@ class MCA(BaseEstimator,TransformerMixin):
         row_dist = squareform(pdist(self.disjonctif_/self.n_vars_,metric="seuclidean",V=ind_moyen)**2)
 
         # Distance des observations à l'origine
-        row_disto = mapply(self.disjonctif_,lambda x : np.sum((1/ind_moyen)*(x/self.n_vars_ - ind_moyen)**2),axis=1,progressbar=False)
+        row_disto = mapply(self.disjonctif_,lambda x : np.sum((1/ind_moyen)*(x/self.n_vars_ - ind_moyen)**2),axis=1,progressbar=False,n_workers=self.n_workers_)
         
         # Poids des observations
         row_weight = np.ones(self.n_rows_)/self.n_rows_
@@ -2605,7 +2637,7 @@ class MCA(BaseEstimator,TransformerMixin):
             row_sup_dummies = pd.DataFrame(Y,columns=self.mod_labels_,index=X.index)
         else:
             row_sup_dummies = X
-        row_sup_profil = (mapply(row_sup_dummies,lambda x : x/np.sum(x),axis=1,progressbar=False)
+        row_sup_profil = (mapply(row_sup_dummies,lambda x : x/np.sum(x),axis=1,progressbar=False,n_workers=self.n_workers_)
                                 .dot(self.mod_coord_)/np.sqrt(self.eig_[0]))
         
         self.row_sup_coord_ = np.array(row_sup_profil)
@@ -2637,7 +2669,7 @@ class MCA(BaseEstimator,TransformerMixin):
         mod_sup_labels = dummies.columns
         short_sup_labels = list([x.split("_",1)[-1] for x in mod_sup_labels])
 
-        mod_sup_coord = mapply(dummies,lambda x : x/np.sum(x),axis=0,progressbar=False).T.dot(self.row_coord_)/np.sqrt(self.eig_[0])
+        mod_sup_coord = mapply(dummies,lambda x : x/np.sum(x),axis=0,progressbar=False,n_workers=self.n_workers_).T.dot(self.row_coord_)/np.sqrt(self.eig_[0])
 
         # Rapport de corrélation
         """
@@ -2646,10 +2678,10 @@ class MCA(BaseEstimator,TransformerMixin):
                                                   .sum(axis=0).to_frame(name=cols).T.div(self.eig_[0])) for cols in X.columns),axis=0)
         """
 
-        mod_sup_cos2 = mapply(mod_sup_coord,lambda x: x**2/np.linalg.norm(mod_sup_coord,axis=1)**2,axis=0,progressbar=False)
+        mod_sup_cos2 = mapply(mod_sup_coord,lambda x: x**2/np.linalg.norm(mod_sup_coord,axis=1)**2,axis=0,progressbar=False,n_workers=self.n_workers_)
 
         mod_sup_disto = (1/p_k)-1
-        mod_sup_vtest = mapply(mod_sup_coord,lambda x : x*np.sqrt(((self.n_rows_-1)*n_k.values)/(self.n_rows_ - n_k.values)),axis=0,progressbar=False)
+        mod_sup_vtest = mapply(mod_sup_coord,lambda x : x*np.sqrt(((self.n_rows_-1)*n_k.values)/(self.n_rows_ - n_k.values)),axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Store supplementary categories informations
         self.mod_sup_coord_     =   np.array(mod_sup_coord)
@@ -2735,7 +2767,7 @@ class MCA(BaseEstimator,TransformerMixin):
             row_sup_dummies = pd.DataFrame(Y,columns=self.mod_labels_,index=X.index)
         else:
             row_sup_dummies = X
-        row_sup_coord = (mapply(row_sup_dummies,lambda x : x/np.sum(x),axis=1,progressbar=False)
+        row_sup_coord = (mapply(row_sup_dummies,lambda x : x/np.sum(x),axis=1,progressbar=False,n_workers=self.n_workers_)
                                 .dot(self.mod_coord_)/np.sqrt(self.eig_[0]))
         
         row_sup_coord = np.array(row_sup_coord)
@@ -2788,6 +2820,7 @@ class FAMD(BaseEstimator,TransformerMixin):
                  row_sup_labels=None,
                  quanti_sup_labels=None,
                  quali_sup_labels=None,
+                 parallelize = False,
                  graph=False,
                  figsize=None):
         self.normalize =normalize
@@ -2798,6 +2831,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         self.row_sup_labels = row_sup_labels
         self.quanti_sup_labels = quanti_sup_labels
         self.quali_sup_labels = quali_sup_labels
+        self.parallelize = parallelize
         self.graph = graph
         self.figsize= figsize
     
@@ -2857,6 +2891,12 @@ class FAMD(BaseEstimator,TransformerMixin):
         #Additionnal informations for supplementary categorical informations
         self.quali_sup_eta2_ = None
 
+        # Parallel option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         # Compute statistics
         self.n_rows_ = X_.shape[0]
         X_quant = X_.select_dtypes(include=np.number)
@@ -2912,7 +2952,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             Z1 = X_quant - self.means_
 
-        Z2 = mapply(dummies,lambda x: x/np.sqrt(self.dummies_means_.values),axis = 1,progressbar=False)
+        Z2 = mapply(dummies,lambda x: x/np.sqrt(self.dummies_means_.values),axis = 1,progressbar=False,n_workers=self.n_workers_)
 
         Z = pd.concat([Z1,Z2],axis=1)
 
@@ -2920,9 +2960,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         row_dist = squareform(pdist(Z,metric='sqeuclidean'))
 
         # Distance between individuals and inertia center
-        row_disto = (mapply(Z1,lambda x:np.sum(x**2),axis=1,progressbar=False) + 
+        row_disto = (mapply(Z1,lambda x:np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_) + 
                      mapply(dummies,lambda x:np.sum(1/self.dummies_means_.values*(x-self.dummies_means_.values)**2),
-                            axis=1,progressbar=False))
+                            axis=1,progressbar=False,n_workers=self.n_workers_))
         # Individuals weight
         row_weight = np.ones(self.n_rows_)/self.n_rows_
 
@@ -2937,7 +2977,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         mod_dist = self.n_rows_*squareform(pdist(dummies_weight.T,metric="sqeuclidean"))
 
         # Distance à l'origine
-        mod_disto = mapply(dummies_weight,lambda x : np.sum(self.n_rows_*(x-row_weight)**2),axis=0,progressbar=False)
+        mod_disto = mapply(dummies_weight,lambda x : np.sum(self.n_rows_*(x-row_weight)**2),axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Poids des modalités
         mod_weight = n_k/(self.n_rows_*dummies.shape[1])
@@ -3010,11 +3050,11 @@ class FAMD(BaseEstimator,TransformerMixin):
         col_coord = var_mod_coord.loc[self.quanti_labels_,:]
 
         ####### Quantitative columns - Cos2 & Contrib
-        col_cos2 = mapply(col_coord,lambda x : x**2, axis=1,progressbar=False)
-        col_contrib = mapply(col_coord,lambda x : 100*x**2/res.eig_[0],axis=1,progressbar=False)
+        col_cos2 = mapply(col_coord,lambda x : x**2, axis=1,progressbar=False,n_workers=self.n_workers_)
+        col_contrib = mapply(col_coord,lambda x : 100*x**2/res.eig_[0],axis=1,progressbar=False,n_workers=self.n_workers_)
 
         # Test de significativité de Fisher
-        col_ftest = mapply(col_coord,lambda x : (1/2)*np.sqrt(self.n_rows_-3)*np.log((1+x)/(1-x)),axis=0,progressbar=False)
+        col_ftest = mapply(col_coord,lambda x : (1/2)*np.sqrt(self.n_rows_-3)*np.log((1+x)/(1-x)),axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Quantitatives informations
         self.col_coord_     = np.array(col_coord)
@@ -3030,20 +3070,20 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         coord_mod = var_mod_coord.loc[self.mod_labels_,:]
 
-        mod_cos2 = mapply(mod_coord,lambda x : x**2/(self.mod_infos_[:,0]**2), axis=0,progressbar=False)
-        mod_contrib = mapply(coord_mod,lambda x : 100*x**2/res.eig_[0],axis = 1,progressbar=False)
+        mod_cos2 = mapply(mod_coord,lambda x : x**2/(self.mod_infos_[:,0]**2), axis=0,progressbar=False,n_workers=self.n_workers_)
+        mod_contrib = mapply(coord_mod,lambda x : 100*x**2/res.eig_[0],axis = 1,progressbar=False,n_workers=self.n_workers_)
         mod_vtest = mapply(mapply(mod_coord,lambda x : x*np.sqrt(((self.n_rows_-1)*Iq.values)/(self.n_rows_-Iq.values)),
-                                  axis=0,progressbar=False),
-                           lambda x : x/np.sqrt(res.eig_[0]),axis=1,progressbar=False)
+                                  axis=0,progressbar=False,n_workers=self.n_workers_),
+                           lambda x : x/np.sqrt(res.eig_[0]),axis=1,progressbar=False,n_workers=self.n_workers_)
         
         # Qualitative informations
         var_eta2 = pd.concat((mapply(coord_mod.loc[filter(lambda x: x.startswith(cols),coord_mod.index),:],
-                                     lambda x : x**2,axis=1,progressbar=False).sum().to_frame(name=cols).T for cols in self.quali_labels_),axis=0)
+                                     lambda x : x**2,axis=1,progressbar=False,n_workers=self.n_workers_).sum().to_frame(name=cols).T for cols in self.quali_labels_),axis=0)
         
         # Cosinus carrés des variables qualitatives
         denom = np.array([len(np.unique(Xq[[col]]))-1 for col in self.quali_labels_])
         var_cos2 = var_eta2.div(denom,axis="index")
-        var_contrib = mapply(var_eta2,lambda x : 100*x/res.eig_[0],axis=1,progressbar=False)
+        var_contrib = mapply(var_eta2,lambda x : 100*x/res.eig_[0],axis=1,progressbar=False,n_workers=self.n_workers_)
     
         # Modality informations
         self.coord_mod_ = np.array(coord_mod)
@@ -3129,15 +3169,15 @@ class FAMD(BaseEstimator,TransformerMixin):
         row_sup_dummies = pd.DataFrame(Y,columns=self.mod_labels_,index=X.index)
 
         # New normalized Data
-        Z2 = mapply(row_sup_dummies,lambda x : (x - self.dummies_means_)/self.dummies_std_,axis=1,progressbar=False)
+        Z2 = mapply(row_sup_dummies,lambda x : (x - self.dummies_means_)/self.dummies_std_,axis=1,progressbar=False,n_workers=self.n_workers_)
 
         # Supplementary individuals coordinates
         row_sup_coord = np.dot(pd.concat([Z1,Z2],axis=1),self.eigen_vectors_)
 
         # Supplementary individuals distance to inertia
-        row_sup_disto = (mapply(Z1,lambda x:np.sum(x**2),axis=1,progressbar=False) + 
+        row_sup_disto = (mapply(Z1,lambda x:np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_) + 
                             mapply(row_sup_dummies,lambda x:np.sum(1/self.dummies_means_.values*(x-self.dummies_means_.values)**2),
-                            axis=1,progressbar=False))
+                            axis=1,progressbar=False,n_workers=self.n_workers_))
         
         row_sup_cos2 = np.apply_along_axis(func1d=lambda x : x**2/(row_sup_disto),axis=0,arr=row_sup_coord)
 
@@ -3252,28 +3292,28 @@ class FAMD(BaseEstimator,TransformerMixin):
                                       .groupby(cols).mean().iloc[1,:].to_frame(name=cols).T for cols in dummies.columns),axis=0)
         
         # Rapport de corrélation
-        quali_sup_eta2 = pd.concat(((mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False).mul(p_k,axis="index")
+        quali_sup_eta2 = pd.concat(((mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_).mul(p_k,axis="index")
                                                   .loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index),:]
                                                   .sum(axis=0).to_frame(name=cols).T.div(self.eig_[0])) for cols in X.columns),axis=0)
         
         # Supplementary categories v-test
         mod_sup_vtest = mapply(mapply(mod_sup_coord,lambda x : x/np.sqrt((self.n_rows_-n_k)/((self.n_rows_-1)*n_k)),
-                                        axis=0,progressbar=False),
-                                 lambda x : x/np.sqrt(self.eig_[0]),axis=1,progressbar=False)
+                                        axis=0,progressbar=False,n_workers=self.n_workers_),
+                                 lambda x : x/np.sqrt(self.eig_[0]),axis=1,progressbar=False,n_workers=self.n_workers_)
         
         # Moyennes conditionnelles sur la variable Z
         mz_g = pd.concat((pd.concat((self.normalized_data_,dummies[cols]),axis=1)
                                     .groupby(cols).mean().iloc[1,:].to_frame(name=cols).T for cols in dummies.columns),axis=0)
 
         # Distance des modalités à  l'origine
-        mod_sup_disto = mapply(mz_g,lambda x : np.sum(x**2),axis=1,progressbar=False)
+        mod_sup_disto = mapply(mz_g,lambda x : np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_)
 
         # Supplementary categories cos2
-        mod_sup_cos2 = mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False).div(mod_sup_disto,axis="index")
+        mod_sup_cos2 = mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_).div(mod_sup_disto,axis="index")
 
         # Supplementary categories eta2 - correlation
         quali_sup_eta2 = pd.concat((mapply(mod_sup_coord.loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index),:],
-                                           lambda x : x**2,axis=1,progressbar=False)
+                                           lambda x : x**2,axis=1,progressbar=False,n_workers=self.n_workers_)
                                            .mul(p_k.loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index)],axis="index")
                                            .div(self.eig_[0],axis="columns")
                                            .sum(axis=0).to_frame(name=cols).T for cols in X.columns),axis=0)
@@ -3353,7 +3393,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         row_sup_dummies = pd.DataFrame(Y,columns=self.mod_labels_,index=X.index)
 
         # New normalized data
-        Z2 = mapply(row_sup_dummies,lambda x : (x - self.dummies_means_)/self.dummies_std_,axis=1,progressbar=False)
+        Z2 = mapply(row_sup_dummies,lambda x : (x - self.dummies_means_)/self.dummies_std_,axis=1,progressbar=False,n_workers=self.n_workers_)
 
         # Supplementary individuals coordinates
         row_sup_coord = np.dot(np.array(pd.concat([Z1,Z2],axis=1)),self.eigen_vectors_)

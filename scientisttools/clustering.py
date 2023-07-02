@@ -7,12 +7,14 @@ import matplotlib.pyplot as plt
 from scientisttools.utils import eta2
 from mapply.mapply import mapply
 from scipy.cluster import hierarchy
+from scipy.spatial.distance import squareform
 from sklearn.cluster import KMeans
 from yellowbrick.cluster import KElbowVisualizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from scientisttools.pyplot import plotHCPC
+from scientisttools.utils import from_dummies,cramer_v
 
 
 
@@ -87,7 +89,11 @@ class HCPC(BaseEstimator,TransformerMixin):
                                          timings=False,locate_elbow=True,show=False).fit(res.row_coord_)
            self.n_clusters_ = visualizer.elbow_value_
 
+        # Linkage matrix
         link_mat = hierarchy.linkage(res.row_coord_,method=self.method_,metric = self.metric_,optimal_ordering=False)
+
+        # Order
+        order = hierarchy.leaves_list(link_mat)
 
         if res.model_ == "mca":
             active_data = res.original_data_
@@ -98,6 +104,7 @@ class HCPC(BaseEstimator,TransformerMixin):
         
         # Coupure de l'arbre
         cutree = (hierarchy.cut_tree(link_mat,n_clusters=self.n_clusters_)+1).reshape(-1, )
+        #cutree = pd.read_excel("d:/Bureau/PythonProject/packages/scientisttools/data/mca_hcpc.xlsx")["clust"].values
         cutree = list(["cluster_"+str(x) for x in cutree])
 
         # Class information
@@ -123,19 +130,21 @@ class HCPC(BaseEstimator,TransformerMixin):
         disto_near = dict()
         for k in np.unique(cluster):
             group = coord_classe[coord_classe["cluster"] == k].drop(columns=["cluster"])
-            disto = mapply(group.sub(cluster_centers.loc[k,:],axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False).to_frame("distance").reset_index()
-            disto_near[k] = disto.sort_values(by="distance")
-            disto_far[k] = disto.sort_values(by="distance",ascending=False)
+            disto = mapply(group.sub(cluster_centers.loc[k,:],axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False).to_frame("distance").reset_index(drop=False)
             # Identification du parangon
             id = np.argmin(disto.iloc[:,1])
             parangon = pd.DataFrame({"parangons" : disto.iloc[id,0],"distance" : disto.iloc[id,1]},index=[k])
             parangons = pd.concat([parangons,parangon],axis=0)
+            # Extraction des distances
+            disto_near[k] = disto.sort_values(by="distance").reset_index(drop=True)
+            disto_far[k] = disto.sort_values(by="distance",ascending=False).reset_index(drop=True)
         
         #Rapport de corrélation entre les axes et les cluster
         desc_axes = self._compute_quantitative(X=row_coord)
 
         # Informations globales
         self.linkage_matrix_ = link_mat
+        self.order_ = order
         self.parangons_ = parangons
         # Individuals closest to their cluster's center
         self.disto_near_ = pd.concat(disto_near,axis=0)
@@ -150,6 +159,10 @@ class HCPC(BaseEstimator,TransformerMixin):
         self.dim_index_ = res.dim_index_
         self.data_cluster_ = pd.concat([active_data,cluster],axis=1)
         self.eig_ = res.eig_
+
+        ### Agglomerative result
+        self.distances_ = link_mat[:,2]
+        self.children_ = link_mat[:,:2].astype(int)
 
         # Modèle
         self.model_ = "hcpc"
@@ -207,8 +220,6 @@ class HCPC(BaseEstimator,TransformerMixin):
         
         
         """
-
-        
         # Dimension du tableau
         n_rows, n_cols = X.shape
 
@@ -335,14 +346,14 @@ class HCPC(BaseEstimator,TransformerMixin):
 
         # Listing MOD/CLASS
         dummies_classe = pd.concat([dummies,self.cluster_],axis=1)
-        mod_class = dummies_classe.groupby("cluster").mean().T
+        mod_class = dummies_classe.groupby("cluster").mean().T.mul(100)
 
         class_mod = dummies_classe.groupby("cluster").sum().T
         class_mod = class_mod.div(dummies_stats["n(s)"].values,axis="index").mul(100)
 
         var_category = dict()
         for i,name in enumerate(self.cluster_labels_):
-            df =pd.concat([class_mod.iloc[:,i],mod_class.iloc[:,i],dummies_stats["n(s)"]],axis=1)
+            df =pd.concat([class_mod.iloc[:,i],mod_class.iloc[:,i],dummies_stats["p(s)"].mul(100)],axis=1)
             df.columns = ["Class/Mod","Mod/Class","Global"]
             var_category[f"cluster_{i+1}"] = df
 
@@ -353,8 +364,8 @@ class HCPC(BaseEstimator,TransformerMixin):
 
 
 
-class VARCLUST(BaseEstimator,TransformerMixin):
-    """Variables Clusstering
+class VARCLUS(BaseEstimator,TransformerMixin):
+    """Clustreing of variables
     
     
     
@@ -380,12 +391,471 @@ class VARCLUST(BaseEstimator,TransformerMixin):
     def fit(self,X,y=None):
         raise NotImplementedError("Error : This method is not yet implemented.")
 
+class VARHCA(BaseEstimator,TransformerMixin):
+    """Hierarchical Clustering Analysis of continuous variables
+
+    Parameters
+    ----------
+    n_clusters :
+    var_labels :
+    var_sup_labels :
+    min_clusters :
+    max_clusters :
+    matrix_type : {"completed","correlation"}
+    metric :
+    method :
+    max_iter :
+    init :
+    random_state :
+    """
+
+    def __init__(self,
+                 n_clusters=None,
+                 var_labels = None,
+                 var_sup_labels = None,
+                 min_clusters = 2,
+                 max_clusters = 5,
+                 matrix_type = "completed",
+                 metric="euclidean",
+                 method="ward",
+                 max_iter = 300,
+                 init="k-means++",
+                 random_state = None,
+                 parallelize=False):
+        self.n_clusters = n_clusters
+        self.var_labels = var_labels
+        self.var_sup_labels = var_sup_labels
+        self.min_clusters = min_clusters
+        self.max_clusters = max_clusters
+        self.matrix_type = matrix_type
+        self.metric = metric
+        self.method = method
+        self.max_iter =max_iter
+        self.init = init
+        self.random_state = random_state
+        self.parallelize = parallelize
+
+    
+    def fit(self,X,y=None):
+        """
+        
+        
+        """
+
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Extract supplementary columns
+        self.var_sup_labels_ = self.var_sup_labels
+        if self.var_sup_labels_ is not None:
+            if self.matrix_type == "completed":
+                Xsup = X[self.var_sup_labels_]
+                active_data = X.drop(columns=self.var_sup_labels_)
+            elif self.matrix_type == "correlation":
+                Xsup = X[self.var_sup_labels_].drop(index=self.var_sup_labels_)
+                active_data = X.drop(columns=self.var_sup_labels_).drop(index=self.var_sup_labels_)
+        else:
+            active_data = X
+
+        self.data_ = X
+        self.active_data_ = active_data
+        
+        # Compute global stat
+        self._compute_stats(active_data)
+        # 
+        if self.var_sup_labels_ is not None:
+            self.data_sup_ = Xsup
+            self.corr_mean_square_ = self.transform(Xsup)
+
+        # Compute supplementary statistique
+
+        return self
+        
+        # From covraince to correlation
+        # https://gist.github.com/wiso/ce2a9919ded228838703c1c7c7dad13b
+    
+    def _compute_stats(self,X):
+        """
+        
+        
+        """
+        # Parallel option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
+
+         # Compute correlation matrix
+        if self.matrix_type == "completed":
+            corr = X.corr(method="pearson")
+        elif self.matrix_type == "correlation":
+            corr = X
+
+        # Variable labels
+        self.var_labels_ = self.var_labels
+        if self.var_labels_ is None:
+            self.var_labels_ = corr.index
+        
+        # Number of variables
+        self.n_vars_ = len(self.var_labels_)
+         # Linkage matrix
+        self.method_ = self.method
+        if self.method_ is None:
+            self.method_ = "ward"
+        
+        self.metric_ = self.metric
+        if self.metric_ is None:
+            self.metric_ = "euclidean"
+
+        # Compute dissimilary matrix
+        D = mapply(corr,lambda x : np.sqrt(1 - x**2),axis=0,progressbar=False,n_workers=self.n_workers_)
+
+        # Vectorize
+        VD = squareform(D)
+
+        # Compute number of clusters
+        self.n_clusters_ = self.n_clusters
+        if self.n_clusters_ is None:
+           kmeans = KMeans(init=self.init,max_iter=self.max_iter,random_state=self.random_state)
+           visualizer = KElbowVisualizer(kmeans, k=(self.min_clusters,self.max_clusters),metric='distortion',
+                                         timings=False,locate_elbow=True,show=False).fit(D)
+           self.n_clusters_ = visualizer.elbow_value_
+
+        # Linkage Matrix
+        link_mat = hierarchy.linkage(VD,method=self.method_,metric = self.metric_,optimal_ordering=False)
+
+        # Order
+        order = hierarchy.leaves_list(link_mat)
+
+         # Coupure de l'arbre
+        cutree = (hierarchy.cut_tree(link_mat,n_clusters=self.n_clusters_)+1).reshape(-1, )
+        cutree = list(["cluster_"+str(x) for x in cutree])
+
+        # Class information
+        cluster = pd.DataFrame(cutree, index = self.var_labels_,columns = ["cluster"])
+
+        # Store First informations
+        self.cluster_ = cluster
+        self.cluster_labels_ = list(["cluster_"+str(x+1) for x in np.arange(self.n_clusters_)])
+        self.covariance_matrix_ = corr
+        self.linkage_matrix_ = link_mat
+
+        ### Agglomerative result
+        self.distances_ = link_mat[:,2]
+        self.children_ = link_mat[:,:2].astype(int)
+        self.order_ = order
+
+        # Model name
+        self.model_ = "varhca"
+    
+    def transform(self,X,y=None):
+        """
+        
+        
+        """
+        # Test if X is a DataFrame
+        if isinstance(X,pd.Series):
+            X = X.to_frame()
+        elif not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
+        if self.matrix_type == "completed":
+            corr_with = pd.DataFrame(np.corrcoef(self.active_data_,X,rowvar=False)[:self.n_vars_,self.n_vars_:],index = self.var_labels_,columns=X.columns)
+        elif self.matrix_type == "correlation":
+            corr_with = X
+        # Concatenation
+        corr_class = pd.concat([corr_with,self.cluster_],axis=1)
+        #moyenne des carrés des corrélations avec les groupes
+        corr_mean_square = mapply(corr_class.groupby("cluster"),lambda x : np.mean(x**2,axis=0),progressbar=False,n_workers=self.n_workers_)
+        return corr_mean_square
+
+    
+    def fit_transform(self,X,y=None):
+        """
+        
+        """
+
+        self.fit(X)
+
+        return self.linkage_matrix_
 
 
 
+
+
+class VARKMEANS(BaseEstimator,TransformerMixin):
+
+
+
+    def __init__(self,n_clusters=None):
+        self.n_clusters = n_clusters
+    
+    def fit(self,X,y=None):
+        raise NotImplementedError("Error : This method is not yet implemented.")
+
+
+class VARQUALHCA(BaseEstimator,TransformerMixin):
+    """Hierarchical Clustering Analysis of Qualitatives Variables
+
+    Parameters
+    ----------
+    n_clusters:
+    var_labels :
+    var_sup_labels :
+    mod_labels :
+    mod_sup_labels :
+    min_clusters:
+    max_clusters:
+    diss_metric : {"cramer","dice","bothpos"}
+    """
+
+    def __init__(self,
+                 n_clusters=None,
+                 var_labels = None,
+                 mod_labels = None,
+                 sup_labels = None,
+                 min_clusters = 2,
+                 max_clusters = 5,
+                 diss_metric = "cramer",
+                 matrix_type = "completed",
+                 metric="euclidean",
+                 method="ward",
+                 max_iter = 300,
+                 init="k-means++",
+                 random_state = None,
+                 parallelize=False):
+        self.n_clusters = n_clusters
+        self.var_labels = var_labels
+        self.mod_labels = mod_labels
+        self.sup_labels = sup_labels
+        self.min_clusters = min_clusters
+        self.max_clusters = max_clusters
+        self.diss_metric = diss_metric
+        self.matrix_type = matrix_type
+        self.metric = metric
+        self.method = method
+        self.max_iter =max_iter
+        self.init = init
+        self.random_state = random_state
+        self.parallelize = parallelize
+    
+
+    def fit(self,X,y=None):
+        """
+        
+        
+        
+        """
+
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Extract supplementary columns
+        self.sup_labels_ = self.sup_labels
+        if self.sup_labels_ is not None:
+            Xsup = X[self.sup_labels_]
+            active_data = X.drop(columns=self.sup_labels_)
+        else:
+            active_data = X
+
+        self.data_ = X
+        self.active_data_ = active_data
+
+
+        self._compute_stat(active_data)
+
+        return self
+    
+    def _diss_invcramer(self,X):
+        """
+        
+        
+        """
+        if self.matrix_type == "completed":
+            M = X
+        elif self.matrix_type == "disjonctif" :
+            M = from_dummies(X,sep="_")
+        
+        # Store matrix
+        self.dummies_matrix_ = pd.concat((pd.get_dummies(M[cols],prefix=cols,prefix_sep='_',drop_first=False) for cols in M.columns),axis=1)
+        self.original_data_ = M
+
+        # Compute Cramer Matrix of similarity
+        D = pd.DataFrame(index=M.columns,columns=M.columns).astype("float")
+        for row in M.columns:
+            for col in M.columns:
+                tab = pd.crosstab(M[row],M[col])
+                D.loc[row,col] = st.contingency.association(tab,method="cramer")
+
+        # Compute cramer matrix of dissimilary
+        D = mapply(D,lambda x : 1 - x,axis=0,progressbar=False,n_workers=self.n_workers_)
+        return D
+    
+    @staticmethod
+    def funSqDice(col1,col2):
+        return 0.5*np.sum((col1-col2)**2)
+    
+    @staticmethod
+    def funbothpos(col1,col2):
+        return 1 - (1/len(col1))*np.sum(col1*col2)
+    
+    def _diss_modality(self,X):
+        """
+        
+        
+        """
+        if self.matrix_type == "completed":
+            M =  pd.concat((pd.get_dummies(X[cols],prefix=cols,prefix_sep='_',drop_first=False) for cols in (X.columns if self.var_labels is None else self.var_labels)),axis=1)
+        elif self.matrix_type == "disjonctif": 
+            M = X
+        
+        self.dummies_matrix_ = M
+        self.original_data_ = from_dummies(M,sep="_")
+
+        # Compute Dissimilarity Matrix
+        D = pd.DataFrame(index=M.columns,columns=M.columns).astype("float")
+        for row in M.columns:
+            for col in M.columns:
+                if self.diss_metric == "dice":
+                    D.loc[row,col] = np.sqrt(self.funSqDice(M[row].values,M[col].values))
+                elif self.diss_metric == "bothpos":
+                    D.loc[row,col] = self.funbothpos(M[row].values,M[col].values)
+        
+        if self.diss_metric == "bothpos":
+            np.fill_diagonal(D.values,0)
+        return D
+
+    def _compute_stat(self,X):
+        """
+        
+        
+        """
+
+        # Parallel option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+        
+        # Compute Dissimilarity Matrix
+        if self.diss_metric == "cramer":
+            D = self._diss_invcramer(X)
+        elif self.diss_metric in ["dice","bothpos"]:
+            D = self._diss_modality(X)
+        
+         # Linkage matrix
+        self.method_ = self.method
+        if self.method_ is None:
+            self.method_ = "ward"
+        
+        self.metric_ = self.metric
+        if self.metric_ is None:
+            self.metric_ = "euclidean"
+
+        self.n_clusters_ = self.n_clusters
+        if self.n_clusters_ is None:
+           kmeans = KMeans(init=self.init,max_iter=self.max_iter,random_state=self.random_state)
+           visualizer = KElbowVisualizer(kmeans, k=(self.min_clusters,self.max_clusters),metric='distortion',
+                                         timings=False,locate_elbow=True,show=False).fit(D)
+           self.n_clusters_ = visualizer.elbow_value_
+
+        # Linkage matrix
+        link_mat = hierarchy.linkage(squareform(D),method=self.method_,metric = self.metric_,optimal_ordering=False)
+
+        # Order
+        order = hierarchy.leaves_list(link_mat)
+        
+        # Coupure de l'arbre
+        cutree = (hierarchy.cut_tree(link_mat,n_clusters=self.n_clusters_)+1).reshape(-1, )
+        cutree = list(["cluster_"+str(x) for x in cutree])
+
+        # Class information
+        cluster = pd.DataFrame(cutree, index=D.columns,columns = ["cluster"])
+
+        cluster_infos = cluster.groupby("cluster").size().to_frame("n(k)")
+        cluster_infos["p(k)"] = cluster_infos["n(k)"]/np.sum(cluster_infos["n(k)"])
+
+        # Store First informations
+        self.cluster_ = cluster
+        self.cluster_labels_ = list(["cluster_"+str(x+1) for x in np.arange(self.n_clusters_)])
+        self.linkage_matrix_ = link_mat
+
+        ### Agglomerative result
+        self.distances_ = link_mat[:,2]
+        self.children_ = link_mat[:,:2].astype(int)
+        self.order_ = order
+        self.labels_ = D.columns
+        self.diss_matrix_ = D
+        self.cluster_infos_ = cluster_infos
+
+        # Model name
+        self.model_ = "varqualhca"
+    
+    def transform(self,X):
+        """
+        
+        
+        """
+         # Test if X is a DataFrame
+        if isinstance(X,pd.Series):
+            X = X.to_frame()
+        elif not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
+
+        if self.diss_metric == "cramer":
+            if self.matrix_type == "completed":
+                M = X
+            elif self.matrix_type == "disjonctif" :
+                M = from_dummies(X,sep="_")
+            # V de cramer 
+            D = pd.DataFrame(index=self.labels_,columns=M.columns).astype("float")
+            for row in self.original_data_.columns:
+                for col in M.columns:
+                    tab = pd.crosstab(self.original_data_[row],M[col])
+                    D.loc[row,col] = st.contingency.association(tab,method="cramer") 
+            #moyenne v de cramer par groupe
+            corr_sup = pd.concat([D,self.cluster_],axis=1).groupby("cluster").mean()
+        elif self.diss_metric in ["dice","bothpos"]:
+            if self.matrix_type == "completed":
+                M =  pd.concat((pd.get_dummies(X[cols],prefix=cols,prefix_sep='_',drop_first=False) for cols in X.columns),axis=1)
+            elif self.matrix_type == "disjonctif": 
+                M = X
+            
+            # Compute Dissimilarity Matrix
+            D = pd.DataFrame(index=self.dummies_matrix_.columns,columns=M.columns).astype("float")
+            for row in self.dummies_matrix_.columns:
+                for col in M.columns:
+                    if self.diss_metric == "dice":
+                        D.loc[row,col] = self.funSqDice(self.dummies_matrix_[row].values,M[col].values)
+                    elif self.diss_metric == "bothpos":
+                        D.loc[row,col] = self.funbothpos(self.dummies_matrix_[row].values,M[col].values)
+            #moyenne distance par groupe
+            corr_sup = pd.concat([D,self.cluster_],axis=1).groupby("cluster").mean()
+        
+        return corr_sup
+
+        
 
 
         
+
+
+
+
 
         
         
