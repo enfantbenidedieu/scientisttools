@@ -601,8 +601,8 @@ class VARKMEANS(BaseEstimator,TransformerMixin):
         raise NotImplementedError("Error : This method is not yet implemented.")
 
 
-class VARQUALHCA(BaseEstimator,TransformerMixin):
-    """Hierarchical Clustering Analysis of Qualitatives Variables
+class CATVARHCA(BaseEstimator,TransformerMixin):
+    """Hierarchical Clustering Analysis of categories variables
 
     Parameters
     ----------
