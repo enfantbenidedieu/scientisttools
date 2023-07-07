@@ -2311,9 +2311,118 @@ def plotHCPC(self,
         ax.axvline(x=0,color=vline_color,linestyle=vline_style)   
     
 
+#######################################################################################################################
+#           VARHCPC
+#######################################################################################################################
 
 
+def plotVARHCPC(self,
+                axis=(0,1),
+                xlabel=None,
+                ylabel=None,
+                title=None,
+                legend_title = None,
+                random_state=None,
+                xlim=None,
+                ylim=None,
+                show_clust_cent = False, 
+                center_marker_size=200,
+                center_text_size = 20,
+                marker = None,
+                color = None,
+                repel=True,
+                ha = "center",
+                va = "center",
+                add_grid=True,
+                add_hline=True,
+                add_vline=True,
+                hline_color="black",
+                vline_color="black",
+                hline_style = "dashed",
+                vline_style = "dashed",
+                ax=None):
+    
+    if self.model_ != "varhcpc":
+        raise ValueError("Error : 'self' must be an object of class VARHCPC.")
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.factor_model_.n_components_-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("Error : You must pass a valid 'axis'.")
+    
+    if ax is None:
+        ax = plt.gca()
 
+    if legend_title is None:
+        legend_title = "cluster"
+    
+    if self.factor_model_.model_ == "pca":
+        coord = self.factor_model_.col_coord_[:,axis]
+    elif self.factor_model_.model_ == "mca":
+        coord = self.factor_model_.mod_coord_[:,axis]
 
-def plot_hcpc_radar(self):
-    pass
+     # Extract coordinates
+    xs = coord[:,axis[0]]
+    ys = coord[:,axis[1]]
+
+    # Extract labels
+    labels = self.labels_
+
+    color_list=list([x[4:] for x in list(mcolors.TABLEAU_COLORS.keys())])
+    marker_list = list(['.', 'o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X'])
+    cluster = self.cluster_
+    modality_list = list(np.unique(cluster))
+    if color is None:
+        random.seed(random_state)
+        color_dict = dict(zip(modality_list,random.sample(color_list,len(modality_list))))
+    else:
+        color_dict = dict(zip(modality_list,color))
+    
+    if marker is None:
+        random.seed(random_state)
+        marker_dict = dict(zip(modality_list,random.sample(marker_list,len(modality_list))))
+    else:
+        marker_dict = dict(zip(modality_list,marker))
+    
+    for group in modality_list:
+        idx = np.where(cluster==group)
+        ax.scatter(xs[idx[0]],ys[idx[0]],label=group,c= color_dict[group],marker = marker_dict[group])
+        if repel:
+            texts=list()
+            for i in idx[0]:
+                texts.append(ax.text(xs[i],ys[i],labels[i],c=color_dict[group],ha=ha,va=va))
+            adjust_text(texts,x=xs,y=ys,arrowprops=dict(arrowstyle="->",color=color_dict[group],lw=1.0),ax=ax)
+        else:
+            for i in idx[0]:
+                ax.text(xs[i],ys[i],labels[i],c=color_dict[group],ha=ha,va=va)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    # Put a legend to the right of the current axis
+    ax.legend(title=legend_title,bbox_to_anchor=(1, 0.5),fancybox=True, shadow=True)
+
+    # Add cluster center
+    if show_clust_cent:
+        cluster_center = self.cluster_centers_.values[:,axis]
+        xxs = cluster_center[:,axis[0]]
+        yys = cluster_center[:,axis[1]]
+        # For overlap text alebl
+        texts=list()
+        for i,name in enumerate(self.cluster_centers_.index):
+            ax.scatter(xxs[i],yys[i],c=list(color_dict.values())[i],marker=list(marker_dict.values())[i],s=center_marker_size)
+            if repel:
+                texts.append(ax.text(xxs[i],yys[i],name,c=color_dict[name],ha=ha,va=va,fontsize=center_text_size))
+                adjust_text(texts,x=xxs,y=yys,arrowprops=dict(arrowstyle="->",color=color_dict[name],lw=1.0),ax=ax)
+            else:
+                ax.text(xxs[i],yys[i],name,c=color_dict[name],ha=ha,va=va,fontsize=center_text_size)
+
+    # Add elements
+    proportion = self.factor_model_.eig_[2]
+    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+    ax.grid(visible=add_grid)
+    ax.set(xlabel=xlabel,ylabel=ylabel,title=title,xlim=xlim,ylim=ylim)
+    if add_hline:
+        ax.axhline(y=0,color=hline_color,linestyle=hline_style)
+    if add_vline:
+        ax.axvline(x=0,color=vline_color,linestyle=vline_style)   

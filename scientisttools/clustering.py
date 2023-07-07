@@ -974,50 +974,12 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         self.cluster_centers_ = cluster_centers
         self.labels_ = labels
 
-        """
-        # Paarongons
-        parangons = pd.DataFrame(columns=["parangons","distance"])
-        disto_far = dict()
-        disto_near = dict()
-        for k in np.unique(cluster):
-            group = coord_classe[coord_classe["cluster"] == k].drop(columns=["cluster"])
-            disto = mapply(group.sub(cluster_centers.loc[k,:],axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False).to_frame("distance").reset_index(drop=False)
-            # Identification du parangon
-            id = np.argmin(disto.iloc[:,1])
-            parangon = pd.DataFrame({"parangons" : disto.iloc[id,0],"distance" : disto.iloc[id,1]},index=[k])
-            parangons = pd.concat([parangons,parangon],axis=0)
-            # Extraction des distances
-            disto_near[k] = disto.sort_values(by="distance").reset_index(drop=True)
-            disto_far[k] = disto.sort_values(by="distance",ascending=False).reset_index(drop=True)
-        
-        #Rapport de corrélation entre les axes et les cluster
-        desc_axes = self._compute_quantitative(X=row_coord)
-
-        # Informations globales
-        self.linkage_matrix_ = link_mat
-        self.order_ = order
-        self.parangons_ = parangons
-        # Individuals closest to their cluster's center
-        self.disto_near_ = pd.concat(disto_near,axis=0)
-        # Individuals the farest from other clusters' center
-        self.disto_far_ = pd.concat(disto_far,axis=0)
-        self.desc_axes_gmean_ = desc_axes[0]
-        self.desc_axes_correlation_ratio_ = desc_axes[1]
-        self.desc_axes_infos_ = pd.concat(desc_axes[2],axis=0)
-        self.row_labels_ = res.row_labels_
-        self.row_coord_ = res.row_coord_
-        self.n_components_ = res.n_components_
-        self.dim_index_ = res.dim_index_
-        self.data_cluster_ = pd.concat([active_data,cluster],axis=1)
-        self.eig_ = res.eig_
-        """
-
         ### Agglomerative result
         self.linkage_matrix_ = link_mat
         self.distances_ = link_mat[:,2]
         self.children_ = link_mat[:,:2].astype(int)
         self.order_ = order
-
+        self.factor_model_ = res
 
         # Modèle
         self.model_ = "varhcpc"
