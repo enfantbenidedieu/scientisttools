@@ -7,14 +7,14 @@ import matplotlib.pyplot as plt
 from scientisttools.utils import eta2
 from mapply.mapply import mapply
 from scipy.cluster import hierarchy
-from scipy.spatial.distance import squareform
+from scipy.spatial.distance import squareform, pdist
 from sklearn.cluster import KMeans
 from yellowbrick.cluster import KElbowVisualizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from scientisttools.pyplot import plotHCPC
-from scientisttools.utils import from_dummies,cramer_v
+from scientisttools.utils import from_dummies
 
 
 
@@ -37,8 +37,7 @@ class HCPC(BaseEstimator,TransformerMixin):
                  max_iter = 300,
                  init="k-means++",
                  random_state = None,
-                 graph=True,
-                 figsize=None):
+                 parallelize = False):
         self.n_clusters = n_clusters
         self.metric = metric
         self.method = method
@@ -47,11 +46,9 @@ class HCPC(BaseEstimator,TransformerMixin):
         self.max_iter = max_iter
         self.init = init
         self.random_state = random_state
-        self.graph = graph
-        self.figsize=figsize
+        self.parallelize = parallelize
 
-
-    def fit(self,res,):
+    def fit(self,res):
 
         if res.model_ not in ["pca","mca"]:
             raise ValueError("Error : 'res' must be an objet of class 'PCA','MCA'.")
@@ -62,16 +59,21 @@ class HCPC(BaseEstimator,TransformerMixin):
             self._compute_stats_pca(res=res)
         elif res.model_ == "mca":
             self._compute_stats_mca(res=res)
-
-        if self.graph:
-            fig, axe = plt.subplots(figsize=self.figsize)
-            plotHCPC(self,repel=True,ax=axe)
-
         
         return self
     
 
     def _compute_global_stats(self,res):
+        """
+        
+        
+        """
+
+        # Set parallelize 
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
 
          # Linkage matrix
         self.method_ = self.method
@@ -130,7 +132,7 @@ class HCPC(BaseEstimator,TransformerMixin):
         disto_near = dict()
         for k in np.unique(cluster):
             group = coord_classe[coord_classe["cluster"] == k].drop(columns=["cluster"])
-            disto = mapply(group.sub(cluster_centers.loc[k,:],axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False).to_frame("distance").reset_index(drop=False)
+            disto = mapply(group.sub(cluster_centers.loc[k,:],axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_).to_frame("distance").reset_index(drop=False)
             # Identification du parangon
             id = np.argmin(disto.iloc[:,1])
             parangon = pd.DataFrame({"parangons" : disto.iloc[id,0],"distance" : disto.iloc[id,1]},index=[k])
@@ -145,6 +147,7 @@ class HCPC(BaseEstimator,TransformerMixin):
         # Informations globales
         self.linkage_matrix_ = link_mat
         self.order_ = order
+        self.labels_ = labels
         self.parangons_ = parangons
         # Individuals closest to their cluster's center
         self.disto_near_ = pd.concat(disto_near,axis=0)
@@ -246,11 +249,11 @@ class HCPC(BaseEstimator,TransformerMixin):
         n_k = df.groupby("cluster").size()
 
         # valeur-test
-        v_test = mapply(gmean,lambda x :np.sqrt(n_rows-1)*(x-means.values)/std.values, axis=0,progressbar=False)
+        v_test = mapply(gmean,lambda x :np.sqrt(n_rows-1)*(x-means.values)/std.values, axis=0,progressbar=False,n_workers=self.n_workers_)
         v_test = pd.concat(((v_test.loc[:,i]/np.sqrt((n_rows-n_k.loc[i,])/n_k.loc[i,])).to_frame(i) for i in list(n_k.index)),axis=1)
 
         # Calcul des probabilités associées aux valeurs test
-        vtest_prob = mapply(v_test,lambda x : 2*(1-st.norm(0,1).cdf(np.abs(x))),axis=0,progressbar=False)
+        vtest_prob = mapply(v_test,lambda x : 2*(1-st.norm(0,1).cdf(np.abs(x))),axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Arrange all result
         
@@ -363,23 +366,21 @@ class HCPC(BaseEstimator,TransformerMixin):
         self.desc_var_category_ = pd.concat(var_category,axis=0)
 
 
-
+#########################################################################################################################
+#       Clustering of Variables
+###########################################################################################################################
 class VARCLUS(BaseEstimator,TransformerMixin):
     """Clustreing of variables
     
     
     
     """
-
-
-
     def __init__(self,
                  nb_clusters=None,
                  matrix_type = "completed",
                  metric = "dice",
                  col_labels = None,
-                 row_labels = None,
-                 ):
+                 row_labels = None):
         self.nb_clusters = nb_clusters
         self.matrix_type = matrix_type
         self.metric = metric
@@ -390,9 +391,13 @@ class VARCLUS(BaseEstimator,TransformerMixin):
 
     def fit(self,X,y=None):
         raise NotImplementedError("Error : This method is not yet implemented.")
+    
+##################################################################################################################################
+#           Hierarchical Clustering Analysis of Continuous Variables (VARHCA)
+##################################################################################################################################
 
 class VARHCA(BaseEstimator,TransformerMixin):
-    """Hierarchical Clustering Analysis of continuous variables
+    """Hierarchical Clustering Analysis of Continuous Variables
 
     Parameters
     ----------
@@ -435,7 +440,6 @@ class VARHCA(BaseEstimator,TransformerMixin):
         self.random_state = random_state
         self.parallelize = parallelize
 
-    
     def fit(self,X,y=None):
         """
         
@@ -482,12 +486,11 @@ class VARHCA(BaseEstimator,TransformerMixin):
         
         
         """
-        # Parallel option
+        # Set parallelize 
         if self.parallelize:
             self.n_workers_ = -1
         else:
             self.n_workers_ = 1
-
 
          # Compute correlation matrix
         if self.matrix_type == "completed":
@@ -588,12 +591,16 @@ class VARHCA(BaseEstimator,TransformerMixin):
 
 
 
-
+###############################################################################################################################
+#                   
+###############################################################################################################################
 
 class VARKMEANS(BaseEstimator,TransformerMixin):
-
-
-
+    """
+    
+    
+    
+    """
     def __init__(self,n_clusters=None):
         self.n_clusters = n_clusters
     
@@ -601,8 +608,12 @@ class VARKMEANS(BaseEstimator,TransformerMixin):
         raise NotImplementedError("Error : This method is not yet implemented.")
 
 
+###################################################################################################################################
+#       Hierarchical Clustering Analysis of Categorical Variables (CATVARHCA)
+###################################################################################################################################
+
 class CATVARHCA(BaseEstimator,TransformerMixin):
-    """Hierarchical Clustering Analysis of categories variables
+    """Hierarchical Clustering Analysis of categorical variables
 
     Parameters
     ----------
@@ -615,7 +626,6 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
     max_clusters:
     diss_metric : {"cramer","dice","bothpos"}
     """
-
     def __init__(self,
                  n_clusters=None,
                  var_labels = None,
@@ -646,14 +656,10 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         self.random_state = random_state
         self.parallelize = parallelize
     
-
     def fit(self,X,y=None):
         """
         
-        
-        
         """
-
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -671,14 +677,12 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         self.data_ = X
         self.active_data_ = active_data
 
-
         self._compute_stat(active_data)
 
         return self
     
-    def _diss_invcramer(self,X):
-        """
-        
+    def _diss_cramer(self,X):
+        """Compute Distance Matrix using Cramer's V statistic
         
         """
         if self.matrix_type == "completed":
@@ -710,8 +714,7 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         return 1 - (1/len(col1))*np.sum(col1*col2)
     
     def _diss_modality(self,X):
-        """
-        
+        """Compute Distance matrix using Dice index
         
         """
         if self.matrix_type == "completed":
@@ -730,7 +733,6 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
                     D.loc[row,col] = np.sqrt(self.funSqDice(M[row].values,M[col].values))
                 elif self.diss_metric == "bothpos":
                     D.loc[row,col] = self.funbothpos(M[row].values,M[col].values)
-        
         if self.diss_metric == "bothpos":
             np.fill_diagonal(D.values,0)
         return D
@@ -749,7 +751,7 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         
         # Compute Dissimilarity Matrix
         if self.diss_metric == "cramer":
-            D = self._diss_invcramer(X)
+            D = self._diss_cramer(X)
         elif self.diss_metric in ["dice","bothpos"]:
             D = self._diss_modality(X)
         
@@ -799,7 +801,7 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         self.cluster_infos_ = cluster_infos
 
         # Model name
-        self.model_ = "varqualhca"
+        self.model_ = "catvarhca"
     
     def transform(self,X):
         """
@@ -827,8 +829,6 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
                 for col in M.columns:
                     tab = pd.crosstab(self.original_data_[row],M[col])
                     D.loc[row,col] = st.contingency.association(tab,method="cramer") 
-            #moyenne v de cramer par groupe
-            corr_sup = pd.concat([D,self.cluster_],axis=1).groupby("cluster").mean()
         elif self.diss_metric in ["dice","bothpos"]:
             if self.matrix_type == "completed":
                 M =  pd.concat((pd.get_dummies(X[cols],prefix=cols,prefix_sep='_',drop_first=False) for cols in X.columns),axis=1)
@@ -843,12 +843,185 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
                         D.loc[row,col] = self.funSqDice(self.dummies_matrix_[row].values,M[col].values)
                     elif self.diss_metric == "bothpos":
                         D.loc[row,col] = self.funbothpos(self.dummies_matrix_[row].values,M[col].values)
-            #moyenne distance par groupe
+        # 
+        if self.method in ["ward","average"]:
             corr_sup = pd.concat([D,self.cluster_],axis=1).groupby("cluster").mean()
+        elif self.method == "single":
+            corr_sup = pd.concat([D,self.cluster_],axis=1).groupby("cluster").min()
+        elif self.method == "complete":
+            corr_sup = pd.concat([D,self.cluster_],axis=1).groupby("cluster").max()
         
         return corr_sup
 
+##############################################################################################################
+#       Hierachical Clustering Analysis on Principal Components of Variables
+##############################################################################################################
         
+class VARHCPC(BaseEstimator,TransformerMixin):
+    """Variables Hierachical Clustering on Principal Components
+
+    Performs Hierarchical Clustering
+    
+    """
+    def __init__(self,
+                 n_clusters=None,
+                 metric="euclidean",
+                 method="ward",
+                 min_clusters = 2,
+                 max_clusters = 8,
+                 max_iter = 300,
+                 init="k-means++",
+                 random_state = None,
+                 parallelize=False):
+        self.n_clusters = n_clusters
+        self.metric = metric
+        self.method = method
+        self.min_clusters = min_clusters
+        self.max_clusters = max_clusters
+        self.max_iter = max_iter
+        self.init = init
+        self.random_state = random_state
+        self.parallelize = parallelize
+
+    def fit(self,res):
+        """
+        
+        """
+        if res.model_ not in ["pca","mca"]:
+            raise ValueError("Error : 'res' must be an objet of class 'PCA','MCA'.")
+        
+        self._compute_global_stats(res)
+
+        return self
+    
+    @staticmethod
+    def weighted_average(val_col_name, wt_col_name):
+        def inner(group):
+            return (group[val_col_name] * group[wt_col_name]).sum() / group[wt_col_name].sum()
+        inner.__name__ = 'weighted_averages'
+        return inner
+    
+    def _compute_global_stats(self,res):
+        """
+        
+        
+        """
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
+        # Extract principal components
+        if res.model_ == "pca":
+            X = res.col_coord_
+            labels = res.col_labels_
+        elif res.model_ == "mca":
+            X = res.mod_coord_
+            labels = res.mod_labels_
+
+        # Linkage matrix
+        self.method_ = self.method
+        if self.method_ is None:
+            self.method_ = "ward"
+        
+        self.metric_ = self.metric
+        if self.metric_ is None:
+            self.metric_ = "euclidean"
+
+        self.n_clusters_ = self.n_clusters
+        if self.n_clusters_ is None:
+           kmeans = KMeans(init=self.init,max_iter=self.max_iter,random_state=self.random_state)
+           visualizer = KElbowVisualizer(kmeans, k=(self.min_clusters,self.max_clusters),metric='distortion',
+                                         timings=False,locate_elbow=True,show=False).fit(X)
+           self.n_clusters_ = visualizer.elbow_value_
+        
+        # Linkage matrix
+        link_mat = hierarchy.linkage(X,method=self.method_,metric = self.metric_,optimal_ordering=False)
+
+        # Order
+        order = hierarchy.leaves_list(link_mat)
+
+        # Coupure de l'arbre
+        cutree = (hierarchy.cut_tree(link_mat,n_clusters=self.n_clusters_)+1).reshape(-1, )
+        cutree = list(["cluster_"+str(x) for x in cutree])
+
+        # Class information
+        cluster = pd.DataFrame(cutree, index = labels,columns = ["cluster"])
+
+        # Cluster example
+        cluster = cluster.cluster.map({"cluster_"+str(x) : "cluster_"+str(y) for x,y in zip([1,2,3,4],[1,2,3,2])},na_action=None).to_frame()
+        cluster_infos = cluster.groupby("cluster").size().to_frame("n(k)")
+        cluster_infos["p(k)"] = cluster_infos["n(k)"]/np.sum(cluster_infos["n(k)"])
+
+        # Store First informations
+        self.cluster_ = cluster
+        self.cluster_infos_ = cluster_infos
+        self.cluster_labels_ = list(["cluster_"+str(x+1) for x in np.arange(self.n_clusters_)])
+        
+        ## Description des cluster par 
+        coord = pd.DataFrame(X,index=labels,columns=res.dim_index_)
+        if res.model_ == "pca":
+            coord_classe = pd.concat([coord, cluster], axis=1)
+            cluster_centers = coord_classe.groupby("cluster").mean()
+        elif res.model_ == "mca":
+            weight = pd.DataFrame(res.mod_infos_[:,1]*res.n_vars_,columns=["weight"],index=labels)
+            coord_classe = pd.concat([weight,coord,cluster], axis=1)
+            cluster_centers = pd.concat((mapply(coord_classe.groupby("cluster"), 
+                                     self.weighted_average(col,"weight"),axis=0,n_workers=self.n_workers_,progressbar=False).to_frame(col) for col in res.dim_index_),axis=1)
+        
+        # Centre des clusters
+        self.cluster_centers_ = cluster_centers
+        self.labels_ = labels
+
+        """
+        # Paarongons
+        parangons = pd.DataFrame(columns=["parangons","distance"])
+        disto_far = dict()
+        disto_near = dict()
+        for k in np.unique(cluster):
+            group = coord_classe[coord_classe["cluster"] == k].drop(columns=["cluster"])
+            disto = mapply(group.sub(cluster_centers.loc[k,:],axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False).to_frame("distance").reset_index(drop=False)
+            # Identification du parangon
+            id = np.argmin(disto.iloc[:,1])
+            parangon = pd.DataFrame({"parangons" : disto.iloc[id,0],"distance" : disto.iloc[id,1]},index=[k])
+            parangons = pd.concat([parangons,parangon],axis=0)
+            # Extraction des distances
+            disto_near[k] = disto.sort_values(by="distance").reset_index(drop=True)
+            disto_far[k] = disto.sort_values(by="distance",ascending=False).reset_index(drop=True)
+        
+        #Rapport de corrélation entre les axes et les cluster
+        desc_axes = self._compute_quantitative(X=row_coord)
+
+        # Informations globales
+        self.linkage_matrix_ = link_mat
+        self.order_ = order
+        self.parangons_ = parangons
+        # Individuals closest to their cluster's center
+        self.disto_near_ = pd.concat(disto_near,axis=0)
+        # Individuals the farest from other clusters' center
+        self.disto_far_ = pd.concat(disto_far,axis=0)
+        self.desc_axes_gmean_ = desc_axes[0]
+        self.desc_axes_correlation_ratio_ = desc_axes[1]
+        self.desc_axes_infos_ = pd.concat(desc_axes[2],axis=0)
+        self.row_labels_ = res.row_labels_
+        self.row_coord_ = res.row_coord_
+        self.n_components_ = res.n_components_
+        self.dim_index_ = res.dim_index_
+        self.data_cluster_ = pd.concat([active_data,cluster],axis=1)
+        self.eig_ = res.eig_
+        """
+
+        ### Agglomerative result
+        self.linkage_matrix_ = link_mat
+        self.distances_ = link_mat[:,2]
+        self.children_ = link_mat[:,:2].astype(int)
+        self.order_ = order
+
+
+        # Modèle
+        self.model_ = "varhcpc"
+
 
 
         

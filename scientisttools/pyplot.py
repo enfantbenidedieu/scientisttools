@@ -2123,20 +2123,12 @@ def plot_dendrogram(self,**kwargs):
     
     
     """
-    if self.model_ not in ["hcpc","varqualhca"]:
-        raise ValueError("Error : 'self' must be an object of class HCPC.")
-    
     max_d = kwargs.pop('max_d', None)
     if max_d and 'color_threshold' not in kwargs:
         kwargs['color_threshold'] = max_d
     annotate_above = kwargs.pop('annotate_above', 0)
 
-    if self.model_ == "hcpc":
-        label = self.row_labels_
-    elif self.model_ == "varqualhca":
-        label = self.labels_
-
-    ddata = dendrogram(self.linkage_matrix_,labels=label,**kwargs)
+    ddata = dendrogram(self.linkage_matrix_,labels=self.labels_,**kwargs)
     if not kwargs.get('no_plot', False):
         for i, d, c in zip(ddata['icoord'],ddata['dcoord'], ddata['color_list']):
             x = 0.5 * sum(i[1:3])

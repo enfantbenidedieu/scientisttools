@@ -12,7 +12,7 @@
     * Weighted Principal Components Analysis (WPCA)
     * Expectation-Maximization Principal Components Analysis (EMPCA)
     * Exploratory Factor Analysis (EFA)
-    * Classical Multidimensional Scaling (CMSCALE)
+    * Classical Multidimensional Scaling (CMDSCALE)
     * Metric and Non - Metric Multidimensional Scaling (MDS)
     * Correspondence Analysis (CA)
     * Multiple Correspondence Analysis (MCA)
