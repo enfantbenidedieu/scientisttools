@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from scientisttools.utils import eta2
 from mapply.mapply import mapply
 from scipy.cluster import hierarchy
+import association_metrics as am
 from scipy.spatial.distance import squareform, pdist
 from sklearn.cluster import KMeans
 from yellowbrick.cluster import KElbowVisualizer
@@ -17,6 +18,9 @@ from scientisttools.pyplot import plotHCPC
 from scientisttools.utils import from_dummies
 
 
+##################################################################################################################3
+#           Hierachical Clustering Analysis on Principal Components (HCPC)
+###################################################################################################################
 
 class HCPC(BaseEstimator,TransformerMixin):
     """Hierarchical Clustering on Principal Components
@@ -49,6 +53,10 @@ class HCPC(BaseEstimator,TransformerMixin):
         self.parallelize = parallelize
 
     def fit(self,res):
+        """
+        
+        
+        """
 
         if res.model_ not in ["pca","mca"]:
             raise ValueError("Error : 'res' must be an objet of class 'PCA','MCA'.")
@@ -102,7 +110,8 @@ class HCPC(BaseEstimator,TransformerMixin):
         else:
             active_data = res.active_data_
         
-        labels = active_data.index
+        # Save labels
+        labels = res.row_labels_
         
         # Coupure de l'arbre
         cutree = (hierarchy.cut_tree(link_mat,n_clusters=self.n_clusters_)+1).reshape(-1, )
@@ -118,6 +127,7 @@ class HCPC(BaseEstimator,TransformerMixin):
         cluster_infos = coord_classe.groupby("cluster").size().to_frame("n(k)")
         cluster_infos["p(k)"] = cluster_infos["n(k)"]/np.sum(cluster_infos["n(k)"])
 
+        # Mean by cluster
         cluster_centers = coord_classe.groupby("cluster").mean()
 
         # Store First informations
@@ -156,16 +166,14 @@ class HCPC(BaseEstimator,TransformerMixin):
         self.desc_axes_gmean_ = desc_axes[0]
         self.desc_axes_correlation_ratio_ = desc_axes[1]
         self.desc_axes_infos_ = pd.concat(desc_axes[2],axis=0)
-        self.row_labels_ = res.row_labels_
-        self.row_coord_ = res.row_coord_
-        self.n_components_ = res.n_components_
-        self.dim_index_ = res.dim_index_
         self.data_cluster_ = pd.concat([active_data,cluster],axis=1)
-        self.eig_ = res.eig_
 
         ### Agglomerative result
         self.distances_ = link_mat[:,2]
         self.children_ = link_mat[:,:2].astype(int)
+
+        # Save the input model
+        self.factor_model_ = res
 
         # Modèle
         self.model_ = "hcpc"
@@ -179,10 +187,6 @@ class HCPC(BaseEstimator,TransformerMixin):
 
         Returns
         -------
-
-        
-        
-        
         """
 
         # Reconstitution des données
@@ -199,7 +203,7 @@ class HCPC(BaseEstimator,TransformerMixin):
         res1 = self._compute_quantitative(X=active_data)
         
         self.gmean_ = res1[0]
-        self.correlation_ratio_ =res1[1]
+        self.correlation_ratio_ = res1[1]
         self.desc_var_quanti_ = pd.concat(res1[2],axis=0)
 
         if res.quanti_sup_labels_ is not None:
@@ -215,13 +219,11 @@ class HCPC(BaseEstimator,TransformerMixin):
             #self.gmean_quanti_sup_ = quali_sup_res[0]
             #self.correlation_ratio_quanti_sup_ = quanti_sup_res[1]
             self.desc_var_quali_sup_ = quali_sup_res
-
             #self.desc_var_quali_ = self._compute_qualitative(X=data[res.quali_sup_labels_])
         
     def _compute_quantitative(self,X):
         """
-        
-        
+
         """
         # Dimension du tableau
         n_rows, n_cols = X.shape
@@ -268,13 +270,10 @@ class HCPC(BaseEstimator,TransformerMixin):
         # Add columns
         gmean.columns = self.cluster_labels_
 
-        
         return gmean,correlation_ratio,quanti
     
     def _compute_qualitative(self,X):
-        """
-        
-        
+        """Perform qualitative 
         """
 
         # Test de chi-2
@@ -304,14 +303,12 @@ class HCPC(BaseEstimator,TransformerMixin):
             # Pearson
             pearson.loc[cols,:] = st.contingency.association(tab,method="pearson")
         
-        quali_test = dict({"chi2" : chi2_test,"log-likelihood-test":loglikelihood_test,"cramer's V":cramers_v,
-                           "tschuprow's T":tschuprow_t,"pearson":pearson})
+        quali_test = dict({"chi2" : chi2_test,"log-likelihood-test":loglikelihood_test,"cramer's V":cramers_v,"tschuprow's T":tschuprow_t,"pearson":pearson})
         
         return quali_test
     
     def _compute_stats_mca(self,res):
         """
-        
         
         """
 
@@ -359,7 +356,6 @@ class HCPC(BaseEstimator,TransformerMixin):
             df =pd.concat([class_mod.iloc[:,i],mod_class.iloc[:,i],dummies_stats["p(s)"].mul(100)],axis=1)
             df.columns = ["Class/Mod","Mod/Class","Global"]
             var_category[f"cluster_{i+1}"] = df
-
 
         self.desc_var_quali_ = res1
         self.var_quali_infos_ = dummies_stats
@@ -441,8 +437,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
         self.parallelize = parallelize
 
     def fit(self,X,y=None):
-        """
-        
+        """ Fit
         
         """
 
@@ -478,15 +473,14 @@ class VARHCA(BaseEstimator,TransformerMixin):
 
         return self
         
-        # From covraince to correlation
+        # From covariance to correlation
         # https://gist.github.com/wiso/ce2a9919ded228838703c1c7c7dad13b
     
     def _compute_stats(self,X):
-        """
+        """Compute global statistiques
         
-        
         """
-        # Set parallelize 
+        # Set parallelize option
         if self.parallelize:
             self.n_workers_ = -1
         else:
@@ -505,6 +499,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
         
         # Number of variables
         self.n_vars_ = len(self.var_labels_)
+
          # Linkage matrix
         self.method_ = self.method
         if self.method_ is None:
@@ -514,7 +509,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
         if self.metric_ is None:
             self.metric_ = "euclidean"
 
-        # Compute dissimilary matrix
+        # Compute dissimilary matrix : sqrt(1 - x**2)
         D = mapply(corr,lambda x : np.sqrt(1 - x**2),axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Vectorize
@@ -573,6 +568,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
             corr_with = pd.DataFrame(np.corrcoef(self.active_data_,X,rowvar=False)[:self.n_vars_,self.n_vars_:],index = self.var_labels_,columns=X.columns)
         elif self.matrix_type == "correlation":
             corr_with = X
+        
         # Concatenation
         corr_class = pd.concat([corr_with,self.cluster_],axis=1)
         #moyenne des carrés des corrélations avec les groupes
@@ -586,27 +582,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
         """
 
         self.fit(X)
-
         return self.linkage_matrix_
-
-
-
-###############################################################################################################################
-#                   
-###############################################################################################################################
-
-class VARKMEANS(BaseEstimator,TransformerMixin):
-    """
-    
-    
-    
-    """
-    def __init__(self,n_clusters=None):
-        self.n_clusters = n_clusters
-    
-    def fit(self,X,y=None):
-        raise NotImplementedError("Error : This method is not yet implemented.")
-
 
 ###################################################################################################################################
 #       Hierarchical Clustering Analysis of Categorical Variables (CATVARHCA)
@@ -682,7 +658,7 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         return self
     
     def _diss_cramer(self,X):
-        """Compute Distance Matrix using Cramer's V statistic
+        """Compute Dissimilary Matrix using Cramer's V statistic
         
         """
         if self.matrix_type == "completed":
@@ -694,15 +670,11 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         self.dummies_matrix_ = pd.concat((pd.get_dummies(M[cols],prefix=cols,prefix_sep='_',drop_first=False) for cols in M.columns),axis=1)
         self.original_data_ = M
 
-        # Compute Cramer Matrix of similarity
-        D = pd.DataFrame(index=M.columns,columns=M.columns).astype("float")
-        for row in M.columns:
-            for col in M.columns:
-                tab = pd.crosstab(M[row],M[col])
-                D.loc[row,col] = st.contingency.association(tab,method="cramer")
+        # Convert you str columns to Category columns
+        M = M.apply(lambda x: x.astype("category") if x.dtype == "O" else x)
 
-        # Compute cramer matrix of dissimilary
-        D = mapply(D,lambda x : 1 - x,axis=0,progressbar=False,n_workers=self.n_workers_)
+        # Compute dissimilarity matrix using cramer's V
+        D = mapply(am.CramersV(M).fit(),lambda x : 1 - x, axis=0,progressbar=False,n_workers=self.n_workers_)
         return D
     
     @staticmethod
@@ -742,7 +714,6 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         
         
         """
-
         # Parallel option
         if self.parallelize:
             self.n_workers_ = -1
@@ -950,7 +921,6 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         cluster = pd.DataFrame(cutree, index = labels,columns = ["cluster"])
 
         # Cluster example
-        cluster = cluster.cluster.map({"cluster_"+str(x) : "cluster_"+str(y) for x,y in zip([1,2,3,4],[1,2,3,2])},na_action=None).to_frame()
         cluster_infos = cluster.groupby("cluster").size().to_frame("n(k)")
         cluster_infos["p(k)"] = cluster_infos["n(k)"]/np.sum(cluster_infos["n(k)"])
 
@@ -983,10 +953,32 @@ class VARHCPC(BaseEstimator,TransformerMixin):
 
         # Modèle
         self.model_ = "varhcpc"
-
-
-
+    
+    def fit_transform(self,X):
+        """
         
+        """
+        self.fit(X)
+        return self.linkage_matrix_
+
+###############################################################################################################################
+#                   
+###############################################################################################################################
+
+class VARKMEANS(BaseEstimator,TransformerMixin):
+    """
+    
+    
+    
+    """
+    def __init__(self,
+                 n_clusters=None):
+        self.n_clusters = n_clusters
+    
+    def fit(self,X,y=None):
+        raise NotImplementedError("Error : This method is not yet implemented.")
+
+
 
 
 
