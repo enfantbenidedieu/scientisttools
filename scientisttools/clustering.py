@@ -258,7 +258,6 @@ class HCPC(BaseEstimator,TransformerMixin):
         vtest_prob = mapply(v_test,lambda x : 2*(1-st.norm(0,1).cdf(np.abs(x))),axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Arrange all result
-        
         quanti = dict()
         for i,name in enumerate(self.cluster_labels_):
             df =pd.concat([v_test.iloc[:,i],vtest_prob.iloc[:,i],gmean.iloc[:,i],means,gstd.iloc[:,i],std],axis=1)
