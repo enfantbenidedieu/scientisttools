@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from plydata import *
 import scipy.stats as st
-import matplotlib.pyplot as plt
 from scientisttools.utils import eta2
 from mapply.mapply import mapply
 from scipy.cluster import hierarchy
@@ -11,7 +10,6 @@ import association_metrics as am
 from scipy.spatial.distance import squareform, pdist
 from sklearn.cluster import KMeans
 from yellowbrick.cluster import KElbowVisualizer
-from sklearn.preprocessing import LabelEncoder
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from scientisttools.pyplot import plotHCPC
@@ -60,6 +58,12 @@ class HCPC(BaseEstimator,TransformerMixin):
 
         if res.model_ not in ["pca","mca"]:
             raise ValueError("Error : 'res' must be an objet of class 'PCA','MCA'.")
+        
+        # Set parallelize 
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
 
         self._compute_global_stats(res=res)
         
@@ -76,12 +80,6 @@ class HCPC(BaseEstimator,TransformerMixin):
         
         
         """
-
-        # Set parallelize 
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
 
          # Linkage matrix
         self.method_ = self.method
@@ -272,19 +270,22 @@ class HCPC(BaseEstimator,TransformerMixin):
         return gmean,correlation_ratio,quanti
     
     def _compute_qualitative(self,X):
-        """Perform qualitative 
+        """Perform qualitative
+        
         """
 
-        # Test de chi-2
+        # concatenate
         df = pd.concat([X,self.cluster_],axis=1)
+
+        # Convert all str columns to category columns
+        df = mapply(df,lambda x: x.astype("category") if x.dtype == "O" else x,axis=0,progressbar=False,n_workers=self.n_clusters_)
 
         # Chi2 squared test - Tschuprow's T
         chi2_test = loglikelihood_test = pd.DataFrame(columns=["statistic","df","pvalue"],index=X.columns).astype("float")
         cramers_v = tschuprow_t = pearson= pd.DataFrame(columns=["value"],index=X.columns).astype("float")
         for cols in X.columns:
-            lb = LabelEncoder().fit_transform(X[cols])
-            tab = pd.crosstab(lb,self.cluster_.values.ravel())
-
+            # Crosstab
+            tab = pd.crosstab(df[cols],df["cluster"])
             # Chi2 - test
             chi2 = st.chi2_contingency(tab,correction=False)
             chi2_test.loc[cols,:] = np.array([chi2.statistic,chi2.dof,chi2.pvalue])
@@ -302,7 +303,7 @@ class HCPC(BaseEstimator,TransformerMixin):
             # Pearson
             pearson.loc[cols,:] = st.contingency.association(tab,method="pearson")
         
-        quali_test = dict({"chi2" : chi2_test,"log-likelihood-test":loglikelihood_test,"cramer's V":cramers_v,"tschuprow's T":tschuprow_t,"pearson":pearson})
+        quali_test = dict({"chi2" : chi2_test,"gtest":loglikelihood_test,"cramer":cramers_v,"tschuprow":tschuprow_t,"pearson":pearson})
         
         return quali_test
     

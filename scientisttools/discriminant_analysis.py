@@ -62,12 +62,14 @@ class CANDISC(BaseEstimator,TransformerMixin):
                  target=list[str],
                  row_labels=None,
                  features_labels=None,
-                 priors = None):
+                 priors = None,
+                 parallelize = False):
         self.n_components = n_components
         self.target = target
         self.row_labels = row_labels
         self.features_labels = features_labels
         self.priors = priors
+        self.parallelize = parallelize
 
     def fit(self,X,y=None):
         """Fit the Canonical Discriminant Analysis model
@@ -90,6 +92,13 @@ class CANDISC(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
+        # Save data
         self.data_ = X
         
         self.target_ = self.target
@@ -170,8 +179,6 @@ class CANDISC(BaseEstimator,TransformerMixin):
         
         Returns:
         --------
-
-        
         """
 
         ## Bartlett Test
@@ -410,7 +417,7 @@ class CANDISC(BaseEstimator,TransformerMixin):
                          .mean())
 
         # Coordonnées des centres de classes
-        z_k = mapply(g_k.dot(u_l),lambda x : x + u_l0,axis=1,progressbar=False)
+        z_k = mapply(g_k.dot(u_l),lambda x : x + u_l0,axis=1,progressbar=False,n_workers=self.n_workers_)
         z_k.columns = self.dim_index_
 
         # Distance entre barycentre
@@ -614,7 +621,8 @@ class CANDISC(BaseEstimator,TransformerMixin):
         # Decision
         scores = self.decision_function(X)
         # Probabilité d'appartenance - transformation 
-        C = mapply(mapply(scores,lambda x : np.exp(x),axis=0,progressbar=False),lambda x : x/np.sum(x),axis=1,progressbar=False)
+        C = mapply(mapply(scores,lambda x : np.exp(x),axis=0,progressbar=False,n_workers=self.n_workers_),
+                   lambda x : x/np.sum(x),axis=1,progressbar=False,n_workers=self.n_workers_)
         C.columns = self.classes_
         return C
 
@@ -710,12 +718,14 @@ class LDA(BaseEstimator,TransformerMixin):
                  target=list[str],
                  distribution = "homoscedastik",
                  row_labels = None,
-                 priors = None):
+                 priors = None,
+                 parallelize = False):
         self.features_labels = features_labels
         self.target = target
         self.distribution = distribution
         self.row_labels = row_labels
         self.priors = priors
+        self.parallelize = parallelize
     
     def fit(self,X,y=None):
         """Fit the Linear Discriminant Analysis model
@@ -736,6 +746,13 @@ class LDA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         
         self.data_ = X
         
@@ -1218,7 +1235,8 @@ class LDA(BaseEstimator,TransformerMixin):
         # Decision
         scores = self.decision_function(X)
         # Probabilité d'appartenance - transformation 
-        C = mapply(mapply(scores,lambda x : np.exp(x),axis=0,progressbar=False),lambda x : x/np.sum(x),axis=1,progressbar=False)
+        C = mapply(mapply(scores,lambda x : np.exp(x),axis=0,progressbar=False,n_workers=self.n_workers_),
+                   lambda x : x/np.sum(x),axis=1,progressbar=False,n_workers=self.n_workers_)
         C.columns = self.classes_
         return C
 
@@ -1282,10 +1300,6 @@ class LDA(BaseEstimator,TransformerMixin):
 
         return accuracy_score(y, self.predict(X), sample_weight=sample_weight)
 
-
-
-
-
 #######################################################################################################
 #           Discriminant Qualitatives (DISQUAL)
 #######################################################################################################
@@ -1343,13 +1357,15 @@ class DISQUAL(BaseEstimator,TransformerMixin):
                  target = list[str],
                  features_labels=None,
                  row_labels = None,
-                 priors=None):
+                 priors=None,
+                 parallelize=False):
         
         self.n_components = n_components
         self.target = target
         self.features_labels = features_labels
         self.row_labels = row_labels
         self.priors = priors
+        self.parallelize = parallelize
     
 
     def fit(self,X,y=None):
@@ -1374,7 +1390,13 @@ class DISQUAL(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
 
+        # Save data
         self.data_ = X
         
         self.target_ = self.target
@@ -1468,8 +1490,7 @@ class DISQUAL(BaseEstimator,TransformerMixin):
         # Analyse des correspondances multiples (MCA)
         mca = MCA(n_components=self.n_components,row_labels=self.row_labels_,var_labels=self.features_labels_,
                   mod_labels=None,matrix_type="completed",benzecri=False,greenacre=False,
-                  row_sup_labels=None,quali_sup_labels=None,quanti_sup_labels=None,graph=False,
-                  figsize=(20,8)).fit(x)
+                  row_sup_labels=None,quali_sup_labels=None,quanti_sup_labels=None,parallelize=self.parallelize).fit(x)
         
         # Stockage des résultats de l'ACM
         mod = get_mca_mod(mca)
@@ -1488,7 +1509,8 @@ class DISQUAL(BaseEstimator,TransformerMixin):
                   distribution="homoscedastik",
                   features_labels=row_coord.columns,
                   row_labels=self.row_labels_,
-                  priors=self.priors).fit(new_X)
+                  priors=self.priors,
+                  parallelize=self.parallelize).fit(new_X)
         
         # LDA coefficients and intercepts
         lda_coef = lda.coef_
@@ -1648,7 +1670,7 @@ class DISCA(BaseEstimator,TransformerMixin):
                  mod_labels = None,
                  matrix_type = "completed",
                  priors = None,
-                 ):
+                 parallelize = False):
         
         self.n_components = n_components
         self.target = target
@@ -1656,6 +1678,7 @@ class DISCA(BaseEstimator,TransformerMixin):
         self.mod_labels = mod_labels
         self.matrix_type = matrix_type
         self.priors = priors
+        self.parallelize = parallelize
     
     def fit(self,X):
 
@@ -1665,6 +1688,13 @@ class DISCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         
         self.target_ = self.target
         if self.target_ is None:
@@ -1719,10 +1749,6 @@ class DISCA(BaseEstimator,TransformerMixin):
         
         return quali_test
     
-
-    
-
-
     def _is_completed(self,X):
         """
         
@@ -1819,8 +1845,6 @@ class DISCA(BaseEstimator,TransformerMixin):
         # Matrice de contingence
         return X.groupby(self.target_).sum()
 
-    
-
     def _computed_stats(self,X):
 
         """
@@ -1851,10 +1875,10 @@ class DISCA(BaseEstimator,TransformerMixin):
         mod_stats.columns = ["n(l)","p(l)"]
 
         # Tableau des profils - Matric des profils
-        profils = mapply(M,lambda x : x/np.sum(x),axis=1,progressbar=False)
+        profils = mapply(M,lambda x : x/np.sum(x),axis=1,progressbar=False,n_workers=self.n_workers_)
         
         # Distance entre un groupe et l'origine
-        row_disto = mapply(profils,lambda x : np.sum((x-G.values)**2/G.values),axis=1,progressbar=False).to_frame("disto(k)")
+        row_disto = mapply(profils,lambda x : np.sum((x-G.values)**2/G.values),axis=1,progressbar=False,n_workers=self.n_workers_).to_frame("disto(k)")
 
         # Distance entre les groupes - Mtrice des distances par paires de classes
         row_dist = pd.DataFrame(squareform(pdist(profils,metric="seuclidean",V=G)**2),index=self.classes_,columns=self.classes_)
@@ -1868,19 +1892,19 @@ class DISCA(BaseEstimator,TransformerMixin):
                 col_labels=M.columns,
                 row_sup_labels=None,
                 col_sup_labels=None,
-                graph=False).fit(M)
+                parallelize=self.parallelize).fit(M)
         
         # Stockage des résultats de l'ACM
         col = get_ca_col(ca)
 
         # Coefficient des fonctions discriminantes canoniques
-        coef = mapply(col["coord"],lambda x : x/(len(self.features_labels_)*np.sqrt(ca.eig_[0])),axis=1,progressbar=False)
+        coef = mapply(col["coord"],lambda x : x/(len(self.features_labels_)*np.sqrt(ca.eig_[0])),axis=1,progressbar=False,n_workers=self.n_workers_)
         
         # Coordonnées des individus à partir du tableau des indicatrices
         row_coord = self.dummies_.dot(coef)
         
         # Somme des carrés totales - totla sum of squared
-        tss = mapply(row_coord,lambda x : x**2,axis=0,progressbar=False).sum(axis=0)
+        tss = mapply(row_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_).sum(axis=0)
         
         # Rapport de corrélation
         eta2 = ((self.n_rows_*ca.eig_[0])/tss).to_frame("correl. ratio").T
@@ -1904,12 +1928,7 @@ class DISCA(BaseEstimator,TransformerMixin):
         
         
         """
-
-
-
         self.fit(X)
-
-
         return self.row_coord_
     
 
@@ -1977,7 +1996,7 @@ class DISCA(BaseEstimator,TransformerMixin):
         coord = self.transform(X)
 
         # Distance euclidiennes aux centres de classes
-        scores = pd.concat((mapply(self.gcoord_.sub(coord.loc[i,:].values,axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False).to_frame(i).rename_axis(None).T 
+        scores = pd.concat((mapply(self.gcoord_.sub(coord.loc[i,:].values,axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_).to_frame(i).rename_axis(None).T 
                             for i in coord.index),axis=0)
 
         return scores
@@ -2012,7 +2031,8 @@ class DISCA(BaseEstimator,TransformerMixin):
         DG = scores.sub((2*np.log(self.priors_.to_frame(name="p(k)").T.loc[:,scores.columns].values)),axis="columns")
     
         # Probabilité d'appartenance - transformation 
-        C = mapply(mapply(DG,lambda x : np.exp(-0.5*x),axis=0,progressbar=False),lambda x : x/np.sum(x),axis=1,progressbar=False)
+        C = mapply(mapply(DG,lambda x : np.exp(-0.5*x),axis=0,progressbar=False,n_workers=self.n_workers_),
+                   lambda x : x/np.sum(x),axis=1,progressbar=False,n_workers=self.n_workers_)
         return C
     
     def predict(self,X):
@@ -2101,14 +2121,15 @@ class DISMIX(BaseEstimator,TransformerMixin):
                  quanti_features_labels=list[str],
                  quali_features_labels = list[str],
                  row_labels = list[str],
-                 priors=None):
+                 priors=None,
+                 parallelize=False):
         self.n_components = n_components
         self.target = target
         self.quanti_features_labels = quanti_features_labels
         self.quali_features_labels = quali_features_labels
         self.row_labels = row_labels
         self.priors = priors
-
+        self.parallelize = parallelize
 
     def fit(self,X,y=None):
         """Fit the Linear Discriminant Analysis with categories variables
@@ -2132,6 +2153,13 @@ class DISMIX(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
+        # Save data
         self.data_ = X
         
         self.target_ = self.target
@@ -2146,7 +2174,6 @@ class DISMIX(BaseEstimator,TransformerMixin):
         if self.quali_features_labels_ is None:
             raise ValueError("Error :'quali_features_labels' must be assigned.")
         
-
         self._compute_stats(X=X)
         
         return self
@@ -2187,7 +2214,7 @@ class DISMIX(BaseEstimator,TransformerMixin):
                     quali_sup_labels=None,
                     quanti_sup_labels=None,
                     row_sup_labels=None,
-                    graph=False).fit(x)
+                    parallelize=self.parallelize).fit(x)
         
         # Extraction des informations sur les individus
         row = get_famd_ind(famd)
@@ -2196,10 +2223,10 @@ class DISMIX(BaseEstimator,TransformerMixin):
         var_mod_coord = pd.DataFrame(famd.var_mod_coord_,index=famd.col_labels_+list(famd.mod_labels_),columns=famd.dim_index_)
 
         # Coefficients de projections sur les modalités des variables qualitatives
-        fproj1 = mapply(var_mod_coord.loc[famd.mod_labels_,:],lambda x : x/(len(self.quali_features_labels_)*np.sqrt(famd.eig_[0])),axis=1,progressbar=False)
+        fproj1 = mapply(var_mod_coord.loc[famd.mod_labels_,:],lambda x : x/(len(self.quali_features_labels_)*np.sqrt(famd.eig_[0])),axis=1,progressbar=False,n_workers=self.n_workers_)
 
         # Coefficients des fonctions de projection sur les variables quantitatives
-        fproj2 = mapply(var_mod_coord.loc[famd.col_labels_,:],lambda x : x/(len(self.quanti_features_labels_)*np.sqrt(famd.eig_[0])),axis=1,progressbar=False)
+        fproj2 = mapply(var_mod_coord.loc[famd.col_labels_,:],lambda x : x/(len(self.quanti_features_labels_)*np.sqrt(famd.eig_[0])),axis=1,progressbar=False,n_workers=self.n_workers_)
 
         # Concaténation des fonction des projection
         fproj = pd.concat([fproj2,fproj1],axis=0)
@@ -2214,7 +2241,8 @@ class DISMIX(BaseEstimator,TransformerMixin):
                   distribution="homoscedastik",
                   features_labels=row_coord.columns,
                   row_labels=self.row_labels_,
-                  priors=self.priors).fit(new_X)
+                  priors=self.priors,
+                  parallelize=self.parallelize).fit(new_X)
         
         # LDA coefficients and intercepts
         lda_coef = lda.coef_
@@ -2345,9 +2373,6 @@ class DISMIX(BaseEstimator,TransformerMixin):
         
         return accuracy_score(y, self.predict(X), sample_weight=sample_weight)
 
-
-
-
 #######################################################################################################
 #               Stepwise Discriminant Analysis (STEPDISC) - Discriminant Analysis Procedure
 #######################################################################################################
@@ -2378,13 +2403,15 @@ class STEPDISC(BaseEstimator,TransformerMixin):
                  alpha=0.01,
                  lambda_init = None,
                  model_train = False,
-                 verbose = True):
+                 verbose = True,
+                 parallelize=False):
         
         self.method = method
         self.alpha = alpha
         self.lambda_init = lambda_init
         self.model_train = model_train
         self.verbose = verbose
+        self.parallelize = parallelize
     
 
     def fit(self,clf):
@@ -2400,10 +2427,9 @@ class STEPDISC(BaseEstimator,TransformerMixin):
             raise ValueError("Error : 'clf' must be and instance of class 'LINEARDISC' or 'CANDISC'.")
         
         isMethodValid = ["forward", "backward","stepwise"]
-        method = method.lower()
-        if method not in isMethodValid:
+        if self.method.lower() not in isMethodValid:
             raise ValueError("Error : 'method' must be either 'backward','forward' or 'stepwise'.")
-        
+
         self._compute_stats(clf)
         
         return self
@@ -2536,34 +2562,46 @@ class STEPDISC(BaseEstimator,TransformerMixin):
                 model = LDA(features_labels = new_features,
                             target=clf.target_,
                             distribution="homoscedastik",
-                            row_labels=clf.row_labels_).fit(clf.data_)
+                            row_labels=clf.row_labels_,
+                            parallelize=self.parallelize).fit(clf.data_)
                 self.train_model_ = model
             elif clf.model_ == "candisc":
-                model = CANDISC(features_labels=new_features,target=clf.target_,row_labels=clf.row_labels_).fit(clf.data_)
+                model = CANDISC(features_labels=new_features,
+                                target=clf.target_,
+                                row_labels=clf.row_labels_,
+                                parallelize=self.parallelize).fit(clf.data_)
                 self.train_model_ = model
-            
-
         
         self.overall_remove_ = overall_remove
-        self.features_remove = features_remove
+        self.features_remove_ = features_remove
     
 ######################################################################################
 #           QUADRATIC DISCRIMINANT ANALYSIS (QDA)
 #####################################################################################
 
-class QUADISC(BaseEstimator,TransformerMixin):
+# https://towardsdatascience.com/quadratic-discriminant-analysis-ae55d8a8148a
+# https://github.com/alinarw/LDA_QDA/blob/master/script.py
+class QDA(BaseEstimator,TransformerMixin):
     """Quadratic Discriminant Analysis
     
     """
     def __init__(self,
                  features_columns,
                  target_columns,
-                 priors=None):
+                 priors=None,
+                 parallelize=False):
         self.features_columns = features_columns
         self.target_columns = target_columns
         self.priors_ = priors
+        self.parallelize = parallelize
     
     def fit(self,X,y=None):
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         raise NotImplementedError("Error : This method is not implemented yet.")
 
 
@@ -2591,16 +2629,21 @@ class MDA(BaseEstimator, TransformerMixin):
     
     
     """
-
-
-
-
-    def __init__(self):
-
-
-        pass
+    def __init__(self,
+                 features_columns = list[str],
+                 target_columns = list[str],
+                 parallelize=False):
+        self.features_columns = features_columns
+        self.target_columns = target_columns
+        self.parallelize = parallelize
 
     def fit(self,X):
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         raise NotImplementedError("Error : This method is not yet implemented.")
     
 
@@ -2618,11 +2661,21 @@ class LOCALFISHERDISC(BaseEstimator,TransformerMixin):
     """Local Fisher Discriminant Analysis
     
     """
-    def __init__(self,feature_columns,target_columns):
+    def __init__(self,
+                 feature_columns=list[str],
+                 target_columns=list[str],
+                 parallelize=False):
         self.feature_columns = feature_columns
         self.target_columns = target_columns
+        self.parallelize = parallelize
 
     def fit(self,X,y=None):
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         raise NotImplementedError("Error : This method is not implemented yet.")
     
 
@@ -2646,12 +2699,20 @@ class FDA(BaseEstimator,TransformerMixin):
     
     """
     def __init__(self,
-                 feature_columns,
-                 target_columns):
+                 feature_columns=list[str],
+                 target_columns=list[str],
+                 parallelize=False):
         self.feature_columns = feature_columns
         self.target_columns = target_columns
+        self.parallelize = parallelize
 
     def fit(self,X,y=None):
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         raise NotImplementedError("Error : This method is not implemented yet.")
 
 
@@ -2687,12 +2748,20 @@ class RDA(BaseEstimator,TransformerMixin):
     
     """
     def __init__(self,
-                 feature_columns,
-                 target_columns):
+                 feature_columns=list[str],
+                 target_columns=list[str],
+                 parallelize=False):
         self.feature_columns = feature_columns
         self.target_columns = target_columns
+        self.parallelize=parallelize
 
     def fit(self,X,y=None):
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         raise NotImplementedError("Error : This method is not implemented yet.")
     
 

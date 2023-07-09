@@ -17,7 +17,7 @@ import scipy as sp
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_array
 from sklearn.metrics import mean_squared_error
-from scientisttools.pyplot import plotPPCA,plotCA,plotPCA,plotMCA
+from scientistmetrics import scientistmetrics
 from scientisttools.utils import (
     orthonormalize,
     random_orthonormal, 
@@ -175,9 +175,7 @@ class PCA(BaseEstimator,TransformerMixin):
                  row_sup_labels =None,
                  quanti_sup_labels = None,
                  quali_sup_labels = None,
-                 parallelize=False,
-                 graph=False,
-                 figsize=None):
+                 parallelize=False):
         self.normalize = normalize
         self.n_components = n_components
         self.row_labels = row_labels
@@ -186,8 +184,6 @@ class PCA(BaseEstimator,TransformerMixin):
         self.quanti_sup_labels = quanti_sup_labels
         self.quali_sup_labels = quali_sup_labels
         self.parallelize = parallelize
-        self.graph = graph
-        self.figsize = figsize
 
     def fit(self,X,y=None):
         """Fit the model to X
@@ -217,6 +213,12 @@ class PCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
         
         # Extract supplementary rows
         self.row_sup_labels_ = self.row_sup_labels
@@ -286,11 +288,6 @@ class PCA(BaseEstimator,TransformerMixin):
         # Compute supplementrary rows statistics
         if self.row_sup_labels_ is not None:
             self._compute_row_sup_stats(X=row_sup)
-        
-        if self.graph:
-            fig, axe = plt.subplots(1,2,figsize=self.figsize)
-            plotPCA(self,choice="ind",repel=True,ax=axe[0])
-            plotPCA(self,choice="var",repel=True,ax=axe[1],xlim=(-1.1,1.1),ylim=(-1.1,1.1))
 
         return self
     
@@ -328,12 +325,7 @@ class PCA(BaseEstimator,TransformerMixin):
         None
         """
 
-        # Parallel option
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
+        # Shape of active data
         self.n_rows_, self.n_cols_ = X.shape
 
         # Set row labels
@@ -486,7 +478,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        self    :   An instance of class FAMD
+        self    :   An instance of class PCA
         X       :   DataFrame (n_rows,n_columns)
         y : None
             y is ignored
@@ -509,10 +501,7 @@ class PCA(BaseEstimator,TransformerMixin):
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
         # Correlation between New and old continuous variables
-        col_sup_corr = np.zeros((len(X.columns),len(self.col_labels_)))
-        for i, lab in enumerate(X.columns):
-            for j, name in enumerate(self.col_labels_):
-                col_sup_corr[i,j] = st.pearsonr(X[lab],self.active_data_[name]).statistic
+        col_sup_corr = np.transpose(np.corrcoef(x=self.active_data_,y=X.values,rowvar=False))[self.n_cols_:,:self.n_cols_]
 
         # Supplementary quantitatives coordinates
         col_sup_coord = np.transpose(np.corrcoef(x=self.row_coord_,y=X.values,rowvar=False)[:self.n_components_,self.n_components_:])
@@ -532,10 +521,10 @@ class PCA(BaseEstimator,TransformerMixin):
         # Supplementray continuous labels
         self.col_sup_labels_ = X.columns
 
-        return dict({"corr"     :  pd.DataFrame(self.col_sup_corr_,index=self.quanti_sup_labels_,columns=self.col_labels_), 
-                    "coord"     :  pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
-                     "cos2"     :  pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
-                     "ftest"    :  pd.DataFrame(self.col_sup_ftest_,index=self.col_sup_labels_,columns=self.dim_index_)
+        return dict({"corr"     :  pd.DataFrame(col_sup_corr,index=X.columns,columns=self.col_labels_), 
+                    "coord"     :  pd.DataFrame(col_sup_coord[:,:self.n_components_],index=X.columns,columns=self.dim_index_),
+                     "cos2"     :  pd.DataFrame(col_sup_cos2[:,:self.n_components_],index=X.columns,columns=self.dim_index_),
+                     "ftest"    :  pd.DataFrame(col_sup_ftest[:,:self.n_components_],index=X.columns,columns=self.dim_index_)
         })
     
     def _compute_quali_sup_stats(self,X,y=None):
@@ -543,7 +532,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        self    :   An instance of class FAMD
+        self    :   An instance of class PCA
         X       :   DataFrame (n_rows,n_columns)
         y : None
             y is ignored
@@ -617,12 +606,12 @@ class PCA(BaseEstimator,TransformerMixin):
         # Supplementary qualitatives variables
         self.quali_sup_eta2_    =   quali_sup_eta2
 
-        return dict({"stats"    :   pd.DataFrame(self.mod_sup_stats_,columns=["n(k)","p(k)"],index=self.mod_sup_labels_),
-                    "coord"     :  pd.DataFrame(self.mod_sup_coord_,index=self.mod_sup_labels_,columns=self.dim_index_),
-                     "cos2"     :   pd.DataFrame(self.mod_sup_cos2_,index=self.mod_sup_labels_,columns=self.dim_index_), 
-                     "dist"     :   pd.DataFrame(self.mod_sup_disto_,index=self.mod_sup_labels_,columns=["dist"]),
-                     "eta2"     :   pd.DataFrame(self.quali_sup_eta2_,index=self.quali_sup_labels_,columns=self.dim_index_),
-                     "vtest"    :   pd.DataFrame(self.mod_sup_vtest_,index=self.mod_sup_labels_,columns=self.dim_index_)
+        return dict({"stats"    :   pd.DataFrame(np.array(mod_sup_stats),columns=["n(k)","p(k)"],index=mod_sup_labels),
+                    "coord"     :  pd.DataFrame(np.array(mod_sup_coord),index=mod_sup_labels,columns=self.dim_index_),
+                     "cos2"     :   pd.DataFrame(np.array(mod_sup_cos2),index=mod_sup_labels,columns=self.dim_index_), 
+                     "dist"     :   pd.DataFrame(np.array(mod_sup_disto),index=mod_sup_labels,columns=["dist"]),
+                     "eta2"     :   pd.DataFrame(quali_sup_eta2,index=X.columns,columns=self.dim_index_),
+                     "vtest"    :   pd.DataFrame( np.array(mod_sup_vtest),index=mod_sup_labels,columns=self.dim_index_)
                      })
     
     def _compute_row_sup_stats(self,X,y=None):
@@ -741,22 +730,18 @@ class PartialPCA(BaseEstimator,TransformerMixin):
     Partial Principal Components Analysis
     """
     def __init__(self,
-                n_components=None,
-                normalize=True,
-                row_labels=None,
-                col_labels=None,
-                partial_labels=None,
-                parallelize = False,
-                graph = False,
-                figsize=None):
+                 n_components=None,
+                 normalize=True,
+                 row_labels=None,
+                 col_labels=None,
+                 partial_labels=None,
+                 parallelize = False):
         self.n_components = n_components
         self.normalize = normalize
         self.row_labels = row_labels
         self.col_labels = col_labels
         self.partial_labels = partial_labels
         self.parallelize = parallelize
-        self.graph = graph
-        self.figsize = figsize
     
     def fit(self,X,y=None):
         """
@@ -766,17 +751,19 @@ class PartialPCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set parallelize option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
 
         self.n_rows_, self.n_cols_ = X.shape
         self.data_ = X
 
         self._compute_stats(X)
         self._compute_svds(X)
-
-        if self.graph:
-            fig,(axe1,axe2) = plt.subplots(1,2,figsize=self.figsize)
-            plotPPCA(self,choice="ind",ax=axe1)
-            plotPPCA(self,choice="var",ax=axe2)
 
         return self
 
@@ -786,13 +773,6 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         
         
         """
-
-        # Parallel option
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
 
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
@@ -906,7 +886,6 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         X_new : array-like, shape (n_samples, n_components)
         """
         self.fit(X)
-
         return self.row_coord_
     
     def transform(self,X,y=None):
@@ -1842,17 +1821,13 @@ class CA(BaseEstimator,TransformerMixin):
                  col_labels=None,
                  row_sup_labels=None,
                  col_sup_labels=None,
-                 parallelize = False,
-                 graph=True,
-                 figsize=None):
+                 parallelize = False):
         self.n_components = n_components
         self.row_labels = row_labels
         self.col_labels = col_labels
         self.row_sup_labels = row_sup_labels
         self.col_sup_labels = col_sup_labels
         self.parallelize = parallelize
-        self.graph = graph
-        self.figsize = figsize
     
     def fit(self,X,y=None):
         """ Fit the model to X
@@ -1876,6 +1851,12 @@ class CA(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         # Extract supplementary rows
         self.row_sup_labels_ = self.row_sup_labels
         if self.row_sup_labels_ is not None:
@@ -1894,7 +1875,9 @@ class CA(BaseEstimator,TransformerMixin):
         else:
             X_ = _X
         
+        # Save data
         self.data_ = X
+        self.active_data_ = X_
         
         # Supplementary initialization
         self.row_sup_coord_ = None
@@ -1903,6 +1886,7 @@ class CA(BaseEstimator,TransformerMixin):
         self.col_sup_coord_ = None
         self.col_sup_cos2_ = None
 
+        # Save shape
         self.n_rows_, self.n_cols_ = X_.shape
         self.total_ = X_.sum().sum()
 
@@ -1917,11 +1901,6 @@ class CA(BaseEstimator,TransformerMixin):
         
         if self.col_sup_labels is not None:
             self._compute_sup(X=col_sup,row=False)
-        
-        if self.graph:
-            fig, (axe1,axe2) = plt.subplots(1,2,figsize=self.figsize)
-            plotCA(self,choice = "row",ax=axe1,repel=True)
-            plotCA(self,choice = "col",ax=axe2,repel=True)
 
         return self
     
@@ -1944,13 +1923,6 @@ class CA(BaseEstimator,TransformerMixin):
     def _compute_indicators(self,X):
         """
         """
-
-        # Parallel option
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
         # 
         prob_conj = mapply(X,lambda x : x/self.total_,axis=0,progressbar=False,n_workers=self.n_workers_)
 
@@ -2026,11 +1998,12 @@ class CA(BaseEstimator,TransformerMixin):
         self._compute_stats(row_prob,col_prob,row_disto,col_disto)
 
         # Return indicators
-        self.chi2_test_ = dict({"statistic" : statistic,"pvalue":pvalue,"dof":dof})
-        self.log_likelihood_test_ = dict({"statistic" : g_test_res[0],"pvalue":g_test_res[1]})
-        self.contingency_association_ = dict({"cramer" : st.contingency.association(X, method="cramer"),
-                                              "tschuprow" : st.contingency.association(X, method="tschuprow"),
-                                              "pearson" : st.contingency.association(X, method="pearson")})
+        self.chi2_test_ = pd.DataFrame(dict({"statistic" : statistic,"pvalue":pvalue,"dof":dof}),index=["chi-squared test"])
+        self.log_likelihood_test_ = pd.DataFrame(dict({"statistic" : g_test_res[0],"pvalue":g_test_res[1]}),index=["G - test"])
+        self.contingency_association_ = pd.DataFrame(dict({"cramer" : st.contingency.association(X, method="cramer"),
+                                                           "tschuprow" : st.contingency.association(X, method="tschuprow"),
+                                                           "pearson" : st.contingency.association(X, method="pearson")}),
+                                                           index=["association"])
         self.resid_ = resid
         self.row_infos_ = row_infos
         self.col_infos_ = col_infos
@@ -2207,9 +2180,7 @@ class MCA(BaseEstimator,TransformerMixin):
                  row_sup_labels = None,
                  quali_sup_labels = None,
                  quanti_sup_labels=None,
-                 parallelize = False,
-                 graph=True,
-                 figsize=None):
+                 parallelize = False):
         self.n_components = n_components
         self.row_labels = row_labels
         self.var_labels = var_labels
@@ -2223,10 +2194,8 @@ class MCA(BaseEstimator,TransformerMixin):
         self.quali_sup_labels = quali_sup_labels
         self.quanti_sup_labels = quanti_sup_labels
         self.parallelize = parallelize
-        self.graph = graph
-        self.figsize = figsize
 
-    def fit(self, X, y=None):
+    def fit(self,X,y=None):
         """
         
         """
@@ -2235,8 +2204,14 @@ class MCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
 
-
+        # Extract supplementary rows
         self.row_sup_labels_ = self.row_sup_labels
         if self.row_sup_labels_ is not None:
             _X = X.drop(index = self.row_sup_labels_)
@@ -2290,12 +2265,6 @@ class MCA(BaseEstimator,TransformerMixin):
         
         if self.n_components == 1:
             raise ValueError("n_components must be grather than 1.")
-    
-        # Parallel option
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
         
         self._compute_svds(X_)
         
@@ -2310,12 +2279,6 @@ class MCA(BaseEstimator,TransformerMixin):
         # Compute supplementrary rows statistics
         if self.row_sup_labels_ is not None:
             self._compute_row_sup_stats(X=row_sup)
-        
-        if self.graph:
-            fig, (axe1,axe2,axe3) = plt.subplots(1,3,figsize=self.figsize)
-            plotMCA(self,choice="ind",repel=True,ax=axe1)
-            plotMCA(self,choice="mod",repel=True,ax=axe2)
-            plotMCA(self,choice="var",repel=True,ax=axe3,xlim=(0,1),ylim=(0,1))
 
         return self
         
@@ -2820,9 +2783,7 @@ class FAMD(BaseEstimator,TransformerMixin):
                  row_sup_labels=None,
                  quanti_sup_labels=None,
                  quali_sup_labels=None,
-                 parallelize = False,
-                 graph=False,
-                 figsize=None):
+                 parallelize = False):
         self.normalize =normalize
         self.n_components = n_components
         self.row_labels = row_labels
@@ -2832,17 +2793,26 @@ class FAMD(BaseEstimator,TransformerMixin):
         self.quanti_sup_labels = quanti_sup_labels
         self.quali_sup_labels = quali_sup_labels
         self.parallelize = parallelize
-        self.graph = graph
-        self.figsize= figsize
     
     def fit(self,X):
         """
         
         
         """
+
+        # Chack if X is a DataFrame
         if not isinstance(X,pd.DataFrame):
-            raise ValueError("Error : 'X' must be a data.frame")
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        # Set parallelize option
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+
         # Extract supplementary rows
         self.row_sup_labels_ = self.row_sup_labels
         if self.row_sup_labels_ is not None:
@@ -2871,6 +2841,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         
         # Save initial data
         self.data_ = X
+        self.active_data_ = X_
         
         # Supplementary initialization
         self.row_sup_coord_ = None
@@ -2891,16 +2862,11 @@ class FAMD(BaseEstimator,TransformerMixin):
         #Additionnal informations for supplementary categorical informations
         self.quali_sup_eta2_ = None
 
-        # Parallel option
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
+        
         # Compute statistics
         self.n_rows_ = X_.shape[0]
         X_quant = X_.select_dtypes(include=np.number)
-        X_qual = X_.select_dtypes(include=["object"])
+        X_qual = X_.select_dtypes(include=["object","category"])
 
         #Initialize lables
         self.row_labels_ = self.row_labels
@@ -2923,18 +2889,11 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         # Partial correlation between continuous variables
         self.col_pcorr_ = np.array(X_quant.pcorr())
-        
-        chi2_stats = np.zeros(shape=(len(self.quali_labels_),len(self.quali_labels_)))
-        chi2_pvalue = np.zeros(shape=(len(self.quali_labels_),len(self.quali_labels_)))
-        for i,lab1 in enumerate(self.quali_labels_):
-            for j,lab2 in enumerate(self.quali_labels_):
-                tab = pd.crosstab(X_.iloc[:,i],X_.iloc[:,j])
-                chi = st.chi2_contingency(tab)
-                chi2_stats[i,j],chi2_pvalue[i,j]= chi[0],chi[1]
-            
-        self.chi2_test_ = dict({"statistic": pd.DataFrame(chi2_stats,index=self.quali_labels_,columns=self.quali_labels_),
-                                "pvalue" : pd.DataFrame(chi2_pvalue,index=self.quali_labels_,columns=self.quali_labels_)
-                        })
+    
+        # Measure of association
+        self.chi2_test_ = scientistmetrics(X=X_qual,method="chi2")
+        self.cramerv_ = scientistmetrics(X=X_qual,method="cramer")
+        self.tschuprowt_ = scientistmetrics(X=X_qual,method="tschuprow")
         
         # Normalisation des variables qualitatives
         dummies = pd.concat((pd.get_dummies(X_qual[cols],prefix=cols,prefix_sep='_') for cols in self.quali_labels_),axis=1)
@@ -2952,8 +2911,10 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             Z1 = X_quant - self.means_
 
+        # Normalize Z2
         Z2 = mapply(dummies,lambda x: x/np.sqrt(self.dummies_means_.values),axis = 1,progressbar=False,n_workers=self.n_workers_)
 
+        # Concatenate the 2 dataframe
         Z = pd.concat([Z1,Z2],axis=1)
 
         # Distance between individuals
@@ -2969,6 +2930,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         # Individuals inertia
         row_inertie = row_disto*row_weight
 
+        # Save all informations
         row_infos = np.c_[np.sqrt(row_disto),row_weight,row_inertie]
 
         ################################
@@ -3006,6 +2968,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         
         if self.quali_sup_labels_ is not None:
             self._compute_quali_sup_stats(X=_X[self.quali_sup_labels_])
+
         return self
 
     def _compute_svd(self,X,Xq,Iq):
@@ -3109,7 +3072,11 @@ class FAMD(BaseEstimator,TransformerMixin):
         if isinstance(X,pd.Series):
             X = X.to_frame()
         elif not isinstance(X,pd.DataFrame):
-            raise ValueError("Error : 'X' must be a DataFrame.")
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
 
         # Modified modality coordinates
         dummies = pd.concat((pd.get_dummies(X[cols],prefix=cols,prefix_sep='_') for cols in X.columns),axis=1)
@@ -3213,10 +3180,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
         # Correlation between New continuous variables and old continuous variables
-        col_sup_corr = np.zeros((len(X.columns),len(self.quanti_labels_)))
-        for i, lab in enumerate(X.columns):
-            for j, name in enumerate(self.quanti_labels_):
-                col_sup_corr[i,j] = st.pearsonr(X[lab],self.quanti_data_[name]).statistic
+        col_sup_corr = np.transpose(np.corrcoef(x=self.quanti_data_.values,y=X.values,rowvar=False))[len(self.quanti_labels_):,:len(self.quanti_labels_)]
 
         # Supplementary continuous coordinates
         col_sup_coord = np.transpose(np.corrcoef(x=self.row_coord_,y=X.values,rowvar=False)[:self.n_components_,self.n_components_:])
@@ -3236,10 +3200,10 @@ class FAMD(BaseEstimator,TransformerMixin):
         # Self
         self.col_sup_labels_ = X.columns
 
-        return dict({"corr"     :   pd.DataFrame(self.col_sup_corr_, index=self.col_sup_labels_,columns=self.col_labels_),
-                     "coord"    :   pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
-                     "cos2"     :   pd.DataFrame(self.col_sup_cos2_, index = self.col_sup_labels_,columns=self.dim_index_),
-                     "ftest"    :   pd.DataFrame(self.col_sup_ftest_,index = self.col_sup_labels_,columns=self.dim_index_)
+        return dict({"corr"     :   pd.DataFrame(col_sup_corr, index=X.columns,columns=self.col_labels_),
+                     "coord"    :   pd.DataFrame(col_sup_coord[:,:self.n_components_],index=X.columns,columns=self.dim_index_),
+                     "cos2"     :   pd.DataFrame(col_sup_cos2[:,:self.n_components_], index = X.columns,columns=self.dim_index_),
+                     "ftest"    :   pd.DataFrame(col_sup_ftest[:,:self.n_components_],index =X.columns,columns=self.dim_index_)
                      })
     
     def _compute_quali_sup_stats(self,X,y=None):
@@ -3423,7 +3387,7 @@ class FAMD(BaseEstimator,TransformerMixin):
 
 
 ######################################################################################################
-#               Multiple Factor Analysis
+#               Multiple Factor Analysis (MFA)
 #####################################################################################################
 
 class MFA(BaseEstimator,TransformerMixin):
@@ -3434,9 +3398,7 @@ class MFA(BaseEstimator,TransformerMixin):
     
 
     def fit(self,X,y=None):
-        raise ValueError("Error : This method is not yet implemented.")
-
-
+        raise NotImplementedError("Error : This method is not yet implemented.")
 
 
 ########################################################################################################
@@ -3451,7 +3413,7 @@ class HMFA(BaseEstimator,TransformerMixin):
     
 
     def fit(self,X,y=None):
-        raise ValueError("Error : This method is not yet implemented.")
+        raise NotImplementedError("Error : This method is not yet implemented.")
 
  
         
