@@ -253,15 +253,13 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
                 sup_labels = None,
                 proximity="euclidean",
                 normalized_stress=True,
-                graph=True,
-                figsize=None):
+                parallelize=False):
         self.n_components = n_components
         self.labels = labels
         self.sup_labels = sup_labels
         self.proximity = proximity
         self.normalized_stress = normalized_stress
-        self.graph = graph
-        self.figsize = figsize
+        self.parallelize =parallelize
     
     def fit(self,X,y=None):
         """Fit the model to X
@@ -285,6 +283,12 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+          # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
+        
         # Extract supplementary data
         self.sup_labels_ = self.sup_labels
         if self.sup_labels_ is not None:
@@ -303,10 +307,6 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         self.centering_matrix_ = np.identity(self.nobs_) - (1/self.nobs_)*np.ones(shape=(self.nobs_,self.nobs_))
         
         self._compute_stats(_X)
-
-        if self.graph:
-            fig, axe = plt.subplots(figsize=self.figsize)
-            plotCMDS(self,repel=True,ax=axe)
         
         if self.sup_labels_ is not None:
             self.sup_coord_ = self.transform(row_sup)
@@ -437,12 +437,11 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        
         d2 = np.sum(self.dist_**2,axis=1)/self.nobs_
         d3 = np.sum(self.dist_**2)/(self.nobs_**2)
         
         if self.proximity == "precomputed":
-            sup_coord = mapply(X,lambda x : -(1/2)*(x**2 - np.sum(x**2)-d2+d3),axis=1,progressbar=False).dot(self.coord_)/self.eig_[0]
+            sup_coord = mapply(X,lambda x : -(1/2)*(x**2 - np.sum(x**2)-d2+d3),axis=1,progressbar=False,n_workers=self.n_workers_).dot(self.coord_)/self.eig_[0]
         elif self.proximity == "euclidean":
             n_supp_obs = X.shape[0]
             sup_dist = np.zeros((n_supp_obs,self.nobs_))
@@ -470,7 +469,6 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         """
         
         self.fit(X)
-
         return self.coord_
     
 
@@ -582,8 +580,7 @@ class MDS(BaseEstimator,TransformerMixin):
                 labels = None,
                 sup_labels = None,
                 normalized_stress=True,
-                graph =True,
-                figsize=(10,10)):
+                parallelize=False):
         self.n_components = n_components
         self.proximity = proximity
         self.metric = metric
@@ -596,8 +593,7 @@ class MDS(BaseEstimator,TransformerMixin):
         self.labels = labels
         self.sup_labels = sup_labels
         self.normalized_stress =normalized_stress
-        self.graph = graph
-        self.figsize = figsize
+        self.parallelize = parallelize
     
     def fit(self,X,y=None, init=None):
         """Fit the model to X
@@ -620,6 +616,12 @@ class MDS(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
         
          # Extract supplementary data
         self.sup_labels_ = self.sup_labels
@@ -663,10 +665,6 @@ class MDS(BaseEstimator,TransformerMixin):
             self.stress_ = np.sum((self.res_dist_-self.dist_)**2)
 
         self.model_ = "mds"
-
-        if self.graph:
-            fig, axe = plt.subplots(figsize=self.figsize)
-            plotMDS(self,repel=True,ax=axe)
 
         return self
     
