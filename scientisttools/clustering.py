@@ -363,7 +363,7 @@ class HCPC(BaseEstimator,TransformerMixin):
 #       Clustering of Variables
 ###########################################################################################################################
 class VARCLUS(BaseEstimator,TransformerMixin):
-    """Clustreing of variables
+    """Clustering of variables
     
     
     
@@ -379,8 +379,6 @@ class VARCLUS(BaseEstimator,TransformerMixin):
         self.metric = metric
         self.row_labels = row_labels
         self.col_labels = col_labels
-
-
 
     def fit(self,X,y=None):
         raise NotImplementedError("Error : This method is not yet implemented.")
@@ -822,13 +820,21 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         return corr_sup
 
 ##############################################################################################################
-#       Hierachical Clustering Analysis on Principal Components of Variables
+#       Hierachical Clustering Analysis on Principal Components of Variables (VARHCPC)
 ##############################################################################################################
         
 class VARHCPC(BaseEstimator,TransformerMixin):
     """Variables Hierachical Clustering on Principal Components
 
-    Performs Hierarchical Clustering
+    Performs Hierarchical Clustering on variables using principal components
+
+    Parameters:
+    ------------
+
+
+
+    Returns:
+    -------
     
     """
     def __init__(self,
@@ -959,7 +965,7 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         return self.linkage_matrix_
 
 ###############################################################################################################################
-#                   
+#                   Variables Kmeans (VARKMEANS)
 ###############################################################################################################################
 
 class VARKMEANS(BaseEstimator,TransformerMixin):

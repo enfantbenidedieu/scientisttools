@@ -30,7 +30,9 @@ Those statistical methods can be used in two ways :
 
 * **Clustering analysis**:
     * Hierarchical Clustering on Principal Components (HCPC)
+    * Variables Hierarchical Clustering Analysis (VARHCA)
     * Variables Hierarchical Clustering Analysis on Principal Components (VARHCPC)
+    * Categorical Variables Hierarchical Clustering Analysis (CATVARHCA)
 * **Discriminant Analysis**
     * Canonical Discriminant Analysis (CANDISC)
     * Linear Discriminant Analysis (LDA)
