@@ -6,15 +6,12 @@ import scipy.stats as st
 from scientisttools.utils import eta2
 from mapply.mapply import mapply
 from scipy.cluster import hierarchy
-import association_metrics as am
+from scientistmetrics import scientistmetrics
 from scipy.spatial.distance import squareform, pdist
 from sklearn.cluster import KMeans
 from yellowbrick.cluster import KElbowVisualizer
 from sklearn.base import BaseEstimator, TransformerMixin
-
-from scientisttools.pyplot import plotHCPC
 from scientisttools.utils import from_dummies
-
 
 ##################################################################################################################3
 #           Hierachical Clustering Analysis on Principal Components (HCPC)
@@ -671,10 +668,10 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         self.original_data_ = M
 
         # Convert you str columns to Category columns
-        M = M.apply(lambda x: x.astype("category") if x.dtype == "O" else x)
+        M = mapply(M,lambda x: x.astype("category") if x.dtype == "O" else x,axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Compute dissimilarity matrix using cramer's V
-        D = mapply(am.CramersV(M).fit(),lambda x : 1 - x, axis=0,progressbar=False,n_workers=self.n_workers_)
+        D = mapply(scientistmetrics(X=M,method="cramer"),lambda x : 1 - x, axis=0,progressbar=False,n_workers=self.n_workers_)
         return D
     
     @staticmethod

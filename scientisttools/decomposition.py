@@ -1389,9 +1389,7 @@ class EFA(BaseEstimator,TransformerMixin):
                 method = "principal",
                 row_sup_labels = None,
                 quanti_sup_labels = None,
-                quali_sup_labels = None,
-                graph =None,
-                figsize=None):
+                quali_sup_labels = None):
         self.normalize = normalize
         self.n_components =n_components
         self.row_labels = row_labels
@@ -1400,8 +1398,6 @@ class EFA(BaseEstimator,TransformerMixin):
         self.row_sup_labels = row_sup_labels
         self.quanti_sup_labels = quanti_sup_labels
         self.quali_sup_labels = quali_sup_labels
-        self.graph = graph
-        self.figsize= figsize
 
     def fit(self,X,y=None):
         """Fit the model to X
@@ -1418,6 +1414,12 @@ class EFA(BaseEstimator,TransformerMixin):
         self : object
                 Returns the instance itself
         """
+
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
         # Extract supplementary rows
         self.row_sup_labels_ = self.row_sup_labels
@@ -1445,13 +1447,9 @@ class EFA(BaseEstimator,TransformerMixin):
         else:
             X_ = _X
         
+        # Save dataframe
         self.data_ = X
-
-        if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        self.active_data_ = X_
         
         # Dimension
         self.n_rows_, self.n_cols_ = X_.shape
@@ -2868,6 +2866,12 @@ class FAMD(BaseEstimator,TransformerMixin):
         X_quant = X_.select_dtypes(include=np.number)
         X_qual = X_.select_dtypes(include=["object","category"])
 
+        # Check if NULL
+        if X_quant.empty and not X_qual.empty:
+            raise ValueError("Error : There is no continuous variables in X. Please use MCA function.")
+        elif X_qual.empty and not X_quant.empty:
+            raise ValueError("Error : There is no categoricals variables in X. Please use PCA function.")
+
         #Initialize lables
         self.row_labels_ = self.row_labels
         if self.row_labels_ is None:
@@ -3391,14 +3395,56 @@ class FAMD(BaseEstimator,TransformerMixin):
 #####################################################################################################
 
 class MFA(BaseEstimator,TransformerMixin):
+    """Multiple Factor Analysis (MFA)
 
+    Performs Multiple Factor Analysis
 
-    def __init__(self,n_components=None):
-        self.n_components =n_components
+    Parameters:
+    ----------
+    n_components :
+
     
+    
+    """
 
+
+    def __init__(self,
+                 n_components=int|None,
+                 group=list[int],
+                 group_type = list[str],
+                 group_name = list[str],
+                 num_group_sup = list[int]|None):
+        self.n_components =n_components
+        self.group = group
+        self.group_type = group_type
+        self.group_name = group_name
+        self.num_group_sup = num_group_sup
+    
     def fit(self,X,y=None):
-        raise NotImplementedError("Error : This method is not yet implemented.")
+        """
+        
+        """
+
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(
+            f"{type(X)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Check if not None
+        if self.num_group_sup is not None:
+            q = len(self.num_group_sup)
+            sup_col = list()
+            for i in self.num_group_sup:
+                g = self.group[i]
+
+        
+        print(q)
+
+        return self
+        
+
+        
 
 
 ########################################################################################################

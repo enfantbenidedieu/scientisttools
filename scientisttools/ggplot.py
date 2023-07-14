@@ -2479,14 +2479,14 @@ def fviz_hcpc_cluster(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
+        (axis[1] > self.factor_model_.n_components_-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
     
     if legend_title is None:
         legend_title = "cluster"
 
-    coord = pd.DataFrame(self.row_coord_,index = self.row_labels_,columns=self.dim_index_)
+    coord = pd.DataFrame(self.factor_model_.row_coord_,index = self.labels_,columns=self.factor_model_.dim_index_)
 
     if cluster is None:
         coord = pd.concat([coord,self.cluster_],axis=1)
@@ -2498,7 +2498,7 @@ def fviz_hcpc_cluster(self,
 
      # Extract coordinates
      # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.labels_))
 
     p = p + pn.geom_point(pn.aes(color = "cluster"),size=point_size,shape=marker)
     if repel:
@@ -2515,7 +2515,7 @@ def fviz_hcpc_cluster(self,
                               size=center_marker_size)
     
     # Add additionnal        
-    proportion = self.eig_[2]
+    proportion = self.factor_model_.eig_[2]
     xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
     ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 

@@ -2235,7 +2235,7 @@ def plotHCPC(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
+        (axis[1] > self.factor_model_.n_components_-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
     
@@ -2245,12 +2245,12 @@ def plotHCPC(self,
     if legend_title is None:
         legend_title = "cluster"
     
-    coord = self.row_coord_[:,axis]
+    coord = self.factor_model_.row_coord_[:,axis]
 
      # Extract coordinates
     xs = coord[:,axis[0]]
     ys = coord[:,axis[1]]
-    labels = self.row_labels_
+    labels = self.labels_
 
     color_list=list([x[4:] for x in list(mcolors.TABLEAU_COLORS.keys())])
     marker_list = list(['.', 'o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X'])
@@ -2300,7 +2300,7 @@ def plotHCPC(self,
                 ax.text(xxs[i],yys[i],name,c=color_dict[name],ha=ha,va=va,fontsize=center_text_size)
 
     # Add elements
-    proportion = self.eig_[2]
+    proportion = self.factor_model_.eig_[2]
     xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
     ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     ax.grid(visible=add_grid)
