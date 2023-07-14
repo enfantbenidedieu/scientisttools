@@ -2477,6 +2477,10 @@ class MCA(BaseEstimator,TransformerMixin):
         # Profil individu moyen
         ind_moyen = row_marge/(self.n_rows_*self.n_vars_)
 
+        ########################################################################################################################
+        #                       Informations sur les individus
+        #######################################################################################################################
+
         # Distance du chi2 entre les individus
         row_dist = squareform(pdist(self.disjonctif_/self.n_vars_,metric="seuclidean",V=ind_moyen)**2)
 
@@ -2489,6 +2493,7 @@ class MCA(BaseEstimator,TransformerMixin):
         # Inertie des observations
         row_inertia = row_disto*row_weight
 
+        # Stockage - concatenation
         row_infos = np.c_[np.sqrt(row_disto), row_weight, row_inertia]
 
         #########################################################################################################
@@ -2508,6 +2513,7 @@ class MCA(BaseEstimator,TransformerMixin):
         # Inertie des modalités
         mod_inertia = mod_disto * mod_weight
 
+        # Stockage des informations
         mod_infos = np.c_[np.sqrt(mod_disto),mod_weight,mod_inertia]
 
         #########################################################################################################
@@ -2530,6 +2536,14 @@ class MCA(BaseEstimator,TransformerMixin):
     
     def _benzecri(self,X):
         """Compute Benzécri correction
+
+        Prameters:
+        ----------
+        X : array
+
+        Return
+        -------
+        None
         
         """
         # save eigen value grather than threshold
@@ -2549,6 +2563,14 @@ class MCA(BaseEstimator,TransformerMixin):
 
     def _greenacre(self,X):
         """Compute Greenacre correction
+
+        Parameters
+        ----------
+        X : array
+
+        Return
+        ------
+        None
         
         """
         # save eigen value grather than threshold
@@ -2610,6 +2632,10 @@ class MCA(BaseEstimator,TransformerMixin):
     
     def _compute_quali_sup_stats(self,X,y=None):
         """Find the supplementary categorical columns factor
+
+        Parameters
+        ----------
+
         
         """
         # Test if X is a DataFrame
@@ -2662,6 +2688,11 @@ class MCA(BaseEstimator,TransformerMixin):
     
     def _compute_quanti_sup_stats(self,X,y=None):
         """Find the supplementary quantitative columns factor
+
+        Parameters
+        ----------
+
+        X : DataFrame
         
         """
 
@@ -2753,8 +2784,6 @@ class MCA(BaseEstimator,TransformerMixin):
 
         self.fit(X)
         return self.row_coord_
-
-
 
 #############################################################################################
 #               FACTOR ANALYSIS OF MIXED DATA (FAMD)
@@ -3388,11 +3417,11 @@ class FAMD(BaseEstimator,TransformerMixin):
         self.fit(X)
         return self.row_coord_
 
-
-
 ######################################################################################################
 #               Multiple Factor Analysis (MFA)
 #####################################################################################################
+
+# https://husson.github.io/MOOC_AnaDo/AFM.html
 
 class MFA(BaseEstimator,TransformerMixin):
     """Multiple Factor Analysis (MFA)
@@ -3401,7 +3430,11 @@ class MFA(BaseEstimator,TransformerMixin):
 
     Parameters:
     ----------
+    normalize : 
     n_components :
+    groups : list of string
+    groups :
+    groups_sup
 
     
     
@@ -3409,16 +3442,18 @@ class MFA(BaseEstimator,TransformerMixin):
 
 
     def __init__(self,
+                 normalize=True,
                  n_components=int|None,
-                 group=list[int],
-                 group_type = list[str],
-                 group_name = list[str],
-                 num_group_sup = list[int]|None):
+                 groups=list[str]|None,
+                 groups_sup = list[str]|None,
+                 row_labels = list[str]|None,
+                 parallelize=False):
+        self.normalize = normalize
         self.n_components =n_components
-        self.group = group
-        self.group_type = group_type
-        self.group_name = group_name
-        self.num_group_sup = num_group_sup
+        self.groups = groups
+        self.groups_sup = groups_sup
+        self.row_labels = row_labels
+        self.parallelize = parallelize
     
     def fit(self,X,y=None):
         """
@@ -3431,17 +3466,162 @@ class MFA(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Check if not None
-        if self.num_group_sup is not None:
-            q = len(self.num_group_sup)
-            sup_col = list()
-            for i in self.num_group_sup:
-                g = self.group[i]
-
+         # set parallelize
+        if self.parallelize:
+            self.n_workers_ = -1
+        else:
+            self.n_workers_ = 1
         
-        print(q)
+        # Check if groups is None 
+        if self.groups is None:
+            raise ValueError("Error : 'groups' must be assigned.")
+        
+        # Remove supplementary group
+        self.groups_sup_ = self.groups_sup
+        if self.groups_sup_ is not None:
+            diff = [i for i in self.groups + self.groups_sup_ if i not in self.groups or i not in self.groups_sup_]
+            if len(diff)==0:
+                raise ValueError("Error : ")
+            else:
+                Xsup = X[self.groups_sup_]
+                X_ = X[self.groups]
+        else:
+            X_ = X
+        
+        # Save data
+        self.data_ = X
+        self.active_data_ = X_
+
+        print(X_.info())
+
+        self._compute_stats(X_)
+
 
         return self
+    
+    def _compute_stats(self,X):
+        """
+        
+        """
+
+        # Shape of X
+        self.n_rows_, self.n_cols_ = X.shape
+
+        # Set row labels
+        self.row_labels_ = self.row_labels
+        if ((self.row_labels_ is None) or (len(self.row_labels_) != self.n_rows_)):
+            self.row_labels_ = ["row_" + str(i+1) for i in np.arange(0,self.n_rows_)]
+
+        # Checks groups are provided
+        self.groups_ = self._determine_groups(X=X)
+
+        # Chack group types are consistent
+        self.all_nums_ = dict()
+        for name, cols in self.groups_.items():
+            all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in cols)
+            all_cat = all(pd.api.types.is_string_dtype(X[c]) for c in cols)
+            if not (all_num or all_cat):
+                raise ValueError(f'Not all columns in "{name}" group are of the same type')
+            self.all_nums_[name] = all_num
+        
+
+        # Run a Factor Analysis in each group
+        model = dict()
+        for group, cols in self.groups_.items():
+            if self.all_nums_[group]:
+                fa = PCA(normalize=self.normalize,
+                         n_components=self.n_components,
+                         row_labels=X.loc[:,cols][group].index,
+                         col_labels=X.loc[:,cols][group].columns,
+                         parallelize=self.parallelize)
+            else:
+                raise NotImplementedError("Groups of non-numerical variables are not supported yet")
+            model[group] = fa.fit(X.loc[:,cols][group])
+            
+        self.fa_model_ = model
+
+        # Normalize data
+        self.means_ = np.mean(X.values, axis=0).reshape(1,-1)
+        if self.normalize:
+            self.std_ = np.std(X.values,axis=0,ddof=0).reshape(1,-1)
+            Z = (X - self.means_)/self.std_
+        else:
+            Z = X - self.means_
+        
+        # Ponderation
+        Zb = pd.concat((mapply(Z.loc[:,cols],lambda x : x/np.sqrt(model[group].eig_[0][0]),axis=0,progressbar=False,n_workers=self.n_workers_) for group, cols in self.groups_.items()),axis=1)
+
+        ###########################################################################################################
+        # Fit global PCA
+        ###########################################################################################################
+        pca_model = PCA(normalize=False,n_components=None,row_labels=Zb.index,col_labels=Zb.columns,parallelize=self.parallelize).fit(Zb)
+        
+        self.n_components_ = self.n_components
+        if self.n_components_ is None:
+            self.n_components_ = pca_model.n_components_
+        
+        dim_index = ["Dim."+str(x+1) for x in np.arange(self.n_components_)]
+
+        # Coordonnées des individus par groupes
+        group_row_coord = pd.DataFrame().astype("float")
+        for group, cols in self.groups_.items():
+            df = Zb.loc[:,cols][group]
+            pca = PCA(normalize=True,n_components=None,row_labels=df.index,col_labels=df.columns,parallelize=self.parallelize).fit(df)
+            ncp = min(df.shape[1],self.n_components_)
+            row_coord = pd.DataFrame(pca.row_coord_[:,:ncp],columns=["Dim."+str(x+1) for x in np.arange(ncp)],index=pca.row_labels_)
+            group_row_coord = pd.concat([group_row_coord,self.add_index(row_coord,group_name=group)],axis=1)
+        
+        # Store all informations
+        self.eig_ = pca_model.eig_[:,:self.n_components_]
+        self.eigen_vectors_ = pca_model.eigen_vectors_[:,:self.n_components]
+        self.row_coord_ = pca_model.row_coord_[:,:self.n_components_]
+        self.dim_index_ = dim_index
+        self.normalied_data_ = Z
+        self.pnormalized_data_ = Zb
+
+        # Model Name
+        self.model_ = "mfa"
+    
+    @staticmethod
+    def grow_coord(X):
+        pass
+
+    @staticmethod
+    def add_index(df,group_name):
+        df.columns = pd.MultiIndex.from_tuples([(group_name,col) for col in df.columns])
+        return df
+
+
+    def _determine_groups(self,X):
+        """
+        
+        
+        """
+
+        if isinstance(self.groups,list):
+            if not isinstance(X.columns,pd.MultiIndex):
+                raise ValueError("Error : Groups have to be provided as a dict when X is not a MultiIndex")
+            groups = { g: [(g, c) for c in X.columns.get_level_values(1)[X.columns.get_level_values(0) == g]] for g in self.groups}
+        else:
+            groups = self.groups
+        
+        return groups
+            
+
+    def fit_transform(self,X,y=None):
+        """
+        
+        
+        """
+
+        self.fit(X)
+        return self.row_coord_
+    
+    def transform(self,X):
+        """
+        
+        """
+        raise NotImplementedError("Error : This method is not yet implemented")
         
 
         
@@ -3452,6 +3632,11 @@ class MFA(BaseEstimator,TransformerMixin):
 #######################################################################################################
 
 class HMFA(BaseEstimator,TransformerMixin):
+    """
+    
+    
+    
+    """
 
 
     def __init__(self,n_components=None):

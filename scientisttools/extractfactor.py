@@ -1856,3 +1856,81 @@ def summaryCANDISC(self,digits=3,
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(var_infos)
+
+
+#############################################################################################
+#           Multiple Factor Analysis (MFA)
+#############################################################################################
+
+def get_mfa_ind(self):
+    """
+    
+    
+    """
+    df = dict({
+        "coord" : pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_)
+    })
+    
+    return df
+
+
+def get_mfa_col(self):
+    raise ValueError("Error : This method is not yet implemented.")
+
+
+def get_mfa(self,choice="row"):
+    """
+    
+    """
+    if choice == "row":
+        return get_mfa_ind(self)
+    elif choice == "col":
+        return get_mfa_col(self)
+    else:
+        raise ValueError("Error : Allowed values are 'row' and 'var'.")
+    
+
+def summaryMFA(self,
+               digits=3,
+               nb_element=10,
+               ncp=3,
+               to_markdown=False,
+               tablefmt = "pipe",
+               **kwargs):
+    """Printing summaries of Multiple Factor Analysis model
+
+    Parameters
+    ----------
+    self        :   an obect of class MFA.
+    digits      :   int, default=3. Number of decimal printed
+    nb_element  :   int, default = 10. Number of element
+    ncp         :   int, default = 3. Number of componennts
+    to_markdown :   Print DataFrame in Markdown-friendly format.
+    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    **kwargs    :   These parameters will be passed to tabulate.
+    """
+
+    row = get_mfa(self,choice="row")
+
+    ncp = min(ncp,self.n_components_)
+    nb_element = min(nb_element,len(self.row_labels_))
+
+    # Principal Components Analysis Results
+    print("                     Multiple Factor Analysis - Results                     \n")
+
+    # Add eigenvalues informations
+    print("Importance of components")
+    eig = pd.DataFrame(self.eig_,columns=self.dim_index_,index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
+    if to_markdown:
+        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(eig)
+    
+    # Add individuals informations
+    print(f"\nIndividuals (the {nb_element} first)\n")
+    row_infos = row["coord"].iloc[:,:ncp]
+    row_infos = row_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(row_infos)

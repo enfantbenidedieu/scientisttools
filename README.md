@@ -17,6 +17,7 @@
     * Correspondence Analysis (CA)
     * Multiple Correspondence Analysis (MCA)
     * Factor Analysis of Mixed Data (FAMD)
+    * Multiple Factor Analysis (MFA)
 * In some methods, it allowed to **add supplementary informations** such as supplementary individuals and/or variables.
 * It provides a geometrical point of view, a lot of graphical outputs.
 * It provides efficient implementations, using a scikit-learn API.
@@ -29,6 +30,7 @@ Those statistical methods can be used in two ways :
 
 * **Clustering analysis**:
     * Hierarchical Clustering on Principal Components (HCPC)
+    * Variables Hierarchical Clustering Analysis on Principal Components (VARHCPC)
 * **Discriminant Analysis**
     * Canonical Discriminant Analysis (CANDISC)
     * Linear Discriminant Analysis (LDA)

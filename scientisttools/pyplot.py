@@ -828,7 +828,7 @@ def plot_eigenvalues(self,
     if choice == "eigenvalue":
         eig = self.eig_[0][:ncp]
         text_labels = list([str(np.around(x,3)) for x in eig])
-        if self.model_ not in ["famd","cmds","disqual","dismix"]:
+        if self.model_ not in ["famd","cmds","disqual","dismix","mfa"]:
             kaiser = self.kaiser_threshold_
         if self.model_ in ["pca","ppca","efa"]:
             kss = self.kss_threshold_
@@ -838,7 +838,7 @@ def plot_eigenvalues(self,
     elif choice == "proportion":
         eig = self.eig_[2][:ncp]
         text_labels = list([str(np.around(x,1))+"%" for x in eig])
-        if self.model_ not in ["famd","cmds","disqual","dismix"]:
+        if self.model_ not in ["famd","cmds","disqual","dismix","mfa"]:
             kaiser = self.kaiser_proportion_threshold_
     else:
         raise ValueError("Error : 'choice' variable must be 'eigenvalue' or 'proportion'.")
@@ -2426,3 +2426,117 @@ def plotVARHCPC(self,
         ax.axhline(y=0,color=hline_color,linestyle=hline_style)
     if add_vline:
         ax.axvline(x=0,color=vline_color,linestyle=vline_style)   
+
+
+############################################################################################################
+#           Multiple Factor Analysis (MFA)
+############################################################################################################
+
+def plotMFA(self,
+            choice ="ind",
+            axis=[0,1],
+            xlim=(None,None),
+            ylim=(None,None),
+            title =None,
+            color="blue",
+            marker="o",
+            add_grid =True,
+            color_map ="jet",
+            add_hline = True,
+            add_vline=True,
+            ha="center",
+            va="center",
+            add_circle=True,
+            hline_color="black",
+            hline_style="dashed",
+            vline_color="black",
+            vline_style ="dashed",
+            patch_color = "black",
+            repel=False,
+            ax=None,
+            **kwargs) -> plt:
+    
+    """ Plot the Factor map for individuals and variables
+
+    Parameters
+    ----------
+    self : aninstance of class MFA
+    choice : {'ind', 'var'}, default = 'ind'
+    axis : tuple or list of two elements
+    xlim : tuple or list of two elements
+    ylim : tuple or list of two elements
+    title : str
+    color : str
+    marker : str
+             The marker style for active points
+    add_grid : bool
+    color_map : str
+    add_hline : bool
+    add_vline : bool
+    ha : horizontalalignment : {'left','center','right'}
+    va : verticalalignment {"bottom","baseline","center","center_baseline","top"}
+    hline_color :
+    hline_style :
+    vline_color :
+    vline_style :
+    ax :
+    **kwargs : Collection properties
+
+    Returns
+    -------
+    None
+    """
+
+    if self.model_ != "mfa":
+        raise ValueError("Error : 'self' must be an instance of class MFA.")
+    
+    if choice not in ["ind","var"]:
+        raise ValueError("Error : Alowed values are 'ind' or 'var'.")
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.n_components_-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("Error : You must pass a valid 'axis'.")
+    
+    if ax is None:
+        ax = plt.gca()
+    
+    if choice == "ind":
+        coord = self.row_coord_[:,axis]
+        labels = self.row_labels_
+        if title is None:
+            title = "Individuals factor map - MFA"
+    elif choice == "var":
+        raise ValueError("Error : This method is not yet implemented.")
+
+    # Extract coordinates
+    xs = coord[:,axis[0]]
+    ys = coord[:,axis[1]]
+
+    
+    if choice == "ind":
+        ax.scatter(xs,ys,c=color,marker=marker,**kwargs)
+        # Add labels
+        if repel:
+            texts = list()
+            for i, lab in enumerate(labels):
+                texts.append(ax.text(xs[i],ys[i],lab,ha=ha,va=va,color=color))
+            adjust_text(texts,x=xs,y=ys,arrowprops=dict(arrowstyle="->",color=color,lw=1.0),ax=ax)
+        else:
+            for i, lab in enumerate(labels):
+                ax.text(xs[i],ys[i],lab,ha=ha,va=va,color=color)
+    else:
+        raise NotImplementedError("Error : This method is not yet implemented.")
+    
+    # Add elements
+    proportion = self.eig_[2]
+    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+    ax.grid(visible=add_grid)
+    ax.set(xlabel=xlabel,ylabel=ylabel,title=title,xlim=xlim,ylim=ylim)
+    if add_hline:
+        ax.axhline(y=0,color=hline_color,linestyle=hline_style)
+    if add_vline:
+        ax.axvline(x=0,color=vline_color,linestyle=vline_style)   
+
