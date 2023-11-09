@@ -1,0 +1,583 @@
+---
+title: '**AFC sous Python avec scientisttools**'
+author: "Duvérier DJIFACK ZEBAZE"
+#date: "`r Sys.Date()`"
+documentclass: article
+geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm, twoside=true"
+fontsize: 11pt
+line-height: 1.5
+urlcolor: blue
+linkcolor: blue
+link-citations : yes
+output: pdf_document
+mainfont: Bookman Old Style
+header-includes:
+- \usepackage{pbox}
+- \usepackage{caption}
+- \usepackage{subcaption}
+- \usepackage{natbib}
+- \usepackage[utf8]{inputenc} # Caractères spéciaux
+- \usepackage[french]{babel}
+- \usepackage{amsmath, amsfonts, amssymb}   #Symboles mathématiques
+- \usepackage{amsfonts}
+# - \usepackage{minitoc} # [undotted] pour supprimer les pointillés
+# - \mtcsetdepth{minitoc}{1} # 1 section, 2 sous-section 3 sous-sous-section
+# - \mtcsettitle{minitoc}{Sommaire} # Changer le titre
+- \usepackage{diagbox}
+- \usepackage{lettrine}
+- \usepackage[labelfont=bf]{caption}
+- \captionsetup{font=scriptsize}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+- \usepackage{minitoc}
+- \usepackage[Bjornstrup]{fncychap}
+#- \usepackage[Conny]{fncychap} 
+#- \usepackage[pdftex]{pict2e}
+- \usepackage[dvipsnames]{xcolor}
+- \usepackage{fourier-orns}
+- \usepackage{fancyhdr}
+- \usepackage{geometry}
+- \geometry{a4paper,total={160mm,240mm},left=25mm,right=25mm,top=25mm,bottom=25mm}
+- \usepackage[printsolution=true]{exercises}
+- \usepackage{tikz}
+---
+
+```{r setup, include=FALSE}
+library(reticulate)
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning=FALSE,fig.pos = "H",
+                      out.extra = "",fig.align = "center",collapse =  FALSE,
+                      highlight = TRUE)
+```
+
+Ce tutoriel a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une Analyse Factorielle des Correspondances. 
+
+# Présentation des données
+
+Les données sur lesquelles nous allons travailler proviennent du site \href{http://factominer.free.fr/factomethods/analyse-factorielle-des-correspondances.html}{http://factominer.free.fr/factomethods/analyse-factorielle-des-correspondances.html}. Il s'agit des données issues d'un questionnaire réalisé sur des françaises en $1974$.
+
+Ces données sont issues d'une enquête du CREDOC publiée en 1974 par Nicole Tabard, intitulée Besoins et aspirations des familles et des jeunes. $1724$ femmes ont répondu à différentes questions à propos du travail des femmes, parmi lesquelles : 
+
+\begin{enumerate}
+\item Quelle est selon vous la famille parfaite?
+\begin{itemize}
+\item  L'homme et la femme travaillent
+\item L'homme travaille plus que la femme
+\item Seul l'homme travaille
+\end{itemize}
+\item Quelle activité est la meilleure pour une mère quand les enfants vont à l'école?
+\begin{itemize}
+\item Rester à la maison
+\item Travailler à mi - temps
+\item Travailler à temps complet
+\end{itemize}
+\item Que pensez - vous de la phrase suivante : les femmes qui ne travaillent pas se sentent coupées du monde?
+\begin{itemize}
+\item Complètement d'accord
+\item Plutôt d'accord
+\item Plutôt en désaccord
+\item Complètement en désaccord
+\end{itemize}
+\end{enumerate}
+
+Le tableau de données est formé de deux tableaux de contingence qui croisent les réponses de la première question à celles des deux autres. 
+
+Nous pouvons charger les données sur \href{http://factominer.free.fr/factomethods/datasets/women_work.txt}{http://factominer.free.fr/factomethods/datasets/women\_work.txt}
+
+
+```{python}
+# Chargement des données
+import pandas as pd
+url = "http://factominer.free.fr/factomethods/datasets/women_work.txt"
+women_work = pd.read_table(url,header=0)
+women_work.info()
+```
+
+
+```{r women-work-data,engine='R',echo=FALSE}
+knitr::kable(py$women_work, 
+             caption = "Données d'enquête",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::row_spec(0,angle = 90) %>% 
+  kableExtra::column_spec(c(1,4,8),border_right = TRUE) %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Chaque valeur du tableau \ref{tab:women-work-data} correspond au nombre de femmes ayant donnée la réponse en ligne et la réponse en colonne.
+
+Le point de départ de l’analyse est le tableau de contingence reproduit ci-dessous. 
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$women_work[,c(1:3)], 
+             caption = "Données d'enquête",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+C’est ce type de données (les marges des totaux mis à part) que nous fournirons à la fonction de calcul de l’AFC.
+
+Comme le souligne François Husson dans le MOOC Analyse des données multidimensionnelles sur la plateforme FUN, il est difficile de savoir à partir de ce tableau si les femmes sont favorables ou non au travail féminin. En effet, 908 femmes sur $1 724$, soit $52\%$ ont répondu que la famille idéale est celle où \og Only man works \fg{}. Elles sont néanmoins $1 123$ sur $1 724$ $(65\%)$ à avoir répondu que l’activité convenant le mieux à une mère de famille quand ses enfants vont à l’école est de travailler à mi-temps \og part-time work \fg{}. L’AFC va nous permettre d’étudier le lien entre ces deux questions et de lever cette apparente contradiction. Elle va notamment nous permettre de visualiser la nature de la liaison entre les deux questions. Mais qu’est ce qu’une liaison ?
+
+Une liaison entre deux variables est l’écart entre les données observées et le modèle d’indépendance. Mettons pour l’instant de côté cette notion, nous y reviendrons plus tard.
+
+# Objectifs 
+
+Les objectifs de l'AFC sont similaires à ceux de l'ACP : obtenir une typologie des lignes et des colonnes et étudier le lien entre ces deux typologies.
+
+Cependant, le concept de similarité entre les lignes et les colonnes est diférent. Ici, la similarité entre deux lignes ou deux colonnes est complètement symétrique. Deux lignes (resp. colonnes) sont proches l'une de l'autre si elles s'associent aux colonnes (resp. lignes) de la même façon.
+
+On recherche les lignes (resp. colonnes) dont la distribution est la plus différente de celle de la population. Celles qui semblent le plus ou le moins semblables.
+
+Chaque groupe de lignes (resp. colonnes) est caractérisé par les colonnes (resp. lignes) auxquelles il est particulièrement ou particulièrement peu associé.
+
+Nous travaillons d'abord avec seulement les 3 premières colonnes: \og Stay at home \fg{}, \og Part time work \fg{} et \og Full time work \fg{}.
+
+```{python}
+# Selection des 3 premières colonnes
+wfemmes = women_work.iloc[:,:3]
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$wfemmes, 
+             caption = "Données d'enquête - Tableau des données observées",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Notons que nous pouvons calculer les marges lignes et les marges colonnes de ce tableau de contingence de la manière suivante : 
+
+```{python}
+# Ajout des marges lignes et colonnes
+wfemmes_avec_marges = wfemmes.copy()
+wfemmes_avec_marges.loc["Total",:] = wfemmes.sum(axis=0)
+wfemmes_avec_marges.loc[:,"Total"] = wfemmes_avec_marges.sum(axis=1)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$wfemmes_avec_marges, 
+             caption = "Données d'enquête avec marge ligne et colonne",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::row_spec(3,hline_after = TRUE) %>% 
+  kableExtra::column_spec(4,border_right = TRUE) %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Il est aussi intéressant de calculer les pourcentages en ligne et les pourcentages en colonne.
+
+
+```{python}
+# Pourcentages en ligne
+import numpy as np
+wfemmes_pourcentage_en_ligne = wfemmes.copy()
+wfemmes_pourcentage_en_ligne.loc["Profil ligne moyen",:] = wfemmes.sum(axis=0)
+wfemmes_pourcentage_en_ligne = wfemmes_pourcentage_en_ligne.apply(
+                                             lambda x : 100*x/np.sum(x),axis=1)
+wfemmes_pourcentage_en_ligne.loc[:,"Total"] = wfemmes_pourcentage_en_ligne.sum(
+                                                       axis=1)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$wfemmes_pourcentage_en_ligne,2), 
+             caption = "Données d'enquête - Tableau des pourcentages en ligne",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::row_spec(3,hline_after = TRUE) %>% 
+  kableExtra::column_spec(4,border_right = TRUE) %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Pour rappel, la ligne \og Profil ligne moyen \fg{} correspond à la répartition en pourcentage des modalités à la question sur \og l’activité qui convient le mieux à une mère de famille quand les enfants vont à l’école \fg{}, quelque soit la réponse à la question sur la famille idéale. Le profil ligne moyen peut être comparé aux profils lignes (la répartition en pourcentages ou la distribution de probabilité d’une modalité en ligne). Ici, aucun des trois profils lignes n’est proche du profil ligne moyen.
+
+Calculons maintenant le tableau des pourcentages en colonne
+
+```{python}
+# Pourcentage en colonne
+wfemmes_pourcentage_en_colonne = wfemmes.copy()
+wfemmes_pourcentage_en_colonne.loc[:,"Profil colonne moyen"] = wfemmes.sum(axis=1)
+wfemmes_pourcentage_en_colonne = wfemmes_pourcentage_en_colonne.apply(
+                                             lambda x : 100*x/np.sum(x),axis=0)
+wfemmes_pourcentage_en_colonne.loc["Total",:] = wfemmes_pourcentage_en_colonne.sum(
+                                                       axis=0)
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$wfemmes_pourcentage_en_colonne,2), 
+             caption = "Données d'enquête - Tableau des pourcentages en colonne",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::row_spec(3,hline_after = TRUE) %>% 
+  kableExtra::column_spec(4,border_right = TRUE) %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Ce tableau permet de constater que la répartition des réponses sur la famille idéale pour la modalité \og Part-time work \fg{} est le plus proche de la répartion des réponses à la question sur la famille idéale. Autrement dit, le profil colonne \og Part-time work \fg{} est le profil colonne le plus proche du profil colonne moyen. Cette similitude se traduira sur le graphe de l’AFC comme nous le verrons plus loin.
+
+Nous verrons également que l’on passera en paramètre à la fonction Python de calcul de l’AFC, le tableau de contingence. Mais l’AFC travaille en réalité sur le tableau de probabilités que l’on peut calculer en divisant les valeurs du tableau de contingence par le nombre d’individus (on effectue le calcul sur le tableau de contingence avec marge pour mieux constater que l’effectif total du tableau de probabilité est bien égal à 1, ce qui est la marque d’une distribution de probabilités) :
+
+```{python}
+# Tableau des probabilités
+wfemmes_tableau_de_probabilite = wfemmes_avec_marges/1724
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$wfemmes_tableau_de_probabilite,5), 
+             caption = "Données d'enquête - Tableau de probabilité",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::row_spec(3,hline_after = TRUE) %>% 
+  kableExtra::column_spec(4,border_right = TRUE) %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Rappellons que notre objectif est de visualiser la nature de la liaison entre deux variables qualitatives. Mais faut-il encore que cette liaison soit significative. Pour ce faire, nous réalisons un test du Khi2.
+
+## Test du $\chi^{2}$
+
+Le test du $\chi^{2}$ mesure la significativité d’une liaison mais pas son intensité. Afin de réaliser ce test du $\chi^{2}$, nous utilisons la fonction \href{https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2_contingency.html}{chi\_contingency} de scipy.
+
+```{python}
+# Test de contingence du chi2
+import scipy.stats as st
+stat, pvalue, dof, expected = st.chi2_contingency(wfemmes)
+chisq_test = pd.DataFrame({"statistic":stat,"dof":dof,"pvalue":pvalue},
+                          index=["chi2 - test"])
+print(chisq_test)
+```
+
+La fonction \href{https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2_contingency.html}{chi\_contingency} nous donne, entre autres, la valeur du $\chi^{2}$ qui est un indicateur de la significativité de la liaison. Mais ce qui nous interesse ici est la p-value. Nous voyons ici que la p-value est égale à `r py$pvalue`. Cela signifie que la probabilité que les variables soient indépendantes est égale à `r py$pvalue`. Ce qui nous permet de rejeter l’hypothèse d’indépendance entre les deux variables. Pour autant, cela ne veut pas dire que les variables soient dépendantes. Les réponses à la question sur la famille idéale sont probablement liées aux réponses concernant l’activité convenant le mieux à une mère de famille dont les enfants vont à l’école.
+
+## Test de $\chi^{2}$ - Explications
+
+Le test du $\chi^{2}$ permet de déterminer la probabilité que les deux variables d’un tableau de contingence soient indépendantes, c’est-à-dire qu’il n’existe pas de relation entre les modalités en ligne et les modalités en colonne (les unes ne conditionnent pas les autres, et réciproquement). Dit autrement et comme le rappelle très clairement Julien Barnier, cela veut dire que le \og fait d’appartenir à une modalité de la première variable n’a pas d’influence sur la modalité d’appartenance de la deuxième variable \fg{}. Dans ce test, l’hypothèse nulle (H0) suppose qu’il y a indépendance entre les deux variables. Si nous acceptons l’hypothèse d’indépendance (H0), nous n’aurons pas d’utilité à réaliser une AFC car les points projetés seront extrêmement proches ou confondus avec le centre de gravité, confondus avec le centre du graphe. Si nous rejetons l’hypothèse d’indépendance (p-value $< 0,05$), l’hypothèse alternative (H1) suppose que la liaison entre les deux variables est significative sans que nous puissions définir l’intensité de la liaison.
+
+Rappelons que pour que le test du $\chi^{2}$ soit opératoire, il doit respecter un certain nombre de conditions (pour reprendre les propos de Claude Grasland) :
+\begin{itemize}
+\item L’effectif total du tableau de contingence doit être supérieur ou égal à $20$.
+\item L’effectif marginal du tableau de contingence doit toujours être supérieur ou égal à $5$.
+\item L’effectif théorique des cases du tableau de contingence doit être supérieur à $5$ dans $80\%$ des cases du tableau de contingence.
+\end{itemize}
+
+Du fait que nous ayons obtenu une p-value égale à `r py$pvalue` et, par extension, inférieure au seuil de $0,05$, nous rejetons l’hypothèse d’indépendance entre les deux variables.
+
+## Test du $\chi^{2}$ - Aide à l'interprétation
+
+Le test du $\chi^{2}$ est symétrique. Les lignes et les colonnes du tableau croisé sont interchangeables. Le résultat du test sera exactement le même. Il n’y a pas de \og sens de lecture \fg{} du tableau.
+
+Nous pouvons afficher le tableau d’indépendance (tableau des effectifs théoriques) en sélectionnant la valeur \texttt{expected}. Dans ce contexte, nous calculons le tableau des pourcentages théoriques, en multipliant pour chaque case la proportion observée dans la population des deux modalités correspondantes. Puis, le tableau des effectifs théoriques se calcule en multipliant le tableau des pourcentages théoriques par l’effectif total.
+
+```{python}
+# Tableau des effectifs théoriques
+effectif_theorik = pd.DataFrame(expected,index=wfemmes.index,
+                                columns=wfemmes.columns)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$effectif_theorik,5), 
+             caption = "Données d'enquête - Tableau des effectifs théoriques",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Le tableau des effectifs théoriques n’a que peu d’intérêt en lui-même mais en a davantage comparativement au tableau des données observées.
+
+Nous pouvons aussi afficher le tableau des résidus standardisés (tableau des écarts à l’indépendance). Un résidu standardisé positif signifie que les effectifs dans la case sont supérieur à ceux attendus sous l’hypothèse d’indépendance. Et l’inverse pour un résidu standardisé négatif.
+
+```{python}
+# Residus standardisés
+standardized_residuals = (wfemmes - effectif_theorik)/np.sqrt(effectif_theorik)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$standardized_residuals,5), 
+             caption = "Données d'enquête - Résidus standardisés",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Exprimé d’une autre manière, l’écart à l’indépendance représente l’écart entre l’effectif observé et l’effectif théorique, et ceci pour chacune des cases du tableau de contingence. D’ailleurs, comme le note Philippe Cibois, l’écart à l’indépendance \og est un effectif et c’est un invariant, indépendant du choix des lignes et des colonnes (c’est la différence entre l’effectif observé et l’effectif théorique : le résultat est donc un effectif). \fg{}
+Par ailleurs,
+\begin{itemize}
+\item Un écart à l’indépendance positif correspond à une attraction entre les deux modalités pour la case observée.
+\item À l’inverse, un écart à l’indépendance négatif correspond à une opposition entre les deux modalités pour la case observée.
+\end{itemize}
+
+Plus la valeur de l’écart à l’indépendance est importante, plus l’attraction/opposition entre les modalités est forte.
+
+# AFC
+
+Notre objectif est bien de visualiser la nature de la liaison entre les deux variables qualitatives. Sachant qu’une liaison correspond à l’écart entre les données observées et le modèle d’indépendance, nous souhaitons donc visualiser la nature de l’écart à l’indépendance entre deux variables qualitatives.
+
+Par ailleurs, il y a trois façons de caractériser la liaison entre les deux variables qualitatives.
+\begin{itemize}
+\item La significativité de la liaison (qui se mesure avec le test du $\chi^{2}$).
+\item L’intensité de la liaison (qui se mesure, entre autre, avec le $\phi^{2}$).
+\item La nature de la liaison (qui correspond à l’association entre les modalités et qui est représentée par le biais de l’AFC).
+\end{itemize}
+
+Le test du $\chi^{2}$ a permis d’écarter l’hypothèse d’indépendance. Il y a donc une liaison entre les modalités des deux variables. De fait, nous pouvons faire une AFC pour visualiser la nature de la liaison. Pour notre part, nous avons choisi d’utiliser le package \og scientisttools \fg{} (dédié à l’analyse multidimensionnelle de données).
+
+On utilisera les trois première colonnes (correspondant aux réponses de la deuxième question) comme variables actives et les quatre dernières (correspondant à la troisième question) comme variables illustratives.
+
+Nous chargeons donc la librairie \og scientisttools \fg{}
+
+```{python}
+# Chargement de la librairie
+from scientisttools.decomposition import CA
+```
+
+
+## Lignes et colonnes actives seulement
+
+Lors du précédent test du $\chi^{2}$, nous avons obtenu une p-value égale à `r py$pvalue`. Nous avons donc rejeté l'hypothèse d'indépendance entre les deux variables et admis que la liaison entre ces deux variables est significative. Nous sommes en droit de réaliser une AFC afin de visualiser la nature de la liaison. Pour ce faire, nous allons employer la fonction \texttt{CA}, fournie par le package \og scientisttools \fg{}.
+
+On crée une instance de la classe CA, en lui passant ici des étiquettes pour les lignes et les colonnes. Ces paramètres sont facultatifs ; en leur absence, le programme détermine automatiquement des étiquettes.
+
+```{python}
+# Instanciation du modèle
+my_ca = CA(n_components=None,
+           row_labels=wfemmes.index,
+           col_labels=wfemmes.columns,
+           row_sup_labels=None,
+           col_sup_labels=None)
+```
+
+On estime le modèle en appliquant la méthode \texttt{fit} de la classe CA sur le jeu de données.
+
+```{python}
+# Entraînement - Estimation du modèle
+my_ca.fit(wfemmes)
+```
+
+## Valeurs propres
+
+L'exécution de la méthode \texttt{my\_ca.fit(wfemmes)} provoque le calcul des attributs parmi lesquels \texttt{my\_ca.eig\_} pour les valeurs propres.
+
+```{python}
+# Valeurs propres
+print(my_ca.eig_)
+```
+
+L'attribut \texttt{my\_ca.eig\_} contient :
+
+\begin{itemize}
+\item en 1ère ligne : les valeurs propres en valeur absolue
+\item en 2ème ligne : les différences des valeurs propres
+\item en 3ème ligne : les valeurs propres en pourcentage de la variance totale (proportions)
+\item en 4ème ligne : les valeurs propres en pourcentage cumulé de la variance totale.
+\end{itemize}
+
+La fonction \texttt{get\_eig} retourne les valeurs propres sous forme de tableau de données.
+
+```{python}
+# Valeurs propres
+from scientisttools.extractfactor import get_eig
+print(get_eig(my_ca))
+```
+
+Les valeurs propres peuvent être représentées graphiquement
+
+```{python, out.width="90%"}
+from scientisttools.ggplot import fviz_eigenvalue
+print(fviz_eigenvalue(my_ca,choice="eigenvalue"))
+```
+
+```{python, out.width="90%"}
+print(fviz_eigenvalue(my_ca,choice="proportion"))
+```
+
+On peut obtenir un résumé des principaux résultats en utilisant la fonction \texttt{summaryCA}.
+
+```{python}
+from scientisttools.extractfactor import summaryCA
+summaryCA(my_ca)
+```
+
+Cette fonction \texttt{summaryCA} nous permet d'obtenir :
+
+\begin{itemize}
+\item Un tableau avec les valeurs propres, les différences, les pourcentages et les pourcentages cumulés d'inertie associés à chaque dimension.
+\item Un tableau avec les résultats sur les lignes actives avec leur coordonnées (Dim.n) sur chaque dimension, leur contribution à la construction (ctr) de chaque dimension et leur qualité de représentation (cos2) sur chaque dimension.
+\item Un tableau avec les résultats sur les colonnes actives (Dim.n, ctr, cos2)
+\end{itemize}
+
+## Représentation graphique
+
+```{python,out.width="90%"}
+# Carte des points lignes
+from scientisttools.ggplot import fviz_ca_row
+print(fviz_ca_row(my_ca,color="blue",repel=True))
+```
+
+```{python, out.width="90%"}
+# Carte des points colonnes
+from scientisttools.ggplot import fviz_ca_col
+print(fviz_ca_col(my_ca,color="red",repel=True))
+```
+
+
+Le nuage des colonnes montre que le premier axe oppose \og Stay at home \fg{} et \og Full-time work \fg{}, ce qui signifie qu'il oppose deux profils de femmes. Les femmes qui ont répondu \og Stay at home \fg{} ont répondu \og Only husband works \fg{} plus souvent que l'ensemble de la population et \og Both husband and wife work \fg{} moins souvent que l'ensemble de la population.
+
+De même, les femmes qui ont répondu \og Full-time work \fg{} ont répondu \og Only husband works \fg{} moins souvent que l'ensemble de la population et \og Both husband and wife work \fg{} plus souvent que l'ensemble de la population. Le premier axe ordonne les modalités de la deuxième question de la moins à la plus en faveur du travail des femmes.
+
+La même interprétation peut être faite pour le premier axe du nuage des lignes. Les modalités sont triées de la moins (\og Only husband works \fg{}) à la plus (\og Both husband and wife work\fg{}) en faveur du travail des femmes.
+
+On peut représenter à la fois les lignes et les colonnes.
+
+```{python,echo=FALSE}
+from fanalysis.ca import CA
+my_ca_fa = CA(n_components=None,
+               row_labels=wfemmes.index,
+               col_labels=wfemmes.columns).fit(wfemmes.values)
+my_ca_fa.mapping(num_x_axis=1, num_y_axis=2)
+```
+
+
+\og Stay at home \fg{} est associé à \og Only husband works \fg{} et peu associé aux deux autres modalités.
+
+\og Both husband and wife work \fg{} est associé à \og Full-time work \fg{} et opposé à \og Stay at home \fg{}.
+
+Revenons un instant sur les données du tableau \ref{tab:women-work-data}, issu de l'enquête de Nicole Tabard, croisant les deux variables qualitatives (questions) :
+
+\begin{itemize}
+\item Quelle est la famille idéale pour vous?
+\item Quelle activité convient le mieux à une mère de famille quand ses enfants vont à l'école?
+\end{itemize}
+
+Il est important de rappeler que les résultats de cette enquête ont été publiés en $1974$. Il est fort à parier que la répartition des réponses serait totalement, si ce n’est en grande partie, différente aujourd’hui.
+
+Lors d’une première lecture de ce tableau de contingence, François Husson soulève une apparente contradiction. À la question \og Quelle est la famille idéale pour vous ? \fg{}, nous voyons que $908$ femmes sur $1724$ (visible dans la marge colonne), soit environ $53\%$ des répondantes, déclarent \og Only man works \fg{} et seulement $261$ femmes sur $1 724$ (environ $15\%$) déclarent \og Both man and woman work \fg{}. Sur la base de ces premières réponses, nous pouvons émettre l’hypothèse, qu’à cette époque, une majorité était en faveur d’un modèle familial où seul le mari travaille.
+
+À côté de ça, à la question \og Quelle activité convient le mieux à une mère de famille quand ses enfants vont à l’école ? \fg{}, elles sont $1440$ sur $1724$ (visible dans la marge ligne), soit environ $84\%$, à être en faveur du travail à mi-temps \og Part time work \fg{} ou à plein-temps \og Full time work \fg{}. Les réponses à cette question semblent indiquer que les femmes sont moins hostiles au travail féminin (bien au contraire).
+
+Du coup, à ce stade de l’interprétation, nous nous retrouvons a priori face une contradiction. De cela, nous pouvons dire que le tableau de contingence ne permet pas de savoir si les femmes des années 70 sont favorables ou non à l’activité féminine. Par contre, Une première lecture du graphe de l’AFC nous permet de dire que les modalités des réponses s’associent entre elles des plus favorables au travail féminin aux plus défavorables au travail féminin.
+
+Avant d’approfondir, plus en détail, l’interprétation de cette AFC, nous allons faire un pas de côté et voir ce qui se passe dans le cas où il y aurait indépendance entre les deux variables.
+
+Si nous réalisons une AFC avec les données du modèle d’indépendance, on obtient la figure suivante : 
+
+```{python,echo=FALSE}
+from fanalysis.ca import CA
+my_ca_ind = CA(n_components=None,
+               row_labels=effectif_theorik.index,
+               col_labels=effectif_theorik.columns).fit(effectif_theorik.values)
+my_ca_ind.mapping(num_x_axis=1, num_y_axis=2)
+```
+
+La lecture de ce graphique nous permet de voir que les points sont quasiment tous confondus avec le centre de gravité, correspondant au profil moyen. La représentation graphique est trompeuse mais l’échelle des axes va dans le sens de notre interprétation. Simplement, ce qu’il y a retenir de ce graphe, c’est que, lorsqu’il y a indépendance entre les deux variables, tous les points sont confondus avec l’origine. Du fait qu’il n’y ait pas d’écarts à l’indépendance, il n’y a graphiquement rien à exploiter, rien à interpréter, rien à analyser. Ce graphe donne à voir ce que nous avons précédemment énoncé, à savoir que :
+\begin{itemize}
+\item Si nous acceptons l’hypothèse d’indépendance (p-value $> 0.05$ dans le cas d’un test du $\chi^{2}$), nous n’aurons pas d’utilité à réaliser une AFC car les points projetés seront extrêmement proches ou confondus avec le centre de gravité, confondus avec le centre du graphe.
+\item La réalisation d’un test du $\chi^{2}$ est donc fortement conseillée avant la réalisation d’une AFC.
+\item Plus précisément, le test du $\chi^{2}$ conditionne l’éventuelle réalisation d’une AFC.
+\end{itemize}
+
+
+## Addition de colonnes illustratives
+
+On ajoute les colonnes qui correspondent à la troisième question en tant que variables illustratives. Tapez :
+
+```{python,echo=FALSE}
+from scientisttools.decomposition import CA
+```
+
+```{python}
+# Modèle avec colonnes supplémentaires
+my_ca2 = CA(n_components=None,
+            row_labels=women_work.index.values,
+            col_labels=women_work.columns[:3].values,
+            row_sup_labels=None,
+            col_sup_labels=women_work.columns[3:].values).fit(women_work)
+```
+
+
+```{python}
+# Carte de modalités colonnes
+import matplotlib.pyplot as plt
+from scientisttools.pyplot import plotCA
+fig,axe = plt.subplots(figsize=(10,10))
+plotCA(my_ca2,choice ="col",add_sup=True,color="blue",repel=True,ax=axe)
+plt.show()
+```
+
+\og Totally agree \fg{} et \og Quite agree \fg{} pour \og Women who do not work feel cut off from the world \fg{} sont proches des modalités en faveur du travail des femmes.
+
+\og Quite disagree \fg{} et \og Totally "disagree \fg{} sont proches des modalités opposées au travail des femmes.
+
+Pour ajouter des points lignes illustratifs, utilisez l'argument suivant de la fonction PCA :
+
+```{python,eval=FALSE}
+row_sup_labels
+```
+
+Tous les résultats détaillés peuvent être vus dans l'objet \texttt{my\_pca2}. On peut récupérer les valeurs propres, les résultats des points lignes actifs et illustratifs, les résultats des points colonnes actifs et supplémentaires en tapant :
+
+```{python}
+from scientisttools.extractfactor import get_ca_row,get_ca_col,get_eig
+eig = get_eig(my_ca2)
+```
+
+```{python}
+row = get_ca_row(my_ca2)
+print(row.keys())
+```
+
+```{python}
+col = get_ca_col(my_ca2)
+print(col.keys())
+```
+
+## Interprétation des axes
+
+Des graphiques qui permettent d'interpréter rapidement les axes : on choisit un axe factoriel (le 1er axe dans notre exemple) et on observe quels sont les points lignes et colonnes qui présentent les plus fortes contributions et cos2 pour cet axe.
+
+```{python, out.width="90%"}
+# Classement des points lignes en fonction de leur contribution au 1er axe
+from scientisttools.pyplot import plot_contrib, plot_cosines
+fig,axe = plt.subplots(figsize=(16,10))
+plot_contrib(my_ca,choice="ind",axis=0,top_contrib=10,ax=axe)
+plt.show()
+```
+
+```{python,out.width="90%"}
+# Classement des points colonnes en fonction de leur contribution au 1er axe
+fig,axe = plt.subplots(figsize=(16,10))
+plot_contrib(my_ca2,choice="var",axis=0,ax=axe)
+plt.show()
+```
+
+```{python,out.width="85%"}
+# Classement des points lignes en fonction de leur cos2 sur le 1er axe
+fig,axe = plt.subplots(figsize=(16,10))
+plot_cosines(my_ca2,choice="ind",axis=0,top_cos2=10,ax=axe)
+plt.show()
+```
+
+```{python,out.width="85%"}
+# Classement des points colonnes en fonction de leur cos2 sur le 1er axe
+fig,axe = plt.subplots(figsize=(16,10))
+plot_cosines(my_ca2,choice="var",axis=0,ax=axe)
+plt.show()
+```
+
+Pour plus d'informations sur l'ACF sous scientisttools, consulter le notebook 
+
+\href{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/ca_example2.ipynb}{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/ca\_example2.ipynb}

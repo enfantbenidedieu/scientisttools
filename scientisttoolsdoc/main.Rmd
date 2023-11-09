@@ -392,6 +392,7 @@ Ces tableaux donnent le coefficient de corrélation et la probabilité critique 
 Les tableaux de la description des deux axes principaux montrent que les variables "Points" et "Long\_jump" sont les plus corrélées à la première dimension et que "Discus" est la variable la plus corrélée à la deuxième dimension. Ceci confirme la premièer interprétation.
 
 Si on ne veut pas qu'un (ou plusieurs) individu participe à l'analyse, il est possible de l'ajouter en tant qu'individu illustratif. Ainsi, il ne sera pas actif dans l'analyse mais apportera de l'information supplémentaire.
+
 Pour ajouter des individus illustratifs, utilisez l'argument suivant de la fonction PCA :
 
 ```{python,eval=FALSE}
