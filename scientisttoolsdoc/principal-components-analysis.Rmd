@@ -278,7 +278,7 @@ Les variables illustratives n'influencent pas la construction des composantes pr
 
 On peut ajouter deux types de variables : continues et qualitatives.
 
-On ajoute les variables "Rank" and "Points" comme variables continues illustratives quantiatives et "Competition" comme variables qualitatives continues. Tapez la ligne de code suivante :
+On ajoute les variables "Rank" and "Points" comme variables continues illustratives quantiatives et "Competition" comme variable qualitative illustrative. Tapez la ligne de code suivante :
 
 ```{python}
 res_pca = PCA(normalize=True,
