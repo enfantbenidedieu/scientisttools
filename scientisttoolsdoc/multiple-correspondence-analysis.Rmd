@@ -378,7 +378,7 @@ X = A
 y = C
 
 # Construction de la Pipeline
-# On enchaine une Analyse en Composantes Prnicipales (4 axes retenus) 
+# On enchaine une Analyse des Correspondances Multiples (4 axes retenus) 
 # puis une régression logistique
 pipe = Pipeline([("mca", MCA(n_components=4,var_labels=A.columns)), 
                  ("logistic_regression", 

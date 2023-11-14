@@ -1,0 +1,434 @@
+---
+title: '**AFDM sous Python avec scientisttools**'
+author: "Duvérier DJIFACK ZEBAZE"
+#date: "`r Sys.Date()`"
+documentclass: article
+geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm, twoside=true"
+fontsize: 11pt
+line-height: 1.5
+urlcolor: blue
+linkcolor: blue
+link-citations : yes
+output: pdf_document
+mainfont: Bookman Old Style
+header-includes:
+- \usepackage{pbox}
+- \usepackage{caption}
+- \usepackage{subcaption}
+- \usepackage{natbib}
+- \usepackage[utf8]{inputenc} # Caractères spéciaux
+- \usepackage[french]{babel}
+- \usepackage{amsmath, amsfonts, amssymb}   #Symboles mathématiques
+- \usepackage{amsfonts}
+# - \usepackage{minitoc} # [undotted] pour supprimer les pointillés
+# - \mtcsetdepth{minitoc}{1} # 1 section, 2 sous-section 3 sous-sous-section
+# - \mtcsettitle{minitoc}{Sommaire} # Changer le titre
+- \usepackage{diagbox}
+- \usepackage{lettrine}
+- \usepackage[labelfont=bf]{caption}
+- \captionsetup{font=scriptsize}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+- \usepackage{minitoc}
+- \usepackage[Bjornstrup]{fncychap}
+#- \usepackage[Conny]{fncychap} 
+#- \usepackage[pdftex]{pict2e}
+- \usepackage[dvipsnames]{xcolor}
+- \usepackage{fourier-orns}
+- \usepackage{fancyhdr}
+- \usepackage{geometry}
+- \geometry{a4paper,total={160mm,240mm},left=25mm,right=25mm,top=25mm,bottom=25mm}
+- \usepackage[printsolution=true]{exercises}
+- \usepackage{tikz}
+---
+
+```{r setup, include=FALSE}
+library(reticulate)
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning=FALSE,fig.pos = "H",
+                      out.extra = "",fig.align = "center",collapse =  FALSE,
+                      highlight = TRUE)
+```
+
+Ce tutoriel a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une Analyse Factorielle des Données Mixtes. 
+
+# Présentation des données
+
+L’analyse factorielle des données mixtes traite les tableaux individus-variables, lesquelles sont composées d’un mix de quantitatives et qualitatives. Nous utilisons la base des données « Autos 2005 » accessible sur la page de cours de Pierre-Louis Gonzalez (\href{https://maths.cnam.fr/spip.php?article50}{https://maths.cnam.fr/spip.php?article50}) au CNAM. Notre base comporte $(I=38)$ modèles de véhicules décrits par $(K_{1}=9)$ variables quantitatives (puissance, cylindrée, vitesse, longueur, largeur, hauteur, poids, CO2 et prix) et $(K_{2}=3)$ variables qualitatives (origie avec $3$ modalités : France, Europe, Autres; carburant avec $2$ modalités : diesel, essence; type4X4 avec $2$ modalités : oui, non).
+
+## Importation des données
+
+
+```{python}
+# Chargement des données
+import pandas as pd
+# Données actives
+A = pd.read_excel("./donnee/autos2005.xlsx",sheet_name=0,index_col=0)
+# Individus actifs
+B = pd.read_excel("./donnee/autos2005.xlsx",sheet_name=1,index_col=0)
+# Variables illustratives quantitatives
+C = pd.read_excel("./donnee/autos2005.xlsx",sheet_name=2,index_col=0)
+# Variables illustratives qualitatives
+D = pd.read_excel("./donnee/autos2005.xlsx",sheet_name=3,index_col=0)
+C.index = D.index = A.index
+# Concaténation
+Data = pd.concat([pd.concat([A,B],axis=0),C,D],axis=1)
+# Affichage des caractéristiques
+Data.info()
+```
+
+```{r autos2005-data,engine='R',echo=FALSE}
+knitr::kable(py$Data, 
+             caption = "Données Autos 2005",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::column_spec(c(13,16,17),border_right = TRUE) %>%
+  kableExtra::row_spec(38,hline_after = TRUE) %>%
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+Les variables coffre, reservoir et consommation seront utilisées comme illustratives quantitatives et \og surtaxe \fg{} comme illustrative qualitative. Certaines voitures ont été mises en illustratives.
+
+Les questions usuelles que l'on se pose sont les suivantes : 
+
+\begin{enumerate}
+\item Quelles sont les véhicules qui se ressemblent, c'est - à - dire qui présentent des caractéristiques similaires? Il sera question d'étudier les proximités entre les individus.
+\item Sur quelles caractéristiques sont basées les ressemblances et dissemblances, avec la difficulté ici de les comptabiliser de manière différenciée selon que les variables incriminées sont quantitatives ou qualitatives.
+\item Quelles sont les relations entre les variables? Entre quantitatives, l'idée de la corrélation s'impose; entre qualitatives, le $\chi^{2}$ de contingence. Mais comment faire entre quantitatives et qualitatives? (rapport de corrélation, etc.)
+\end{enumerate}
+
+# AFDM
+
+## Objectifs 
+
+L'objectif est de trouver un système de représentation  (répère factoriel) qui préserve au mieux les distances entre les individus, qui permet de discerner le mieux possible les individus entre eux, qui maximise les (le carré des) écarts à l'origine.
+
+## Chargement de scientisttools
+
+```{python}
+from scientisttools.decomposition import FAMD
+```
+
+## Individus et variables actifs
+
+On crée une instance de la classe FAMD, en lui passant ici des étiquettes pour les lignes et les variables. Ces paramètres sont facultatifs ; en leur absence, le programme détermine automatiquement des étiquettes.
+
+```{python}
+# Instanciation
+my_famd = FAMD(normalize=True,
+               n_components=None,
+               row_labels= A.index,
+               quanti_labels= list(A.columns[:9]),
+               quali_labels=list(A.columns[9:]),
+               row_sup_labels=None,
+               quanti_sup_labels=None,
+               quali_sup_labels=None,
+               parallelize=False)
+```
+
+On estime le modèle en appliquant la méthode \texttt{fit} de la classe FAMD sur le jeu de données.
+
+```{python}
+# Estimation du modèle
+my_famd.fit(A)
+```
+
+
+### Les valeurs propres
+
+L'exécution de la méthode \texttt{my\_famd.fit(A)} provoque le calcul des attributs parmi lesquels \texttt{my\_famd.eig\_} pour les valeurs propres.
+
+```{python}
+# Valeurs propres
+print(my_famd.eig_)
+```
+
+L'attribut \texttt{my\_famd.eig\_} contient :
+
+\begin{itemize}
+\item en 1ère ligne : les valeurs propres en valeur absolue
+\item en 2ème ligne : les différences des valeurs propres
+\item en 3ème ligne : les valeurs propres en pourcentage de la variance totale (proportions)
+\item en 4ème ligne : les valeurs propres en pourcentage cumulé de la variance totale.
+\end{itemize}
+
+La fonction \texttt{get\_eig} retourne les valeurs propres sous forme de tableau de données.
+
+```{python}
+# Valeurs propres
+from scientisttools.extractfactor import get_eig
+print(get_eig(my_famd))
+```
+
+Les valeurs propres peuvent être représentées graphiquement : 
+
+```{python}
+from scientisttools.pyplot import plot_eigenvalues
+import matplotlib.pyplot as plt
+fig, axe = plt.subplots(figsize=(16,6))
+plot_eigenvalues(my_famd,choice="eigenvalue",ax=axe)
+plt.show()
+```
+
+```{python}
+fig, axe = plt.subplots(figsize=(16,6))
+plot_eigenvalues(my_famd,choice="proportion",ax=axe)
+plt.show()
+```
+
+Même si le mécanisme sous - jacent de l'AFDM repose sur une ACP, nous ne pouvons pas vraiment utiliser les stratégies usuelles.
+
+\begin{itemize}
+\item Avec la règle de Kaiser, nous sélectionnerons les facteurs tels que $\lambda_{\alpha} \geq 1$, c'est - à - dire $H=3$. On se rend compte en pratique que ce critère est trop permissif, nous retenons un nombre excessif de facteurs parce qu'une partie de l'information est rédondante comme en ACM. 
+\item Avec la règle de Karlis - Saporta - Spinaki, la valeur seuil est surestimé parce que le nombre de colonnes $K$ des données présentées à l'ACP est \og surévalué \fg{}, des redondances ont été artificiellement introduites.
+\end{itemize}
+
+De fait, les critères de l'ACP ne s'appliquent pas ici parce que les données ne sont pas composées de variables nativement quantitatives, certaines colonnes sont liées entre elles avec le codage disjonctif complet des variables qualitatives.
+
+Finalement, on en revient au diagramme des valeurs propres et la recherche de \og coudes \fg{}, annonciateurs de changement significatif de structure dans les données. 
+
+
+```{python}
+fig, axe = plt.subplots(figsize=(16,6))
+plot_eigenvalues(my_famd,choice="eigenvalue",ax=axe)
+plt.show()
+```
+
+
+Nous avons un \og coude \fg{} au niveau de $h=2$. Nous choisissons de retenir $H=2$.
+
+On peut obtenir un résumé des principaux résultats en utilisant la fonction \texttt{summaryFAMD}.
+
+```{python}
+from scientisttools.extractfactor import summaryFAMD
+summaryFAMD(my_famd)
+```
+
+## Représentation graphique
+
+```{python,out.width="70%"}
+# Carte des individus
+from scientisttools.ggplot import fviz_famd_ind
+print(fviz_famd_ind(my_famd,color="blue",repel=True))
+```
+
+
+```{python, out.width="70%"}
+# Carte des modalités - variables qualitatives
+from scientisttools.ggplot import fviz_famd_mod
+print(fviz_famd_mod(my_famd,color="red",repel=True))
+```
+
+```{python, out.width="65%"}
+# Cercle des corrélations - variables quantitatives
+from scientisttools.ggplot import fviz_famd_col
+print(fviz_famd_col(my_famd,color="blue"))
+```
+
+
+```{python, out.width="70%"}
+# Carte des variables - rapport de corrélation et cosinus carré
+from scientisttools.pyplot import plotFAMD
+fig, axe = plt.subplots(figsize=(10,10))
+plotFAMD(my_famd,choice="var",repel=True)
+plt.show()
+```
+
+
+# AFDM avec les éléments supplémentaires
+
+Les individus illustratifs et les variables illustratives n'influencent pas la construction des composantes principales de l'analyse. Ils/Elles aident à l'interprétation des dimensions de variabilité.
+
+On peut ajouter deux types de variables : continues et qualitatives.
+Tapez la ligne de code suivante :
+
+```{python}
+# AFDM avec les éléments supplémentaires
+my_famd2 = FAMD(normalize=True,
+                n_components=None,
+                row_labels= A.index,
+                quanti_labels= list(A.columns[:9]),
+                quali_labels=list(A.columns[9:]),
+                row_sup_labels=B.index,
+                quanti_sup_labels=list(C.columns),
+                quali_sup_labels=list(D.columns),
+                parallelize=False)
+# Estimation
+my_famd2.fit(Data)
+```
+
+
+```{python,out.width="90%"}
+# Carte des individus
+from scientisttools.pyplot import plotFAMD
+fig, axe = plt.subplots(figsize=(10,10))
+plotFAMD(my_famd2,choice="ind",ind_sup=True,xlim=(-8,5),ylim=(-5,4),
+         repel=True,ax=axe)
+plt.show()
+```
+
+```{python,out.width="65%"}
+# Carte des modalités
+print(fviz_famd_mod(my_famd2,color="blue",repel=True))
+```
+
+
+```{python,out.width="90%"}
+# Cercle des corrélations des variables
+fig, axe = plt.subplots(figsize=(10,10))
+plotFAMD(my_famd2,choice="col",color="blue",ax=axe)
+plt.show()
+```
+
+
+# Interprétation des axes
+
+Des graphiques qui permettent d'interpréter rapidement les axes : on choisit un axe factoriel (le 1er axe dans notre exemple) et on observe quels sont les points lignes et colonnes qui présentent les plus fortes contributions et cos2 pour cet axe.
+
+```{python, out.width="90%"}
+# Classement des points lignes en fonction de leur contribution au 1er axe
+from scientisttools.pyplot import plot_contrib, plot_cosines
+fig, axe = plt.subplots(figsize=(16,8))
+plot_contrib(my_famd2,choice="ind",axis=0,top_contrib=10,ax=axe)
+plt.show()
+```
+
+
+```{python,out.width="90%"}
+# Classement des modalités en fonction de leur contribution au 1er axe
+fig, axe = plt.subplots(figsize=(16,8))
+plot_contrib(my_famd2,choice="mod",axis=0,ax=axe)
+plt.show()
+```
+
+```{python,out.width="85%"}
+# Classement des individus en fonction de leur cos2 sur le 1er axe
+fig, axe = plt.subplots(figsize=(16,8))
+plot_cosines(my_famd2,choice="ind",axis=0,top_cos2=10,ax=axe)
+plt.show()
+```
+
+
+```{python,out.width="85%"}
+# Classement des modalités en fonction de leur cos2 sur le 1er axe
+fig, axe = plt.subplots(figsize=(16,8))
+plot_cosines(my_famd2,choice="mod",axis=0,ax=axe)
+plt.show()
+```
+
+# Approche Machine Learning
+
+Ici, l'objectif est d'utiliser l'Analyse Factorielle des Données Mixtes en tant que méthode de prétraitement.
+
+La classe FAMD implémente les méthodes \texttt{fit}, \texttt{transform} et \texttt{fit\_transform} bien connues des utilisateurs de scikit-learn.
+
+```{python}
+my_famd.transform(A)[:5,:2]
+```
+
+
+```{python}
+my_famd.fit_transform(A)[:5,:2]
+```
+
+
+## Intégration dans une Pipeline de scikit-learn
+
+La class \texttt{FAMD} peut être intégrée dans une Pipeline de scikit-learn. Dans le cadre de notre exemple, nous cherchons à prédire la variable (variable "Prix") à partir des $11$ autres variables du jeu de données (données actives). 
+
+"prix" est une variable quantitative. Pour la prédire, nous allons utiliser un modèle de régression linéaire qui prendra en input des axes issus d'une Analyse Factorielle des Données Mixtes pratiquée sur les données brutes.
+
+Dans un premier temps, et de façon tout à fait arbitraire, nous fixons le nombre de composantes extraites à 4.
+
+```{python}
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import GridSearchCV
+
+# X = features
+X = A.drop(columns=["prix"])
+# y = target
+y = A.prix
+
+# Construction de la Pipeline
+# On enchaine une Analyse Factorielle des Données Mixtes (4 axes retenus) 
+# puis une régression linéaire
+pipe = Pipeline([("famd", FAMD(n_components=4)), 
+                 ("ols", LinearRegression())])
+# Estimation du modèle
+pipe.fit(X, y)
+```
+
+On prédit
+
+```{python}
+# Prédiction sur l'échantillon de test
+print(pipe.predict(B))
+```
+
+
+Le paramètre \texttt{n\_components} peut faire l'objet d'une optimisation via GridSearchCV de scikit-learn.
+
+Nous reconstruisons donc une Pipeline, sans spécifier de valeur a priori pour n_components.
+
+```{python}
+# Reconstruction d'une Pipeline, sans spécifier de valeur 
+# a priori pour n_components
+pipe2 = Pipeline([("famd", FAMD()), 
+                  ("ols", LinearRegression())])
+                  
+# Paramétrage de la grille de paramètres
+# Attention à l'étendue des valeurs possibles pour famd__n_components !!!
+param = [{"famd__n_components": [x + 1 for x in range(12)]}]
+
+# Construction de l'objet GridSearchCV
+grid_search = GridSearchCV(pipe2, 
+                           param_grid=param, 
+                           scoring="neg_mean_squared_error",
+                           cv=5,
+                           verbose=0)
+# Estimation du modèle
+grid_search.fit(X, y)
+```
+
+
+```{python}
+# Affichage du score optimal
+grid_search.best_score_
+```
+
+
+```{python}
+# Affichage du RMSE optimal
+import numpy as np
+print(np.sqrt(-grid_search.best_score_))
+```
+
+
+```{python}
+# Affichage du paramètre optimal
+grid_search.best_params_
+```
+
+```{python}
+# Prédiction sur l'échantillon de test
+grid_search.predict(B)
+```
+
+Pour plus d'informations sur l'AFDM sous scientisttools, consulter le notebook 
+
+\href{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/famd_example.ipynb}{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/famd\_example.ipynb}.
+
