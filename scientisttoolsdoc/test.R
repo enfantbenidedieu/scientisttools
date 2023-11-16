@@ -1,0 +1,2 @@
+library(FactoMineR)
+data(tea)

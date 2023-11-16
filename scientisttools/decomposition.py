@@ -18,6 +18,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_array
 from sklearn.metrics import mean_squared_error
 from scientistmetrics import scientistmetrics
+from scientisttools.extractfactor import get_pca_ind
 from scientisttools.utils import (
     orthonormalize,
     random_orthonormal, 
@@ -2247,7 +2248,6 @@ class MCA(BaseEstimator,TransformerMixin):
 
         self.quali_sup_coord_ = None
         self.quali_sup_cos2_ = None
-        self.quali_sup_eta2_ = None
         self.quali_sup_disto_ = None
         self.quali_sup_vtest_ = None
 
@@ -2656,18 +2656,16 @@ class MCA(BaseEstimator,TransformerMixin):
         mod_sup_labels = dummies.columns
         short_sup_labels = list([x.split("_",1)[-1] for x in mod_sup_labels])
 
+        # Coordinates of supplementary categories
         mod_sup_coord = mapply(dummies,lambda x : x/np.sum(x),axis=0,progressbar=False,n_workers=self.n_workers_).T.dot(self.row_coord_)/np.sqrt(self.eig_[0])
 
-        # Rapport de corrélation
-        """
-        quali_sup_eta2 = pd.concat(((mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False).mul(p_k,axis="index")
-                                                  .loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index),:]
-                                                  .sum(axis=0).to_frame(name=cols).T.div(self.eig_[0])) for cols in X.columns),axis=0)
-        """
-
+        # Cosinus carré des modalités supplémentaires
         mod_sup_cos2 = mapply(mod_sup_coord,lambda x: x**2/np.linalg.norm(mod_sup_coord,axis=1)**2,axis=0,progressbar=False,n_workers=self.n_workers_)
 
+        # Distance à l'origine des modalités supplémentaires
         mod_sup_disto = (1/p_k)-1
+
+        # Valeur test des modalités supplémentaires
         mod_sup_vtest = mapply(mod_sup_coord,lambda x : x*np.sqrt(((self.n_rows_-1)*n_k.values)/(self.n_rows_ - n_k.values)),axis=0,progressbar=False,n_workers=self.n_workers_)
 
         # Store supplementary categories informations
@@ -3649,7 +3647,29 @@ class HMFA(BaseEstimator,TransformerMixin):
  
         
 
-        
+
+
+
+###################################################""
+def dimdesc(self,proba=0.05):
+    if self.model_ == "pca":
+        data = self.active_data_
+        row_coord = get_pca_ind(self)["coord"]
+    
+        corrdim = {}
+        for idx in self.dim_index_:
+            corDim = pd.DataFrame(columns=["statistic","pvalue"]).astype("float")
+            for col in data.columns:
+                if (data[col].dtypes in ["float64","int64","float32","int32"]):
+                    res = st.pearsonr(data[col],row_coord[idx])
+                    row_RD = pd.DataFrame({"statistic" : res.statistic,"pvalue":res.pvalue},index = [col])
+                    corDim = pd.concat([corDim,row_RD])
+            corDim = (corDim.query(f'pvalue < {proba}').sort_values(by="statistic",ascending=False))
+            corrdim[idx] = corDim
+    
+    return corrdim
+    
+
 
 
 

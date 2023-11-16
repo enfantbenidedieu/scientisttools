@@ -568,7 +568,7 @@ def get_mca_mod(self) -> dict:
             "coord"     :   pd.DataFrame(self.mod_sup_coord_, index =self.mod_sup_labels_,columns=self.dim_index_),
             "cos2"      :   pd.DataFrame(self.mod_sup_cos2_,  index =self.mod_sup_labels_,columns=self.dim_index_),
             "dist"      :   pd.DataFrame(self.mod_sup_disto_, index = self.mod_sup_labels_,columns=["Dist"]),
-            "vtest"     :   pd.DataFrame(self.mod_sup_vtest_, index =self.mod_sup_coord_,columns=self.dim_index_)
+            "vtest"     :   pd.DataFrame(self.mod_sup_vtest_, index =self.mod_sup_labels_,columns=self.dim_index_)
             })    
     return df
 
@@ -598,20 +598,10 @@ def get_mca_var(self) -> dict:
         "cos2"      :   pd.DataFrame(self.var_cos2_,index=self.var_labels_,columns=self.dim_index_),
         "contrib"   :   pd.DataFrame(self.var_contrib_,index=self.var_labels_,columns=self.dim_index_)
     })
-    if ((self.quanti_sup_labels_ is not None) & (self.quali_sup_labels_ is not None)):
+
+    if self.quanti_sup_labels_ is not None:
         df["quanti_sup"] = dict({
             "coord" :   pd.DataFrame(self.quanti_sup_coord_,index=self.quanti_sup_labels_,columns=self.dim_index_)
-        })
-        df["quali_sup"] = dict({
-            "eta2" :    pd.DataFrame(self.quali_sup_eta2_,index=self.quali_sup_labels_,columns=self.dim_index_),
-        })
-    elif self.quanti_sup_labels_ is not None:
-        df["quanti_sup"] = dict({
-            "coord" :   pd.DataFrame(self.quanti_sup_coord_,index=self.quanti_sup_labels_,columns=self.dim_index_)
-        })
-    elif self.quali_sup_labels_ is not None:
-        df["quali_sup"] = dict({
-            "eta2" :    pd.DataFrame(self.quali_sup_eta2_,index=self.quali_sup_labels_,columns=self.dim_index_),
         })
 
     return df
@@ -1392,7 +1382,7 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(row_sup_infos)
 
     # Add variables informations
-    print(f"\nCategories\n")
+    print(f"\nCategories (the {nb_element} first)\n")
     mod_infos = mod["infos"]
     for i in np.arange(0,ncp,1):
         mod_coord = mod["coord"].iloc[:,i]
@@ -1438,7 +1428,7 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     # Add Supplementary categories – Variable illustrative qualitative
     if self.quali_sup_labels_ is not None:
         print("\nSupplementary categories\n")
-        mod_sup = mod["quali_sup"]
+        mod_sup = mod["sup"]
         mod_sup_infos = np.sqrt(mod_sup["dist"])
         for i in np.arange(0,ncp,1):
             mod_sup_coord = mod_sup["coord"].iloc[:,i]
@@ -1453,15 +1443,6 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(mod_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(mod_sup_infos)
-        
-        # Add supplementary qualitatives - correlation ration
-        print("\nSupplementatry qualitative variable - Correlation ratio\n")
-        corr_ratio = mod_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
-        if to_markdown:
-            print(corr_ratio.to_markdown(tablefmt=tablefmt))
-        else:
-            print(corr_ratio)
-
 ###### PCA
 
 def summaryPCA(self,

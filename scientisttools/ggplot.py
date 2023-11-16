@@ -3,8 +3,12 @@
 import plotnine as pn
 import numpy as np
 import pandas as pd
+import sklearn
 from scientisttools.extractfactor import get_eigenvalue
+from scientisttools.ggcorrplot import ggcorrplot, no_panel
+from scientisttools.utils import get_melt
 import matplotlib.pyplot as plt
+import plydata as ply
 
 def text_label(texttype,**kwargs):
     """Function to choose between ``geom_text`` and ``geom_label``
@@ -37,6 +41,7 @@ def gg_circle(r, xc, yc, color="black",fill=None,**kwargs):
 def fviz_screeplot(self,
                    choice="proportion",
                    geom_type=["bar","line"],
+                   ylim=None,
                    bar_fill = "steelblue",
                    bar_color="steelblue",
                    line_color="black",
@@ -47,8 +52,8 @@ def fviz_screeplot(self,
                    add_broken_stick = False,
                    n_components=10,
                    add_labels=False,
-                   h_align= "center",
-                   v_align = "bottom",
+                   ha= "center",
+                   va = "bottom",
                    title=None,
                    x_label=None,
                    y_label=None,
@@ -67,7 +72,7 @@ def fviz_screeplot(self,
     if choice == "eigenvalue":
         eig = eig["eigenvalue"]
         text_labels = list([str(np.around(x,3)) for x in eig.values])
-        if self.model_ != "mds":
+        if self.model_ not in ["famd","mds"]:
             kaiser = self.kaiser_threshold_
         if y_label is None:
             y_label = "Eigenvalue"
@@ -88,11 +93,11 @@ def fviz_screeplot(self,
         p = (p  +   pn.geom_line(color=line_color,linetype=line_type)+\
                     pn.geom_point(shape="o",color=line_color))
     if add_labels:
-        p = p + pn.geom_text(label=text_labels,ha = h_align,va = v_align)
+        p = p + pn.geom_text(label=text_labels,ha = ha,va = va)
     if add_kaiser :
-        p = (p +  pn.geom_hline(yintercept=kaiser,linetype="--", color="red")+\
-                  pn.annotate("text", x=int(np.median(np.arange(1,len(eig)+1))), y=kaiser, 
-                              label="Kaiser threshold"))
+        if self.model_ not in ["famd","mds"]:
+            p = (p +  pn.geom_hline(yintercept=kaiser,linetype="--", color="red")+\
+                      pn.annotate("text", x=int(np.median(np.arange(1,len(eig)+1))), y=kaiser, label="Kaiser threshold"))
 
     if add_kss:
         if self.model_ in ["pca","ppca"]:
@@ -122,6 +127,9 @@ def fviz_screeplot(self,
     if y_label is None:
         y_label = "Percentage of explained variances"
     
+    if ylim is not None:
+        p = p + pn.ylim(ylim)
+    
     p = p + pn.labs(title = title, x = x_label, y = y_label)
     p = p + ggtheme
     return p
@@ -148,9 +156,10 @@ def fviz_pca_ind(self,
                  text_type = "text",
                  marker = "o",
                  add_grid =True,
-                 ind_sup=False,
+                 ind_sup=True,
                  color_sup = "red",
                  marker_sup = "^",
+                 legend_title=None,
                  add_ellipse=False, 
                  ellipse_type = "t",
                  confint_level = 0.95,
@@ -191,43 +200,58 @@ def fviz_pca_ind(self,
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
 
     if color == "cos2":
-        limits = [0,1]
-        legend_title = "cos2"
-        midpoint = 0.5
         c = np.sum(self.row_cos2_[:,axis],axis=1)
+        if legend_title is None:
+            legend_title = "cos2"
     elif color == "contrib":
-        midpoint = 50
-        limits = [0,100]
-        legend_title = "Contrib"
         c = np.sum(self.row_contrib_[:,axis],axis=1)
+        if legend_title is None:
+            legend_title = "Contrib"
+    elif isinstance(color,np.ndarray):
+        c = np.asarray(color)
+        if legend_title is None:
+            legend_title = "Cont_Var"
 
     if habillage is None :        
         # Using cosine and contributions
-        if color in ["cos2","contrib"]:
+        if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
             # Add gradients colors
-            p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
-            p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],midpoint=midpoint,limits = limits,
-                                              name = legend_title)
+            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
+                     pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                     adjust_text={'arrowprops': {'arrowstyle': '->','color': "black",'lw':1.0}})
+                                     adjust_text={'arrowprops': {'arrowstyle': '-','color': "black",'lw':1.0}})
             else:
-                p = p + text_label(text_type,pn.aes(color=c),size=text_size,va=va,ha=ha)
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+        elif hasattr(color, "labels_"):
+            c = [str(x+1) for x in color.labels_]
+            if legend_title is None:
+                legend_title = "Cluster"
+            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
+                     pn.guides(color=pn.guide_legend(title=legend_title)))
+            if repel :
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
+                                     adjust_text={'arrowprops': {'arrowstyle': '-','color': "black",'lw':1.0}})
+            else:
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+            
+            if add_ellipse:
+                p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=c),type = ellipse_type,alpha = 0.25,level=confint_level)
         else:
             p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
             if repel :
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '->','color': color,'lw':1.0}})
+                                   adjust_text={'arrowprops': {'arrowstyle': '-','color': color,'lw':1.0}})
             else:
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     else:
         if self.quali_sup_labels_ is not None:
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size,shape=marker)
             if repel:
-                p = p + text_label(text_type,pn.aes(color=habillage),size=text_size,va=va,ha=ha,
+                p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,
                                      adjust_text={'arrowprops': {'arrowstyle': '->','lw':1.0}})
             else:
-                p = p + text_label(text_type,pn.aes(color=habillage),size=text_size,va=va,ha=ha)
+                p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha)
             
             if add_ellipse:
                 p = p + pn.geom_point(pn.aes(color = habillage))
@@ -304,6 +328,7 @@ def fviz_pca_var(self,
                  add_grid =True,
                  quanti_sup=True,
                  color_sup = "red",
+                 legend_title = None,
                  add_hline = True,
                  add_vline=True,
                  ha="center",
@@ -337,27 +362,39 @@ def fviz_pca_var(self,
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_labels_))
 
     if color == "cos2":
-        legend_title = "cos2"
-        midpoint = 0.5
         c = np.sum(self.col_cos2_[:,axis],axis=1)
-        if limits is None:
-            limits = list([np.min(c),np.max(c)])
+        if legend_title is None:
+            legend_title = "cos2"
     elif color == "contrib":
-        midpoint = 50
-        legend_title = "Contrib"
         c = np.sum(self.col_contrib_[:,axis],axis=1)
-        if limits is None:
-            limits = list([np.min(c),np.max(c)])
+        if legend_title is None:
+            legend_title = "Contrib"
+    elif isinstance(color,np.ndarray):
+        c = np.asarray(color)
+        if legend_title is None:
+            legend_title = "Cont_Var"
     
-    if color in ["cos2","contrib"]:
+    if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
         # Add gradients colors
-        p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",colour=c), arrow = pn.arrow())
-        p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],midpoint=midpoint,limits = limits,name = legend_title)
+        p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow())+
+                 pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
         if repel:
-            p = p + text_label(text_type,mappping=pn.aes(colour=c),size=text_size,va=va,ha=ha,
+            p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                adjust_text={'arrowprops': {'arrowstyle': '->','color': 'black','lw':1.0}})
         else:
-            p = p + text_label(text_type,mapping=pn.aes(colour=c),size=text_size,va=va,ha=ha)
+            p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+    elif hasattr(color, "labels_"):
+        c = [str(x+1) for x in color.labels_]
+        if legend_title is None:
+            legend_title = "Cluster"
+        p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow())+ 
+                 pn.guides(color=pn.guide_legend(title=legend_title)))
+        if repel:
+            p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
+                               adjust_text={'arrowprops': {'arrowstyle': '->','color': 'black','lw':1.0}})
+        else:
+            p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+
     else:
         p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), arrow = pn.arrow(),color=color)
         if repel:
@@ -369,14 +406,14 @@ def fviz_pca_var(self,
     if quanti_sup:
         if self.quanti_sup_labels_ is not None:
             sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
-            p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=sup_coord.iloc[:,axis[0]],yend=sup_coord.iloc[:,axis[1]]),arrow = pn.arrow(),color=color_sup)
-            if repel:
-                p = p + text_label(text_type,mapping=pn.aes(x=sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.col_sup_labels_),
-                                   color=color_sup,size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '->','color': color_sup,'lw':1.0}})
-            else:
-                p  = p + text_label(text_type,mapping=pn.aes(x=sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.col_sup_labels_),
-                                    color=color_sup,size=text_size,va=va,ha=ha)
+            #p = p + pn.geom_segment(data=sup_coord,mapping=pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"),arrow = pn.arrow(),color=color_sup)
+    #        if repel:
+    #            p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_sup_labels_),
+    #                               color=color_sup,size=text_size,va=va,ha=ha,
+    #                               adjust_text={'arrowprops': {'arrowstyle': '->','color': color_sup,'lw':1.0}})
+    #        else:
+    #            p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_sup_labels_),
+    #                                color=color_sup,size=text_size,va=va,ha=ha)
     
     # Create circle
     if add_circle:
@@ -508,6 +545,8 @@ def fviz_mca_ind(self,
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     else:
         if self.quali_sup_labels_ is not None:
+            if habillage not in self.quali_sup_labels_ :
+                raise ValueError("Error : ")
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size,shape=marker)
             if repel:
                 p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,
@@ -522,14 +561,14 @@ def fviz_mca_ind(self,
     if ind_sup:
         if self.row_sup_labels_ is not None:
             sup_coord = pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_)
-            p = p + pn.geom_point(mapping=pn.aes(x = sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.row_sup_labels_),
+            p = p + pn.geom_point(data=sup_coord,mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
                                   color = color_sup,shape = marker_sup,size=point_size)
             if repel:
-                p = p + text_label(text_type,mapping=pn.aes(x = sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.row_sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
                                    color=color_sup,size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '->','color': color_sup,'lw':1.0}})
             else:
-                p = p + text_label(text_type,mapping=pn.aes(x = sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.row_sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
                                      color = color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
@@ -582,6 +621,7 @@ def fviz_mca_mod(self,
                  hline_style="dashed",
                  vline_color="black",
                  vline_style ="dashed",
+                 corrected = False,
                  repel=False,
                  ggtheme=pn.theme_gray()) -> plt:
     
@@ -598,27 +638,28 @@ def fviz_mca_mod(self,
         (axis[1] > self.n_components_-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
-
-    # Initialize
-    coord = pd.DataFrame(self.mod_coord_,index = self.mod_labels_,columns=self.dim_index_)
-
+    
     # Categories labels
     if short_labels:
         labels = self.short_labels_
     else:
         labels = self.mod_labels_
+    
+    # Corrected 
+    if corrected:
+        coord = pd.DataFrame(self.corrected_mod_coord_,index = labels,columns=self.dim_index_)
+    else:
+        coord = pd.DataFrame(self.mod_coord_,index = labels,columns=self.dim_index_)
 
     # Initialize
+    coord = pd.DataFrame(self.mod_coord_,index = labels,columns=self.dim_index_)
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=labels))
 
     if color == "cos2":
-        limits = [0,1]
         legend_title = "cos2"
-        midpoint = 0.5
         c = np.sum(self.mod_cos2_[:,axis],axis=1)
+        print(c)
     elif color == "contrib":
-        midpoint = 50
-        limits = [0,100]
         legend_title = "Contrib"
         c = np.sum(self.mod_contrib_[:,axis],axis=1)
      
@@ -626,8 +667,7 @@ def fviz_mca_mod(self,
     if color in ["cos2","contrib"]:
         # Add gradients colors
         p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
-        p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],midpoint=midpoint,limits = limits,
-                                              name = legend_title)
+        p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1], name = legend_title)
         if repel :
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                adjust_text={'arrowprops': {'arrowstyle': '->','color': "black",'lw':1.0}})
@@ -2290,17 +2330,24 @@ def fviz_contrib(self,
     contrib_sorted = np.sort(contrib)[limit:n]
     labels_sort = pd.Series(labels)[np.argsort(contrib)][limit:n]
 
-    df = pd.DataFrame({"labels" : labels_sort, "contrib" : contrib_sorted})
+    # Add hline
+    if self.model_ == "pca":
+        hvalue = 100/len(self.col_labels_)
+    elif self.model_ == "mca":
+        hvalue = 100/len(self.mod_labels_)
 
+    df = pd.DataFrame({"labels" : labels_sort, "contrib" : contrib_sorted})
     p = pn.ggplot(df,pn.aes(x = "reorder(labels,contrib)", y = "contrib"))+pn.geom_bar(stat="identity",fill=color,width=bar_width)
 
     title = f"Contribution of {name} to Dim-{axis+1}"
     p = p + pn.ggtitle(title)+pn.xlab(name)+pn.ylab(xlabel)
     p = p + pn.coord_flip()
 
+    p = p + pn.geom_hline(yintercept=hvalue,linetype="dashed",color="red")
+
     if add_grid:
         p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"),
-                         axis_text_x = pn.element_text(angle = 60, ha = "center", va = "center"))
+                         axis_text_x = pn.element_text(angle = 90, ha = "center", va = "center"))
 
     return p+ggtheme
 
@@ -2545,5 +2592,48 @@ def fviz_hcpc_cluster(self,
     return p
     
 
+def fviz_corrplot(X,
+                  method = "square",
+                  type = "full",
+                  xlabel=None,
+                  ylabel=None,
+                  title=None,
+                  outline_color = "gray",
+                  colors = ["blue","white","red"],
+                  legend_title = "Corr",
+                  is_corr = False,
+                  show_legend = True,
+                  ggtheme = pn.theme_minimal()
+                  ):
+    
+    if is_corr:
+        p = ggcorrplot(X)
+    else:
+        X.columns = pd.Categorical(X.columns,categories=X.columns)
+        X.index = pd.Categorical(X.index,categories=X.index)
+        melt = get_melt(X)
+
+        p = (pn.ggplot(melt,pn.aes(x="Var1",y="Var2",fill="value")) + 
+             pn.geom_point(pn.aes(size="value"),color=outline_color,shape="o")+pn.guides(size=None)+pn.coord_flip())
+
+        # Adding colors
+        p =p + pn.scale_fill_gradient2(low = colors[0],high = colors[2],mid = colors[1],name = legend_title) 
+
+        # Add theme
+        p = p + ggtheme
+
+        if title is not None:
+            p = p + pn.ggtitle(title=title)
+        if xlabel is not None:
+            p = p + pn.xlab(xlabel)
+        if ylabel is not None:
+            p  = p + pn.ylab(ylabel)
+    
+        # Removing legend
+        if not show_legend:
+            p =p+pn.theme(legend_position=None)
+    
+    return p
+    
 
 
