@@ -5,7 +5,6 @@ import functools
 from functools import reduce
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from mapply.mapply import mapply
 import pingouin as pg
 import statsmodels.formula.api as smf
@@ -18,7 +17,6 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_array
 from sklearn.metrics import mean_squared_error
 from scientistmetrics import scientistmetrics
-from scientisttools.extractfactor import get_pca_ind
 from scientisttools.utils import (
     orthonormalize,
     random_orthonormal, 
@@ -3650,24 +3648,7 @@ class HMFA(BaseEstimator,TransformerMixin):
 
 
 
-###################################################""
-def dimdesc(self,proba=0.05):
-    if self.model_ == "pca":
-        data = self.active_data_
-        row_coord = get_pca_ind(self)["coord"]
-    
-        corrdim = {}
-        for idx in self.dim_index_:
-            corDim = pd.DataFrame(columns=["statistic","pvalue"]).astype("float")
-            for col in data.columns:
-                if (data[col].dtypes in ["float64","int64","float32","int32"]):
-                    res = st.pearsonr(data[col],row_coord[idx])
-                    row_RD = pd.DataFrame({"statistic" : res.statistic,"pvalue":res.pvalue},index = [col])
-                    corDim = pd.concat([corDim,row_RD])
-            corDim = (corDim.query(f'pvalue < {proba}').sort_values(by="statistic",ascending=False))
-            corrdim[idx] = corDim
-    
-    return corrdim
+
     
 
 

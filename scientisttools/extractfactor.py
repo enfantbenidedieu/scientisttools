@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from scipy.spatial.distance import pdist,squareform
 from scipy.cluster import hierarchy
+from scientisttools.utils import eta2
+import scipy.stats as st
 
 def get_ca_row(self)-> dict:
 
@@ -1915,3 +1917,98 @@ def summaryMFA(self,
         print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(row_infos)
+
+
+###################################################""
+#       Description of axis
+#############################################################
+def dimdesc(self,proba=0.05):
+    if self.model_ == "pca":
+        data = self.active_data_
+        row_coord = get_pca_ind(self)["coord"]
+
+        if self.quanti_sup_labels_ is not None:
+            quanti_sup = self.data_[self.quanti_sup_labels_]
+            data = pd.concat([data,quanti_sup],axis=1)
+            if self.row_sup_labels_ is not None:
+                data = data.drop(index=self.row_sup_labels_)
+    
+        corrdim = {}
+        for idx in self.dim_index_:
+            # For continuous variables
+            corDim = pd.DataFrame(columns=["statistic","pvalue"]).astype("float")
+            for col in data.columns:
+                if (data[col].dtypes in ["float64","int64","float32","int32"]):
+                    res = st.pearsonr(data[col],row_coord[idx])
+                    row_RD = pd.DataFrame({"statistic" : res.statistic,"pvalue":res.pvalue},index = [col])
+                    corDim = pd.concat([corDim,row_RD])
+            # Filter by pvalue
+            corDim = (corDim.query(f'pvalue < {proba}').sort_values(by="statistic",ascending=False))
+
+            # For categorical variable
+            if self.quali_sup_labels_ is not None:
+                quali_sup = self.data_[self.quali_sup_labels_]
+                if self.row_sup_labels_ is not None:
+                    quali_sup = quali_sup.drop(index=self.row_sup_labels_)
+                
+                corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','correlation ratio','F-stats','pvalue'])
+                for col in quali_sup.columns:
+                    row_RD = pd.DataFrame(eta2(quali_sup[col],row_coord[idx]),index=[col])
+                    corqDim = pd.concat([corqDim,row_RD])
+                # Filter by pvalue
+                corqDim = (corqDim.query(f'pvalue < {proba}').sort_values(by="correlation ratio",ascending=False))
+            
+            if self.quali_sup_labels_ is None:
+                res = corDim
+            else:
+                if corqDim.shape[0] != 0 :
+                    res = {"quanti":corDim,"quali":corqDim}
+                else:
+                    res = corDim
+            
+            corrdim[idx] = res
+    elif self.model_ == "mca":
+        data = self.original_data_
+        row_coord = get_mca_ind(self)["coord"]
+        if self.quali_sup_labels_ is not None:
+            quali_sup = self.data_[self.quali_sup_labels_]
+            data = pd.concat([data,quali_sup],axis=1)
+            if self.row_sup_labels_ is not None:
+                data = data.drop(index=self.row_sup_labels_)
+
+        corrdim = {}
+        for idx in self.dim_index_:
+            # Pearson correlation test
+            if self.quanti_sup_labels_ is not None:
+                quanti_sup = self.data_[self.quanti_sup_labels_]
+                if self.row_sup_labels_ is not None:
+                    quanti_sup = quanti_sup.drop(index=self.row_sup_labels_)
+                
+                corDim = pd.DataFrame(columns=["statistic","pvalue"]).astype("float")
+                for col in quanti_sup.columns:
+                    if (quanti_sup[col].dtypes in ["float64","int64","float32","int32"]):
+                        res = st.pearsonr(quanti_sup[col],row_coord[idx])
+                        row_RD = pd.DataFrame({"statistic" : res.statistic,"pvalue":res.pvalue},index = [col])
+                        corDim = pd.concat([corDim,row_RD])
+                # Filter by pvalue
+                corDim = (corDim.query(f'pvalue < {proba}').sort_values(by="statistic",ascending=False))
+
+            # Correlation ratio (eta2)
+            corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','correlation ratio','F-stats','pvalue'])
+            for col in data.columns:
+                row_RD = pd.DataFrame(eta2(data[col],row_coord[idx]),index=[col])
+                corqDim = pd.concat([corqDim,row_RD])
+            # Filter by pvalue
+            corqDim = (corqDim.query(f'pvalue < {proba}').sort_values(by="correlation ratio",ascending=False))
+        
+            if self.quanti_sup_labels_ is None:
+                res = corqDim
+            else:
+                if corDim.shape[0] != 0 :
+                    res = {"quali":corqDim,"quanti":corDim}
+                else:
+                    res = corqDim
+            corrdim[idx] = res
+    elif self.model_ == "famd":
+        raise NotImplementedError("Error : This method is not yet implemented.")
+    return corrdim

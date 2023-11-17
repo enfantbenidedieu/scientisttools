@@ -159,11 +159,11 @@ def eta2(categories, value,digits=4):
     # calcul de la pvalue
     from scipy.stats import f
     pvalue = np.round(f.sf(f_stat, K-1, n-K),4)
-    return dict({'Sum. Intra':round(scintra,digits),
-                 'Sum. Inter':round(scinter,digits),
-                 'correlation ratio':round(eta2,digits),
-                 'F-stats': round(f_stat,digits),
-                 'pvalue': pvalue})
+    return {'Sum. Intra':round(scintra,digits),
+            'Sum. Inter':round(scinter,digits),
+            'correlation ratio':round(eta2,digits),
+            'F-stats': round(f_stat,digits),
+            'pvalue': pvalue}
 
 def RGBtoHex(vals, rgbtype=256):
   """Converts RGB values in a variety of formats to Hex values.
