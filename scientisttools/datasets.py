@@ -1,19 +1,112 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
-
 import pathlib
-
 import pandas as pd
+import pyreadr 
 
-DATASETS_DIR = pathlib.Path(__file__).parent / "datasets"
+DATASETS_DIR = pathlib.Path(__file__).parent / "data"
 
+# https://husson.github.io/data.html
+# https://r-stat-sc-donnees.github.io/liste_don.html
+
+### Principal Components Analysis ############################
 
 def load_decathlon():
     """The Decathlon dataset from FactoMineR."""
-    decathlon = pd.read_csv(DATASETS_DIR / "decathlon.csv")
-    decathlon.columns = ["athlete", *map(str.lower, decathlon.columns[1:])]
-    decathlon.athlete = decathlon.athlete.apply(str.title)
-    decathlon = decathlon.set_index(["competition", "athlete"])
-    return decathlon
+    data = pd.read_excel(DATASETS_DIR/"decathlon.xlsx",header=0,index_col=0)
+    data.name = "decathlon"
+    return data
+
+def load_decathlon2():
+    """The Decathlon dataset from Factoextra."""
+    data = pd.read_excel(DATASETS_DIR/"decathlon2.xlsx",header=0,index_col=0)
+    data.name = "decathlon2"
+    return data
+
+def load_autos():
+    """Autos 2005 - Données sur 40 voitures"""
+    data = pd.read_excel(DATASETS_DIR/"autos2005.xls",header=0,index_col=0)
+    data.name = "autos_2005"
+    return data
+
+def load_temperature():
+    data = pd.read_excel(DATASETS_DIR/"temperature.xlsx",header=0,index_col=0)
+    data.name = "temperature"
+    return data
+
+def load_temperature2():
+    data = pd.read_excel(DATASETS_DIR/"temperature_acp.xlsx",header=0,index_col=0)
+    data.name = "temperature2"
+    return data
+
+############################################# Correspondance Analysis ########################################""
+
+def load_woman_work():
+    """"""
+    data = pd.read_csv(DATASETS_DIR/"women_work.txt",sep="\t")
+    data.name = "woman_work"
+    return data
+
+def load_femmes_travail():
+    """"""
+    data = pd.read_csv(DATASETS_DIR/"femme_travail.csv",delimiter=";",encoding =  "cp1252",index_col =0)
+    data.name = "femmes_travail"
+    return data
+
+def load_housetasks():
+    """House tasks contingency table
+
+    Description
+    -----------
+    A data frame containing the frequency of execution of 13 house tasks in the couple. This table is also available in ade4 package.
+
+    Format
+    ------
+    A data frame with 13 observations (house tasks) on the following 4 columns.
+    Wife : a numeric vector
+    Alternating : a numeric vector
+    Husband : a numeric vector
+    Jointly : a numeric vector
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"housetasks.rda")["housetasks"]
+    data.name = "housetasks"
+    return data
+
+###################################### Multiple Correspondance Analysis #########################################
+
+def load_races_canines():
+    """"""
+    data = pd.read_excel(DATASETS_DIR/"races_canines.xls",header=0,index_col=0)
+    data.name = "races_canines"
+    return data
+
+def load_races_canines2():
+    """"""
+    data = pd.read_excel(DATASETS_DIR/"races_canines2.xlsx",header=0,index_col=0)
+    data.name = "races_canines2"
+    return data
+
+def load_races_canines3():
+    """"""
+    data = pd.read_excel(DATASETS_DIR/"races_canines_acm.xlsx",header=0,index_col=0)
+    data.name = "races_canines3"
+    return data
+
+def load_tea():
+    """"""
+    data = pd.read_excel(DATASETS_DIR/"tea.xlsx",header=0,index_col=0)
+    data.name = "tea"
+    return data
+
+################################## Factor Analysis of Mixed Data #####################################"
+
+def load_autos2():
+    """FAMD Data - Données sur 45 voitures"""
+    data = pd.read_excel(DATASETS_DIR/"autos2005_afdm.xlsx",header=0,index_col=0)
+    data.name = "autos_2005"
+    return data
+
+################################## Multiple Fcator Analysis (MFA) ########################################
 
 def load_burgundy_wines():
     """Burgundy wines dataset.
@@ -49,3 +142,10 @@ def load_burgundy_wines():
     )
     wines.insert(0, "Oak type", [1, 2, 2, 2, 1, 1])
     return wines
+
+########################################## Autres datasets
+
+def load_poison():
+    data = pyreadr.read_r(DATASETS_DIR/"poison.rda")["poison"]
+    data.name = "poison"
+    return data

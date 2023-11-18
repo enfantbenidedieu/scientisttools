@@ -79,7 +79,7 @@ def fviz_screeplot(self,
     elif choice == "proportion":
         eig = eig["proportion"]
         text_labels = list([str(np.around(x,1))+"%" for x in eig.values])
-        if self.model_ !=  "pca":
+        if self.model_ not in ["pca", "famd"]:
             kaiser = self.kaiser_proportion_threshold_
     else:
         raise ValueError("Allowed values for the argument choice are : 'proportion' or 'eigenvalue'")
@@ -178,6 +178,8 @@ def fviz_pca_ind(self,
                  vline_color="black",
                  vline_style ="dashed",
                  repel=False,
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  ggtheme=pn.theme_gray()) -> plt:
     
     """
@@ -198,9 +200,27 @@ def fviz_pca_ind(self,
     # Add categorical supplementary variables
     if self.quali_sup_labels_ is not None:
         coord[self.quali_sup_labels] = self.data_[self.quali_sup_labels_]
+    
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.row_cos2_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.row_contrib_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if color == "cos2":
         c = np.sum(self.row_cos2_[:,axis],axis=1)
@@ -353,6 +373,8 @@ def fviz_pca_var(self,
                  add_circle = True,
                  arrow_angle=10,
                  arrow_length =0.1,
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  ggtheme=pn.theme_gray()) -> plt:
     
     """
@@ -371,8 +393,23 @@ def fviz_pca_var(self,
 
     coord = pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_)
 
-    # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_labels_))
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
 
     if color == "cos2":
         c = np.sum(self.col_cos2_[:,axis],axis=1)
@@ -387,6 +424,9 @@ def fviz_pca_var(self,
         if legend_title is None:
             legend_title = "Cont_Var"
     
+    # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
+
     if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
         # Add gradients colors
         p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
@@ -494,6 +534,8 @@ def fviz_mca_ind(self,
                  vline_color="black",
                  vline_style ="dashed",
                  repel=False,
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  ggtheme=pn.theme_gray()) -> plt:
     
     """
@@ -516,6 +558,24 @@ def fviz_mca_ind(self,
     # Add categorical supplementary variables
     if self.quali_sup_labels_ is not None:
         coord[self.quali_sup_labels] = self.data_[self.quali_sup_labels_]
+
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.row_cos2_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.row_contrib_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
     
     if color == "cos2":
         c = np.sum(self.row_cos2_[:,axis],axis=1)
@@ -531,7 +591,7 @@ def fviz_mca_ind(self,
             legend_title = "Cont_Var"
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if habillage is None :        
         # Using cosine and contributions
@@ -655,6 +715,8 @@ def fviz_mca_mod(self,
                  confint_level = 0.95,
                  geom_ellipse = "polygon",
                  repel=False,
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  ggtheme=pn.theme_gray()) -> plt:
     
     """
@@ -685,7 +747,27 @@ def fviz_mca_mod(self,
 
     # Initialize
     coord = pd.DataFrame(self.mod_coord_,index = labels,columns=self.dim_index_)
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=labels))
+
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.mod_cos2_,index = labels,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.mod_contrib_,index = labels,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
+
+    # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if color == "cos2":
         c = np.sum(self.mod_cos2_[:,axis],axis=1)
@@ -805,6 +887,8 @@ def fviz_mca_var(self,
                  vline_color="black",
                  vline_style ="dashed",
                  repel=False,
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  ggtheme=pn.theme_gray()) -> plt:
     
     if self.model_ != "mca":
@@ -819,8 +903,26 @@ def fviz_mca_var(self,
     # Initialize
     coord = pd.DataFrame(self.var_eta2_,index =  self.var_labels_,columns=self.dim_index_)
 
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.var_cos2_,index = self.var_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.var_contrib_,index = self.var_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
+
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.var_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if color == "cos2":
         c = np.sum(self.var_cos2_[:,axis],axis=1)
@@ -922,6 +1024,8 @@ def fviz_ca_row(self,
                  hline_style="dashed",
                  vline_color="black",
                  vline_style ="dashed",
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  repel=False,
                  ggtheme=pn.theme_gray()) -> plt:
     
@@ -941,6 +1045,24 @@ def fviz_ca_row(self,
 
     # Initialize
     coord = pd.DataFrame(self.row_coord_,index = self.row_labels_,columns=self.dim_index_)
+
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.row_cos2_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.row_contrib_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
     
     if color == "cos2":
         limits = [0,1]
@@ -954,7 +1076,7 @@ def fviz_ca_row(self,
         c = np.sum(self.row_contrib_[:,axis],axis=1)
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
  
         # Using cosine and contributions
     if color in ["cos2","contrib"]:
@@ -1037,6 +1159,8 @@ def fviz_ca_col(self,
                  hline_style="dashed",
                  vline_color="black",
                  vline_style ="dashed",
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  repel=False,
                  ggtheme=pn.theme_gray()) -> plt:
     
@@ -1056,8 +1180,26 @@ def fviz_ca_col(self,
 
     coord = pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_)
 
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.col_cos2_,index = self.collabels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
+
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if color == "cos2":
         legend_title = "cos2"
@@ -1180,6 +1322,8 @@ def fviz_famd_ind(self,
                  hline_style="dashed",
                  vline_color="black",
                  vline_style ="dashed",
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  repel=False,
                  ggtheme=pn.theme_gray()) -> plt:
     
@@ -1202,8 +1346,23 @@ def fviz_famd_ind(self,
     if self.quali_sup_labels_ is not None:
         coord[self.quali_sup_labels] = self.data_[self.quali_sup_labels_]
 
-    # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.row_cos2_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.row_contrib_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
 
     if color == "cos2":
         c = np.sum(self.row_cos2_[:,axis],axis=1)
@@ -1217,6 +1376,9 @@ def fviz_famd_ind(self,
         c = np.asarray(color)
         if legend_title is None:
             legend_title = "Cont_Var"
+    
+    # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if habillage is None :        
         # Using cosine and contributions
@@ -1350,6 +1512,8 @@ def fviz_famd_col(self,
                  hline_style="dashed",
                  vline_color="black",
                  vline_style ="dashed",
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  add_circle = True,
                  ggtheme=pn.theme_gray()) -> plt:
     
@@ -1369,8 +1533,23 @@ def fviz_famd_col(self,
 
     coord = pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_)
 
-    # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_labels_))
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
 
     if color == "cos2":
         c = np.sum(self.col_cos2_[:,axis],axis=1)
@@ -1384,6 +1563,9 @@ def fviz_famd_col(self,
         c = np.asarray(color)
         if legend_title is None:
             legend_title = "Cont_Var"
+    
+     # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
     
     if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
         # Add gradients colors
@@ -1472,6 +1654,8 @@ def fviz_famd_mod(self,
                  hline_style="dashed",
                  vline_color="black",
                  vline_style ="dashed",
+                 lim_cos2 = None,
+                 lim_contrib = None,
                  repel=False,
                  ggtheme=pn.theme_gray()) -> plt:
     
@@ -1488,10 +1672,7 @@ def fviz_famd_mod(self,
         (axis[1] > self.n_components_-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
-
-    # Initialize
-    coord = pd.DataFrame(self.mod_coord_,index = self.mod_labels_,columns=self.dim_index_)
-
+    
     # Categories labels
     if short_labels:
         labels = self.short_labels_
@@ -1499,7 +1680,25 @@ def fviz_famd_mod(self,
         labels = self.mod_labels_
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=labels))
+    coord = pd.DataFrame(self.mod_coord_,index = labels,columns=self.dim_index_)
+
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.mod_cos2_,index = self.mod_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.mod_contrib_,index = self.mod_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
 
     if color == "cos2":
         c = np.sum(self.mod_cos2_[:,axis],axis=1)
@@ -1513,6 +1712,9 @@ def fviz_famd_mod(self,
         c = np.asarray(color)
         if legend_title is None:
             legend_title = "Contrib"
+    
+    # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
      
     # Using cosine and contributions
     if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
@@ -1637,9 +1839,6 @@ def fviz_famd_var(self,
     coord = pd.concat([col_cos2,var_eta2],axis=0)
     labels = self.col_labels_ + self.quali_labels_
 
-    # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=labels))
-
     if color == "contrib":
         contrib = np.append(self.col_contrib_[:,axis],self.var_contrib_[:,axis],axis=0)
         c = np.sum(contrib,axis=1)
@@ -1649,8 +1848,10 @@ def fviz_famd_var(self,
         c = np.array(color)
         if legend_title is None:
             legend_title = "Cont_Var"
-
     
+    # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=labels))
+
     # Using cosine and contributions
     if color == "contrib" or isinstance(color,np.ndarray):
         # Add gradients colors
@@ -2616,6 +2817,7 @@ def fviz_hcpc_cluster(self,
                       cluster = None,
                       center_marker_size=5,
                       marker = None,
+                      add_labels = True,
                       repel=True,
                       ha = "center",
                       va = "center",
@@ -2661,19 +2863,19 @@ def fviz_hcpc_cluster(self,
         
     # Rename last columns
     coord.columns = [*coord.columns[:-1], legend_title]
-
-     # Extract coordinates
      # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.labels_))
 
     p = p + pn.geom_point(pn.aes(color = "cluster"),size=point_size,shape=marker)
-    if repel:
-        p = p + pn.geom_text(pn.aes(color="cluster"),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '->','lw':1.0}})
-    else:
-        p = p + pn.geom_text(pn.aes(color="cluster"),size=text_size,va=va,ha=ha)
+    if add_labels:
+        if repel:
+            p = p + text_label(text_type,mapping=pn.aes(color="cluster"),size=text_size,va=va,ha=ha,
+                               adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+        else:
+            p = p + text_label(text_type,mapping=pn.aes(color="cluster"),size=text_size,va=va,ha=ha)
     if add_ellipse:
-        p = p + pn.geom_point(pn.aes(color = "cluster"))
-        p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill="cluster"),type = ellipse_type,alpha = 0.25,level=confint_level)
+        p = (p + pn.geom_point(pn.aes(color = "cluster"))+ 
+                 pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill="cluster"),type = ellipse_type,alpha = 0.25,level=confint_level))
     
     if show_clust_cent:
         cluster_center = self.cluster_centers_
@@ -2722,11 +2924,54 @@ def fviz_corrplot(X,
                   legend_title = "Corr",
                   is_corr = False,
                   show_legend = True,
-                  ggtheme = pn.theme_minimal()
+                  ggtheme = pn.theme_minimal(),
+                  show_diag = None,
+                  hc_order = False,
+                  hc_method = "complete",
+                  lab = False,
+                  lab_col = "black",
+                  lab_size = 11,
+                  p_mat = None,
+                  sig_level=0.05,
+                  insig = "pch",
+                  pch = 4,
+                  pch_col = "black",
+                  pch_cex = 5,
+                  tl_cex = 12,
+                  tl_col = "black",
+                  tl_srt = 45,
+                  digits = 2
                   ):
     
+    if not isinstance(X,pd.DataFrame):
+        raise ValueError("Error : 'X' must be a DataFrame.")
+    
     if is_corr:
-        p = ggcorrplot(X)
+        p = ggcorrplot(x=X,
+                       method=method,
+                       type=type,
+                       ggtheme = ggtheme,
+                       title = title,
+                       show_legend = show_legend,
+                       legend_title = legend_title,
+                       show_diag = show_diag,
+                       colors = colors,
+                       outline_color = outline_color,
+                       hc_order = hc_order,
+                       hc_method = hc_method,
+                       lab = lab,
+                       lab_col = lab_col,
+                       lab_size = lab_size,
+                       p_mat = p_mat,
+                       sig_level=sig_level,
+                       insig = insig,
+                       pch = pch,
+                       pch_col = pch_col,
+                       pch_cex = pch_cex,
+                       tl_cex = tl_cex,
+                       tl_col = tl_col,
+                        tl_srt = tl_srt,
+                        digits = digits)
     else:
         X.columns = pd.Categorical(X.columns,categories=X.columns)
         X.index = pd.Categorical(X.index,categories=X.index)
@@ -2741,13 +2986,15 @@ def fviz_corrplot(X,
         # Add theme
         p = p + ggtheme
 
-        if title is not None:
-            p = p + pn.ggtitle(title=title)
-        if xlabel is not None:
-            p = p + pn.xlab(xlabel)
-        if ylabel is not None:
-            p  = p + pn.ylab(ylabel)
-    
+        # Add axis elements and title
+        if title is None:
+            title = "Correlation"
+        if ylabel is None:
+            ylabel = "Dimensions"
+        if xlabel is None:
+            xlabel = "Variables"
+        p = p + pn.labs(title=title,x=xlabel,y=ylabel)
+            
         # Removing legend
         if not show_legend:
             p =p+pn.theme(legend_position=None)

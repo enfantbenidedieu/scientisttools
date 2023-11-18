@@ -158,7 +158,7 @@ def eta2(categories, value,digits=4):
     f_stat = (scinter/(K-1))/(scintra/(n-K))
     # calcul de la pvalue
     from scipy.stats import f
-    pvalue = np.round(f.sf(f_stat, K-1, n-K),4)
+    pvalue = np.round(f.sf(f_stat, K-1, n-K),digits)
     return {'Sum. Intra':round(scintra,digits),
             'Sum. Inter':round(scinter,digits),
             'correlation ratio':round(eta2,digits),
