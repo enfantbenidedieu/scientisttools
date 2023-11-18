@@ -5,6 +5,11 @@ res.mca = MCA(tea, quanti.sup=19, quali.sup=c(20:36),graph = FALSE)
 summary(res.mca)
 dimdesc(res.mca)
 
+res = catdes(tea, num.var=23, proba=0.05)
+res$test.chi2
+res$category
+
+
 anova(res.mca$ind$coord[,1]~tea[,1])
 
 library(FactoMineR)

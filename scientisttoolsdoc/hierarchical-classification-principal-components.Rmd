@@ -1,5 +1,5 @@
 ---
-title: '**Classification sur composantes principales sous Python avec scientisttools**'
+title: '**Classification Hiérarchique sur Composantes Principales sous Python avec scientisttools**'
 author: "Duvérier DJIFACK ZEBAZE"
 #date: "`r Sys.Date()`"
 documentclass: article
@@ -63,6 +63,427 @@ knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning=FALSE,fig.pos = "H",
                       highlight = TRUE)
 ```
 
-Ce tutoriel a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une classification 
+Ce tutoriel a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une classification hiérarchique combinée avec une analyse factorielle (HCPC, \emph{Hierarchical Clustering on Principal Components}).
 
 # Présentation des données
+
+On va réaliser une classification hiérarchique sur les composantes principales d'une analyse factorielle. Nous allons prendre un exemple sur les données météorologiques. Les données sur lesquelles nous allons travailler proviennent d’un jeu de données d’étudiants français qui avaient pris cela comme sujet d’examen (Tableau \ref{tab:temperature-data}). En lignes, les individus statistiques sont représentés par les $15$ villes de France sélectionnées et en colonnes les températures mensuelles moyennes. Ces températures mensuelles moyennes ont été calculées sur $30$ ans. Donc, par exemple, à Bordeaux en Janvier, il fait en moyenne $5.6$ degrés. Cette valeur de $5.6$ degrés est la moyenne sur tous les jours de Janvier pendant 30 ans. On a ainsi $12$ variables correspondants au $12$ mois de l'année. On retrouve également en colonnes deux variables liées à la position géographique des villes (Latitude et Longitude).
+
+
+```{python}
+# Chargement des données
+import pandas as pd
+Data = pd.read_excel("./donnee/temperature_acp.xlsx",sheet_name=0,index_col=0)
+
+```
+
+```{r temperature-data,engine='R',echo=FALSE}
+knitr::kable(py$Data, 
+             caption = "Données - Température des villes françaises",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::column_spec(c(13,17,18),border_right = TRUE) %>%
+  kableExtra::row_spec(15,hline_after = TRUE) %>%
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+
+# ACP
+
+Le but général de l’étude est de comparer les températures mensuelles des différentes villes. D'une part du point de vue des villes, on pose les questions suivantes : Quelles sont les villes qui se ressemblent vis-à-vis de l’ensemble des variables (les mois). Quelles sont celles qui diffèrent. Plus généralement, peut-on faire une typologie des villes mettant en évidence l’ensemble des ressemblances ainsi définies?  D'autre part, du point de vue des mois : Quels mois sont corrélés entre eux ? Quels sont ceux qui le sont peu ? Plus généralement, peut-on faire un bilan de corrélation entre les 12 mois ? Les températures mensuelles sont-elles liées à la position géographique (variables supplémentaires)?
+
+## Chargement de scientisttools
+
+```{python}
+from scientisttools.decomposition import PCA
+```
+
+
+On crée une instance de la classe PCA, en lui passant ici des étiquettes pour les lignes et les variables. Ces paramètres sont facultatifs ; en leur absence, le programme détermine automatiquement des étiquettes.
+
+Le constructeur de la classe PCA possède un paramètre \texttt{normalize} qui indique si l'ACP est réalisée :
+
+\begin{itemize}
+\item à partir de données centrées et réduites -> PCA(normalize=True)
+\item à partir de données centrées mais non réduites -> PCA(normalize=False)
+\end{itemize}
+
+Par défaut, la valeur du paramètre \texttt{normalize} est fixée à \texttt{True}, car c'est le cas le plus courant.
+
+Réalisez l'ACP sur tous les individus (actifs et supplémentaires) et les variables (actives et supplémentaires)en tapant la ligne de code suivante :
+
+
+```{python}
+# ACP - Instanciation
+res_pca = PCA(normalize=True,
+              n_components = None,
+              row_labels=Data.index[:15],
+              col_labels=Data.columns[:12],
+              row_sup_labels=Data.index[15:],
+              quanti_sup_labels=["moy","amp","Lati","Long"],
+              quali_sup_labels=["groupe"],
+              parallelize=True).fit(Data)
+```
+
+
+# HCPC
+
+La première étape consistait à réaliser une ACP du tableau de données. On réalise ensuite la classification hiérarchique. Nous demandons une partition en $3$ classes.
+
+```{python}
+from scientisttools.clustering import HCPC
+res_hcpc = HCPC(n_clusters=3)
+```
+
+```{python}
+# Entraînement du modèle
+res_hcpc.fit(res_pca)
+```
+
+## Dendrogram
+
+L'arbre hiérarchique nous montre notre partition en trois classes.
+
+```{python}
+# Plot dendodgram
+from scientisttools.pyplot import plot_dendrogram
+import matplotlib.pyplot as plt
+fig,axe = plt.subplots(figsize=(16,8))
+plot_dendrogram(res_hcpc,ax=axe,max_d=5)
+plt.show()
+```
+
+## Plan factoriel
+
+Le plan factoriel où les individus sont coloriés en fonction de la classe à laquelle ils appartiennent est le suivant :
+
+
+```{python, fig.cap = "Plan factoriel",out.width="70%"}
+# Plan factoriel
+from plotnine import *
+from scientisttools.ggplot import fviz_hcpc_cluster
+p = (fviz_hcpc_cluster(res_hcpc,add_ellipse=False,repel=False,
+                      show_clust_cent=False,center_marker_size=5)+theme_gray()+
+    theme(legend_direction="vertical",legend_position=(0.2,0.3)))
+print(p)
+```
+
+```{python}
+# Statistiques sur les classes
+cinfos =  res_hcpc.cluster_infos_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$cinfos, 
+             caption = "Statistiques sur les classes",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::kable_styling(font_size = 8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+En creusant plus en profondeur, on a la composition suivante :
+
+\begin{itemize}
+\item La classe $1$ (Les 5 villes méridionales) : Bordeaux, Marseille, Montpellier, Nice et Toulouse. 
+\item La classe $2$ (les 3 villes les plus occidentales - à faible amplitude thermique) : Brest, Nantes et Rennes
+\item La classe $3$ (les $7$ villes à forte amplitude thermique) : Clermont, Grenoble, Lille, Lyon, Paris, Strasbourg et Vichy.
+\end{itemize}
+
+## Description des classes
+
+Les classes peuvent être décrites par : 
+
+\begin{itemize}
+\item les variables et/ou des modalités
+\item les axes factoriels
+\item les individus
+\end{itemize}
+
+### Moyenne par classe
+
+```{python}
+# Moyennes des variables par classe
+gmean=res_hcpc.gmean_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$gmean, 
+             caption = "Moyennes des variables par classe",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::kable_styling(font_size = 8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+### Coordonnées des classes
+
+
+```{python}
+# Centre de gravité des classes
+gclasse = res_hcpc.cluster_centers_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$gclasse, 
+             caption = "Centre de gravité",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+### Corrélation entre classe et variables
+
+```{python}
+# Rapport de correlation
+eta2 = res_hcpc.correlation_ratio_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$eta2, 
+             caption = "Rapport de corrélation",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::kable_styling(font_size = 8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+###  Description par variables
+
+```{python}
+# Description par les variables quantitatives
+vardesc = res_hcpc.desc_var_quanti_
+# Pour un meilleur rendu
+vardesc = (vardesc.reset_index()
+                 .rename(columns={"level_0":"cluster","level_1" : "variable"}))
+```
+
+
+
+```{r var-desc,engine='R',echo=FALSE}
+knitr::kable(py$vardesc,
+             caption = "Description par les variables",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::row_spec(c(12,24),hline_after = TRUE) %>%
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+Le tableau \ref{tab:var-desc} fournit directement les caractéristiques des classes. Nous les résumons en $3$ points :
+
+\begin{enumerate}
+\item Les individus de la classe $1$ sont caractérisés par une température élevée toute l'année, particulièrement en demi - saison. Ces villes sont méridionaales (faible latitude).
+
+\item \og A l'opposé \fg{}, les individus de la classe $3$ sont caractérisés par une température faible toute l'année, particulièrement pendant les mois les plus froids.
+
+\item La classe $2$ comporte des villes présentant une faible amplitude thermique; elles sont situées à l'ouest (faible longitude).
+\end{enumerate}
+
+
+### Description par les axes factoriels
+
+
+```{python}
+# Description par les axes factoriels
+axinfos = res_hcpc.desc_axes_infos_
+axinfos= (axinfos.reset_index()
+                 .rename(columns={"level_0":"cluster","level_1" : "variable"}))
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$axinfos,
+             caption = "Description par les axes",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::row_spec(c(12,24),hline_after = TRUE) %>%
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+Les individus de la classe $1$ possèdent de faibles coordonnées sur le premier axe. Ceux de la classe $2$ possèdent des coordonnées faibles sur le deuxième axe et les individus de la classe $2$ possèdent des coordonnées élevées sur les deux premiers axes.
+
+### Description par les individus
+
+Il existe deux types d'individus spécifiques pour décrire les classes : 
+
+\begin{itemize}
+\item Les individus les plus proches du centre de classe (le parangons)
+\item Les individus les plus éloignés des centres des autres classes.
+\end{itemize}
+
+
+```{python}
+# Individu proches
+near = res_hcpc.disto_near_
+near = (near.reset_index()
+            .drop(columns=["level_1"])
+            .rename(columns={"level_0":"cluster"}))
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$near,
+             caption = "Description par les individus proches",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::row_spec(c(5,8),hline_after = TRUE) %>%
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+```{python}
+### Individus loins
+far = res_hcpc.disto_far_
+far = (far.reset_index()
+          .drop(columns=["level_1"])
+          .rename(columns={"level_0":"cluster"}))
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$far,
+             caption = "Description par les individus éloignés",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::row_spec(c(5,8),hline_after = TRUE) %>%
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+`r py$near[1,2]` appartient à la classe $1$ et est le plus proche du centre de cette classe. De même, `r py$far[1,2]` appartient à la même classe et est le plus éloigné du centre de cette classe.
+
+L'atttribut \texttt{.parangons\_} permet avoir les individus les plus proches du centre de gravité de chaque classe.
+
+```{python}
+# Parangons
+para = res_hcpc.parangons_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$para,
+             caption = "Individus parangons",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+### Autres attributs
+
+```{python}
+# Correlation des variables suppélmentaires et le cluster
+vsupeta2 = res_hcpc.correlation_ratio_quanti_sup_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$vsupeta2,
+             caption = "Rapport de corrélation variables supplémentaires quantitatives avec les axes factoriels",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+```{python}
+# Rapport de corrélation avec les axes factoriels
+axeta2 = res_hcpc.desc_axes_correlation_ratio_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$axeta2,
+             caption = "Rapport de corrélation avec les axes factoriels",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+```{python}
+# Moyennes des axes par cluster
+axgmean = res_hcpc.desc_axes_gmean_.T
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$axgmean,
+             caption = "Centre de gravité",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+```{python}
+vsupdesc = res_hcpc.desc_var_quanti_sup_
+vsupdesc = (vsupdesc.reset_index()
+                    .rename(columns={"level_0":"cluster","level_1" : "variable"}))
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$vsupdesc,
+             caption = "Description par les variables quantitatives supplémentaires",
+             booktabs = TRUE,linesep = "") %>%
+  kableExtra::row_spec(c(4,8),hline_after = TRUE) %>%
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+
+```{python}
+vqsup = res_hcpc.desc_var_quali_sup_
+vqsup.keys()
+```
+
+
+```{python}
+chi2 = vqsup["chi2"]
+chi2
+```
+
+
+```{python}
+# Likelihood-test
+gtest = vqsup["gtest"]
+gtest
+```
+
+```{python}
+# Cramer's V statistic
+vqsup["cramer"]
+```
+
+
+```{python}
+# Tschuprow's T statistic
+vqsup["tschuprow"]
+```
+
+
+```{python}
+# Pearson statistic
+vqsup["pearson"]
+```
+
+
+```{python}
+# Distances d'agrégation
+dist = res_hcpc.distances_
+# Histogram
+import numpy as np
+fig,axe = plt.subplots(figsize=(16,8))
+axe.bar(np.arange(1,len(dist)+1),sorted(dist,reverse=True),color = "black")
+plt.show()
+```
+
+
+Pour plus d'informations sur la classification hiérarchique combinée avec une analyse factorielle (HCPC) sous scientisttools, consulter le notebook 
+
+\href{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/hcpc_pca_autos2005.ipynb}{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/hcpc\_pca\_autos2005.ipynb}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
