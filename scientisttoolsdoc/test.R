@@ -44,6 +44,68 @@ res.hcpc$desc.var$test.chi2
 res.hcpc$desc.var$category
 dimdesc(res.hcpc)
 
+# Multiple Factor Analysis
+library(FactoMineR)
+library(factoextra)
+data(wine)
+res.mfa <- MFA(wine, 
+               group = c(2, 5, 3, 10, 9, 2), 
+               type = c("n", "s", "s", "s", "s", "s"),
+               name.group = c("origin","odor","visual",
+                              "odor.after.shaking", "taste","overall"),
+               num.group.sup = c(1, 6),
+               graph = FALSE)
+
+# Quantitative Variables
+quanti.var <- get_mfa_var(res.mfa, "quanti.var")
+# Coordinates
+head(quanti.var$coord)
+# Cos2: quality on the factore map
+head(quanti.var$cos2)
+# Contributions to the dimensions
+head(quanti.var$contrib)
+
+# Group of variables
+group <- get_mfa_var(res.mfa, "group")
+group
+
+head(group$coord)
+
+
+
+# Individuals
+ind <- get_mfa_ind(res.mfa)
+ind
+head(ind$coord)
+head(ind$coord.partiel)
+head(ind$within.inertia)
+head(ind$within.partial.inertia)
+head(ind$contrib)
+head(ind$cos2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

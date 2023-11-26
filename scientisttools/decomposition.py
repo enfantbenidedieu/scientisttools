@@ -3418,6 +3418,7 @@ class FAMD(BaseEstimator,TransformerMixin):
 #####################################################################################################
 
 # https://husson.github.io/MOOC_AnaDo/AFM.html
+# https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r
 
 class MFA(BaseEstimator,TransformerMixin):
     """Multiple Factor Analysis (MFA)
@@ -3429,8 +3430,8 @@ class MFA(BaseEstimator,TransformerMixin):
     normalize : 
     n_components :
     groups : list of string
-    groups :
-    groups_sup
+    groups : list of string
+    groups_sup : list of string
 
     
     
@@ -3488,8 +3489,7 @@ class MFA(BaseEstimator,TransformerMixin):
         self.data_ = X
         self.active_data_ = X_
 
-        print(X_.info())
-
+        # Compute stats
         self._compute_stats(X_)
 
 
@@ -3546,31 +3546,31 @@ class MFA(BaseEstimator,TransformerMixin):
         
         # Ponderation
         Zb = pd.concat((mapply(Z.loc[:,cols],lambda x : x/np.sqrt(model[group].eig_[0][0]),axis=0,progressbar=False,n_workers=self.n_workers_) for group, cols in self.groups_.items()),axis=1)
-
+        print(Zb)
         ###########################################################################################################
         # Fit global PCA
         ###########################################################################################################
-        pca_model = PCA(normalize=False,n_components=None,row_labels=Zb.index,col_labels=Zb.columns,parallelize=self.parallelize).fit(Zb)
-        
+        pca_model = PCA(normalize=False,
+                        n_components=None,
+                        row_labels=Zb.index,
+                        col_labels=Zb.columns,
+                        parallelize=self.parallelize).fit(Zb)
+
+        # Number of components
         self.n_components_ = self.n_components
         if self.n_components_ is None:
             self.n_components_ = pca_model.n_components_
         
         dim_index = ["Dim."+str(x+1) for x in np.arange(self.n_components_)]
-
-        # Coordonnées des individus par groupes
-        group_row_coord = pd.DataFrame().astype("float")
-        for group, cols in self.groups_.items():
-            df = Zb.loc[:,cols][group]
-            pca = PCA(normalize=True,n_components=None,row_labels=df.index,col_labels=df.columns,parallelize=self.parallelize).fit(df)
-            ncp = min(df.shape[1],self.n_components_)
-            row_coord = pd.DataFrame(pca.row_coord_[:,:ncp],columns=["Dim."+str(x+1) for x in np.arange(ncp)],index=pca.row_labels_)
-            group_row_coord = pd.concat([group_row_coord,self.add_index(row_coord,group_name=group)],axis=1)
         
         # Store all informations
         self.eig_ = pca_model.eig_[:,:self.n_components_]
+        # Eigenvectors
         self.eigen_vectors_ = pca_model.eigen_vectors_[:,:self.n_components]
+        # Row coordinates
         self.row_coord_ = pca_model.row_coord_[:,:self.n_components_]
+        # Partial row coordinates
+        self.row_coord_partial_ = self._row_coord_partial(X,Zb,pca_model.eig_[0])
         self.dim_index_ = dim_index
         self.normalied_data_ = Z
         self.pnormalized_data_ = Zb
@@ -3578,13 +3578,34 @@ class MFA(BaseEstimator,TransformerMixin):
         # Model Name
         self.model_ = "mfa"
     
-    @staticmethod
-    def grow_coord(X):
-        pass
+    def _row_coord_partial(self,X,Zb,s):
+        # 
+        X = (X - X.mean()) / ((X - X.mean()) ** 2).sum() ** 0.5
+        print(X.shape )
+        Z = pd.concat((X.loc[:,cols][group]/self.fa_model_[group].eig_[0][0]**2) for group, cols in self.groups_.items())
+        # Matrice des poids
+        M = np.full(len(X), 1 / len(X))
+        U = np.linalg.svd(Zb)[0] #[:,:self.n_components_]
+        print(Z.shape)
+        print(U.shape)
+        print(s.shape)
+        print(M.shape)
+        print(Z.dot(Z.T).shape)
+        #s = np.sqrt(self.eig_[0])
+        return len(self.groups_) * pd.concat(
+            [
+                self.add_index(
+                    df=(Zb[g] @ Zb[g].T) @ (M[:, np.newaxis] ** (-0.5) * U * s**-1),
+                    group_name=g,
+                )
+                for g, cols in self.groups_.items()
+            ],
+            axis="columns",
+        )
 
     @staticmethod
     def add_index(df,group_name):
-        df.columns = pd.MultiIndex.from_tuples([(group_name,col) for col in df.columns])
+        df.columns = pd.MultiIndex.from_tuples([(group_name,col) for col in df.columns],names=("group","component"))
         return df
 
 
@@ -3602,6 +3623,9 @@ class MFA(BaseEstimator,TransformerMixin):
             groups = self.groups
         
         return groups
+    
+    def _compute_groups_sup_coord(self,X):
+        pass
             
 
     def fit_transform(self,X,y=None):
