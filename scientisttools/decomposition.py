@@ -3419,6 +3419,7 @@ class FAMD(BaseEstimator,TransformerMixin):
 
 # https://husson.github.io/MOOC_AnaDo/AFM.html
 # https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r
+# https://eudml.org/subject/MSC/62H25
 
 class MFA(BaseEstimator,TransformerMixin):
     """Multiple Factor Analysis (MFA)
@@ -3507,10 +3508,20 @@ class MFA(BaseEstimator,TransformerMixin):
         self.row_labels_ = self.row_labels
         if ((self.row_labels_ is None) or (len(self.row_labels_) != self.n_rows_)):
             self.row_labels_ = ["row_" + str(i+1) for i in np.arange(0,self.n_rows_)]
-
+        
         # Checks groups are provided
         self.groups_ = self._determine_groups(X=X)
 
+        # Set columns labels - columns group labels
+        self.col_labels_ = []
+        self.col_group_labels_ = []
+        for _, cols in self.groups_.items():
+            for i in range(len(cols)):
+                group = cols[i][0]
+                col_label = cols[i][1]
+                self.col_labels_.append(col_label)
+                self.col_group_labels_.append(group)
+    
         # Chack group types are consistent
         self.all_nums_ = dict()
         for name, cols in self.groups_.items():
@@ -3520,7 +3531,6 @@ class MFA(BaseEstimator,TransformerMixin):
                 raise ValueError(f'Not all columns in "{name}" group are of the same type')
             self.all_nums_[name] = all_num
         
-
         # Run a Factor Analysis in each group
         model = dict()
         for group, cols in self.groups_.items():
@@ -3546,7 +3556,7 @@ class MFA(BaseEstimator,TransformerMixin):
         
         # Ponderation
         Zb = pd.concat((mapply(Z.loc[:,cols],lambda x : x/np.sqrt(model[group].eig_[0][0]),axis=0,progressbar=False,n_workers=self.n_workers_) for group, cols in self.groups_.items()),axis=1)
-        print(Zb)
+        
         ###########################################################################################################
         # Fit global PCA
         ###########################################################################################################
@@ -3569,11 +3579,25 @@ class MFA(BaseEstimator,TransformerMixin):
         self.eigen_vectors_ = pca_model.eigen_vectors_[:,:self.n_components]
         # Row coordinates
         self.row_coord_ = pca_model.row_coord_[:,:self.n_components_]
+        # Row contributions
+        self.row_contrib_ = pca_model.row_contrib_[:,:self.n_components_]
+        # Row - Quality of representation
+        self.row_cos2_ = pca_model.row_cos2_[:,:self.n_components_]
         # Partial row coordinates
         self.row_coord_partial_ = self._row_coord_partial(X,Zb,pca_model.eig_[0])
         self.dim_index_ = dim_index
         self.normalied_data_ = Z
         self.pnormalized_data_ = Zb
+
+        ###### Columns informations ################################################
+        # Columns coordinates
+        self.col_coord_ = pca_model.col_coord_[:,:self.n_components_]
+        # Columns contributions
+        self.col_contrib_ = pca_model.col_contrib_[:,:self.n_components_]
+        # Columns Quality of representations
+        self.col_cos2_ = pca_model.col_cos2_
+        # Correlation with axis
+        self.col_cor_ = pca_model.col_cor_
 
         # Model Name
         self.model_ = "mfa"
@@ -3586,11 +3610,6 @@ class MFA(BaseEstimator,TransformerMixin):
         # Matrice des poids
         M = np.full(len(X), 1 / len(X))
         U = np.linalg.svd(Zb)[0] #[:,:self.n_components_]
-        print(Z.shape)
-        print(U.shape)
-        print(s.shape)
-        print(M.shape)
-        print(Z.dot(Z.T).shape)
         #s = np.sqrt(self.eig_[0])
         return len(self.groups_) * pd.concat(
             [
@@ -3625,7 +3644,10 @@ class MFA(BaseEstimator,TransformerMixin):
         return groups
     
     def _compute_groups_sup_coord(self,X):
-        pass
+        """
+        """
+        if not isinstance(X,pd.DataFrame):
+            raise ValueError()
             
 
     def fit_transform(self,X,y=None):

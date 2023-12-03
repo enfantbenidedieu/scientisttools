@@ -1656,13 +1656,16 @@ class DISQUAL(BaseEstimator,TransformerMixin):
 class DISCA(BaseEstimator,TransformerMixin):
     """Discriminant Correspondence Analysis (DISCA)
 
-    Performa
+    Performance Discriminant Correspondence Analysis
+
+    Parameters:
+    ----------
+    n_components:
+    target :
+
     
     
     """
-
-
-
     def __init__(self,
                  n_components = None,
                  target = list[str],
@@ -1798,7 +1801,6 @@ class DISCA(BaseEstimator,TransformerMixin):
         # tableau de contingence
         return pd.concat([y,dummies],axis=1).groupby(self.target_).sum()
 
-    
     def _is_dummies(self,X):
         """
         
@@ -1880,7 +1882,7 @@ class DISCA(BaseEstimator,TransformerMixin):
         # Distance entre un groupe et l'origine
         row_disto = mapply(profils,lambda x : np.sum((x-G.values)**2/G.values),axis=1,progressbar=False,n_workers=self.n_workers_).to_frame("disto(k)")
 
-        # Distance entre les groupes - Mtrice des distances par paires de classes
+        # Distance entre les groupes - Matrice des distances par paires de classes
         row_dist = pd.DataFrame(squareform(pdist(profils,metric="seuclidean",V=G)**2),index=self.classes_,columns=self.classes_)
 
         # Inertie totale
@@ -1893,7 +1895,7 @@ class DISCA(BaseEstimator,TransformerMixin):
                 row_sup_labels=None,
                 col_sup_labels=None,
                 parallelize=self.parallelize).fit(M)
-        
+            
         # Stockage des résultats de l'ACM
         col = get_ca_col(ca)
 
@@ -1909,17 +1911,69 @@ class DISCA(BaseEstimator,TransformerMixin):
         # Rapport de corrélation
         eta2 = ((self.n_rows_*ca.eig_[0])/tss).to_frame("correl. ratio").T
 
+        # Coordonnées des classes
+        gcoord = pd.DataFrame(ca.row_coord_,index=ca.row_labels_,columns=ca.dim_index_)
+
+        # Qualite de la représentation des classes - COS2
+        gcos2 = pd.DataFrame(ca.row_cos2_,index=ca.row_labels_,columns=ca.dim_index_)
+
+        # Contribution des classes
+        gcontrib = pd.DataFrame(ca.row_contrib_,index=ca.row_labels_,columns=ca.dim_index_)
+
+        # Distance euclidienne entre les classes
+        gdist = pd.DataFrame(ca.row_dist_,columns=ca.row_labels_,index=ca.row_labels_)
+
+        # Informations sur les groupes
+        ginfos = pd.DataFrame(ca.row_infos_,columns=ca.row_labels_,index=ca.row_labels_)
+
+        ##### 
+        # Coordonnées des modalités
+        mod_coord = pd.DataFrame(ca.col_coord_,index=ca.col_labels_,columns=ca.dim_index_)
+
+        # Cosinus carrés des modalités
+        mod_cos2 = pd.DataFrame(ca.col_cos2_,index=ca.col_labels_,columns=ca.dim_index_)
+
+        # Contributions des modalités
+        mod_contrib = pd.DataFrame(ca.col_contrib_,index=ca.col_labels_,columns=ca.dim_index_)
+
+        # Eigenvalues informations
+        self.eig_ = ca.eig_
+        self.n_components_ = ca.n_components_
+        self.dim_index_ = ca.dim_index_
+
         # All informations
-        self.mod_stats = mod_stats
         self.row_dist_ = row_dist
         self.row_disto_ = row_disto
-        self.gcoord_ = pd.DataFrame(ca.row_coord_,index=ca.row_labels_,columns=ca.dim_index_)
-        self.ca_model_ = ca
-        
-        self.inertia_ = IT
-        self.coef_ = coef
         self.row_coord_ = row_coord
+        self.row_labels_ = X.index
+
+        # Class informations
+        self.gcoord_ = gcoord
+        self.gdist_ = gdist
+        self.gcos2_ = gcos2
+        self.gcontrib_ = gcontrib
+        self.ginfos_ = ginfos
+
+        # Categories informations
+        self.mod_stats_ = mod_stats
+        self.mod_coord_ = mod_coord
+        self.mod_cos2_ = mod_cos2
+        self.mod_contrib_ = mod_contrib
+
+        # Correspondance Analysis
+        self.ca_model_ = ca
+
+        # Inertie
+        self.inertia_ = IT
+
+        # Score function
+        self.coef_ = coef
+        
+        # Correlation ratio
         self.correlation_ratio_ = eta2
+        self.canonical_correlation_ratio_ = mapply(eta2,lambda x : np.sqrt(x),axis=0,progressbar=False,n_workers=self.n_workers_)
+
+        self.model_ = "disca"
 
         
     def fit_transform(self,X):
@@ -2000,8 +2054,6 @@ class DISCA(BaseEstimator,TransformerMixin):
                             for i in coord.index),axis=0)
 
         return scores
-
-
 
     def predict_proba(self,X):
         """Estimate probability
@@ -2090,9 +2142,6 @@ class DISCA(BaseEstimator,TransformerMixin):
 ##################################################################################################
 #           Linear Discriminant Analysis with both Continuous and Categorical variables (DISMIX)
 ###################################################################################################
-
-
-
 class DISMIX(BaseEstimator,TransformerMixin):
     """Discriminant Analysis under Continuous and Categorical variables (DISMIX)
 
@@ -2111,10 +2160,6 @@ class DISMIX(BaseEstimator,TransformerMixin):
     
     
     """
-
-
-
-
     def __init__(self,
                  n_components = None,
                  target=list[str],
@@ -2442,7 +2487,7 @@ class STEPDISC(BaseEstimator,TransformerMixin):
 
         Parameters:
         -----------
-        clf : an instance of class LINEARDISC or CANDISC
+        clf : an instance of class LDA or CANDISC
         
         Return
         ------

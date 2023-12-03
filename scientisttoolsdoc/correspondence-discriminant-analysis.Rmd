@@ -1,0 +1,648 @@
+---
+title: '**ACD sous Python avec scientisttools**'
+author: "Duvérier DJIFACK ZEBAZE"
+#date: "`r Sys.Date()`"
+documentclass: article
+geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm, twoside=true"
+fontsize: 11pt
+line-height: 1.5
+urlcolor: blue
+linkcolor: blue
+link-citations : yes
+output: pdf_document
+mainfont: Bookman Old Style
+header-includes:
+- \usepackage{pbox}
+- \usepackage{caption}
+- \usepackage{subcaption}
+- \usepackage{natbib}
+- \usepackage[utf8]{inputenc} # Caractères spéciaux
+- \usepackage[french]{babel}
+- \usepackage{amsmath, amsfonts, amssymb}   #Symboles mathématiques
+- \usepackage{amsfonts}
+# - \usepackage{minitoc} # [undotted] pour supprimer les pointillés
+# - \mtcsetdepth{minitoc}{1} # 1 section, 2 sous-section 3 sous-sous-section
+# - \mtcsettitle{minitoc}{Sommaire} # Changer le titre
+- \usepackage{diagbox}
+- \usepackage{lettrine}
+- \usepackage[labelfont=bf]{caption}
+- \captionsetup{font=scriptsize}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+- \usepackage{minitoc}
+- \usepackage[Bjornstrup]{fncychap}
+#- \usepackage[Conny]{fncychap} 
+#- \usepackage[pdftex]{pict2e}
+- \usepackage[dvipsnames]{xcolor}
+- \usepackage{fourier-orns}
+- \usepackage{fancyhdr}
+- \usepackage{geometry}
+- \geometry{a4paper,total={160mm,240mm},left=25mm,right=25mm,top=25mm,bottom=25mm}
+- \usepackage[printsolution=true]{exercises}
+- \usepackage{tikz}
+---
+
+```{r setup, include=FALSE}
+library(reticulate)
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning=FALSE,fig.pos = "H",
+                      out.extra = "",fig.align = "center",collapse =  FALSE,
+                      highlight = TRUE)
+```
+
+Ce tutoriel a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une Analyse des Correspondances Discriminante . 
+
+<!-- https://scholar.google.com/citations?view_op=view_citation&hl=en&user=Tyd1NtYAAAAJ&cstart=20&pagesize=80&citation_for_view=Tyd1NtYAAAAJ:TFP_iSt0sucC -->
+
+# Présentation des données
+
+L'analyse des correspondances discriminante (ACD) est le pendant de l'analyse factorielle discriminante pour les descripteurs catégoriels. On la reconnaît sous les traits de l'analyse discriminante barycentrique. Lorsque le nombre de classes est supérieur à $2$, l'approche passe par un tableau de contingence particulier soumis à une analyse factorielle des correspondances (AFC).
+
+## Importation des données
+
+Nous illustrons l'analyse des correspondances discriminante à l'aide d'un exemple sur les données \og Races Canines \fg{} extraites de l'ouvrage de Tenenhaus. Il s'agit de prédire la variable \og Fonction \fg{} (utilite, chasse, compagnie) de $(n=27)$ chiens à partir de leurs caractéristiques (Taille, Poids, etc. 6 variables).
+
+
+```{python}
+# Chargement des données
+import pandas as pd
+# Données actives
+DTrain = pd.read_csv("./donnee/races_canines.txt",sep="\t",encoding='latin-1',
+                     index_col=0)
+print(DTrain.info())
+```
+
+
+## Distribution relative
+
+Nous calculons la distribution relative des classes :
+
+```{python}
+# Distribution relative des classes
+d = (DTrain.Fonction.value_counts(normalize=True).reset_index()
+                .rename(columns={"index":"Fonction","Fonction":"p(k)"}))
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$d, 
+             caption = "Distribution relative des classes",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+## Analyse bivariée
+
+Une première piste consiste à procéder à une simple analyse bivariée. Nous croisons chaque descripteur avec la variable cible. Nous disposons ainsi d'une première indication sur les liaisons individuelles de chaque descripteur avec \og Fonction \fg{}.
+
+```{python}
+# V de Cramer
+import scientistmetrics as st
+cramerV = st.scientistmetrics(DTrain)
+cramerV = (cramerV.iloc[:6,6].to_frame()
+                  .sort_values(by="Fonction",ascending=False).T)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$cramerV, 
+             caption = "V de Cramer entre la cible et les descripteurs",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Nous avons quelques relations qui sont assez fortes :  `r colnames(py$cramerV)[1]` avec un V de Cramer de `r round(py$cramerV[1,1],2)`; `r colnames(py$cramerV)[2]` avec un V de Cramer de `r round(py$cramerV[1,2],2)`; `r colnames(py$cramerV)[3]` avec un V de Cramer de `r round(py$cramerV[1,3],2)` et `r colnames(py$cramerV)[4]` avec un V de Cramer de `r round(py$cramerV[1,4],2)`. Il semble donc possible d'expliquer la fonction des chiens à partir de leurs caractéristiques. Mais il faut le faire de manière multivariée c'est - à - dire en tenant compte du rôle simultané de l'ensemble des descripteurs.
+
+# Analyse avec scientisttools
+
+## Modélisation avec scientisttools
+
+Sage précaution avec les packages pour Python, nous affichons le numéro de la version de \og scientisttools \fg{} utilisée dans ce tutoriel. 
+
+```{python}
+# version
+import scientisttools
+print(scientisttools.__version__)
+```
+
+Nous fonctionnons avec la version \og 0.0.9 \fg{}.
+
+```{python}
+# Importation
+from scientisttools.discriminant_analysis import DISCA
+```
+
+On crée une instance de la classe DISCA, en lui passant ici des étiquettes pour les variables explicatives et la variable cible. 
+
+```{python}
+# Instanciation
+disca = DISCA(n_components=None,
+              target=["Fonction"],
+              features_labels=DTrain.columns[:-1].values,
+              matrix_type="completed",
+              priors=None,
+              parallelize=False)
+```
+
+On estime le modèle en appliquant la méthode \texttt{.fit} de la classe DISCA sur le jeu de données.
+
+```{python}
+# Entraînement du modèle
+disca.fit(DTrain)
+```
+
+## Inspection de l'objet DISCA
+
+\begin{itemize}
+\item \texttt{priors\_} correspond à la distribution relative des classes.
+\end{itemize}
+
+```{python,eval=FALSE}
+# distribution des classes
+print(lda.priors_)
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(t(py$disca$priors_), 
+             caption = "Distribution relative pour chaque classe",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+\begin{itemize}
+\item \texttt{statistics\_test\_} correspond aux tests statistiques entre variables qualitatives
+\end{itemize}
+
+```{python}
+# Tests statistiques
+stats_test = disca.statistics_test_
+print(stats_test.keys())
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$disca$statistics_test_$chi2, 
+             caption = "Test statistique de chi2",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+\begin{itemize}
+\item \texttt{mod\_stats} correspond à la distribution absolue et relative des classes 
+\end{itemize}
+
+```{python,eval=FALSE}
+# distribution absolue et relative des classes
+print(disca.mod_stats)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$disca$mod_stats, 
+             caption = "Distribution absolue et relative pour chaque classe",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+# Analyse des classes
+
+##  Coordonnées des classes
+
+L'objet \og disca \fg{} fournit les coordonnées des points - classes.
+
+```{python,eval=FALSE}
+# Coordonnées des points - classes
+disca.gcoord_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$disca$gcoord_, 
+             caption = "Coordonnées factorielles des classes",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+On projette ces points - classes dans le plan :
+
+```{python gcoord,fig.cap="Carte des points - classes",out.width="50%"}
+# Projection des points classes
+from plotnine import *
+gcoord = disca.gcoord_
+p = (ggplot(gcoord,aes(x="Dim.1",y="Dim.2",label=gcoord.index))+
+        geom_point(aes(color=gcoord.index))+
+        geom_text(aes(color=gcoord.index),
+                  adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})+
+        geom_hline(yintercept=0,colour="black",linetype="--")+
+        geom_vline(xintercept=0,colour="black",linetype="--")+
+        theme(legend_direction="vertical",legend_position=(0.2,0.7))+
+        labs(color="Fonction"))
+print(p)
+```
+
+Visiblement, \og compagnie \fg{} et \og utilite \fg{} s'opposent sur le premier facteur. \og chasse \fg{} se démarque des deux autres sur le second facteur.
+
+## Distances entre centres de classes
+
+Les distances entre centres de classes permettent de situer les proximités entre les groupes sur l'ensemble des facteurs. La distance euclidienne entre les classes dans le répère factoriel est la suivante :
+
+```{python}
+# Distance euclidienne
+DE = pd.DataFrame(disca.ca_model_.row_dist_,columns=disca.classes_,
+                  index=disca.classes_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$DE, 
+             caption = "Distance euclidienne entre les classes",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Les trois types de fonctions forment un triangle approximativement isocèle dans le plan factoriel.
+
+Ajoutons ces distances sur le plan factoriel :
+
+```{python fig.cap="Carte des points - classes",out.width="50%"}
+# Projection des points classes avec distances entre classes
+p = (ggplot(gcoord,aes(x="Dim.1",y="Dim.2",label=gcoord.index))+
+        geom_point(aes(color=gcoord.index))+
+        geom_text(aes(color=gcoord.index),
+                  adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})+
+        geom_hline(yintercept=0,colour="black",linetype="--")+
+        geom_vline(xintercept=0,colour="black",linetype="--")+
+        theme(legend_direction="vertical",legend_position=(0.2,0.7))+
+        annotate("segment",x=gcoord.iloc[0,0],y=gcoord.iloc[0,1],
+                           xend=gcoord.iloc[1,0],yend=gcoord.iloc[1,1],
+                           color="blue")+
+        annotate("segment",x=gcoord.iloc[0,0],y=gcoord.iloc[0,1],
+                           xend=gcoord.iloc[2,0],yend=gcoord.iloc[2,1],
+                           color="blue")+
+        annotate("segment",x=gcoord.iloc[1,0],y=gcoord.iloc[1,1],
+                           xend=gcoord.iloc[2,0],yend=gcoord.iloc[2,1],
+                           color="blue")+
+        # Add test
+        annotate('text', x = -0.3, y = 0.2,label = DE.iloc[0,1].round(2),
+                 size = 10, angle='35')+
+        annotate('text', x = 0.4, y = 0.2,label = DE.iloc[0,2].round(2),
+                 size = 10, angle='-60')+
+        annotate('text', x = 0, y = -0.25,label = DE.iloc[2,1].round(2),
+                 size = 10, angle='-10')+
+        labs(color="Fonction"))
+print(p)
+```
+
+
+## Qualité de la représentation des classes
+
+Il suffit de passer les coordonnées au carré et de diviser par la somme en ligne. Sous scientisttools, elles correspondent à la qualité de représentation des points - lignes de l'analyse factorielle des correspondances.
+
+```{python}
+# Qualité de représentation
+gcos2 = pd.DataFrame(disca.ca_model_.row_cos2_,
+                     index=disca.ca_model_.row_labels_,
+                     columns = disca.ca_model_.dim_index_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$gcos2, 
+             caption = "Qualité de représentation des classes - COS2",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Le graphique (Figure \ref{fig:gcoord}) ne laissait aucun doute, mais c'est toujours mieux quand les chiffres confirment : les informations portées par \og compagnie \fg{} et \og utilite \fg{} sont bien captées par le premier facteur. \og chasse \fg{} est mieux situé sur le second facteur. Et la somme en ligne dans le tableau des COS2 fait bien $100\%$.
+
+## Contributions des classes
+
+Sous scientisttools, elles correspondent aux contributions des points - lignes de l'analyse factorielle des correspondances.
+
+```{python}
+# Contribution des groupes
+gcontrib = pd.DataFrame(disca.ca_model_.row_contrib_,
+                        index=disca.ca_model_.row_labels_,
+                         columns = disca.ca_model_.dim_index_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$gcontrib, 
+             caption = "Contributions des classes",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+Le premier axe oppose les fonctions \og compagnie \fg{} et \og utilite \fg{}. Elles déterminent (\textbf{contributions} = `r round(py$gcontrib[2,1],2)`$\%$ $+$ `r round(py$gcontrib[3,1],2)`$\%$) `r round(sum(py$gcontrib[c(2:3),1]),2)`$\%$ de l'information portée par le facteur. Elles sont aussi très bien représentées puisque `r round(100*py$gcos2[2,1],2)`$\%$ (resp. `r round(100*py$gcos2[3,1],2)`$\%$) de l'information véhiculée par \og compagnie \fg{} (resp. \og utilite \fg{}) est restrancrite sur cet axe.
+
+Le second axe permet surtout de distinguer la fonction \og chasse \fg{} des deux premiers.
+
+# Structures canoniques
+
+Les structures canoniques correspondent aux représentations des modalités colonnes du tableau de contingence - et donc des modalités des variables prédictives - dans le répère factoriel.
+
+## Poids, distance à l'origine et inertie
+
+```{python}
+# Informations sur les modalités
+from scientisttools.extractfactor import get_ca_col
+mod_infos = get_ca_col(disca.ca_model_)["infos"]
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$mod_infos, 
+             caption = "Caractéristiques des modalités",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+## Coordonnées des points modalités
+
+Les coordonnées des points modalités sont fournies par l'objet \texttt{ca\_model\_}.
+
+
+```{python}
+# Coordonnées des points modalités
+mod_coord = pd.DataFrame(disca.ca_model_.col_coord_,
+                         index=disca.ca_model_.col_labels_,
+                         columns = disca.ca_model_.dim_index_)
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$mod_coord, 
+             caption = "Coordonnées des points modalités",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+```{python modcoord,fig.cap="Carte des points - modalités",out.width="50%"}
+# Ajout de la variable
+modcoord = mod_coord.copy()
+modcoord.loc[:,"variable"] = [x.split("_")[0] for x in mod_coord.index]
+
+# Projection des points modalités
+p = (ggplot(modcoord,aes(x="Dim.1",y="Dim.2",label=mod_coord.index))+
+        geom_point(aes(color=modcoord.variable))+
+        geom_text(aes(color=modcoord.variable),
+                  adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})+
+        geom_hline(yintercept=0,colour="black",linetype="--")+
+        geom_vline(xintercept=0,colour="black",linetype="--")+
+        theme(legend_direction="vertical",legend_position=(0.2,0.2))+
+        labs(color="Variable"))
+print(p)
+```
+
+## Contributions des points modalités aux facteurs
+
+Les contributions des points modalités sont :
+
+```{python}
+# Contributions des points modalités
+mod_contrib = pd.DataFrame(disca.ca_model_.col_contrib_,
+                         index=disca.ca_model_.col_labels_,
+                         columns = disca.ca_model_.dim_index_)
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$mod_contrib, 
+             caption = "Contribution des points modalités",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+# Affectation des classes
+
+## Fonction discriminante canonique
+
+L'exécution de la méthode \texttt{disca.fit(DTrain)} provoque le calcul de plusieurs attributs parmi lesquels \texttt{disca.coef\_}. Ce champ nous intéresse particulièrement car il correspond aux coefficients des fonctions de classement. Ces fonctions canoniques permettent de projeter des individus non étiquetés dans l'espace factoriel.
+
+```{python,eval=FALSE}
+# Coefficients des fonctions discriminantes canoniques
+print(disca.coef_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$disca$coef_, 
+             caption = "Coefficients des fonctions discriminantes canoniques",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+## Coordonnées des individus
+
+A partir des fonctions discriminantes canoniques, on détermine les coordonnées des individus.
+
+```{python}
+# Coordonnées factorielles des individus
+row_coord = disca.row_coord_
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$disca$row_coord_, 
+             caption = "Coordonnées des individus",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+```{python rowcoord,fig.cap="Carte des individus",out.width="50%"}
+# Ajout de la colonne Fonction
+rowcoord = pd.concat([row_coord,DTrain["Fonction"]],axis=1)
+# Projection des points modalités
+p = (ggplot(rowcoord,aes(x="Dim.1",y="Dim.2",label=rowcoord.index))+
+        geom_point(aes(color=rowcoord.Fonction))+
+        geom_text(aes(color=rowcoord.Fonction),
+                  adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})+
+        geom_hline(yintercept=0,colour="black",linetype="--")+
+        geom_vline(xintercept=0,colour="black",linetype="--")+
+        theme(legend_direction="vertical",legend_position=(0.5,0.2))+
+        labs(color="Fonction")+
+        annotate("text",x=gcoord["Dim.1"].values,y=gcoord["Dim.2"].values,
+                 label=gcoord.index,color=["red","green","violet"]))
+print(p)
+```
+
+## Valeurs propres associées aux facteurs
+
+Les valeurs propres associées aux facteurs sont celles issues de l'analyse factorielle des correspondances.
+
+```{python}
+# Valeurs propres
+from scientisttools.extractfactor import get_eigenvalue
+eig = get_eigenvalue(disca.ca_model_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$eig, 
+             caption = "Valeurs propres associées aux facteurs",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size = 8,
+                            position = "center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+La valeur propre $(\lambda)$ indique l'inertie (la variance) expliquée par l'appartenance aux groupes sur chaque axe. En les additionnant, nous avons l'inertie expliquée par l'appartenance aux groupes dans l'espace complet soit `r sum(py$eig[,1])`. Cette inertie indique la quantité d'information que l'on peut modéliser dans la relation entre la cible Fonction et les descripteurs. Le premier facteur explique `r round(py$eig[1,3],2)`$\%$ de l'inertie totale.
+
+On peut représenter graphiquement ces valeurs propres
+
+```{python,fig.cap = "Scree plot",out.width="50%"}
+# Scree plot
+from scientisttools.ggplot import fviz_screeplot
+p = fviz_screeplot(disca.ca_model_,choice="proportion",add_labels=True)
+print(p)
+```
+
+## Rapport de corrélation
+
+Le champ \texttt{correlation\_ratio\_} correspond aux carrés des rapports de corrélation.
+
+```{python,eval=FALSE}
+# Rapport de corrélation
+print(disca.correlation_ratio_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$disca$correlation_ratio_, 
+             caption = "Rapport de correlation",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size = 8,
+                            position = "center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+Le rapport de corrélation est le ratio entre la variance expliquée par l'appartenance aux groupes et la vaiance totale de l'axe. Il indique la qualité de discrimination des classes sur le facteur. Nous avons $\eta_{1}^{2}$ = `r py$disca$correlation_ratio_[1,1]`, c'est - à - dire `r round(100*py$disca$correlation_ratio_[1,1],2)`$\%$ de la variabilité des observations est expliquée par l'appartenance aux groupes sur le premier facteur. L'indicateur varie entre $0$ (discrimination nulle, les sous - populations sont complètement mélangées) et $1$ (discrimination parfaite, elles sont agglutinées) sur les centres de classes qui sont distincts les uns des autres.
+
+
+## Corrélation canonique
+
+La corrélation canonique est la racine carré du rapport de corrélation.
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(sqrt(py$disca$correlation_ratio_), 
+             caption = "Corrélation canonique",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size = 8,
+                            position = "center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+
+# Traitement d'individus supplémentaires
+
+Les fonctions discriminantes canoniques nous permettent de positionner les individus suppémentaires dans le répère factoriel.
+
+## Importation des données
+
+Nous chargeons les individus supplémentaires.
+
+```{python}
+# Individus supplémentaires
+Dsup = pd.read_excel("./donnee/races_canines_acm.xls",
+                     header=0,sheet_name=1,index_col=0)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$Dsup, 
+             caption = "Individus supplémentaires",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size = 8,
+                            position = "center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+## Coordonnées des individus supplémentaires
+
+L'objet \og DISCA \fg{} contient la fonction \texttt{transform()} bien connue des utilisateurs de scikit-learn. Elle permet d'obtenir les coordonnées des individus dans l'espace factoriel.
+
+```{python}
+# Coordonnées des individus supplémentaires
+row_sup_coord = disca.transform(Dsup)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$row_sup_coord, 
+             caption = "Coordonnées des individus supplémentaires",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size = 8,
+                            position = "center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+On rajoute ces individus au plan factoriel
+
+```{python,fig.cap="Carte des individus",out.width="50%"}
+# Projection des points modalités
+p = (ggplot(rowcoord,aes(x="Dim.1",y="Dim.2",label=rowcoord.index))+
+        geom_point(aes(color=rowcoord.Fonction))+
+        geom_text(aes(color=rowcoord.Fonction),
+                  adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})+
+        geom_hline(yintercept=0,colour="black",linetype="--")+
+        geom_vline(xintercept=0,colour="black",linetype="--")+
+        theme(legend_direction="vertical",legend_position=(0.5,0.2))+
+        labs(color="Variable")+
+        annotate("text",x=row_sup_coord["Dim.1"].values,
+                        y=row_sup_coord["Dim.2"].values,
+                    label=row_sup_coord.index))
+print(p)
+```
+
+## Distances euclidiennes aux classes
+
+La fonction \texttt{decision\_function()} permet de calculer les distances euclidiennes aux centres de classes.
+
+```{python}
+# Distances euclidiennes aux classes
+disca.decision_function(Dsup)
+```
+
+
+## Probabilités d'affectation
+
+L'objet \og scientisttools \fg{} calcule les probabilités d'affectation aux classes avec \texttt{predict\_proba()}.
+
+```{python}
+# probabilité d'affectation
+print(disca.predict_proba(Dsup))
+```
+
+## Prédiction
+
+On effectue la prédiction à partir de la matrice des explicatives des individus supplémentaires.
+
+```{python}
+# Prediction des individus supplémentaires
+ypred = disca.predict(Dsup)
+ypred
+```
+
+
+

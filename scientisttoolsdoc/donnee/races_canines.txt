@@ -1,0 +1,28 @@
+Chien	Taille	Poids	Velocite	Intelligence	Affection	Agressivite	Fonction
+Beauceron	Taille++	Poids+	Veloc++	Intell+	Affec+	Agress+	utilite
+Basset	Taille-	Poids-	Veloc-	Intell-	Affec-	Agress+	chasse
+Berger All	Taille++	Poids+	Veloc++	Intell++	Affec+	Agress+	utilite
+Boxer	Taille+	Poids+	Veloc+	Intell+	Affec+	Agress+	compagnie
+Bull-Dog	Taille-	Poids-	Veloc-	Intell+	Affec+	Agress-	compagnie
+Bull-Mastif	Taille++	Poids++	Veloc-	Intell++	Affec-	Agress+	utilite
+Caniche	Taille-	Poids-	Veloc+	Intell++	Affec+	Agress-	compagnie
+Chihuahua	Taille-	Poids-	Veloc-	Intell-	Affec+	Agress-	compagnie
+Cocker	Taille+	Poids-	Veloc-	Intell+	Affec+	Agress+	compagnie
+Colley	Taille++	Poids+	Veloc++	Intell+	Affec+	Agress-	compagnie
+Dalmatien	Taille+	Poids+	Veloc+	Intell+	Affec+	Agress-	compagnie
+Doberman	Taille++	Poids+	Veloc++	Intell++	Affec-	Agress+	utilite
+Dogue All	Taille++	Poids++	Veloc++	Intell-	Affec-	Agress+	utilite
+Epag. Breton	Taille+	Poids+	Veloc+	Intell++	Affec+	Agress-	chasse
+Epag. Français	Taille++	Poids+	Veloc+	Intell+	Affec-	Agress-	chasse
+Fox-Hound	Taille++	Poids+	Veloc++	Intell-	Affec-	Agress+	chasse
+Fox-Terrier	Taille-	Poids-	Veloc+	Intell+	Affec+	Agress+	compagnie
+Gd Bleu Gasc	Taille++	Poids+	Veloc+	Intell-	Affec-	Agress+	chasse
+Labrador	Taille+	Poids+	Veloc+	Intell+	Affec+	Agress-	chasse
+Levrier	Taille++	Poids+	Veloc++	Intell-	Affec-	Agress-	chasse
+Mastiff	Taille++	Poids++	Veloc-	Intell-	Affec-	Agress+	utilite
+Pekinois	Taille-	Poids-	Veloc-	Intell-	Affec+	Agress-	compagnie
+Pointer	Taille++	Poids+	Veloc++	Intell++	Affec-	Agress-	chasse
+St-Bernard	Taille++	Poids++	Veloc-	Intell+	Affec-	Agress+	utilite
+Setter	Taille++	Poids+	Veloc++	Intell+	Affec-	Agress-	chasse
+Teckel	Taille-	Poids-	Veloc-	Intell+	Affec+	Agress-	compagnie
+Terre-Neuve	Taille++	Poids++	Veloc-	Intell+	Affec-	Agress-	utilite

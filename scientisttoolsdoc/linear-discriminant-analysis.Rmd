@@ -1,0 +1,519 @@
+---
+title: '**ADL sous Python avec scientisttools**'
+author: "Duvérier DJIFACK ZEBAZE"
+#date: "`r Sys.Date()`"
+documentclass: article
+geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm, twoside=true"
+fontsize: 11pt
+line-height: 1.5
+urlcolor: blue
+linkcolor: blue
+link-citations : yes
+output: pdf_document
+mainfont: Bookman Old Style
+header-includes:
+- \usepackage{pbox}
+- \usepackage{caption}
+- \usepackage{subcaption}
+- \usepackage{natbib}
+- \usepackage[utf8]{inputenc} # Caractères spéciaux
+- \usepackage[french]{babel}
+- \usepackage{amsmath, amsfonts, amssymb}   #Symboles mathématiques
+- \usepackage{amsfonts}
+# - \usepackage{minitoc} # [undotted] pour supprimer les pointillés
+# - \mtcsetdepth{minitoc}{1} # 1 section, 2 sous-section 3 sous-sous-section
+# - \mtcsettitle{minitoc}{Sommaire} # Changer le titre
+- \usepackage{diagbox}
+- \usepackage{lettrine}
+- \usepackage[labelfont=bf]{caption}
+- \captionsetup{font=scriptsize}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+- \usepackage{minitoc}
+- \usepackage[Bjornstrup]{fncychap}
+#- \usepackage[Conny]{fncychap} 
+#- \usepackage[pdftex]{pict2e}
+- \usepackage[dvipsnames]{xcolor}
+- \usepackage{fourier-orns}
+- \usepackage{fancyhdr}
+- \usepackage{geometry}
+- \geometry{a4paper,total={160mm,240mm},left=25mm,right=25mm,top=25mm,bottom=25mm}
+- \usepackage[printsolution=true]{exercises}
+- \usepackage{tikz}
+---
+
+```{r setup, include=FALSE}
+library(reticulate)
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning=FALSE,fig.pos = "H",
+                      out.extra = "",fig.align = "center",collapse =  FALSE,
+                      highlight = TRUE)
+```
+
+Ce tutoriel a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une Analyse Discriminante Linéaire. 
+
+# Présentation des données
+
+L'analyse discriminante linéaire fait partie des technique d'analyse discriminante prédictive. C'est une méthode prédictive où le modèle s'exprime sous la forme d'un système d'équations linéaires des variables explicatives. Il s'agit d'expliquer et de prédire l'appartenance d'un individu à une classe (groupe) prédéfinie à partir de ses caractéristiques mesurées à l'aide de variables prédictives.
+
+## Importation des données
+
+Nous utilisons les données \og alcool \fg{}(\emph{cf.} \href{https://eric.univ-lyon2.fr/ricco/tanagra/fichiers/fr_Tanagra_LDA_Python.pdf}{fr\_Tanagra\_LDA\_Python.pdf}). Il s'agit de prédire le TYPE d'alcool (KIRSCH, MIRAB, POIRE) à partir de ses composants (butanol, méthanol, etc; $8$ variables).
+
+```{python}
+# Chargement des données
+import pandas as pd
+DTrain = pd.read_excel("./donnee/Eau_de_vie_LDA.xlsx",sheet_name="TRAIN")
+print(DTrain.info())
+```
+
+## Distribution relative
+
+Nous calculons la distribution relative des classes :
+
+```{python}
+# Distribution relative des classes
+d = (DTrain.TYPE.value_counts(normalize=True).reset_index()
+                .rename(columns={"index":"TYPE","TYPE":"p(k)"}))
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$d, 
+             caption = "Distribution relative des classes",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Les classes semblent assez équilibrées.
+
+# LDA
+
+## Modélisation avec scientisttools
+
+Sage précaution avec les packages pour Python, nous affichons le numéro de la version de \og scientisttools \fg{} utilisée dans ce tutoriel. 
+
+```{python}
+# version
+import scientisttools
+print(scientisttools.__version__)
+```
+
+Nous fonctionnons avec la version \og 0.0.9 \fg{}.
+
+```{python}
+# Importation
+from scientisttools.discriminant_analysis import LDA
+```
+
+On crée une instance de la classe LDA, en lui passant ici des étiquettes pour les lignes et les variables. 
+
+```{python}
+# Instanciation
+lda = LDA(features_labels=DTrain.columns[1:].values,
+          target=["TYPE"],
+          distribution = "homoscedastik",
+          row_labels=DTrain.index,
+          priors = None,
+          parallelize=False)
+```
+
+On estime le modèle en appliquant la méthode \texttt{.fit} de la classe LDA sur le jeu de données.
+
+```{python}
+# Entraînement du modèle
+lda.fit(DTrain)
+```
+
+L'exécution de la méthode \texttt{lda.fit(D)} provoque le calcul de plusieurs attributs parmi lesquels \texttt{lda.coef\_}. Ce champ nous intéresse particulièrement car il correspond aux coefficients des fonctions de classement.
+
+```{python,eval=FALSE}
+# Coefficients des fonctions de score
+print(lda.coef_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$lda$coef_, 
+             caption = "Coefficients des fonctions de score",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Le tableau est de dimension $(8,3)$ puisque nous avons un problème à $(K=3)$ classes (le nombre de modalités de la variable cible origine) et $8$ descripteurs.
+
+Il ne faut pas oublier les constantes (intercept) des fonctions linéaires :
+
+```{python,eval=FALSE}
+# et les constantes pour chaque classe
+print(lda.intercept_)
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$lda$intercept_, 
+             caption = "Constantes pour chaque classe",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+## Inspection de l'objet LDA
+
+\begin{itemize}
+\item \texttt{priors\_} correspond à la distribution relative des classes.
+\end{itemize}
+
+```{python,eval=FALSE}
+# distribution des classes
+print(lda.priors_)
+```
+
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(t(py$lda$priors_), 
+             caption = "Distribution relative pour chaque classe",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+\begin{itemize}
+\item \texttt{class\_level\_information\_} correspond à la distribution absolue et relative des classes 
+\end{itemize}
+
+```{python,eval=FALSE}
+# distribution absolue et relative des classes
+print(lda.class_level_information_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$lda$class_level_information_, 
+             caption = "Distribution absolue et relative pour chaque classe",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+\begin{itemize}
+\item \texttt{correlation\_ratio\_} correspond au rapport de corrélation $\eta^{2}(X,y)$ entre les variables explicatives et la variable expliquée.
+\end{itemize}
+
+```{python,eval=FALSE}
+# Rapport de corrélation
+print(lda.correlation_ratio_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$lda$correlation_ratio_, 
+             caption = "Rapport de correlation",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+\begin{itemize}
+\item \texttt{gmean\_} indique les moyennes des variables conditionnellement aux classes
+\end{itemize}
+
+```{python,eval=FALSE}
+# moyennes conditionnelles des variables
+print(lda.gmean_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$lda$gmean_,, 
+             caption = "Moyennes conditionnelles",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+\begin{itemize}
+\item \texttt{mean\_} indique les moyennes des variables explicatives
+\end{itemize}
+
+```{python,eval=FALSE}
+# moyennes des variables
+print(lda.mean_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(t(py$lda$mean_),, 
+             caption = "Moyennes des variables",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+\begin{itemize}
+\item \texttt{std\_} indique les écart types des variables explicatives
+\end{itemize}
+
+```{python,eval=FALSE}
+# écarts types des variables
+print(lda.std_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(t(py$lda$std_),, 
+             caption = "Ecart - types des variables",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+\begin{itemize}
+\item \texttt{squared\_mdist\_} indique la matrice des distances (au carré) de Mahalanobis
+\end{itemize}
+
+```{python,eval=FALSE}
+# Matrice des distances (au carré) de Mahalanobis
+print(lda.squared_mdist_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$lda$squared_mdist_,, 
+             caption = "Ecart - types des variables",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+# Evaluation globale du modèle
+
+## Statistiques multivariées
+
+Le test de significativité globale du modèle est basé sur l'écartement entre les barycentres conditionnels pour l'analyse discriminante.
+
+```{python}
+# MANOVA Test
+print(lda.manova_)
+```
+
+Nous nous intéressons en particulier à la ligne relative à \og Wilks' Lambda \fg{}.
+
+## Matrice de covariance
+
+### Matrice de covariance intra - classe
+
+Elle est directement fournie par l'objet \og scientisttools \fg{}.
+
+```{python,eval=FALSE}
+# Matrice de covariance intra - classe
+print(lda.wcov_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$lda$wcov_,2), 
+             caption = "Matrice de covariance intra - classe",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+### Matrice de covariance totale
+
+La matrice de covariance totale est proposée par l'objet \og scientisttools \fg{}.
+
+```{python,eval=FALSE}
+# Matrice de covariance totale
+print(lda.tcov_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$lda$tcov_,2), 
+             caption = "Matrice de covariance totale",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+### Matrice de covariance inter - classe
+
+La matrice de covariance inter - classe est proposée par l'objet \og scientisttools \fg{}.
+
+```{python,eval=FALSE}
+# Matrice de covariance inter - classe
+print(lda.bcov_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$lda$bcov_,2), 
+             caption = "Matrice de covariance inter - classe",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+## Autres indicateurs : Lambda de Wilks, Transformation de RAO et de Bartlett.
+
+Ces trois indicateurs sont retournés par l'objet \og scientisttools \fg{}.
+
+```{r,eval=FALSE}
+# MANOVA test
+print(lda.global_performance_)
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$lda$global_performance_, 
+             caption = "Performance globale",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+# Evaluation des contributions des variables
+
+Mesurer l'impact des variables est crucial pour l'interprétation du mécanisement d'affectation. Pour l'analyse discriminante, il est possible de produire une mesure d'importance des variables basée sur leurs contributions à la discrimination. Concrètement, il s'agit simplement d'opposer les lambdas de Wilks avec ou sans la variable à évaluer.
+
+## Affichage des contributions sous Python
+
+Ces résultats sont fournis directement par l'objet \og scientisttools \fg{}
+
+```{python,eval=FALSE}
+# Evaluation statistique
+print(lda.statistical_evaluation_)
+```
+
+```{r lambda-wilks,engine='R',echo=FALSE}
+knitr::kable(round(py$lda$statistical_evaluation_,4), 
+             caption = "Contribution des variables",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+Dans le tableau \ref{tab:lambda-wilks}, nous distinguons le lambda de Wilks lorsque la variable est rétirée (Wilks L; `r py$lda$statistical_evaluation_[1,1]` si on retire la variable `r rownames(py$lda$statistical_evaluation_)[1]` par exemple), le ratio entre le lambda global (`r py$lda$global_performance_[1,2]`) et ce dernier (Partial L; pour `r rownames(py$lda$statistical_evaluation_)[1]` : `r py$lda$global_performance_[1,2]` / `r py$lda$statistical_evaluation_[1,1]` = `r py$lda$statistical_evaluation_[1,2]`), et la statistique de test de significativité de l'écart (F = `r py$lda$statistical_evaluation_[1,3]`) qui suit une distribution de Fisher à $(K-1=2)$ et $(N-K-p+1=42)$.
+
+# Evaluation en Test
+
+L'avaluation sur l'échantillon test est une approche priviligiée pour mesurer et comparer les performances des modèles de nature et de complexité différente. Dans cette section, nnous traitons la seconde feuille \og TEST \fg{} comportant $50$ observations de notre classeur Excel.
+
+## Importation des données
+
+Nous chargeons la feuille \og TEST \fg{}. 
+
+```{python}
+# chargement échantillon TEST
+DTest = pd.read_excel("./donnee/Eau_de_vie_LDA.xlsx",sheet_name="TEST")
+print(DTest.info())
+```
+
+Nous affichons pour vérification la distribution des classes.
+
+```{python}
+# Distribution relative des classes
+dtest = (DTest.TYPE.value_counts(normalize=True).reset_index()
+                   .rename(columns={"index":"TYPE","TYPE":"p(k)"}))
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$dtest, 
+             caption = "Distribution relative des classes - TEST",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+Elle est similaire à celle de l'échantillon \og TRAIN \fg{}.
+
+## Prédiction des classes sur l'échantillon d'apprentissage
+
+Il y a deux étapes dans l'évaluation : 
+\begin{enumerate}
+\item Effectuer la prédiction à partir de la matrice des explicatives de l'échantillon test;
+\item Confronter les prédictions de l'étape 1 avec les classes observées.
+\end{enumerate}
+
+### Probabilité d'appartenance
+
+L'objet \og scientisttools \fg{} calcule les probabilités d'affectation aux classes avec \texttt{predict\_proba()}. Elle permettent une analyse plus fine de la qualité du modèle, via la construction de la courbe ROC par exemple, dont le principe reste valable pour les problèmes multi - classes.
+
+```{python}
+# Matrice X en Test
+XTest = DTest[DTest.columns[1:]]
+# Probabilité d'appartenance
+print(lda.predict_proba(XTest).head(6))
+```
+
+
+### Classe d'appartenance
+
+L'objet \og scientisttools \fg{} calcule les classes d'appartenance avec la fonction \texttt{predict()}. Elle permet de produire les prédictions à partir de la matrice des explicatives en test.
+
+```{python}
+# Prédiction sur XTest
+y_pred = lda.predict(XTest)
+```
+
+On calcule la distribution d'appartenance
+
+```{python}
+# Distribution des classes prédictes
+import numpy as np
+# print(np.unique(y_pred,return_counts=True))
+y_pred.value_counts(normalize=False)
+```
+
+$19$ observations ont été prédite \og MIRAB \fg{}, $16$ \og POIRE \fg{} et $15$ \og KIRSCH \fg{}.
+
+## Matrice de confusion et taux de bon classement
+
+La matrice de confusion est issue de la confrontation entre ces prédictions et les classes observées. Nous faisons appel au module \og \href{https://scikit-learn.org/stable/modules/model_evaluation.html}{metrics} \fg{} de la librairie \og \href{https://scikit-learn.org/stable/index.html}{scikit-learn} \fg{}.
+
+```{python,fig.cap = "Matrice de confusion",out.width="50%"}
+# Matrice de confusion
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+cm = confusion_matrix(DTest.TYPE,y_pred,labels=lda.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+                              display_labels=lda.classes_)
+disp.plot(cmap=plt.cm.Blues,values_format='g');
+plt.show()
+```
+
+
+La fonction \texttt{score()} nous donne le taux de reconnaissance (ou taux de succès).
+
+```{python}
+# Taux de succès
+print(lda.score(XTest,DTest.TYPE))
+```
+
+Notre taux de succès est de $82\%$.
+
+La fonction \texttt{classification\_report()} génère un rapport sur les performances globales, mais aussi sur les reconnaissances par classe (rappel, précision et F-Measure[F1-Score])
+
+```{python}
+# rapport
+from sklearn.metrics import classification_report
+print(classification_report(DTest.TYPE,y_pred))
+```
+
+Nous retrouvons, entre autres le taux de succès de $82\%$.
+
+Pour plus d'informations sur l'ADL sous scientisttools, consulter le notebook 
+
+\href{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/lda_example.ipynb}{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/lda\_example.ipynb}.
+
+
+

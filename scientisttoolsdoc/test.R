@@ -83,6 +83,20 @@ head(ind$within.partial.inertia)
 head(ind$contrib)
 head(ind$cos2)
 
+summary(res.mfa)
+
+res.mfa$eig
+res.mfa$separate.analyses
+res.mfa$group
+res.mfa$partial.axes
+res.mfa$inertia.ratio
+res.mfa$ind
+res.mfa$quanti.var
+res.mfa$quanti.var.sup
+res.mfa$quali.var.sup
+res.mfa$summary.quanti
+res.mfa$summary.quali
+res.mfa.pca <- res.mfa$global.pca
 
 
 
@@ -91,17 +105,28 @@ head(ind$cos2)
 
 
 
+###################### Discriminant Multiple Analysis
+library(TExPosition)
+race <- read.csv("./donnee/races_canines.txt",sep = "\t",header =TRUE,row.names = )
 
+race <- tibble::column_to_rownames(race,var = "Chien")
 
+canines = list(data=PCAmixdata::tab.disjonctif.NA(race[,c(1:6)]),
+               design = PCAmixdata::tab.disjonctif.NA(race[,7]))
 
+disca <- tepDICA(DATA = canines$data,
+                 DESIGN = canines$design,
+                 make_design_nominal = FALSE,
+                 graphs = FALSE)
 
+texdata <- disca$TExPosition.Data
+head(texdata$fii) # Factor scores
+head(texdata$dii) # Squared distances
+head(texdata$rii) # Cosinus of the individuals
 
+head(texdata$eigs)
 
-
-
-
-
-
+head(apply(texdata$fii,2,function(x){x^2}))
 
 
 

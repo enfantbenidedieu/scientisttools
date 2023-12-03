@@ -1851,13 +1851,17 @@ def get_mfa_ind(self):
     
     """
     df = dict({
-        "coord" : pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_)
+        "coord" : pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_),
+        "contrib" : pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
+        "cos2" : pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
+        "coord_partial" : None,
+        "within_inertia" : None,
+        "within_partial_inertia" : None
     })
     
     return df
 
-
-def get_mfa_col(self):
+def get_mfa_var(self):
     raise ValueError("Error : This method is not yet implemented.")
 
 
@@ -1868,7 +1872,7 @@ def get_mfa(self,choice="row"):
     if choice == "row":
         return get_mfa_ind(self)
     elif choice == "col":
-        return get_mfa_col(self)
+        return get_mfa_var(self)
     else:
         raise ValueError("Error : Allowed values are 'row' and 'var'.")
     
