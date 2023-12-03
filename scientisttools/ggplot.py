@@ -3534,6 +3534,7 @@ def fviz_disca_ind(self,
                    ylim = None,
                    color="black",
                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                   legend_title=None,
                    add_labels=True,
                    repel=True,
                    point_size = 1.5,
@@ -3685,3 +3686,9 @@ def fviz_disca_ind(self,
 
     return p
     
+
+def fviz_disca_group(self):
+    pass
+
+def fviz_disca_mod(self):
+    pass

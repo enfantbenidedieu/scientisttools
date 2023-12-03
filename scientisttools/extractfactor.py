@@ -2179,3 +2179,43 @@ def reconst(self,n_components=None):
         X.iloc[:,k] = Z[:,k]*self.std_[0][k] + self.means_[0][k]
     
     return X
+
+
+
+
+
+
+
+
+
+
+###########################################"" Discriminant Correspondence Analysis (CDA) ###########################################
+
+# Row informations
+def get_disca_ind(self):
+    pass
+
+# Categories informations
+def get_disca_mod(self):
+    pass
+
+# Group informations
+def get_disca_group(self):
+    pass
+
+def get_disca(self,choice="ind"):
+    """
+    
+    """
+    if choice == "ind":
+        return get_disca_ind(self)
+    elif choice == "mod":
+        return get_disca_mod(self)
+    elif choice == "group":
+        return get_disca_group(self)
+    else:
+        raise ValueError("Error : give a valid choice.")
+
+
+def summaryCDA(self):
+    pass
