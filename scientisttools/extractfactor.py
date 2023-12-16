@@ -2007,9 +2007,9 @@ def dimdesc(self,axis=None,proba=0.05):
             row_coord_sup = get_ca_row(self)["row_sup"]["coord"]
             row_coord = pd.concat([row_coord,row_coord_sup],axis=1)
         
-        # Add supplmentaru columns
+        # Add supplmentary columns
         if self.col_sup_labels_ is not None:
-            col_coord_sup = get_ca_row(self)["col_sup"]["coord"]
+            col_coord_sup = get_ca_col(self)["col_sup"]["coord"]
             col_coord = pd.concat([col_coord,col_coord_sup],axis=1)
 
         # Select axis
@@ -2203,6 +2203,7 @@ def get_disca_mod(self):
 def get_disca_group(self):
     pass
 
+# Disca extract informations
 def get_disca(self,choice="ind"):
     """
     
@@ -2216,6 +2217,6 @@ def get_disca(self,choice="ind"):
     else:
         raise ValueError("Error : give a valid choice.")
 
-
-def summaryCDA(self):
+# Summary DISCA
+def summaryDISCA(self):
     pass

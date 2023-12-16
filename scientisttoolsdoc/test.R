@@ -17,14 +17,27 @@ women_work=read.table("http://factominer.free.fr/classical/datasets/women_work.t
 res.ca = CA(women_work, col.sup=4:ncol(women_work))
 
 library("FactoMineR")
+library(Factoshiny)
+library(factoextra)
 res.ca <- CA(housetasks, graph = FALSE)
+res.shiny = CAshiny(res.ca)
 dimdesc(res.ca)
 # PCA
 data("decathlon2")
 decathlon2.active <- decathlon2[1:23, 1:10]
 res.pca <- PCA(decathlon2, ind.sup = 24:27, 
                quanti.sup = 11:12, quali.sup = 13, graph=FALSE)
+res.pca <- 
 p = dimdesc(res.pca)
+res.shiny = PCAshiny(res.pca)
+
+model1 <- PCA(decathlon2.active,graph=FALSE)
+model2 <- PCA(decathlon2,ind.sup=24:27,quali.sup = 13,graph=FALSE)
+model3 <- PCA(decathlon2,quanti.sup = 11:12, quali.sup = 13, graph=FALSE)
+model4 <- PCA(decathlon2, ind.sup = 24:27, 
+              quanti.sup = 11:12, quali.sup = 13, graph=FALSE)
+res.shiny = PCAshiny(model4)
+
 
 library("FactoMineR")
 data(wine)
