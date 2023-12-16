@@ -38,7 +38,8 @@ def get_ca_row(self)-> dict:
             })
     if self.row_sup_labels_ is not None:
         df["row_sup"] = dict({
-            "coord" : self.row_sup_coord_})
+            "coord" : pd.DataFrame(self.row_sup_coord_,columns=self.dim_index_,index=self.row_sup_labels_)
+            })
     
     return df
 
@@ -73,7 +74,7 @@ def get_ca_col(self)-> dict:
                })
     if self.col_sup_labels_ is not None:
         df["col_sup"] = dict({
-            "coord" : self.col_sup_coord_
+            "coord" : pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
             })
     
     return df

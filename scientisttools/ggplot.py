@@ -1088,29 +1088,29 @@ def fviz_ca_row(self,
                                               name = legend_title)
         if repel :
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                     adjust_text={'arrowprops': {'arrowstyle': '->','color': "black","lw":1.0}})
+                                     adjust_text={'arrowprops': {'arrowstyle': '-','color': "black","lw":1.0}})
         else:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
         p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
         if repel :
             p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '->','color': color,"lw":1.0}})
+                                   adjust_text={'arrowprops': {'arrowstyle': '-','color': color,"lw":1.0}})
         else:
             p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     
     if row_sup:
         if self.row_sup_labels_ is not None:
             sup_coord = pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_)
-            p = p + pn.geom_point(pn.aes(x = sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.row_sup_labels_),
+            p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[0]+1}",label=self.row_sup_labels_),
                                   color = color_sup,shape = marker_sup,size=point_size)
             if repel:
-                p = p + text_label(text_type,mapping=pn.aes(x = sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.row_sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[0]+1}",label=self.row_sup_labels_),
                                    color=color_sup,size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '->','color': color_sup,"lw":1.0}})
+                                   adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
             else:
-                p = p + text_label(text_type,mapping=pn.aes(x = sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.row_sup_labels_),
-                                     color = color_sup,size=text_size,va=va,ha=ha)
+                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[0]+1}",label=self.row_sup_labels_),
+                                   color = color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
     proportion = self.eig_[2]
@@ -1239,10 +1239,10 @@ def fviz_ca_col(self,
             p  = p+pn.geom_point(sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_sup_labels_),
                                  color=color_sup,shape=marker_sup,size=point_size)
             if repel:
-                p = p + text_label(text_type,mapping=pn.aes(x=sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.col_sup_labels_),
-                                   color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '->','color': color_sup,"lw":1.0}})
+                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[0]+1}",label=self.col_sup_labels_),
+                                   color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
             else:
-                p  = p + text_label(text_type,mapping=pn.aes(x=sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.col_sup_labels_),
+                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[0]+1}",label=self.col_sup_labels_),
                                     color=color_sup,size=text_size,va=va,ha=ha)
     
     # Add additionnal        
