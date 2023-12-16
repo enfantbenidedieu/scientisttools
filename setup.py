@@ -6,7 +6,7 @@ with open("README.md", "r",encoding="utf-8") as fh:
 # Setting up
 setuptools.setup(
     name="scientisttools",
-    version="0.0.9",
+    version="0.1.0",
     author="Duverier DJIFACK ZEBAZE",
     author_email="duverierdjifack@gmail.com",
     description="Python library for multidimensional analysis",
@@ -19,7 +19,13 @@ setuptools.setup(
                       "pandas>=1.5.3",
                       "mapply>=0.1.21",
                       "plotnine>=0.10.1",
-                      "plydata>=0.4.3"],
+                      "plydata>=0.4.3",
+                      "pingouin>=0.5.3",
+                      "scientistmetrics>=0.0.3",
+                      "ggcorrplot>=0.0.2",
+                      "factor_analyzer>=0.5.0",
+                      "networkx>=3.2.1",
+                      "more_itertools>=10.1.0"],
     python_requires=">=3.10",
     package_data={"": ["*.txt"]},
     classifiers=[

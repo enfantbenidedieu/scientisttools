@@ -50,14 +50,19 @@ Notebooks are availabled.
 scientisttools requires 
 
 ```
-Python >=3.10
-Numpy >= 1.23.5
-Matplotlib >= 3.5.3
-Scikit-learn >=  1.2.2
-Pandas >= 1.5.3
-mapply >= 0.1.21
-Plotnine >= 0.10.1
-Plydata >= 0.4.3
+numpy>=1.23.5
+matplotlib>=3.5.3
+scikit-learn>=1.2.2
+pandas>=1.5.3
+mapply>=0.1.21
+plotnine>=0.10.1
+plydata>=0.4.3
+pingouin>=0.5.3
+scientistmetrics>=0.0.3
+ggcorrplot>=0.0.2
+factor_analyzer>=0.5.0
+networkx>=3.2.1
+more_itertools>=10.1.0
 ```
 
 ### User installation
