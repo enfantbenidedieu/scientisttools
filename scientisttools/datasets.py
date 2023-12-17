@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-import pathlib
 import pandas as pd
 import pyreadr 
 
-DATASETS_DIR = pathlib.Path(__file__).parent / "data"
+DATASETS_DIR = "https://github.com/enfantbenidedieu/scientisttools/tree/master/scientisttools/data"
 
 # https://husson.github.io/data.html
 # https://r-stat-sc-donnees.github.io/liste_don.html
@@ -142,6 +141,100 @@ def load_burgundy_wines():
     )
     wines.insert(0, "Oak type", [1, 2, 2, 2, 1, 1])
     return wines
+
+def load_wine():
+    """
+    
+    
+    """
+    # Load Data
+    url = "http://factominer.free.fr/factomethods/datasets/wine.txt"
+    wine = pd.read_table(url,sep="\t")
+
+    # Transform
+    wine2 = pd.DataFrame(data=wine.values,
+                         columns = pd.MultiIndex.from_tuples(
+                        [
+                            ("others","Label"),
+                            ("others","Soil"),
+                            ("before shaking","Odor.Intensity"),
+                            ("before shaking","Aroma.quality"),
+                            ("before shaking","Fruity"),
+                            ("before shaking","Flower"),
+                            ("before shaking","Spice"),
+                            ("vision","Visual.intensity"),
+                            ("vision","Nuance"),
+                            ("vision","Surface.feeling"),
+                            ("after shaking","Odor.intensity"),
+                            ("after shaking","Quality.of.odour"),
+                            ("after shaking","Fruity"),
+                            ("after shaking","Flower"),
+                            ("after shaking","Spice"),
+                            ("after shaking","Plante"),
+                            ("after shaking","Phenolic"),
+                            ("after shaking","Aroma.intensity"),
+                            ("after shaking","Aroma.persistency"),
+                            ("after shaking","Aroma.quality"),
+                            ("gustation","Attack.intensity"),
+                            ("gustation","Acidity"),
+                            ("gustation","Astringency"),
+                            ("gustation","Alcohol"),
+                            ("gustation","Balance"),
+                            ("gustation","Smooth"),
+                            ("gustation","Bitterness"),
+                            ("gustation","Intensity"),
+                            ("gustation","Harmony"),
+                            ("overall judgement","Overall.quality"),
+                            ("overall judgement","Typical")
+                        ]
+        ))
+    wine2.index= wine.index
+    groups = wine2.columns.levels[0].drop(["others","overall judgement"]).tolist()
+    for g in groups:
+        wine2[g] = wine2[g].astype("float")
+    
+    return wine2
+
+def load_qtevie():
+    """
+    
+    """
+    qtevie = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
+    qtevie.info()
+
+    data = pd.DataFrame(qtevie.values,
+                    columns=pd.MultiIndex.from_tuples(
+                        [
+                            ("weel_being","Logements sans sanitaires"),
+                            ("weel_being","Coût logement"),
+                            ("weel_being","Nb pièces par personne"),
+                            ("weel_being","Revenu ménages"),
+                            ("weel_being","Patrimoine financier"),
+                            ("employment","Taux emploi"),
+                            ("employment","Sécurité emploi"),
+                            ("employment","Chômage longue durée"),
+                            ("employment","Revenus moyens activité"),
+                            ("employment","Horaires travail lourds"),
+                            ("pleasure","Qualité réseau social"),
+                            ("pleasure","Satisfaction sur la vie"),
+                            ("pleasure","Temps aux loisirs et à soi"),
+                            ("health_and_security","Pollution atmosphérique"),
+                            ("health_and_security","Qualité eau"),
+                            ("health_and_security","Espérance de vie"),
+                            ("health_and_security","Auto-évaluation état de santé"),
+                            ("health_and_security","Taux agression"),
+                            ("health_and_security","Taux homocides"),
+                            ("education","Niveau instruction"),
+                            ("education","Compétences élèves"),
+                            ("education","Années scolarité"),
+                            ("region","Région")
+                        ]
+                    ))
+    data.index = qtevie.index
+    groups = data.columns.levels[0].drop(["region"]).tolist()
+    for g in groups:
+        data[g] = data[g].astype("float")
+    return data
 
 ########################################## Autres datasets
 
