@@ -3585,7 +3585,7 @@ class MFA(BaseEstimator,TransformerMixin):
         # Row - Quality of representation
         self.row_cos2_ = pca_model.row_cos2_[:,:self.n_components_]
         # Partial row coordinates
-        self.row_coord_partial_ = self._row_coord_partial(X,Zb,pca_model.eig_[0])
+        #self.row_coord_partial_ = self._row_coord_partial(X,Zb,pca_model.eig_[0])
         self.dim_index_ = dim_index
         self.normalied_data_ = Z
         self.pnormalized_data_ = Zb
