@@ -2006,12 +2006,12 @@ def dimdesc(self,axis=None,proba=0.05):
         # Add Supplementary row
         if self.row_sup_labels_ is not None:
             row_coord_sup = get_ca_row(self)["row_sup"]["coord"]
-            row_coord = pd.concat([row_coord,row_coord_sup],axis=1)
+            row_coord = pd.concat([row_coord,row_coord_sup],axis=0)
         
         # Add supplmentary columns
         if self.col_sup_labels_ is not None:
             col_coord_sup = get_ca_col(self)["col_sup"]["coord"]
-            col_coord = pd.concat([col_coord,col_coord_sup],axis=1)
+            col_coord = pd.concat([col_coord,col_coord_sup],axis=0)
 
         # Select axis
         if axis is not None:

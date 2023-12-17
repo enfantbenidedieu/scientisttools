@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+# https://kiwidamien.github.io/making-a-python-package.html
 ##################################### Chargement des librairies
 import functools
 from functools import reduce

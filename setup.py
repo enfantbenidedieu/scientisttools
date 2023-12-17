@@ -27,7 +27,12 @@ setuptools.setup(
                       "networkx>=3.2.1",
                       "more_itertools>=10.1.0"],
     python_requires=">=3.10",
-    package_data={"": ["*.txt"]},
+    include_package_data=True,
+    package_data={"": ["data/*.xlsx",
+                       "data/*.xls",
+                       "data/*.txt",
+                       "data/*.csv",
+                       "data/*.rda"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
