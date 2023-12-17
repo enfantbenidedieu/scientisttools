@@ -2629,10 +2629,14 @@ def fviz_contrib(self,
         name = "individuals"
         contrib = self.row_contrib_[:,axis]
         labels = self.row_labels_
+        if self.model_ == "ca":
+            name = "rows"
     elif choice == "var" and self.model_ != "mca":
         name = "continues variables"
         contrib = self.col_contrib_[:,axis]
         labels  = self.col_labels_
+        if self.model_ == "ca":
+            name == "columns"
         if self.model_ == "famd":
             contrib = np.append(contrib,self.var_contrib_[:,axis],axis=0)
             labels = labels + self.quali_labels_
@@ -2754,12 +2758,16 @@ def fviz_cosines(self,
         
     if choice == "ind":
         name = "individuals"
+        if self.model_ == "ca":
+            name = "rows"
         cos2 = self.row_cos2_[:,axis]
         labels = self.row_labels_
     elif choice == "var" and self.model_ != "mca":
         name = "continues variables"
         cos2 = self.col_cos2_[:,axis]
         labels  = self.col_labels_
+        if self.model_ == "ca":
+            name = "columns"
     elif choice == "mod" and self.model_ in ["mca","famd"]:
         name = "categories"
         cos2 = self.mod_cos2_[:,axis]
