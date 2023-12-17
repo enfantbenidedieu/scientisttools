@@ -6,7 +6,7 @@ with open("README.md", "r",encoding="utf-8") as fh:
 # Setting up
 setuptools.setup(
     name="scientisttools",
-    version="0.1.0",
+    version="0.1.1",
     author="Duverier DJIFACK ZEBAZE",
     author_email="duverierdjifack@gmail.com",
     description="Python library for multidimensional analysis",
