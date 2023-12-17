@@ -224,14 +224,15 @@ def fviz_pca_ind(self,
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
-    if color == "cos2":
-        c = np.sum(self.row_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.row_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.row_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.row_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
@@ -239,7 +240,7 @@ def fviz_pca_ind(self,
 
     if habillage is None :        
         # Using cosine and contributions
-        if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+        if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
             p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                      pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
@@ -411,15 +412,15 @@ def fviz_pca_var(self,
                        .query(f"contrib > {lim_contrib}"))
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
-
-    if color == "cos2":
-        c = np.sum(self.col_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.col_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.col_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.col_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
@@ -428,7 +429,7 @@ def fviz_pca_var(self,
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
-    if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
         # Add gradients colors
         p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
                                  arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+
@@ -576,15 +577,15 @@ def fviz_mca_ind(self,
                        .query(f"contrib > {lim_contrib}"))
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
-    
-    if color == "cos2":
-        c = np.sum(self.row_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.row_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.row_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.row_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c= np.asarray(color)
         if legend_title is None:
@@ -595,7 +596,7 @@ def fviz_mca_ind(self,
 
     if habillage is None :        
         # Using cosine and contributions
-        if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+        if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
             p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
             p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
@@ -769,21 +770,22 @@ def fviz_mca_mod(self,
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
-    if color == "cos2":
-        c = np.sum(self.mod_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.mod_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.mod_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.mod_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c= np.asarray(color)
         if legend_title is None:
             legend_title = "Cont_Var"
      
     # Using cosine and contributions
-    if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         p = (p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)+ 
                  pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1], name = legend_title))
@@ -827,16 +829,18 @@ def fviz_mca_mod(self,
 
             mod_sup_coord = pd.DataFrame(self.mod_sup_coord_,columns=self.dim_index_,index=mod_sup_labels)
             
-            p = p + pn.geom_point(mod_sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),
+            p = p + pn.geom_point(mod_sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
                                   color=color_sup,size=point_size,shape=marker_sup)
             if add_labels:
                 if repel:
-                    p = p + text_label(text_type,data=mod_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),
-                                    color=color_sup,size=text_size,va=va,ha=ha,
-                                    adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,'lw':1.0}})
+                    p = p + text_label(text_type,data=mod_sup_coord,
+                                       mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
+                                       color=color_sup,size=text_size,va=va,ha=ha,
+                                       adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,'lw':1.0}})
                 else:
-                    p = p + text_label(text_type,data=mod_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),
-                                    color=color_sup,size=text_size,va=va,ha=ha)
+                    p = p + text_label(text_type,data=mod_sup_coord,
+                                       mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
+                                       color=color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
     proportion = self.eig_[2]
@@ -924,20 +928,21 @@ def fviz_mca_var(self,
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
-    if color == "cos2":
-        c = np.sum(self.var_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.var_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.var_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.var_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
             legend_title = "Cont_Var"
     # Using cosine and contributions
-    if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         p = (p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)+ 
                  pn.scale_color_gradient2(low=gradient_cols[0],high=gradient_cols[2],mid=gradient_cols[1],name=legend_title))
@@ -1372,14 +1377,15 @@ def fviz_famd_ind(self,
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
 
-    if color == "cos2":
-        c = np.sum(self.row_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.row_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.row_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.row_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
@@ -1390,7 +1396,7 @@ def fviz_famd_ind(self,
 
     if habillage is None :        
         # Using cosine and contributions
-        if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+        if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
             # Add gradients colors
             p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                       pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
@@ -1441,14 +1447,14 @@ def fviz_famd_ind(self,
         if self.row_sup_labels_ is not None:
             sup_coord = pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_)
 
-            p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
+            p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                   color = color_sup,shape = marker_sup,size=point_size)
             if repel:
-                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                      color=color_sup,size=text_size,va=va,ha=ha,
                                      adjust_text={'arrowprops': {'arrowstyle': '->','color': color_sup,"lw":1.0}})
             else:
-                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                      color = color_sup,size=text_size,va=va,ha=ha)
     if quali_sup:
         if self.quali_sup_labels_ is not None:
@@ -1458,15 +1464,18 @@ def fviz_famd_ind(self,
                 else:
                     mod_sup_labels = self.mod_sup_labels_
 
-                mod_sup_coord = pd.DataFrame(self.mod_sup_coord_,columns=self.dim_index_)
-                p = p + pn.geom_point(mod_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),color="red",size=point_size)
+                mod_sup_coord = pd.DataFrame(self.mod_sup_coord_,columns=self.dim_index_,index=mod_sup_labels)
+                p = p + pn.geom_point(mod_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
+                                      color="red",size=point_size)
                 if add_labels:
                     if repel:
-                        p = p + text_label(text_type,data=mod_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),
+                        p = p + text_label(text_type,data=mod_sup_coord,
+                                           mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
                                            color="red",size=text_size,va=va,ha=ha,
                                            adjust_text={'arrowprops': {'arrowstyle': '-','color': "red","lw":1.0}})
                     else:
-                        p = p + text_label(text_type,data=mod_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),
+                        p = p + text_label(text_type,data=mod_sup_coord,
+                                           mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
                                            color ="red",size=text_size,va=va,ha=ha)
 
     # Add additionnal        
@@ -1558,15 +1567,15 @@ def fviz_famd_col(self,
                        .query(f"contrib > {lim_contrib}"))
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
-
-    if color == "cos2":
-        c = np.sum(self.col_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.col_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.col_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.col_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
@@ -1575,7 +1584,7 @@ def fviz_famd_col(self,
      # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
     
-    if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
                                 arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+ 
@@ -1602,7 +1611,8 @@ def fviz_famd_col(self,
             sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
             p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=sup_coord.iloc[:,axis[0]],yend=sup_coord.iloc[:,axis[1]]),arrow = pn.arrow(),color=color_sup)
             if add_labels:
-                p  = p + text_label(text_type,mapping=pn.aes(x=sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=self.col_sup_labels_),
+                p  = p + text_label(text_type,
+                                    mapping=pn.aes(x=sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=sup_coord.index),
                                     color=color_sup,size=text_size,va=va,ha=ha)
     
     # Create circle
@@ -1708,14 +1718,15 @@ def fviz_famd_mod(self,
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
 
-    if color == "cos2":
-        c = np.sum(self.mod_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.mod_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.mod_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.mod_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
@@ -1725,7 +1736,7 @@ def fviz_famd_mod(self,
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
      
     # Using cosine and contributions
-    if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                  pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
@@ -1769,16 +1780,19 @@ def fviz_famd_mod(self,
 
             mod_sup_coord = pd.DataFrame(self.mod_sup_coord_,columns=self.dim_index_,index=mod_sup_labels)
             
-            p = p + pn.geom_point(data=mod_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),
+            p = p + pn.geom_point(data=mod_sup_coord,
+                                  mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
                                   color=color_sup,size=point_size,shape=marker_sup)
             if add_labels:
                 if repel:
-                    p = p + text_label(text_type,data=mod_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),
+                    p = p + text_label(text_type,data=mod_sup_coord,
+                                       mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
                                     color=color_sup,size=text_size,va=va,ha=ha,
                                     adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
                 else:
-                    p = p + text_label(text_type,data=mod_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_labels),
-                                    color=color_sup,size=text_size,va=va,ha=ha)
+                    p = p + text_label(text_type,data=mod_sup_coord,
+                                       mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
+                                       color=color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
     proportion = self.eig_[2]
@@ -1847,11 +1861,12 @@ def fviz_famd_var(self,
     coord = pd.concat([col_cos2,var_eta2],axis=0)
     labels = self.col_labels_ + self.quali_labels_
 
-    if color == "contrib":
-        contrib = np.append(self.col_contrib_[:,axis],self.var_contrib_[:,axis],axis=0)
-        c = np.sum(contrib,axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "contrib":
+            contrib = np.append(self.col_contrib_[:,axis],self.var_contrib_[:,axis],axis=0)
+            c = np.sum(contrib,axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.array(color)
         if legend_title is None:
@@ -1861,7 +1876,7 @@ def fviz_famd_var(self,
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=labels))
 
     # Using cosine and contributions
-    if color == "contrib" or isinstance(color,np.ndarray):
+    if (isinstance(color,str) and color == "contrib") or isinstance(color,np.ndarray):
         # Add gradients colors
         p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False) + 
                  pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
@@ -1971,28 +1986,31 @@ def fviz_cmds(self,
     coord = pd.DataFrame(self.coord_,index = self.labels_,columns=self.dim_index_)
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     # Add point
     p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
     if repel :
         p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
-                    adjust_text={'arrowprops': {'arrowstyle': '->','color': color,"lw":1.0}})
+                    adjust_text={'arrowprops': {'arrowstyle': '-','color': color,"lw":1.0}})
     else:
         p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     
     if add_sup:
         if self.sup_labels_ is not None:
             sup_coord = pd.DataFrame(self.sup_coord_, index= self.sup_labels_,columns=self.dim_index_)
-            p = p + pn.geom_point(data=sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.sup_labels_),
+            p = p + pn.geom_point(data=sup_coord,
+                                  mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                   color=color_sup,size=point_size,shape=marker_sup)
 
             if repel:
-                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,
+                                   mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                    color=color_sup,size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '->','color': color_sup,"lw":1.0}})
+                                   adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
             else:
-                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,
+                                   mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                    color=color_sup,size=text_size,va=va,ha=ha)
     
     if title is None:
@@ -2067,7 +2085,7 @@ def fviz_mds(self,
     coord = pd.DataFrame(self.coord_,index = self.labels_,columns=self.dim_index_)
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     # Add point
     p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
@@ -2080,14 +2098,17 @@ def fviz_mds(self,
     if add_sup:
         if self.sup_labels_ is not None:
             sup_coord = pd.DataFrame(self.sup_coord_, index= self.sup_labels_,columns=self.dim_index_)
-            p = p + pn.geom_point(data=sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.sup_labels_),
+            p = p + pn.geom_point(data=sup_coord,
+                                  mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                   color=color_sup,size=point_size,shape=marker_sup)
             if repel:
-                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,
+                                   mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                    color=color_sup,size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '->','color': color_sup,"lw":1.0}})
             else:
-                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,
+                                   mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                    color=color_sup,size=text_size,va=va,ha=ha)
     
     if title is None:
@@ -2198,7 +2219,7 @@ def fviz_ppca_ind(self,
     coord = pd.DataFrame(self.row_coord_,index = self.row_labels_,columns=self.dim_index_)
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if color == "cos2":
         limits = [0,1]
@@ -2300,7 +2321,7 @@ def fviz_ppca_var(self,
     coord = pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_)
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if color == "cos2":
         legend_title = "cos2"
@@ -2411,7 +2432,7 @@ def fviz_efa_ind(self,
     coord = pd.DataFrame(self.row_coord_,index = self.row_labels_,columns=self.dim_index_)
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
     if repel :
@@ -2487,7 +2508,7 @@ def fviz_efa_var(self,
     coord = pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_)
 
     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if color == "contrib":
         midpoint = 50
@@ -2880,7 +2901,7 @@ def fviz_hcpc_cluster(self,
     # Rename last columns
     coord.columns = [*coord.columns[:-1], legend_title]
      # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.labels_))
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     p = p + pn.geom_point(pn.aes(color = "cluster"),size=point_size,shape=marker)
     if add_labels:
@@ -3193,14 +3214,15 @@ def fviz_mfa_ind(self,
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
-    if color == "cos2":
-        c = np.sum(self.row_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.row_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.row_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.row_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
@@ -3208,7 +3230,7 @@ def fviz_mfa_ind(self,
 
     if habillage is None :        
         # Using cosine and contributions
-        if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+        if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
             # Add gradients colors
             p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                      pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
@@ -3388,14 +3410,15 @@ def fviz_mfa_var(self,
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
 
-    if color == "cos2":
-        c = np.sum(self.col_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.col_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.col_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.col_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
@@ -3404,7 +3427,7 @@ def fviz_mfa_var(self,
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
-    if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
                                  arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+
@@ -3609,21 +3632,22 @@ def fviz_disca_ind(self,
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
-    if color == "cos2":
-        c = np.sum(self.row_cos2_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "cos2"
-    elif color == "contrib":
-        c = np.sum(self.row_contrib_[:,axis],axis=1)
-        if legend_title is None:
-            legend_title = "Contrib"
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.row_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "cos2"
+        elif color == "contrib":
+            c = np.sum(self.row_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
         c = np.asarray(color)
         if legend_title is None:
             legend_title = "Cont_Var"
     
     # Using cosine and contributions
-    if color in ["cos2","contrib"] or isinstance(color,np.ndarray):
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                  pn.scale_color_gradient2(low = gradient_cols[0],
