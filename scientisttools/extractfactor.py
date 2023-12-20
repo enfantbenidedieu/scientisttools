@@ -283,18 +283,18 @@ def get_famd_ind(self) -> dict:
         raise ValueError("Error : 'self' must be an object of class FAMD.")
 
     # Store informations
-    df = dict({
+    df = {
         "coord"     :   pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_), 
         "cos2"      :   pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
         "contrib"   :   pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
         "infos"     :   pd.DataFrame(self.row_infos_,columns= ["d(i,G)","p(i)","I(i,G)"],index=self.row_labels_)
-        })
+        }
     if self.row_sup_labels_ is not None:
-        df["ind_sup"] = dict({
+        df["ind_sup"] = {
             "dist"  :   pd.DataFrame(self.row_sup_disto_,index = self.row_sup_labels_,columns=["Dist"]),
             "coord" :   pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_),
             "cos2"  :   pd.DataFrame(self.row_sup_cos2_,index=self.row_sup_labels_,columns=self.dim_index_)
-            })
+            }
     return df
 
 def get_famd_col(self) -> dict:
@@ -320,22 +320,22 @@ def get_famd_col(self) -> dict:
         raise ValueError("Error : 'self' must be an object of class FAMD")
     
     # Store informations
-    df = dict({
+    df = {
         "corr"      :   pd.DataFrame(self.col_corr_,index=self.col_labels_,columns=self.col_labels_),
         "pcorr"      :   pd.DataFrame(self.col_pcorr_,index=self.col_labels_,columns=self.col_labels_),
         "coord"     :   pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_), 
         "cos2"      :   pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_),
         "contrib"   :   pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_),
         "ftest"     :   pd.DataFrame(self.col_ftest_,index = self.col_labels_,columns=self.dim_index_)
-    })
+    }
     if self.quanti_sup_labels_ is not None:
         # Add supplementary continuous variables informations
-        df["quanti_sup"] = dict({
+        df["quanti_sup"] = {
             "corr"  :   pd.DataFrame(self.col_sup_corr_,index=self.col_sup_labels_,columns=self.col_labels_),
             "coord" :   pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
             "cos2"  :   pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
             "ftest" :   pd.DataFrame(self.col_sup_ftest_,index=self.col_sup_labels_,columns=self.dim_index_)
-        })
+        }
     return df
 
 def get_famd_mod(self) -> dict:
@@ -364,22 +364,22 @@ def get_famd_mod(self) -> dict:
         raise ValueError("Error : 'self' must be an object of class FAMD.")
 
     # Store informations
-    df = dict({
+    df = {
         "stats"     :   pd.DataFrame(self.mod_stats_,columns=["n(k)","p(k)"],index=self.mod_labels_),
         "coord"     :   pd.DataFrame(self.mod_coord_,index=self.mod_labels_,columns=self.dim_index_), 
         "cos2"      :   pd.DataFrame(self.mod_cos2_,index=self.mod_labels_,columns=self.dim_index_),
         "contrib"   :   pd.DataFrame(self.mod_contrib_,index=self.mod_labels_,columns=self.dim_index_),
         "vtest"     :   pd.DataFrame(self.mod_vtest_,index=self.mod_labels_,columns=self.dim_index_),
         "infos"     :   pd.DataFrame(self.mod_infos_,columns= ["d(k,G)","p(k)","I(k,G)"],index=self.mod_labels_)
-        })
+        }
     if self.quali_sup_labels_ is not None:
-        df["quali_sup"] = dict({
+        df["quali_sup"] = {
             "stats" :   pd.DataFrame(self.mod_sup_stats_,columns=["n(k)","p(k)"],index=self.mod_sup_labels_),
             "coord" :   pd.DataFrame(self.mod_sup_coord_,index=self.mod_sup_labels_,columns=self.dim_index_),
             "cos2"  :   pd.DataFrame(self.mod_sup_cos2_,index=self.mod_sup_labels_,columns=self.dim_index_),
-            "dist"  :   pd.DataFrame(self.mod_sup_disto_,index=self.mod_sup_labels_,columns=self.dim_index_),
+            "dist"  :   pd.DataFrame(np.c_[self.mod_sup_disto_],index=self.mod_sup_labels_,columns=["dist"]),
             "vtest" :   pd.DataFrame(self.mod_sup_vtest_,index=self.mod_sup_labels_,columns=self.dim_index_)
-        })
+        }
     return df
 
 def get_famd_var(self):
@@ -403,17 +403,18 @@ def get_famd_var(self):
     if self.model_ != "famd":
         raise ValueError("Error : 'self' must be an object of class FAMD.")
 
-    df = dict({
+    df = {
         "chi2"      :   self.chi2_test_,
         "eta2"      :   pd.DataFrame(self.var_eta2_,index=self.quali_labels_,columns=self.dim_index_),
         "cos2"      :   pd.DataFrame(self.var_cos2_,index=self.quali_labels_,columns=self.dim_index_),
         "contrib"   :   pd.DataFrame(self.var_contrib_,index=self.quali_labels_,columns=self.dim_index_)
-    })
+    }
     if self.quali_sup_labels_ is not None:
-        df["quali_sup"] = dict({
-            "chi2"  :   self.chi2_sup_stats_,
+        df["quali_sup"] = {
+            "chi2"  :   self.chi2_sup_test_,
             "eta2"  :   pd.DataFrame(self.quali_sup_eta2_,index=self.quali_sup_labels_,columns=self.dim_index_),
-        })
+            "cos2"  :   pd.DataFrame(self.quali_sup_cos2_,index=self.quali_sup_labels_,columns=self.dim_index_)
+        }
     return df
 
 
@@ -1248,7 +1249,7 @@ def summaryFAMD(self,
     # Add supplementary continuous variables informations
     if self.quanti_sup_labels_ is not None:
         print(f"\nSupplementary continuous variable\n")
-        col_sup_infos = pd.DataFrame(index=self.quanti_sup_labels_).astype("float")
+        col_sup_infos = pd.DataFrame(index=self.col_sup_labels_).astype("float")
         col_sup = col["quanti_sup"]
         for i in np.arange(0,ncp,1):
             col_sup_coord = col_sup["coord"].iloc[:,i]
@@ -1282,13 +1283,15 @@ def summaryFAMD(self,
     
     # Add variables
     print("\nCategorical variables\n")
-    var_infos = pd.DataFrame(index=self.quali_sup_labels_).astype("float")
+    var_infos = pd.DataFrame(index=self.quali_labels_).astype("float")
     for i in np.arange(0,ncp,1):
         var_eta2 = var["eta2"].iloc[:,i]
-        var_eta2.name = "eta2."+str(i+1)
+        var_eta2.name = "Dim."+str(i+1)
+        var_contrib = var["contrib"].iloc[:,i]
+        var_contrib.name = "ctr"
         var_cos2 = var["cos2"].iloc[:,i]
-        var_cos2.name = "cos2." +str(i+1)
-        var_infos = pd.concat([var_infos,var_eta2,var_cos2],axis=1)
+        var_cos2.name = "cos2"
+        var_infos = pd.concat([var_infos,var_eta2,var_contrib,var_cos2],axis=1)
     var_infos = var_infos.round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -1298,7 +1301,7 @@ def summaryFAMD(self,
     # Add Supplementary categories – Variable illustrative qualitative
     if self.quali_sup_labels_ is not None:
         print("\nSupplementary categories\n")
-        mod_sup = col["quali_sup"]
+        mod_sup = mod["quali_sup"]
         mod_sup_infos = np.sqrt(mod_sup["dist"])
         for i in np.arange(0,ncp,1):
             mod_sup_coord = mod_sup["coord"].iloc[:,i]
@@ -1315,12 +1318,20 @@ def summaryFAMD(self,
             print(mod_sup_infos)
         
         # Add supplementary qualitatives - correlation ration
-        print("\nSupplementatry categorical variable\n")
-        corr_ratio = mod_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
+        print("\nSupplementary categorical variable\n")
+        var_sup = var["quali_sup"]
+        var_sup_infos = pd.DataFrame().astype("float")
+        for i in np.arange(0,ncp,1):
+            var_sup_eta2 = var_sup["eta2"].iloc[:,i]
+            var_sup_eta2.name = "Dim."+str(i+1)
+            var_sup_cos2 = var_sup["cos2"].iloc[:,i]
+            var_sup_cos2.name = "cos2"
+            var_sup_infos =  pd.concat([var_sup_infos,var_sup_eta2,var_sup_cos2],axis=1)
+        var_sup_infos = var_sup_infos.round(decimals=digits)
         if to_markdown:
-            print(corr_ratio.to_markdown(tablefmt=tablefmt))
+            print(var_sup_infos.to_markdown(tablefmt=tablefmt))
         else:
-            print(corr_ratio)
+            print(var_sup_infos)
 
 ########" MCA"
 

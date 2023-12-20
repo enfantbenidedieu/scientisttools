@@ -3450,15 +3450,9 @@ class FAMD(BaseEstimator,TransformerMixin):
                                                    columns=self.dim_index_),dummies[cols]),axis=1)
                                       .groupby(cols).mean().iloc[1,:].to_frame(name=cols).T for cols in dummies.columns),axis=0)
         
-        # Rapport de corrélation
-        quali_sup_eta2 = pd.concat(((mapply(mod_sup_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_).mul(p_k,axis="index")
-                                                  .loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index),:]
-                                                  .sum(axis=0).to_frame(name=cols).T.div(self.eig_[0])) for cols in X.columns),axis=0)
-        
         # Supplementary categories v-test
-        mod_sup_vtest = mapply(mapply(mod_sup_coord,lambda x : x/np.sqrt((self.n_rows_-n_k)/((self.n_rows_-1)*n_k)),
-                                        axis=0,progressbar=False,n_workers=self.n_workers_),
-                                 lambda x : x/np.sqrt(self.eig_[0]),axis=1,progressbar=False,n_workers=self.n_workers_)
+        mod_sup_vtest = pd.concat(((mod_sup_coord.loc[k,:]/np.sqrt((self.n_rows_-n_k[k])/((self.n_rows_-1)*n_k[k]))).to_frame(name=k).T for k in mod_sup_coord.index),
+                                  axis=0)/np.sqrt(self.eig_[0])
         
         # Moyennes conditionnelles sur la variable Z
         mz_g = pd.concat((pd.concat((self.normalized_data_,dummies[cols]),axis=1)
@@ -3476,6 +3470,10 @@ class FAMD(BaseEstimator,TransformerMixin):
                                            .mul(p_k.loc[filter(lambda x: x.startswith(cols),mod_sup_coord.index)],axis="index")
                                            .div(self.eig_[0],axis="columns")
                                            .sum(axis=0).to_frame(name=cols).T for cols in X.columns),axis=0)
+        
+        # Cosinus carrés des variables qualitatives supplémentaires
+        nb_mod = pd.Series([len(np.unique(X[[col]])) for col in X.columns],index=X.columns,name="count")
+        quali_sup_cos2 = pd.concat(((quali_sup_eta2.loc[cols,:]/nb_mod[cols]).to_frame(name=cols).T for cols in quali_sup_eta2.index),axis=0)
 
         # Supplementary categories informations
         self.mod_sup_coord_     =   np.array(mod_sup_coord)
@@ -3489,6 +3487,7 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         # Categorical variables
         self.quali_sup_eta2_    =   np.array(quali_sup_eta2)
+        self.quali_sup_cos2_    =   np.array(quali_sup_cos2)
         self.chi2_sup_test_     = {"statistic" : pd.DataFrame(chi2_sup_stats,index=X.columns,columns=self.quali_labels_),
                                     "pvalue"    : pd.DataFrame(chi2_sup_pvalue,index=X.columns,columns=self.quali_labels_)
                                     }

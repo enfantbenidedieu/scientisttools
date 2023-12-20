@@ -1956,8 +1956,8 @@ def fviz_famd_var(self,
         raise ValueError("Error : You must pass a valid 'axis'.")
 
     # Initialize
-    col_cos2 = pd.DataFrame(self.col_cos2_[:,axis],index = self.col_labels_,columns=self.dim_index_)
-    var_eta2 = pd.DataFrame(self.var_eta2_[:,axis],index = self.quali_labels_,columns=self.dim_index_)
+    col_cos2 = pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_)
+    var_eta2 = pd.DataFrame(self.var_eta2_,index = self.quali_labels_,columns=self.dim_index_)
     
     # Initialize
     p = (pn.ggplot(data=col_cos2,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=col_cos2.index))+ 
