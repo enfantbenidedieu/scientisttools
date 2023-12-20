@@ -61,8 +61,6 @@ pingouin>=0.5.3
 scientistmetrics>=0.0.3
 ggcorrplot>=0.0.2
 factor_analyzer>=0.5.0
-networkx>=3.2.1
-more_itertools>=10.1.0
 ```
 
 ### User installation

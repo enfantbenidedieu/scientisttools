@@ -87,7 +87,9 @@ def load_races_canines2():
 
 def load_races_canines3():
     """"""
-    data = pd.read_excel(DATASETS_DIR/"races_canines_acm.xlsx",header=0,index_col=0)
+    url = DATASETS_DIR+"/races_canines_acm.xlsx"
+    print(url)
+    data = pd.read_excel(DATASETS_DIR+"/races_canines_acm.xlsx",header=0,index_col=0)
     data.name = "races_canines3"
     return data
 

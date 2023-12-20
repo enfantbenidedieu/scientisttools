@@ -521,17 +521,17 @@ def get_mca_ind(self) -> dict:
         raise ValueError("Error : 'self' must be an object of class MCA.")
 
     # Store informations
-    df = dict({
+    df = {
         "coord"     :   pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_), 
         "cos2"      :   pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
         "contrib"   :   pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
         "infos"     :   pd.DataFrame(self.row_infos_,columns= ["d(i,G)","p(i)","I(i,G)"],index=self.row_labels_)
-        })
+        }
     if self.row_sup_labels_ is not None:
-        df["ind_sup"] = dict({
+        df["ind_sup"] = {
             "coord" :   pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_),
             "cos2"  :   pd.DataFrame(self.row_sup_cos2_,index=self.row_sup_labels_,columns=self.dim_index_)
-            })    
+            }   
     return df
 
 def get_mca_mod(self) -> dict:
@@ -557,22 +557,22 @@ def get_mca_mod(self) -> dict:
         raise ValueError("Error : 'self' must be an object of class MCA.")
 
     # Store informations
-    df = dict({
+    df = {
         "coord"             :   pd.DataFrame(self.mod_coord_,index=self.mod_labels_,columns=self.dim_index_), 
         "corrected_coord"   :   pd.DataFrame(self.corrected_mod_coord_,index=self.mod_labels_,columns=self.dim_index_),
         "cos2"              :   pd.DataFrame(self.mod_cos2_,index=self.mod_labels_,columns=self.dim_index_),
         "contrib"           :   pd.DataFrame(self.mod_contrib_,index=self.mod_labels_,columns=self.dim_index_),
         "vtest"             :   pd.DataFrame(self.mod_vtest_,index = self.mod_labels_,columns=self.dim_index_),
         "infos"             :   pd.DataFrame(self.mod_infos_,columns= ["d(k,G)","p(k)","I(k,G)"],index=self.mod_labels_)
-        })
+        }
     if self.quali_sup_labels_ is not None:
-        df["sup"] = dict({
+        df["sup"] = {
             "stats"     :   pd.DataFrame(self.mod_sup_stats_, index = self.mod_sup_labels_,columns = ["n(k)","p(k)"]),
             "coord"     :   pd.DataFrame(self.mod_sup_coord_, index =self.mod_sup_labels_,columns=self.dim_index_),
             "cos2"      :   pd.DataFrame(self.mod_sup_cos2_,  index =self.mod_sup_labels_,columns=self.dim_index_),
             "dist"      :   pd.DataFrame(self.mod_sup_disto_, index = self.mod_sup_labels_,columns=["Dist"]),
             "vtest"     :   pd.DataFrame(self.mod_sup_vtest_, index =self.mod_sup_labels_,columns=self.dim_index_)
-            })    
+            }
     return df
 
 def get_mca_var(self) -> dict:
@@ -594,18 +594,24 @@ def get_mca_var(self) -> dict:
     if self.model_ != "mca":
         raise ValueError("Error : 'self' must be an object of class MCA.")
 
-    df = dict({
+    df = {
         "chi2"      :   self.chi2_test_,
         "inertia"   :   pd.DataFrame(self.var_inertia_,index=self.var_labels_,columns=["I(j,G)"]),
         "eta2"      :   pd.DataFrame(self.var_eta2_,index=self.var_labels_,columns=self.dim_index_),
         "cos2"      :   pd.DataFrame(self.var_cos2_,index=self.var_labels_,columns=self.dim_index_),
         "contrib"   :   pd.DataFrame(self.var_contrib_,index=self.var_labels_,columns=self.dim_index_)
-    })
+    }
 
     if self.quanti_sup_labels_ is not None:
-        df["quanti_sup"] = dict({
-            "coord" :   pd.DataFrame(self.quanti_sup_coord_,index=self.quanti_sup_labels_,columns=self.dim_index_)
-        })
+        df["quanti_sup"] = {
+            "coord" :   pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
+            "cos2"  :   pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_)
+        }
+    if self.quali_sup_labels_ is not None:
+        df["quali_sup"] = {
+            "eta2"  :    self.quali_sup_eta2_,
+            "cos2"  :    self.quali_sup_cos2_ 
+        }
 
     return df
 
@@ -721,8 +727,9 @@ def get_pca_ind(self) -> dict:
     if self.row_sup_labels_ is not None:
         df["ind_sup"] = dict({
             "coord" :   pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_),
-            "cos2"  :   pd.DataFrame(self.row_sup_cos2_,index=self.row_sup_labels_,columns=self.dim_index_)
-            })    
+            "cos2"  :   pd.DataFrame(self.row_sup_cos2_,index=self.row_sup_labels_,columns=self.dim_index_),
+            "dist"  :   pd.DataFrame(np.c_[self.row_sup_disto_],index=self.row_sup_labels_,columns=["d(i,G)"])
+            })   
     return df
 
 def get_pca_var(self) -> dict:
@@ -1407,27 +1414,19 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     var_infos = var["inertia"]
     for i in np.arange(0,ncp,1):
         var_eta2 = var["eta2"].iloc[:,i]
-        var_eta2.name = "eta2."+str(i+1)
+        var_eta2.name = "Dim."+str(i+1)
         var_cos2 = var["cos2"].iloc[:,i]
-        var_cos2.name = "cos2." +str(i+1)
-        var_ctr = var["contrib"].iloc[:,i]
-        var_ctr.name = "ctr."+str(i+1)
-        var_infos = pd.concat([var_infos,var_eta2,var_ctr,var_cos2],axis=1)
+        var_cos2.name = "cos2"
+        var_contrib = var["contrib"].iloc[:,i]
+        var_contrib.name = "ctr"
+        var_infos = pd.concat([var_infos,var_eta2,var_cos2,var_contrib],axis=1)
+    
     var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(var_infos)
-    
-    # Add supplementary continuous variables informations
-    if self.quanti_sup_labels_ is not None:
-        print(f"\nSupplementary continuous variable\n")
-        col_sup_coord = var["quanti_sup"]["coord"].iloc[:,:ncp]
-        if to_markdown:
-            print(col_sup_coord.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(col_sup_coord)
-    
+
     # Add Supplementary categories – Variable illustrative qualitative
     if self.quali_sup_labels_ is not None:
         print("\nSupplementary categories\n")
@@ -1446,6 +1445,40 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(mod_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(mod_sup_infos)
+        
+        print("\nSupplementary categorical variables\n")
+        var_sup_infos = pd.DataFrame().astype("float")
+        var_sup = var['quali_sup']
+        for i in np.arange(0,ncp,1):
+            var_sup_eta2 = var_sup["eta2"].iloc[:,i]
+            var_sup_eta2.name = "Dim."+str(i+1)
+            var_sup_cos2 = var_sup["cos2"].iloc[:,i]
+            var_sup_cos2.name = "cos2"
+            var_sup_infos = pd.concat([var_sup_infos,var_sup_eta2,var_sup_cos2],axis=1)
+        
+        var_sup_infos = var_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(var_sup_infos)
+
+    # Add supplementary continuous variables informations
+    if self.quanti_sup_labels_ is not None:
+        print(f"\nSupplementary continuous variable\n")
+        col_sup_infos = pd.DataFrame().astype("float")
+        col_sup= var["quanti_sup"]
+        for i in np.arange(0,ncp,1):
+            col_sup_coord = col_sup["coord"].iloc[:,i]
+            col_sup_cos2 = col_sup["cos2"].iloc[:,i]
+            col_sup_cos2.name = "cos2"
+            col_sup_infos = pd.concat([col_sup_infos,col_sup_coord,col_sup_cos2],axis=1)
+        
+        col_sup_infos = col_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(col_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(col_sup_infos)
+    
 ###### PCA
 
 def summaryPCA(self,
@@ -1507,8 +1540,8 @@ def summaryPCA(self,
     if self.row_sup_labels_ is not None:
         print(f"\nSupplementary Individuals\n")
         # Save all informations
-        row_sup_infos = pd.DataFrame(index=self.row_sup_labels_).astype("float")
         row_sup = row["ind_sup"]
+        row_sup_infos = row_sup["dist"]
         for i in np.arange(0,ncp,1):
             row_sup_coord = row_sup["coord"].iloc[:,i]
             row_sup_cos2 = row_sup["cos2"].iloc[:,i]
@@ -1557,7 +1590,7 @@ def summaryPCA(self,
     if self.quali_sup_labels_ is not None:
         print("\nSupplementary categories\n")
         mod_sup = col["quali_sup"]
-        mod_sup_infos = np.sqrt(mod_sup["dist"])
+        mod_sup_infos = mod_sup["dist"]
         for i in np.arange(0,ncp,1):
             mod_sup_coord = mod_sup["coord"].iloc[:,i]
             mod_sup_cos2 = mod_sup["cos2"].iloc[:,i]
@@ -1573,7 +1606,7 @@ def summaryPCA(self,
             print(mod_sup_infos)
         
         # Add supplementary qualitatives - correlation ration
-        print("\nSupplementatry categorical variable\n")
+        print("\nSupplementatry categorical variable (eta2)\n")
         corr_ratio = mod_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
         if to_markdown:
             print(corr_ratio.to_markdown(tablefmt=tablefmt))

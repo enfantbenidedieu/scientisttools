@@ -33,7 +33,12 @@ from scientisttools.utils import (
 #####################################################################################################
 
 class PCA(BaseEstimator,TransformerMixin):
-    """Principal Component Analysis
+    """
+    Principal Component Analysis (PCA)
+    ----------------------------------
+
+    Description
+    -----------
 
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
@@ -43,6 +48,21 @@ class PCA(BaseEstimator,TransformerMixin):
     Performs Principal Component Analysis (PCA) with supplementary 
     individuals, supplementary quantitative variables and supplementary
     categorical variables.
+
+    Missing values are replaced by the column mean.
+
+    Usage
+    -----
+    PCA(normalize=True,
+        n_components=None,
+        row_labels=None,
+        col_labels=None,
+        row_sup_labels =None,
+        quanti_sup_labels = None,
+        quali_sup_labels = None,
+        parallelize=False).fit(X)
+    
+    where X a data frame with n_rows (individuals) and p columns (numeric variables).
 
     Parameters
     ----------
@@ -88,13 +108,11 @@ class PCA(BaseEstimator,TransformerMixin):
     quali_sup_labels : array of strings or None, default = None
         This array provides the categorical supplementary variables labels
     
-    graph : bool, default = True
-        if True a graph is displayed
+    parallelize : bool, default = False
+        If model should be parallelize
+            - If True : parallelize using mapply
+            - If False : parallelize using apply
 
-    figsize : tuple of int, default = None
-        Width, height in inches.
-
-    
     Attributes
     ----------
     n_components_ : int
@@ -131,20 +149,20 @@ class PCA(BaseEstimator,TransformerMixin):
     row_coord_ : ndarray of shape (n_rows,n_components_)
         A n_rows x n_components_ matrix containing the row coordinates.
     
-    col_coord_ : ndarray of shape (n_columns,n_components_)
-        A n_columns x n_components_ matrix containing the column
-        coordinates.
-        
-    row_contrib_ : ndarray of shape (n_rows,n_components_)
+     row_contrib_ : ndarray of shape (n_rows,n_components_)
         A n_rows x n_components_ matrix containing the row
-        contributions.
-    
-    col_contrib_ : ndarray of shape (n_columns,n_components_)
-        A n_columns x n_components_ matrix containing the column
         contributions.
     
     row_cos2_ : ndarray of shape (n_rows,n_components_)
         A n_rows x n_components_ matrix containing the row cosines.
+    
+    col_coord_ : ndarray of shape (n_columns,n_components_)
+        A n_columns x n_components_ matrix containing the column
+        coordinates.
+
+    col_contrib_ : ndarray of shape (n_columns,n_components_)
+        A n_columns x n_components_ matrix containing the column
+        contributions.
     
     col_cos2_ : ndarray of shape (n_columns,n_components_)
         A n_columns x n_components_ matrix containing the column
@@ -154,6 +172,18 @@ class PCA(BaseEstimator,TransformerMixin):
         A n_columns x n_components_ matrix containing the correlations
         between variables (= columns) and axes.
     
+    col_ftest_ : ndarray of shape (n_columns,n_components_)
+        A n_columns x n_components_ matrix containing the fisher test
+        between variables (= columns) and axes.
+    
+    col_corr_ : ndarray of shape (n_columns,n_columns)
+        A n_columns x n_components matrix containing the pearson correlations
+        between variables (= columns)
+    
+    col_pcorr_ : ndarray of shape (n_columns,n_columns)
+        A n_columns x n_components matrix containing the partial correlations
+        between variables (= columns)
+    
     means_ : ndarray of shape (n_columns,)
         The mean for each variable (= for each column).
     
@@ -162,6 +192,61 @@ class PCA(BaseEstimator,TransformerMixin):
     
     ss_col_coord_ : ndarray of shape (n_columns,)
         The sum of squared of columns coordinates.
+    
+    row_weight_ : ndarray of shape (n_rows,)
+        weights for the individuals
+    
+    col_weight_ : ndarray of shape (n_columns,)
+        weights for the variables
+    
+    row_sup_coord_ : ndarray of shape (n_sup_rows,n_components_)
+        A n_sup_rows x n_components_ matrix containing the 
+        coordinates for the supplementary individuals
+    
+    row_sup_cos2_ : ndarray of shape (n_sup_rows,n_components_)
+        A n_sup_rows x n_components_ matrix containing the 
+        Cos2 for the supplementary individuals
+    
+    row_sup_disto_ : ndarray of shape (n_sup_rows,)
+        Distance to origin for the supplementary individuals
+    
+    col_sup_corr_ : ndarray of shape (n_sup_columns,n_columns)
+        A n_sup_columns x n_components matrix containing the pearson correlations
+        between actives variables and supplementary quantitatives variables
+    
+    col_sup_coord_ : ndarray of shape (n_sup_columns,n_components_)
+        A n_sup_columns x n_components_ matrix containing the 
+        coordinates for the supplementary quantitatives variables
+    
+    col_sup_cos2_ : ndarray of shape (n_sup_columns,n_components_)
+        A n_sup_columns x n_components_ matrix containing the cos2 
+        for the supplementary quantitatives variables
+    
+    col_sup_ftest_ : ndarray of shape (n_sup_columns,n_components_)
+        A n_sup_columns x n_components_ matrix containing the fisher test
+        between variables (= columns) and axes.
+    
+    mod_sup_stats_ : pd.DataFrame of shape (n_sup_mod,2)
+        Statistical informations about variables/categories
+    
+    mod_sup_coord_ : ndarray of shape (n_sup_mod,n_components_)
+        A n_sup_mod x n_components_ matrix containing the 
+        coordinates for the supplementary variables/categories
+    
+    mod_sup_cos2_ : ndarray of shape (n_sup_mod,n_components_)
+        A n_sup_mod x n_components_ matrix containing the 
+        cos2 for the supplementary variables/categories
+    
+    mod_sup_vtest_ : ndarray of shape (n_sup_mod,n_components_)
+        A n_sup_mod x n_components_ matrix containing the 
+        value-test for the supplementary variables/categories
+    
+    mod_sup_disto_ : ndarray of shape (n_sup_mod)
+       Distance to origin for the supplementary variables/categories
+    
+    quali_sup_eta2_ : ndarray of shape (n_quali_sup_labels_,n_components_)
+        A n_quali_sup_labels_ x n_components_ matrix containing the 
+        correlation ratio for the supplementary qualitatives variables.
     
     model_ : string
         The model fitted = 'pca'
@@ -246,8 +331,14 @@ class PCA(BaseEstimator,TransformerMixin):
         else:
             X_ = _X
         
-        # Store data and active data
+        # Store Data set
         self.data_ = X
+
+        # Check if NA in DataFrame
+        if X_.isnull().values.any():
+            X_ = X_.fillna(X_.mean(), inplace=True)
+
+        # Active Dataset
         self.active_data_ = X_
         
         # Supplementary initialization
@@ -414,6 +505,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         # Store all informations
         self.eigen_vectors_= V_T.T[:,:self.n_components_]
+
         # Factor coordinates for rows
         self.row_coord_ = row_coord[:,:self.n_components_]
 
@@ -421,8 +513,10 @@ class PCA(BaseEstimator,TransformerMixin):
         self.col_coord_ = col_coord[:,:self.n_components_]
         self.col_cor_ = col_cor[:,:self.n_components_]
         self.col_ftest_ = col_ftest[:,:self.n_components_]
+        self.col_weight_ = np.repeat(a=1,repeats=self.n_cols_)
 
         self.row_infos_ = row_infos
+        self.row_weight_ = np.repeat(a=1/self.n_rows_,repeats=self.n_rows_)
         self.inertia_ = inertia
         self.normalized_data_ = Z
         self.dim_index_ = ["Dim."+str(x+1) for x in np.arange(0,self.n_components_)]
@@ -595,7 +689,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         # Supplementary categories informations
         self.mod_sup_stats_     =   np.array(mod_sup_stats)
-        self.mod_sup_disto_     =   np.array(mod_sup_disto)
+        self.mod_sup_disto_     =   np.sqrt(np.array(mod_sup_disto))
         self.mod_sup_coord_     =   np.array(mod_sup_coord)
         self.mod_sup_cos2_      =   np.array(mod_sup_cos2)
         self.mod_sup_vtest_     =   np.array(mod_sup_vtest)
@@ -653,12 +747,17 @@ class PCA(BaseEstimator,TransformerMixin):
         row_sup_coord = np.array(Z.dot(self.eigen_vectors_))
         row_sup_cos2 = ((row_sup_coord ** 2)/ (np.linalg.norm(Z, axis=1).reshape(-1, 1) ** 2))
 
+        # Distance à l'origine
+        row_sup_disto = np.apply_along_axis(func1d=lambda  x : np.sum(x**2),arr=Z,axis=1)
+
         # Store all informations
         self.row_sup_coord_     =   row_sup_coord[:,:self.n_components_]
         self.row_sup_cos2_      =   row_sup_cos2[:,:self.n_components_]
+        self.row_sup_disto_     =   np.sqrt(row_sup_disto)
 
         return dict({"coord"    :   row_sup_coord[:,:self.n_components_],
-                     "cos2"     :   row_sup_cos2[:,:self.n_components_]})
+                     "cos2"     :   row_sup_cos2[:,:self.n_components_],
+                     "dist"     :   np.sqrt(row_sup_disto)})
 
 
     def transform(self,X,y=None):
@@ -727,7 +826,8 @@ class PCA(BaseEstimator,TransformerMixin):
 
 class PartialPCA(BaseEstimator,TransformerMixin):
     """
-    Partial Principal Components Analysis
+    Partial Principal Components Analysis (PartialPCA)
+    --------------------------------------------------
     """
     def __init__(self,
                  n_components=None,
@@ -1722,13 +1822,31 @@ def which(self):
     return(indices)
 
 class CA(BaseEstimator,TransformerMixin):
-    """ Correspondence Analysis (CA)
+    """
+    Correspondence Analysis (CA)
+    ----------------------------
     
+    Description
+    -----------
+
     This class inherits from sklearn BaseEstimator and TransformerMixin class
     
     CA performs a Correspondence Analysis, given a contingency table
     containing absolute frequencies ; shape= n_rows x n_columns.
     This implementation only works for dense dataframe.
+
+    It Performs Correspondence Analysis (CA) including supplementary row and/or column points.
+
+    Usage
+    -----
+    CA(n_components=None,
+       row_labels=None,
+       col_labels=None,
+       row_sup_labels=None,
+       col_sup_labels=None,
+       parallelize = False).fit(X)
+
+    where X a data frame or a table with n rows and p columns, i.e. a contingency table.
 
     Parameters
     ----------
@@ -1806,6 +1924,7 @@ class CA(BaseEstimator,TransformerMixin):
     col_cos2_ : array of float
         A n_columns x n_components_ matrix containing the column
         cosines.
+
     total_ : float
         The sum of the absolute frequencies in the X array.
     
@@ -2011,6 +2130,8 @@ class CA(BaseEstimator,TransformerMixin):
         self.inertia_ = inertia
         self.row_dist_ = row_dist
         self.col_dist_ = col_dist
+        self.col_weight_ = col_weight
+        self.row_weight_ = row_weight
     
     def _compute_svd(self,X):
         """"Compute a Singular Value Decomposition
@@ -2155,13 +2276,24 @@ def _mul(*args):
     return functools.reduce(np.dot,args)
 
 class MCA(BaseEstimator,TransformerMixin):
-    """Multiple Correspondence Analysis (MCA)
+    """
+    Multiple Correspondence Analysis (MCA)
+    ---------------------------------------
+
+    Description
+    -----------
 
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     This class performs Multiple Correspondence Analysis (MCA) with supplementary 
     individuals, supplementary quantitative variables and supplementary
     categorical variables.
+
+    Usage
+    ----
+
+    Parameters
+    ----------
     
     """
     
@@ -2242,15 +2374,17 @@ class MCA(BaseEstimator,TransformerMixin):
         self.row_sup_coord_ = None
         self.row_sup_cos2_ = None
 
-        self.quanti_sup_coord_ = None
-        self.quanti_sup_cos2_ = None
+        self.col_sup_coord_ = None
+        self.col_sup_cos2_ = None
 
-        self.quali_sup_coord_ = None
-        self.quali_sup_cos2_ = None
-        self.quali_sup_disto_ = None
-        self.quali_sup_vtest_ = None
+        # Supplementary variables/categories informations
+        self.mod_sup_coord_ = None
+        self.mod_sup_cos2_ = None
+        self.mod_sup_disto_ = None
+        self.mod_sup_vtest_ = None
 
-        self.var_sup_eta2_ = None
+        # Supplementary categorical variables correlation ratio
+        self.quali_sup_eta2_ = None
 
         # Benzerci and Greenacre coorection
         self.benzecri_correction_ = None
@@ -2413,7 +2547,6 @@ class MCA(BaseEstimator,TransformerMixin):
         dummies_sum = self.disjonctif_.sum(axis=0)
         mod_vtest = np.apply_along_axis(func1d=lambda x : x*np.sqrt(((self.n_rows_ - 1)*dummies_sum)/(self.n_rows_ - dummies_sum)),
                                         axis=0,arr=mod_coord)
-        
         # Qualitative informations
         mod_coord_df = pd.DataFrame(mod_coord,index=self.mod_labels_,columns=self.dim_index_)
         dummies_mean = self.disjonctif_.mean(axis=0)
@@ -2421,10 +2554,17 @@ class MCA(BaseEstimator,TransformerMixin):
         var_eta2 = pd.concat((mapply(var_eta2.loc[filter(lambda x: x.startswith(cols),var_eta2.index),:],lambda x : np.sum(x),
                              axis=0,progressbar=False,n_workers=self.n_workers_).to_frame(name=cols).T for cols in  self.var_labels_),axis=0)
     
-        # Cosinus carrés des variables qualitatives
-        denom = np.array([len(np.unique(self.original_data_[[col]]))-1 for col in self.var_labels_])
-        var_cos2 = var_eta2.div(denom,axis="index")
-        var_contrib = mapply(var_eta2,lambda x : 100*x/self.eig_[0],axis=1,progressbar=False,n_workers=self.n_workers_)
+        ## Cosinus carrés des variables qualitatives
+        # Nombre de modalités par variables
+        nb_mod = pd.Series(np.array([len(np.unique(self.original_data_[[col]])) for col in self.var_labels_]),index=self.var_labels_,name="count")
+
+        # Cosinus des variables
+        var_cos2 = pd.DataFrame(mod_cos2,index=self.mod_labels_,columns=self.dim_index_)
+        var_cos2 = pd.concat((var_cos2.loc[var_cos2.index.str.startswith(cols)].sum(axis=0).to_frame(name=cols).T/(nb_mod[cols]-1) for cols in self.var_labels_),axis=0)
+        
+        # Contribution des variables
+        var_contrib = pd.DataFrame(mod_contrib,index=self.mod_labels_,columns=self.dim_index_)
+        var_contrib = pd.concat((var_contrib.loc[var_contrib.index.str.startswith(cols)].sum(axis=0).to_frame(name=cols).T for cols in self.var_labels_),axis=0)
 
         # Store all informations
         self.row_coord_ = row_coord
@@ -2626,8 +2766,8 @@ class MCA(BaseEstimator,TransformerMixin):
         self.row_sup_cos2_ = np.apply_along_axis(lambda x : x**2/np.linalg.norm(self.row_sup_coord_,axis=1)**2,
                                                     axis=0,arr=self.row_sup_coord_)
         
-        dict({"coord"    :   self.row_sup_coord_,
-              "cos2"     :   self.row_sup_cos2_})
+        return {"coord"    :   self.row_sup_coord_,
+                "cos2"     :   self.row_sup_cos2_}
     
     def _compute_quali_sup_stats(self,X,y=None):
         """Find the supplementary categorical columns factor
@@ -2655,17 +2795,33 @@ class MCA(BaseEstimator,TransformerMixin):
         mod_sup_labels = dummies.columns
         short_sup_labels = list([x.split("_",1)[-1] for x in mod_sup_labels])
 
-        # Coordinates of supplementary categories
-        mod_sup_coord = mapply(dummies,lambda x : x/np.sum(x),axis=0,progressbar=False,n_workers=self.n_workers_).T.dot(self.row_coord_)/np.sqrt(self.eig_[0])
-
-        # Cosinus carré des modalités supplémentaires
-        mod_sup_cos2 = mapply(mod_sup_coord,lambda x: x**2/np.linalg.norm(mod_sup_coord,axis=1)**2,axis=0,progressbar=False,n_workers=self.n_workers_)
-
         # Distance à l'origine des modalités supplémentaires
         mod_sup_disto = (1/p_k)-1
+        
+        # Coordinates of supplementary categories - corrected
+        mod_sup_coord = mapply(dummies,lambda x : x/np.sum(x),axis=0,progressbar=False,n_workers=self.n_workers_).T.dot(self.row_coord_)/np.sqrt(self.eig_[0])
+
+        # Square of coordinates
+        sq_mod_sup_coord = mapply(mod_sup_coord,lambda x: x**2,axis=0,progressbar=False,n_workers=self.n_workers_)
+
+        # Cosinus carré des modalités supplémentaires
+        mod_sup_cos2 = pd.concat(((sq_mod_sup_coord.loc[k,:]/mod_sup_disto[k]).to_frame().T for k in mod_sup_coord.index),axis=0)
 
         # Valeur test des modalités supplémentaires
-        mod_sup_vtest = mapply(mod_sup_coord,lambda x : x*np.sqrt(((self.n_rows_-1)*n_k.values)/(self.n_rows_ - n_k.values)),axis=0,progressbar=False,n_workers=self.n_workers_)
+        mod_sup_vtest = pd.concat(((mod_sup_coord.loc[k,:]*np.sqrt(((self.n_rows_-1)*n_k[k])/(self.n_rows_ - n_k[k]))).to_frame(name=k).T for k in mod_sup_coord.index),axis=0)
+        mod_sup_vtest.columns = self.dim_index_
+
+        # Correlation Ratio
+        quali_sup_eta2 = pd.concat(((sq_mod_sup_coord.loc[k,:]*p_k[k]).to_frame().T for k in mod_sup_coord.index),axis=0)
+        quali_sup_eta2 = pd.concat((quali_sup_eta2.loc[quali_sup_eta2.index.str.startswith(cols)].sum(axis=0).to_frame(name=cols).T for cols in X.columns),axis=0)
+        quali_sup_eta2.columns = self.dim_index_
+
+        # Nombre de modalités par variables
+        nb_sup_mod = pd.Series(np.array([len(np.unique(X[[col]])) for col in X.columns]),index=X.columns,name="count")
+       
+        # Cosinus des variables qualitatives supplémentaires
+        quali_sup_cos2 = pd.concat((mod_sup_cos2.loc[mod_sup_cos2.index.str.startswith(cols)].sum(axis=0).to_frame(name=cols).T/(nb_sup_mod[cols]-1) for cols in X.columns),axis=0)
+        quali_sup_cos2.columns = self.dim_index_
 
         # Store supplementary categories informations
         self.mod_sup_coord_     =   np.array(mod_sup_coord)
@@ -2677,19 +2833,26 @@ class MCA(BaseEstimator,TransformerMixin):
         self.mod_sup_labels_ = mod_sup_labels
         self.short_sup_labels_ = short_sup_labels
 
-        return dict({"coord"   :   mod_sup_coord,
-                     "cos2"    :   mod_sup_cos2,
-                     "dist"    :   mod_sup_disto.to_frame("Dist"),
-                     "stats"   :   mod_sup_stats,
-                     "vtest"   :   mod_sup_vtest})  
+        # Supplementative categorical variables correlation ratio and cos2
+        self.quali_sup_eta2_ = quali_sup_eta2
+        self.quali_sup_cos2_ = quali_sup_cos2
+
+        return {"coord"   :   mod_sup_coord,
+                "cos2"    :   mod_sup_cos2,
+                "dist"    :   mod_sup_disto.to_frame("Dist"),
+                "stats"   :   mod_sup_stats,
+                "vtest"   :   mod_sup_vtest}
     
     def _compute_quanti_sup_stats(self,X,y=None):
         """Find the supplementary quantitative columns factor
 
         Parameters
         ----------
-
         X : DataFrame
+
+        Returns:
+        -------
+
         
         """
 
@@ -2702,19 +2865,19 @@ class MCA(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-
         # Supplementary quantitatives coordinates
-        quanti_sup_coord = np.transpose(np.corrcoef(x=self.row_coord_,y=X.values,rowvar=False)[:self.n_components_,self.n_components_:])
+        col_sup_coord = np.transpose(np.corrcoef(x=self.row_coord_,y=X.values,rowvar=False)[:self.n_components_,self.n_components_:])
 
         # Supplementary quantitatives cos2
-        quanti_sup_cos2 = np.apply_along_axis(func1d=lambda x : x**2,arr = quanti_sup_coord,axis=0)
+        col_sup_cos2 = np.apply_along_axis(func1d=lambda x : x**2,arr = col_sup_coord,axis=0)        
 
         # Store supplementary quantitatives informations
-        self.quanti_sup_coord_  =   quanti_sup_coord[:,:self.n_components_]
-        self.quanti_sup_cos2_   =   quanti_sup_cos2[:,:self.n_components_]
+        self.col_sup_coord_  =   col_sup_coord[:,:self.n_components_]
+        self.col_sup_cos2_   =   col_sup_cos2[:,:self.n_components_]
+        self.col_sup_labels_ = X.columns
 
-        return dict({"coord"    :   quanti_sup_coord[:,:self.n_components_],
-                     "cos2"     :   quanti_sup_cos2[:,:self.n_components_]})
+        return {"coord"    :   col_sup_coord[:,:self.n_components_],
+                "cos2"     :   col_sup_cos2[:,:self.n_components_]}
     
     def transform(self,X,y=None):
         """ Apply the dimensionality reduction on X. X is projected on
@@ -2885,6 +3048,7 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         #Additionnal informations for supplementary categorical informations
         self.quali_sup_eta2_ = None
+        self.quali_sup_cos2_ = None
 
         
         # Compute statistics
@@ -3074,10 +3238,12 @@ class FAMD(BaseEstimator,TransformerMixin):
                                      lambda x : x**2,axis=1,progressbar=False,n_workers=self.n_workers_).sum().to_frame(name=cols).T for cols in self.quali_labels_),axis=0)
         
         # Cosinus carrés des variables qualitatives
-        denom = np.array([len(np.unique(Xq[[col]]))-1 for col in self.quali_labels_])
-        var_cos2 = var_eta2.div(denom,axis="index")
+        nb_mod = pd.Series([len(np.unique(Xq[[col]])) for col in self.quali_labels_],index=self.quali_labels_,name="count")
+        var_cos2 = pd.concat(((var_eta2.loc[cols,:]/nb_mod[cols]).to_frame(name=cols).T for cols in var_eta2.index),axis=0)
+        
+        # Contributions des variables qualitatives
         var_contrib = mapply(var_eta2,lambda x : 100*x/res.eig_[0],axis=1,progressbar=False,n_workers=self.n_workers_)
-    
+        
         # Modality informations
         self.coord_mod_ = np.array(coord_mod)
         self.mod_coord_ = np.array(mod_coord)
@@ -3145,7 +3311,6 @@ class FAMD(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-        
         X_sup_quant = X[self.quanti_labels_]
         X_sup_qual = X[self.quali_labels_]
 
@@ -3230,11 +3395,11 @@ class FAMD(BaseEstimator,TransformerMixin):
         # Self
         self.col_sup_labels_ = X.columns
 
-        return dict({"corr"     :   pd.DataFrame(col_sup_corr, index=X.columns,columns=self.col_labels_),
+        return {"corr"     :   pd.DataFrame(col_sup_corr, index=X.columns,columns=self.col_labels_),
                      "coord"    :   pd.DataFrame(col_sup_coord[:,:self.n_components_],index=X.columns,columns=self.dim_index_),
                      "cos2"     :   pd.DataFrame(col_sup_cos2[:,:self.n_components_], index = X.columns,columns=self.dim_index_),
                      "ftest"    :   pd.DataFrame(col_sup_ftest[:,:self.n_components_],index =X.columns,columns=self.dim_index_)
-                     })
+                     }
     
     def _compute_quali_sup_stats(self,X,y=None):
         """Compute statistics supplementary categorical variables
@@ -3324,17 +3489,17 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         # Categorical variables
         self.quali_sup_eta2_    =   np.array(quali_sup_eta2)
-        self.chi2_sup_test_ = dict({"statistic" : pd.DataFrame(chi2_sup_stats,index=X.columns,columns=self.quali_labels_),
+        self.chi2_sup_test_     = {"statistic" : pd.DataFrame(chi2_sup_stats,index=X.columns,columns=self.quali_labels_),
                                     "pvalue"    : pd.DataFrame(chi2_sup_pvalue,index=X.columns,columns=self.quali_labels_)
-                                    })
+                                    }
 
-        return dict({"chi2"     :   self.chi2_sup_test_,
+        return {"chi2"     :   self.chi2_sup_test_,
                     "coord"     :   pd.DataFrame(self.mod_sup_coord_,index=self.mod_sup_labels_,columns=self.dim_index_),
                      "cos2"     :   pd.DataFrame(self.mod_sup_cos2_,index=self.mod_sup_labels_,columns=self.dim_index_), 
                      "dist"     :   pd.DataFrame(self.mod_sup_disto_,index=self.mod_sup_labels_,columns=["dist"]),
                      "eta2"     :   pd.DataFrame(self.quali_sup_eta2_,index=self.quali_sup_labels_,columns=self.dim_index_),
                      "vtest"    :   pd.DataFrame(self.mod_sup_vtest_,index=self.mod_sup_labels_,columns=self.dim_index_)
-                     })
+                     }
     
     def transform(self,X):
         """Apply the dimensionality reduction on X

@@ -1,7 +1,34 @@
 library(FactoMineR)
-data(tea)
 
-res.mca = MCA(tea, quanti.sup=19, quali.sup=c(20:36),graph = FALSE)
+# https://openclassrooms.com/fr/courses/5641796-adoptez-visual-studio-comme-environnement-de-developpement/6140631-utilisez-les-raccourcis-pour-etre-plus-efficace
+
+races_canines <- readxl::read_excel("./donnee/races_canines_acm.xlsx")
+races_canines <- tibble::column_to_rownames(races_canines,var = "Chien")
+
+# MCA with all informations
+res.mca <- MCA(races_canines, ind.sup = 28:33, 
+               quanti.sup = 8, quali.sup = 7,  graph=FALSE)
+print(res.mca)
+res.mca.shiny <- MCAshiny(res.mca)
+
+head(res.mca$ind.sup$coord)
+
+head(res.mca$var$contrib)
+
+# Supplementary variables/categories
+head(res.mca$quali.sup$coord)
+head(res.mca$quali.sup$cos2)
+head(res.mca$quali.sup$v.test)
+head(res.mca$quali.sup$eta2)
+
+# Supplementary continuous variables - Coordinates
+head(res.mca$quanti.sup$coord)
+
+# Supplementary Individuals
+head(res.mca$ind.sup$coord)
+head(res.mca$ind.sup$cos2)
+
+
 summary(res.mca)
 dimdesc(res.mca)
 
@@ -27,7 +54,24 @@ data("decathlon2")
 decathlon2.active <- decathlon2[1:23, 1:10]
 res.pca <- PCA(decathlon2, ind.sup = 24:27, 
                quanti.sup = 11:12, quali.sup = 13, graph=FALSE)
-res.pca <- 
+
+# Supplementary quantitatives informations.
+head(res.pca$quanti.sup$coord)
+head(res.pca$quanti.sup$cor)
+head(res.pca$quanti.sup$cos2)
+
+# Supplementary qualitatives informations
+head(res.pca$quali.sup$coord)
+head(res.pca$quali.sup$cos2)
+head(res.pca$quali.sup$v.test)
+head(res.pca$quali.sup$eta2)
+head(res.pca$quali.sup$dist)
+
+# Supplementary individuals informations
+head(res.pca$ind.sup$coord)
+head(res.pca$ind.sup$cos2)
+head(res.pca$ind.sup$dist)
+
 p = dimdesc(res.pca)
 res.shiny = PCAshiny(res.pca)
 
