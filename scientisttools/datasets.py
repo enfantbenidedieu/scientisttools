@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pyreadr 
 
-DATASETS_DIR = "https://github.com/enfantbenidedieu/scientisttools/tree/master/scientisttools/data"
+
 
 # https://husson.github.io/data.html
 # https://r-stat-sc-donnees.github.io/liste_don.html
@@ -12,29 +12,29 @@ DATASETS_DIR = "https://github.com/enfantbenidedieu/scientisttools/tree/master/s
 
 def load_decathlon():
     """The Decathlon dataset from FactoMineR."""
-    data = pd.read_excel(DATASETS_DIR/"decathlon.xlsx",header=0,index_col=0)
+    data = pd.read_excel("decathlon.xlsx",header=0,index_col=0)
     data.name = "decathlon"
     return data
 
 def load_decathlon2():
     """The Decathlon dataset from Factoextra."""
-    data = pd.read_excel(DATASETS_DIR/"decathlon2.xlsx",header=0,index_col=0)
+    data = pd.read_excel("decathlon2.xlsx",header=0,index_col=0)
     data.name = "decathlon2"
     return data
 
 def load_autos():
     """Autos 2005 - Données sur 40 voitures"""
-    data = pd.read_excel(DATASETS_DIR/"autos2005.xls",header=0,index_col=0)
+    data = pd.read_excel("autos2005.xls",header=0,index_col=0)
     data.name = "autos_2005"
     return data
 
 def load_temperature():
-    data = pd.read_excel(DATASETS_DIR/"temperature.xlsx",header=0,index_col=0)
+    data = pd.read_excel("temperature.xlsx",header=0,index_col=0)
     data.name = "temperature"
     return data
 
 def load_temperature2():
-    data = pd.read_excel(DATASETS_DIR/"temperature_acp.xlsx",header=0,index_col=0)
+    data = pd.read_excel("temperature_acp.xlsx",header=0,index_col=0)
     data.name = "temperature2"
     return data
 
@@ -42,13 +42,13 @@ def load_temperature2():
 
 def load_woman_work():
     """"""
-    data = pd.read_csv(DATASETS_DIR/"women_work.txt",sep="\t")
+    data = pd.read_csv("women_work.txt",sep="\t")
     data.name = "woman_work"
     return data
 
 def load_femmes_travail():
     """"""
-    data = pd.read_csv(DATASETS_DIR/"femme_travail.csv",delimiter=";",encoding =  "cp1252",index_col =0)
+    data = pd.read_csv("femme_travail.csv",delimiter=";",encoding =  "cp1252",index_col =0)
     data.name = "femmes_travail"
     return data
 
@@ -67,7 +67,7 @@ def load_housetasks():
     Husband : a numeric vector
     Jointly : a numeric vector
     """
-    data = pyreadr.read_r(DATASETS_DIR/"housetasks.rda")["housetasks"]
+    data = pyreadr.read_r("housetasks.rda")["housetasks"]
     data.name = "housetasks"
     return data
 
@@ -75,27 +75,27 @@ def load_housetasks():
 
 def load_races_canines():
     """"""
-    data = pd.read_excel(DATASETS_DIR/"races_canines.xls",header=0,index_col=0)
+    data = pd.read_excel("races_canines.xls",header=0,index_col=0)
     data.name = "races_canines"
     return data
 
 def load_races_canines2():
     """"""
-    data = pd.read_excel(DATASETS_DIR/"races_canines2.xlsx",header=0,index_col=0)
+    data = pd.read_excel("races_canines2.xlsx",header=0,index_col=0)
     data.name = "races_canines2"
     return data
 
 def load_races_canines3():
-    """"""
-    url = DATASETS_DIR+"/races_canines_acm.xlsx"
-    print(url)
-    data = pd.read_excel(DATASETS_DIR+"/races_canines_acm.xlsx",header=0,index_col=0)
+    """
+    
+    """
+    data = pd.read_excel("/races_canines_acm.xlsx",header=0,index_col=0)
     data.name = "races_canines3"
     return data
 
 def load_tea():
     """"""
-    data = pd.read_excel(DATASETS_DIR/"tea.xlsx",header=0,index_col=0)
+    data = pd.read_excel("tea.xlsx",header=0,index_col=0)
     data.name = "tea"
     return data
 
@@ -103,7 +103,7 @@ def load_tea():
 
 def load_autos2():
     """FAMD Data - Données sur 45 voitures"""
-    data = pd.read_excel(DATASETS_DIR/"autos2005_afdm.xlsx",header=0,index_col=0)
+    data = pd.read_excel("autos2005_afdm.xlsx",header=0,index_col=0)
     data.name = "autos_2005"
     return data
 
@@ -201,7 +201,7 @@ def load_qtevie():
     """
     
     """
-    qtevie = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
+    qtevie = pd.read_csv("QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
     qtevie.info()
 
     data = pd.DataFrame(qtevie.values,
@@ -241,6 +241,6 @@ def load_qtevie():
 ########################################## Autres datasets
 
 def load_poison():
-    data = pyreadr.read_r(DATASETS_DIR/"poison.rda")["poison"]
+    data = pyreadr.read_r("poison.rda")["poison"]
     data.name = "poison"
     return data
