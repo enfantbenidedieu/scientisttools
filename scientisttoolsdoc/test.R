@@ -14,6 +14,7 @@ res.mca.shiny <- MCAshiny(res.mca)
 head(res.mca$ind.sup$coord)
 
 head(res.mca$var$contrib)
+head(res.mca$var$eta2)
 
 # Supplementary variables/categories
 head(res.mca$quali.sup$coord)
@@ -28,7 +29,8 @@ head(res.mca$quanti.sup$coord)
 head(res.mca$ind.sup$coord)
 head(res.mca$ind.sup$cos2)
 
-
+res.mca <- MCA(poison, ind.sup = 53:55, 
+               quanti.sup = 1:2, quali.sup = 3:4,  graph=FALSE)
 summary(res.mca)
 dimdesc(res.mca)
 
@@ -90,13 +92,23 @@ head(df[, 1:7], 4)
 
 library(FactoMineR)
 res.famd <- FAMD(df, graph = FALSE)
+res.pca <- FAMDshiny(res.famd)
 dimdesc(res.famd)
 fviz_contrib(res.famd,choice = "ind")
 
+require(FactoMineR)
+data(geomorphology)
+# FAMD with Factoshiny:
+res.shiny=FAMDshiny(geomorphology)
+
+# Find your app the way you left it (by clicking on the "Quit the app" button)
+res.shiny2=FAMDshiny(res.shiny)
 
 library(FactoMineR)
 data(tea)
 res.hcpc = HCPC(res.mca)
+res.shiny = HCPCshiny(res.hcpc)
+
 res.hcpc$desc.var$test.chi2
 res.hcpc$desc.var$category
 dimdesc(res.hcpc)
@@ -186,7 +198,12 @@ head(texdata$eigs)
 head(apply(texdata$fii,2,function(x){x^2}))
 
 
-
+library("FactoMineR")
+data(wine)
+df <- wine[,c(1,2, 16, 22, 29, 28, 30,31)]
+head(df[, 1:7], 4)
+res.famd <- FAMD(df, graph = FALSE)
+res.shiny <- FAMDshiny(res.famd)
 
 
 

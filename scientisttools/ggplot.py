@@ -476,7 +476,9 @@ def fviz_pca_var(self,
             p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
                                  arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype=linestyle_sup)
             if add_labels:
-                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_sup_labels_),
+                p  = p + text_label(text_type,
+                                    data=sup_coord,
+                                    mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                     color=color_sup,size=text_size,va=va,ha=ha)
     # Create circle
     if add_circle:
@@ -1612,6 +1614,7 @@ def fviz_famd_col(self,
                  add_grid =True,
                  quanti_sup=True,
                  color_sup = "red",
+                 linestyle_sup="dashed",
                  add_labels=True,
                  add_hline = True,
                  add_vline=True,
@@ -1661,6 +1664,7 @@ def fviz_famd_col(self,
                        .query(f"contrib > {lim_contrib}"))
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
+    
     if isinstance(color,str):
         if color == "cos2":
             c = np.sum(self.col_cos2_[:,axis],axis=1)
@@ -1703,10 +1707,11 @@ def fviz_famd_col(self,
     if quanti_sup:
         if self.quanti_sup_labels_ is not None:
             sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
-            p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=sup_coord.iloc[:,axis[0]],yend=sup_coord.iloc[:,axis[1]]),arrow = pn.arrow(),color=color_sup)
+            p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
+                                 arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype=linestyle_sup)
             if add_labels:
-                p  = p + text_label(text_type,
-                                    mapping=pn.aes(x=sup_coord.iloc[:,axis[0]],y=sup_coord.iloc[:,axis[1]],label=sup_coord.index),
+                p  = p + text_label(text_type,data=sup_coord,
+                                    mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                     color=color_sup,size=text_size,va=va,ha=ha)
     
     # Create circle
@@ -3254,7 +3259,8 @@ def fviz_corrcircle(self,
             p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
                                  arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
             if add_labels:
-                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_sup_labels_),
+                p  = p + text_label(text_type,data=sup_coord,
+                                    mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                     color=color_sup,size=text_size,va="center",ha="center")
     # Create circle
     if add_circle:
@@ -3626,7 +3632,8 @@ def fviz_mfa_var(self,
             p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
                                  arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype=linestyle_sup)
             if add_labels:
-                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.col_sup_labels_),
+                p  = p + text_label(text_type,data=sup_coord,
+                                    mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                     color=color_sup,size=text_size,va=va,ha=ha)
         
     # Create circle
