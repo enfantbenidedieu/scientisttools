@@ -125,6 +125,9 @@ res.mfa <- MFA(wine,
                num.group.sup = c(1, 6),
                graph = FALSE)
 
+
+res.shiny = MFAshiny(res.mfa)
+
 # Quantitative Variables
 quanti.var <- get_mfa_var(res.mfa, "quanti.var")
 # Coordinates
@@ -206,5 +209,36 @@ res.famd <- FAMD(df, graph = FALSE)
 res.shiny <- FAMDshiny(res.famd)
 
 
+# Confusion Matrix
+library(caret)
 
+# data/code from "2 class example" example courtesy of ?caret::confusionMatrix
 
+lvs <- c("normal", "abnormal")
+truth <- factor(rep(lvs, times = c(86, 258)),
+                levels = rev(lvs))
+pred <- factor(
+  c(
+    rep(lvs, times = c(54, 32)),
+    rep(lvs, times = c(27, 231))),
+  levels = rev(lvs))
+
+confusionMatrix(pred, truth)
+
+library(ggplot2)
+library(dplyr)
+
+table <- data.frame(confusionMatrix(pred, truth)$table)
+
+plotTable <- table %>%
+  mutate(goodbad = ifelse(table$Prediction == table$Reference, "good", "bad")) %>%
+  group_by(Reference) %>%
+  mutate(prop = Freq/sum(Freq))
+
+# fill alpha relative to sensitivity/specificity by proportional outcomes within reference groups (see dplyr code above as well as original confusion matrix for comparison)
+ggplot(data = plotTable, mapping = aes(x = Reference, y = Prediction, fill = goodbad, alpha = prop)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), vjust = .5, fontface  = "bold", alpha = 1) +
+  scale_fill_manual(values = c(good = "green", bad = "red")) +
+  theme_bw() +
+  xlim(rev(levels(table$Reference)))

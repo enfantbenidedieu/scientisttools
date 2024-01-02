@@ -2,7 +2,6 @@
 
 # https://kiwidamien.github.io/making-a-python-package.html
 ##################################### Chargement des librairies
-import functools
 from functools import reduce
 import numpy as np
 import pandas as pd
@@ -10,7 +9,6 @@ from mapply.mapply import mapply
 import pingouin as pg
 import statsmodels.formula.api as smf
 from scipy.spatial.distance import pdist,squareform
-from scipy import linalg
 from scipy.sparse import issparse
 import scipy.stats as st
 import scipy as sp
@@ -1126,7 +1124,7 @@ class WPCA(BaseEstimator, TransformerMixin):
             covar *= np.outer(Ws, Ws) ** self.xi
 
         eigvals = (X.shape[1] - n_components, X.shape[1] - 1)
-        evals, evecs = linalg.eigh(covar, eigvals=eigvals)
+        evals, evecs = sp.linalg.eigh(covar, eigvals=eigvals)
         self.components_ = evecs[:, ::-1].T
         self.explained_variance_ = evals[::-1]
         self.explained_variance_ratio_ = evals[::-1] / covar.trace()
@@ -2273,7 +2271,7 @@ class CA(BaseEstimator,TransformerMixin):
 
 def _mul(*args):
     """An internal method to multiply matrices."""
-    return functools.reduce(np.dot,args)
+    return reduce(np.dot,args)
 
 class MCA(BaseEstimator,TransformerMixin):
     """

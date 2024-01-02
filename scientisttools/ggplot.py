@@ -57,10 +57,43 @@ def fviz_screeplot(self,
                    title=None,
                    x_label=None,
                    y_label=None,
-                   ggtheme=pn.theme_gray())-> plt:
+                   ggtheme=pn.theme_gray())-> pn:
     """
+    Extract and visualize the eigenvalues/proportions of dimensions
+    -------------------------------------------------------------
+
+    Parameters
+    ----------
+    self : an object of class PCA, CA, MCA, FAMD, MFA, CMDS, DISQUAL, MIXDISC
+    choice : a text specifying the data to be plotted. Allowed values are "proportion" or "eigenvalue".
+    geom_type : a text specifying the geometry to be used for the graph. Allowed values are "bar" for barplot, 
+                "line" for lineplot or ["bar", "line"] to use both types.
+    ylim : y-axis limits, default = None
+    bar_fill : 	fill color for bar plot.
+    bar_color : outline color for bar plot.
+    line_color : color for line plot (when geom contains "line").
+    line_type : line type
+    bar_width : float, the width(s) of the bars
+    add_kaiser : Kaiser criterion
+    add_kss : KSS criterion
+    add_broken_stick : Broken Stick criterion
+    n_components : a numeric value specifying the number of dimensions to be shown.
+    add_labels : logical value. If TRUE, labels are added at the top of bars or points showing the information retained by each dimension.
+    ha : horizontal adjustment of the labels.
+    va : vertical adjustment of the labels.
+    title : title of the graph
+    x_label : x-axis title
+    y_label : y-axis title
+    ggtheme : function plotnine theme name. Default value is theme_gray(). Allowed values include plotnine official themes: 
+                theme_gray(), theme_bw(), theme_minimal(), theme_classic(), theme_void(), ....
     
-    
+    Return
+    ------
+    figure : a plotnine graphs
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
         
     if self.model_ not in ["pca","ca","mca","famd","mfa","cmds","disqual","mixdisc"]:
@@ -72,14 +105,14 @@ def fviz_screeplot(self,
     if choice == "eigenvalue":
         eig = eig["eigenvalue"]
         text_labels = list([str(np.around(x,3)) for x in eig.values])
-        if self.model_ not in ["famd","mds","mfa"]:
+        if self.model_ not in ["famd","mds","mfa","cmds"]:
             kaiser = self.kaiser_threshold_
         if y_label is None:
             y_label = "Eigenvalue"
     elif choice == "proportion":
         eig = eig["proportion"]
         text_labels = list([str(np.around(x,1))+"%" for x in eig.values])
-        if self.model_ not in ["pca","famd","mfa"]:
+        if self.model_ not in ["pca","famd","mfa","cmds"]:
             kaiser = self.kaiser_proportion_threshold_
     else:
         raise ValueError("Allowed values for the argument choice are : 'proportion' or 'eigenvalue'")
@@ -95,7 +128,7 @@ def fviz_screeplot(self,
     if add_labels:
         p = p + pn.geom_text(label=text_labels,ha = ha,va = va)
     if add_kaiser :
-        if self.model_ not in ["famd","mds","mfa"]:
+        if self.model_ not in ["famd","mds","mfa","cmds"]:
             p = (p +  pn.geom_hline(yintercept=kaiser,linetype="--", color="red")+\
                       pn.annotate("text", x=int(np.median(np.arange(1,len(eig)+1))), y=kaiser, label="Kaiser threshold"))
 
@@ -111,7 +144,7 @@ def fviz_screeplot(self,
             raise ValueError("'add_kss' is only for class PCA or PPCA")
     if add_broken_stick:
         if choice == "eigenvalue":
-            if self.model_ == ["pca","ppca"]:
+            if self.model_ in ["pca","ppca"]:
                 bst = self.broken_stick_threshold_[:min(n_components,self.n_components_)]
                 p = (p  +   pn.geom_line(pn.aes(x="dim",y=bst),color="green",linetype="--")+\
                             pn.geom_point(pn.aes(x="dim",y=bst),colour="green")+\
@@ -120,7 +153,7 @@ def fviz_screeplot(self,
             else:
                 raise ValueError("'add_broken_stick' is only for class PCA or PPCA")
         else:
-            raise ValueError("'add_broken_stick' is only with 'choice==proportion'")
+            raise ValueError("'add_broken_stick' is only with 'choice==eigenvalue'")
 
     if title is None:
         title = "Scree plot"
@@ -136,10 +169,22 @@ def fviz_screeplot(self,
     p = p + ggtheme
     return p
 
-def fviz_eigenvalue(self,**kwargs):
+def fviz_eigenvalue(self,**kwargs) -> pn:
+    """
+    Extract and visualize the eigenvalues/proportions of dimensions
+    -------------------------------------------------------------
+
+    see fviz_screeplot(...)
+    """
     return fviz_screeplot(self,**kwargs)
 
-def fviz_eig(self,**kwargs):
+def fviz_eig(self,**kwargs) -> pn:
+    """
+    Extract and visualize the eigenvalues/proportions of dimensions
+    -------------------------------------------------------------
+
+    see fviz_screeplot(...)
+    """
     return fviz_screeplot(self,**kwargs)
 
 ####################################################################################
@@ -151,7 +196,7 @@ def fviz_pca_ind(self,
                  xlim=None,
                  ylim=None,
                  title =None,
-                 color ="blue",
+                 color ="black",
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -160,7 +205,7 @@ def fviz_pca_ind(self,
                  add_grid =True,
                  add_labels=True,
                  ind_sup=True,
-                 color_sup = "red",
+                 color_sup = "blue",
                  marker_sup = "^",
                  legend_title=None,
                  add_ellipse=False, 
@@ -182,15 +227,21 @@ def fviz_pca_ind(self,
                  repel=False,
                  lim_cos2 = None,
                  lim_contrib = None,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
     
     """
-    
+    Draw the Principal Component Analysis (PCA) individuals graphs
+    --------------------------------------------------------------
+
+    Author:
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an instance of class PCA.")
+        raise ValueError("Error : 'self' must be an object of class PCA.")
     
+
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
         (axis[1] > self.n_components_-1)  or
@@ -251,12 +302,8 @@ def fviz_pca_ind(self,
         if legend_title is None:
             legend_title = "Cont_Var"
 
-    if habillage is None :
-        color_list = ["cos2","contrib"]
-        for i in range(len(coord.columns)):
-            val = coord.columns.values[i]
-            color_list.append(val)         
-        if (isinstance(color,str) and color in color_list) or (isinstance(color,np.ndarray)):
+    if habillage is None :  
+        if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
             p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                      pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
@@ -371,14 +418,14 @@ def fviz_pca_ind(self,
 def fviz_pca_var(self,
                  axis=[0,1],
                  title =None,
-                 color ="blue",
+                 color ="black",
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  add_labels = True,
                  text_type = "text",
                  text_size = 8,
                  add_grid =True,
                  quanti_sup=True,
-                 color_sup = "red",
+                 color_sup = "blue",
                  linestyle_sup="dashed",
                  legend_title = None,
                  add_hline = True,
@@ -394,15 +441,19 @@ def fviz_pca_var(self,
                  arrow_length =0.1,
                  lim_cos2 = None,
                  lim_contrib = None,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
     
     """
-    
-    
+    Draw the Principal Component Analysis (PCA) variables graphs
+    ------------------------------------------------------------
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an instance of class PCA.")
+        raise ValueError("Error : 'self' must be an object of class PCA.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -506,18 +557,492 @@ def fviz_pca_var(self,
 
     return p
 
-def fviz_pca(self,choice="ind",**kwargs)->plt:
+def fviz_pca(self,choice="ind",**kwargs)->pn:
     """
+    Draw the Principal Component Analysis (PCA) graphs
+    --------------------------------------------------
+
+    Description
+    -----------
+    Plot the graphs for a Principal Component Analysis (PCA) with supplementary individuals, 
+    supplementary quantitative variables and supplementary categorical variables.
+
+    Parameters
+    ----------
+    self : an object of class PCA
+    choice : the graph to plot
+                - 'ind' for the individuals graphs
+                - 'var' for the variables graphs (correlation circle)
+    **kwargs : 	further arguments passed to or from other methods
+
+    Return
+    ------
+    figure : The individuals factor map and the variables factor map
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+
+    if self.model_ != "pca":
+        raise ValueError("Error : 'self' must be an instance of class PCA.")
     
-    """
+    if choice not in ["ind","var"]:
+        raise ValueError("Error : Allowed 'choice' values are 'ind' or 'var'.")
 
     if choice == "ind":
         return fviz_pca_ind(self,**kwargs)
     elif choice == "var":
         return fviz_pca_var(self,**kwargs)
-    else:
-        raise ValueError("Error : Allowed values are 'ind' or 'var'.")
 
+#################################################################################################################
+#               Correspondence Analysis (CA) graphs
+#################################################################################################################
+
+# Row points Factor Map
+def fviz_ca_row(self,
+                 axis=[0,1],
+                 xlim=None,
+                 ylim=None,
+                 title =None,
+                 color ="blue",
+                 gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                 point_size = 1.5,
+                 text_size = 8,
+                 text_type = "text",
+                 marker = "o",
+                 add_grid =True,
+                 add_labels=True,
+                 row_sup=True,
+                 color_sup = "red",
+                 marker_sup = "^",
+                 add_hline = True,
+                 add_vline=True,
+                 legend_title = None,
+                 add_ellipse=False, 
+                 ellipse_type = "t",
+                 confint_level = 0.95,
+                 geom_ellipse = "polygon",
+                 ha="center",
+                 va="center",
+                 hline_color="black",
+                 hline_style="dashed",
+                 vline_color="black",
+                 vline_style ="dashed",
+                 lim_cos2 = None,
+                 lim_contrib = None,
+                 repel=False,
+                 ggtheme=pn.theme_gray()) -> pn:
+    
+    """
+    
+    
+    """
+    
+    if self.model_ != "ca":
+        raise ValueError("Error : 'self' must be an object of class CA.")
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.n_components_-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("Error : You must pass a valid 'axis'.")
+
+    # Initialize
+    coord = pd.DataFrame(self.row_coord_,index = self.row_labels_,columns=self.dim_index_)
+
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.row_cos2_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.row_contrib_,index = self.row_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
+    
+    # Set color if cos2, contrib or continuous variables
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.row_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Cos2"
+        elif color == "contrib":
+            c = np.sum(self.row_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
+    elif isinstance(color,np.ndarray):
+        c = np.asarray(color)
+        if legend_title is None:
+            legend_title = "Cont_Var"
+
+    # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
+ 
+        # Using cosine and contributions
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
+        # Add gradients colors
+        p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
+        p = p + pn.scale_color_gradient2(low = gradient_cols[0],
+                                         high = gradient_cols[2],
+                                         mid = gradient_cols[1],
+                                         name = legend_title)
+        if add_labels:
+            if repel :
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
+                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': "black","lw":1.0}})
+            else:
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+    elif hasattr(color, "labels_"):
+            c = [str(x+1) for x in color.labels_]
+            if legend_title is None:
+                legend_title = "Cluster"
+            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
+                     pn.guides(color=pn.guide_legend(title=legend_title)))
+            if add_labels:
+                if repel :
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
+                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': "black",'lw':1.0}})
+                else:
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+            
+            if add_ellipse:
+                p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=c),type = ellipse_type,alpha = 0.25,level=confint_level)
+    else:
+        p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
+        if add_labels:
+            if repel :
+                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
+                                    adjust_text={'arrowprops': {'arrowstyle': '-','color': color,"lw":1.0}})
+            else:
+                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
+        
+    if row_sup:
+        if self.row_sup_labels_ is not None:
+            sup_coord = pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_)
+            p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                  color = color_sup,shape = marker_sup,size=point_size)
+            if add_labels:
+                if repel:
+                    p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                       color=color_sup,size=text_size,va=va,ha=ha,
+                                       adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
+                else:
+                    p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                       color = color_sup,size=text_size,va=va,ha=ha)
+
+    # Add additionnal        
+    proportion = self.eig_[2]
+    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+
+    if title is None:
+        title = "Row points - CA"
+    if ((xlim is not None) and ((isinstance(xlim,list) or (isinstance(xlim,tuple))))):
+        p = p + pn.xlim(xlim)
+    if ((ylim is not None) and ((isinstance(ylim,list) or (isinstance(ylim,tuple))))):
+        p = p + pn.ylim(ylim)
+   
+    p = p + pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
+    if add_hline:
+        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
+    if add_vline:
+        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
+
+    # Add theme
+    p = p + ggtheme
+    
+    return p
+
+# Columns points factor map
+def fviz_ca_col(self,
+                 axis=[0,1],
+                 xlim= None,
+                 ylim=None,
+                 title =None,
+                 color ="blue",
+                 gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                 text_type = "text",
+                 marker = "o",
+                 point_size = 1.5,
+                 text_size = 8,
+                 add_grid =True,
+                 add_labels=True,
+                 legend_title = None,
+                 add_ellipse=False, 
+                 ellipse_type = "t",
+                 confint_level = 0.95,
+                 geom_ellipse = "polygon",
+                 col_sup=True,
+                 color_sup = "red",
+                 marker_sup = "^",
+                 add_hline = True,
+                 add_vline=True,
+                 ha="center",
+                 va="center",
+                 hline_color="black",
+                 hline_style="dashed",
+                 vline_color="black",
+                 vline_style ="dashed",
+                 lim_cos2 = None,
+                 lim_contrib = None,
+                 repel=False,
+                 ggtheme=pn.theme_gray()) -> pn:
+    
+    """
+    
+    
+    """
+    
+    if self.model_ != "ca":
+        raise ValueError("Error : 'self' must be an object of class CA.")
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.n_components_-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("Error : You must pass a valid 'axis'.")
+
+    coord = pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_)
+
+    # Using lim cos2
+    if lim_cos2 is not None:
+        if isinstance(lim_cos2,float):
+            cos2 = (pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
+                       .query(f"cosinus > {lim_cos2}"))
+            if cos2.shape[0] != 0:
+                coord = coord.loc[cos2.index,:]
+    
+    # Using lim contrib
+    if lim_contrib is not None:
+        if isinstance(lim_contrib,float):
+            contrib = (pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_)
+                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
+                       .query(f"contrib > {lim_contrib}"))
+            if contrib.shape[0] != 0:
+                coord = coord.loc[contrib.index,:]
+
+    # Initialize
+    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
+
+    if isinstance(color,str):
+        if color == "cos2":
+            c = np.sum(self.col_cos2_[:,axis],axis=1)
+            if legend_title is None:
+                 legend_title = "Cos2"
+        elif color == "contrib":
+            c = np.sum(self.col_contrib_[:,axis],axis=1)
+            if legend_title is None:
+                legend_title = "Contrib"
+    elif isinstance(color,np.ndarray):
+        c = np.asarray(color)
+        if legend_title is None:
+            legend_title = "Cont_Var"
+    
+    if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
+        # Add gradients colors
+        p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
+        p = p + pn.scale_color_gradient2(low = gradient_cols[0],
+                                         high = gradient_cols[2],
+                                         mid = gradient_cols[1],
+                                         name = legend_title)
+        if add_labels:
+            if repel:
+                p = p + text_label(text_type,mapping=pn.aes(colour=c),size=text_size,va=va,ha=ha,
+                                adjust_text={'arrowprops': {'arrowstyle': '-','color': 'black','lw':1.0}})
+            else:
+                p = p + text_label(text_type,mapping=pn.aes(colour=c),size=text_size,va=va,ha=ha)
+    elif hasattr(color, "labels_"):
+            c = [str(x+1) for x in color.labels_]
+            if legend_title is None:
+                legend_title = "Cluster"
+            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
+                     pn.guides(color=pn.guide_legend(title=legend_title)))
+            if add_labels:
+                if repel :
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
+                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': "black",'lw':1.0}})
+                else:
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+            
+            if add_ellipse:
+                p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=c),type = ellipse_type,alpha = 0.25,level=confint_level)
+    else:
+        p = p + pn.geom_point(pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),color=color,shape=marker,size=point_size)
+        if add_labels:
+            if repel:
+                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
+                                adjust_text={'arrowprops': {'arrowstyle': '-','color': color,"lw":1.0}})
+            else:
+                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
+    
+    if col_sup:
+        if self.col_sup_labels_ is not None:
+            sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
+            p  = p + pn.geom_point(sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                   color=color_sup,shape=marker_sup,size=point_size)
+            if add_labels:
+                if repel:
+                    p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                       color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
+                else:
+                    p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                        color=color_sup,size=text_size,va=va,ha=ha)
+    
+    # Add additionnal        
+    proportion = self.eig_[2]
+    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+
+    if title is None:
+        title = "Columns points - CA"
+    if ((xlim is not None) and ((isinstance(xlim,list) or (isinstance(xlim,tuple))))):
+        p = p + pn.xlim(xlim)
+    if ((ylim is not None) and ((isinstance(ylim,list) or (isinstance(ylim,tuple))))):
+        p = p + pn.ylim(ylim)
+    
+    p = p + pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
+
+    if add_hline:
+        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
+    if add_vline:
+        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
+
+    # Add theme
+    p = p + ggtheme
+
+    return p
+
+def fviz_ca(self,choice,**kwargs)->pn:
+    """
+    Draw the Correspondence Analysis (CA) graphs
+    --------------------------------------------
+
+    Description
+    -----------
+    Draw the Correspondence Analysis (CA) graphs.
+
+    Parameters
+    ----------
+    self : an object of class CA
+    choice : the graph to plot
+                - 'row' for the row points factor map
+                - 'col' for the columns points factor map
+    **kwargs : 	further arguments passed to or from other methods
+
+    Return
+    ------
+    figure : The row points factor map and the columns points factor map.
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+
+    if self.model_ != "ca":
+        raise ValueError("Error : 'self' must be an object of class CA.")
+    
+    if choice not in ["row","col"]:
+        raise ValueError("Error : Allowed values for choice are :'row' or 'col'.")
+
+
+    if choice == "row":
+        return fviz_ca_row(self,**kwargs)
+    elif choice == "col":
+        return fviz_ca_col(self,**kwargs)
+
+
+########################################################
+def fviz_corrcircle(self,
+                    axis=[0,1],
+                    xlabel=None,
+                    ylabel=None,
+                    title=None,
+                    color = "black",
+                    color_sup = "blue",
+                    text_type="text",
+                    arrow_length=0.1,
+                    text_size=8,
+                    arrow_angle=10,
+                    add_labels=True,
+                    add_circle=True,
+                    add_hline=True,
+                    add_vline=True,
+                    add_grid=True,
+                    ggtheme=pn.theme_gray()) -> pn:
+    """
+    
+    """
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.n_components_-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("Error : You must pass a valid 'axis'.")
+    
+    if self.model_ not in ["pca","mca","famd","mfa"]:
+        raise ValueError("Error : Factor method not allowed.")
+    
+    if self.model_ in ["pca","famd","mfa"]:
+        coord = pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_)
+    else:
+        if self.quanti_sup_labels_ is not None:
+            coord = pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_)
+
+    # Initialize
+    p = (pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))+
+         pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
+                                arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color))
+    if add_labels:
+            p = p + text_label(text_type,color=color,size=text_size,va="center",ha="center")
+        
+    if self.model_ in ["pca","famd"]:
+        if self.quanti_sup_labels_ is not None:
+            sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
+            p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
+                                 arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
+            if add_labels:
+                p  = p + text_label(text_type,data=sup_coord,
+                                    mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                    color=color_sup,size=text_size,va="center",ha="center")
+    # Create circle
+    if add_circle:
+        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color="black", fill=None)
+    
+    # Add additionnal        
+    proportion = self.eig_[2]
+    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+
+    if title is None:
+        title = "Correlation circle"
+    
+    p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+ pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
+
+    if add_hline:
+        p = p + pn.geom_hline(yintercept=0, colour="black", linetype ="dashed")
+    if add_vline:
+        p = p+ pn.geom_vline(xintercept=0, colour="black", linetype ="dashed")
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
+
+    # Add theme
+    p = p + ggtheme
+
+    return p
 
 ######################################################################################################
 ##                             Multiple Correspondence Analysis (MCA)
@@ -528,7 +1053,7 @@ def fviz_mca_ind(self,
                  xlim=None,
                  ylim=None,
                  title =None,
-                 color ="blue",
+                 color ="black",
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -538,7 +1063,7 @@ def fviz_mca_ind(self,
                  legend_title=None,
                  add_grid =True,
                  ind_sup=True,
-                 color_sup = "red",
+                 color_sup = "blue",
                  marker_sup = "^",
                  add_ellipse=False, 
                  ellipse_type = "t",
@@ -556,15 +1081,19 @@ def fviz_mca_ind(self,
                  repel=False,
                  lim_cos2 = None,
                  lim_contrib = None,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
     
     """
-    
-    
+    Draw the Multiple Correspondence Analysis (MCA) individuals graphs
+    ------------------------------------------------------------------
+
+    Author
+    -----
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an instance of class MCA.")
+        raise ValueError("Error : 'self' must be an object of class MCA.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -685,14 +1214,17 @@ def fviz_mca_ind(self,
     if ind_sup:
         if self.row_sup_labels_ is not None:
             sup_coord = pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_)
-            p = p + pn.geom_point(data=sup_coord,mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
+            p = p + pn.geom_point(data=sup_coord,
+                                  mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
                                   color = color_sup,shape = marker_sup,size=point_size)
             if repel:
-                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,
+                                   mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
                                    color=color_sup,size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,'lw':1.0}})
             else:
-                p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
+                p = p + text_label(text_type,data=sup_coord,
+                                   mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=self.row_sup_labels_),
                                      color = color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
@@ -726,7 +1258,7 @@ def fviz_mca_mod(self,
                  xlim=None,
                  ylim=None,
                  title =None,
-                 color ="blue",
+                 color ="black",
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -736,7 +1268,7 @@ def fviz_mca_mod(self,
                  add_grid =True,
                  add_labels=True,
                  quali_sup = True,
-                 color_sup = "red",
+                 color_sup = "blue",
                  marker_sup = "^",
                  short_labels=True,
                  add_hline = True,
@@ -755,15 +1287,19 @@ def fviz_mca_mod(self,
                  repel=False,
                  lim_cos2 = None,
                  lim_contrib = None,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
     
     """
-    
-    
+    Draw the Multiple Correspondence Analysis (MCA) categorical graphs
+    ------------------------------------------------------------------
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an instance of class MCA.")
+        raise ValueError("Error : 'self' must be an object of class MCA.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -904,7 +1440,8 @@ def fviz_mca_mod(self,
     p = p + ggtheme
     
     return p
-    
+
+#------------------------------------------------------------------------
 def fviz_mca_var(self,
                  axis=[0,1],
                  xlim=None,
@@ -936,10 +1473,18 @@ def fviz_mca_var(self,
                  repel=False,
                  lim_cos2 = None,
                  lim_contrib = None,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
+    """
+    Draw the Multiple Correspondence Analysis (MCA) variables graphs
+    ----------------------------------------------------------------
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
     
     if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an instance of class MCA.")
+        raise ValueError("Error : 'self' must be an object of class MCA.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -1006,19 +1551,19 @@ def fviz_mca_var(self,
     
     if add_quanti_sup:
         if self.quanti_sup_labels_ is not None:
-            var_quant_sup_coord = pd.DataFrame(self.col_sup_coord_,index=self.quanti_sup_labels_,columns=self.dim_index_)
-            p = p + pn.geom_point(var_quant_sup_coord,
-                                  pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_quant_sup_coord.index),
+            var_quant_sup_cos2 = pd.DataFrame(self.col_sup_cos2_,index=self.quanti_sup_labels_,columns=self.dim_index_)
+            p = p + pn.geom_point(var_quant_sup_cos2,
+                                  pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_quant_sup_cos2.index),
                                   color = color_quanti_sup,shape = marker_quanti_sup,size=point_size)
             if add_labels:
                 if repel:
-                    p = p + text_label(text_type,data=var_quant_sup_coord,
-                                       mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_quant_sup_coord.index),
+                    p = p + text_label(text_type,data=var_quant_sup_cos2,
+                                       mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_quant_sup_cos2.index),
                                        color=color_quanti_sup,size=text_size,va=va,ha=ha,
                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': color_quanti_sup,"lw":1.0}})
                 else:
-                    p = p + text_label(text_type,data=var_quant_sup_coord,
-                                       mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_quant_sup_coord.index),
+                    p = p + text_label(text_type,data=var_quant_sup_cos2,
+                                       mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_quant_sup_cos2.index),
                                        color = color_quanti_sup,size=text_size,va=va,ha=ha)
     
     if add_quali_sup:
@@ -1064,317 +1609,51 @@ def fviz_mca_var(self,
     
     return p
 
-def fviz_mca(self,choice="ind",**kwargs)->plt:
+def fviz_mca(self,choice="ind",**kwargs)->pn:
     """
-    
-    
+    Draw the Multiple Correspondence Analysis (MCA) graphs
+    ------------------------------------------------------
+
+    Description
+    -----------
+    Draw the Multiple Correspondence Analysis (MCA) graphs.
+
+    Parameters
+    ----------
+    self : an object of class MCA
+    choice : the graph to plot
+                - "ind" for the individuals graphs
+                - "mod" for the categories graphs
+                - "var" for the variables graphs
+                - "quanti_sup" for the supplementary quantitatives variables.
+    **kwargs : 	further arguments passed to or from other methods
+
+    Return
+    ------
+    figure : The individuals factor map and the variables factor map.
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
+
+    if self.model_ != "mca":
+        raise ValueError("Error : 'self' must be an object of class MCA.")
+    
+    if choice not in ["ind","mod","var","quanti_sup"]:
+        raise ValueError("Error : 'choice' values allowed are : 'ind', 'mod', 'var' and 'quanti_sup'.")
+    
     if choice == "ind":
         return fviz_mca_ind(self,**kwargs)
     elif choice == "mod":
         return fviz_mca_mod(self,**kwargs)
     elif choice == "var":
         return fviz_mca_var(self,**kwargs)
-    else:
-        raise ValueError("Error : Allowed values are 'ind', 'mod' or 'var'.")
-
-
-#################################################################################################################
-#               Correspondence Analysis (CA)
-#################################################################################################################
-
-def fviz_ca_row(self,
-                 axis=[0,1],
-                 xlim=None,
-                 ylim=None,
-                 title =None,
-                 color ="blue",
-                 gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                 point_size = 1.5,
-                 text_size = 8,
-                 text_type = "text",
-                 marker = "o",
-                 add_grid =True,
-                 add_labels=True,
-                 row_sup=True,
-                 color_sup = "red",
-                 marker_sup = "^",
-                 add_hline = True,
-                 add_vline=True,
-                 ha="center",
-                 va="center",
-                 hline_color="black",
-                 hline_style="dashed",
-                 vline_color="black",
-                 vline_style ="dashed",
-                 lim_cos2 = None,
-                 lim_contrib = None,
-                 repel=False,
-                 ggtheme=pn.theme_gray()) -> plt:
-    
-    """
-    
-    
-    """
-    
-    if self.model_ != "ca":
-        raise ValueError("Error : 'self' must be an instance of class CA.")
-    
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
-        (axis[0] > axis[1])) :
-        raise ValueError("Error : You must pass a valid 'axis'.")
-
-    # Initialize
-    coord = pd.DataFrame(self.row_coord_,index = self.row_labels_,columns=self.dim_index_)
-
-    # Using lim cos2
-    if lim_cos2 is not None:
-        if isinstance(lim_cos2,float):
-            cos2 = (pd.DataFrame(self.row_cos2_,index = self.row_labels_,columns=self.dim_index_)
-                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
-                       .query(f"cosinus > {lim_cos2}"))
-            if cos2.shape[0] != 0:
-                coord = coord.loc[cos2.index,:]
-    
-    # Using lim contrib
-    if lim_contrib is not None:
-        if isinstance(lim_contrib,float):
-            contrib = (pd.DataFrame(self.row_contrib_,index = self.row_labels_,columns=self.dim_index_)
-                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
-                       .query(f"contrib > {lim_contrib}"))
-            if contrib.shape[0] != 0:
-                coord = coord.loc[contrib.index,:]
-    
-    if color == "cos2":
-        limits = [0,1]
-        legend_title = "cos2"
-        midpoint = 0.5
-        c = np.sum(self.row_cos2_[:,axis],axis=1)
-    elif color == "contrib":
-        midpoint = 50
-        limits = [0,100]
-        legend_title = "Contrib"
-        c = np.sum(self.row_contrib_[:,axis],axis=1)
-
-    # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
- 
-        # Using cosine and contributions
-    if color in ["cos2","contrib"]:
-        # Add gradients colors
-        p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
-        p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],midpoint=midpoint,limits = limits,
-                                              name = legend_title)
-        if add_labels:
-            if repel :
-                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': "black","lw":1.0}})
-            else:
-                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
-    else:
-        p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-        if add_labels:
-            if repel :
-                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
-                                    adjust_text={'arrowprops': {'arrowstyle': '-','color': color,"lw":1.0}})
-            else:
-                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
-        
-    if row_sup:
-        if self.row_sup_labels_ is not None:
-            sup_coord = pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_)
-            p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                  color = color_sup,shape = marker_sup,size=point_size)
-            if add_labels:
-                if repel:
-                    p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                       color=color_sup,size=text_size,va=va,ha=ha,
-                                       adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
-                else:
-                    p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                       color = color_sup,size=text_size,va=va,ha=ha)
-
-    # Add additionnal        
-    proportion = self.eig_[2]
-    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-
-    if title is None:
-        title = "Row points - CA"
-    if ((xlim is not None) and ((isinstance(xlim,list) or (isinstance(xlim,tuple))))):
-        p = p + pn.xlim(xlim)
-    if ((ylim is not None) and ((isinstance(ylim,list) or (isinstance(ylim,tuple))))):
-        p = p + pn.ylim(ylim)
-   
-    p = p + pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
-    if add_hline:
-        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
-    if add_vline:
-        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
-
-    # Add theme
-    p = p + ggtheme
-    
-    return p
-
-def fviz_ca_col(self,
-                 axis=[0,1],
-                 xlim= None,
-                 ylim=None,
-                 title =None,
-                 color ="blue",
-                 gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                 text_type = "text",
-                 marker = "o",
-                 point_size = 1.5,
-                 text_size = 8,
-                 add_grid =True,
-                 add_labels=True,
-                 col_sup=True,
-                 color_sup = "red",
-                 marker_sup = "^",
-                 add_hline = True,
-                 add_vline=True,
-                 ha="center",
-                 va="center",
-                 limits = None,
-                 hline_color="black",
-                 hline_style="dashed",
-                 vline_color="black",
-                 vline_style ="dashed",
-                 lim_cos2 = None,
-                 lim_contrib = None,
-                 repel=False,
-                 ggtheme=pn.theme_gray()) -> plt:
-    
-    """
-    
-    
-    """
-    
-    if self.model_ != "ca":
-        raise ValueError("Error : 'self' must be an instance of class CA.")
-    
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
-        (axis[0] > axis[1])) :
-        raise ValueError("Error : You must pass a valid 'axis'.")
-
-    coord = pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_)
-
-    # Using lim cos2
-    if lim_cos2 is not None:
-        if isinstance(lim_cos2,float):
-            cos2 = (pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_)
-                       .iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False)
-                       .query(f"cosinus > {lim_cos2}"))
-            if cos2.shape[0] != 0:
-                coord = coord.loc[cos2.index,:]
-    
-    # Using lim contrib
-    if lim_contrib is not None:
-        if isinstance(lim_contrib,float):
-            contrib = (pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_)
-                       .iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False)
-                       .query(f"contrib > {lim_contrib}"))
-            if contrib.shape[0] != 0:
-                coord = coord.loc[contrib.index,:]
-
-    # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
-
-    if color == "cos2":
-        legend_title = "cos2"
-        midpoint = 0.5
-        c = np.sum(self.col_cos2_[:,axis],axis=1)
-        if limits is None:
-            limits = list([np.min(c),np.max(c)])
-    elif color == "contrib":
-        midpoint = 50
-        legend_title = "Contrib"
-        c = np.sum(self.col_contrib_[:,axis],axis=1)
-        if limits is None:
-            limits = list([np.min(c),np.max(c)])
-    
-    if color in ["cos2","contrib"]:
-        # Add gradients colors
-        p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
-        p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],midpoint=midpoint,limits = limits,name = legend_title)
-        if add_labels:
-            if repel:
-                p = p + text_label(text_type,mapping=pn.aes(colour=c),size=text_size,va=va,ha=ha,
-                                adjust_text={'arrowprops': {'arrowstyle': '-','color': 'black','lw':1.0}})
-            else:
-                p = p + text_label(text_type,mapping=pn.aes(colour=c),size=text_size,va=va,ha=ha)
-    else:
-        p = p + pn.geom_point(pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),color=color,shape=marker,size=point_size)
-        if add_labels:
-            if repel:
-                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
-                                adjust_text={'arrowprops': {'arrowstyle': '-','color': color,"lw":1.0}})
-            else:
-                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
-    
-    if col_sup:
-        if self.col_sup_labels_ is not None:
-            sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
-            p  = p + pn.geom_point(sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                   color=color_sup,shape=marker_sup,size=point_size)
-            if add_labels:
-                if repel:
-                    p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                       color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
-                else:
-                    p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                        color=color_sup,size=text_size,va=va,ha=ha)
-    
-    # Add additionnal        
-    proportion = self.eig_[2]
-    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-
-    if title is None:
-        title = "Columns points - CA"
-    if ((xlim is not None) and ((isinstance(xlim,list) or (isinstance(xlim,tuple))))):
-        p = p + pn.xlim(xlim)
-    if ((ylim is not None) and ((isinstance(ylim,list) or (isinstance(ylim,tuple))))):
-        p = p + pn.ylim(ylim)
-    
-    p = p + pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
-
-    if add_hline:
-        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
-    if add_vline:
-        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
-
-    # Add theme
-    p = p + ggtheme
-
-    return p
-
-def fviz_ca(self,choice,**kwargs)->plt:
-    """
-    
-    
-    """
-    if self.model_ != "ca":
-        raise ValueError("Error : 'self' must be an instance of class CA.")
-
-
-    if choice == "row":
-        return fviz_ca_row(self,**kwargs)
-    elif choice == "col":
-        return fviz_ca_col(self,**kwargs)
-    else:
-        raise ValueError("Error : Allowed values for choice are :'row' or 'col'.")
-
+    elif choice == "quanti_sup":
+        if self.quanti_sup_labels_ is not None:
+            return fviz_corrcircle(self,**kwargs)
+        else:
+            raise ValueError("Error : No supplementary continuous variables available.")
 
 ####################################################################################################################
 #               Factor Analyis of Mixed Data (FAMD)
@@ -1402,9 +1681,6 @@ def fviz_famd_ind(self,
                  confint_level = 0.95,
                  geom_ellipse = "polygon",
                  habillage = None,
-                 quali_sup = True,
-                 color_quali_sup = "red",
-                 short_labels=True,
                  add_hline = True,
                  add_vline=True,
                  ha="center",
@@ -1416,14 +1692,19 @@ def fviz_famd_ind(self,
                  lim_cos2 = None,
                  lim_contrib = None,
                  repel=False,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
     
     """
-    
+    Draw the Multiple Factor Analysis for Mixed Data (FAMD) individuals graphs
+    --------------------------------------------------------------------------
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an instance of class FAMD.")
+        raise ValueError("Error : 'self' must be an object of class FAMD.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -1552,28 +1833,6 @@ def fviz_famd_ind(self,
             else:
                 p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                      color = color_sup,size=text_size,va=va,ha=ha)
-    if quali_sup:
-        if self.quali_sup_labels_ is not None:
-            if habillage is None:
-                if short_labels:
-                    mod_sup_labels = self.short_sup_labels_
-                else:
-                    mod_sup_labels = self.mod_sup_labels_
-
-                mod_sup_coord = pd.DataFrame(self.mod_sup_coord_,columns=self.dim_index_,index=mod_sup_labels)
-                p = p + pn.geom_point(mod_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
-                                      color=color_quali_sup,size=point_size)
-                if add_labels:
-                    if repel:
-                        p = p + text_label(text_type,data=mod_sup_coord,
-                                           mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
-                                           color=color_quali_sup,size=text_size,va=va,ha=ha,
-                                           adjust_text={'arrowprops': {'arrowstyle': '-','color': "red","lw":1.0}})
-                    else:
-                        p = p + text_label(text_type,data=mod_sup_coord,
-                                           mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
-                                           color =color_quali_sup,size=text_size,va=va,ha=ha)
-
     # Add additionnal        
     proportion = self.eig_[2]
     xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
@@ -1606,14 +1865,14 @@ def fviz_famd_ind(self,
 def fviz_famd_col(self,
                  axis=[0,1],
                  title =None,
-                 color ="blue",
+                 color ="black",
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  text_type = "text",
                  text_size = 8,
                  legend_title=None,
                  add_grid =True,
                  quanti_sup=True,
-                 color_sup = "red",
+                 color_sup = "blue",
                  linestyle_sup="dashed",
                  add_labels=True,
                  add_hline = True,
@@ -1629,15 +1888,19 @@ def fviz_famd_col(self,
                  lim_cos2 = None,
                  lim_contrib = None,
                  add_circle = True,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
     
     """
-    
-    
+    Draw the Multiple Factor Analysis for Mixed Data (FAMD) correlation circle graphs
+    ---------------------------------------------------------------------------------
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an instance of class FAMD.")
+        raise ValueError("Error : 'self' must be an object of class FAMD.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -1746,7 +2009,7 @@ def fviz_famd_mod(self,
                  xlim=None,
                  ylim=None,
                  title =None,
-                 color ="blue",
+                 color ="black",
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -1756,7 +2019,7 @@ def fviz_famd_mod(self,
                  add_labels=True,
                  add_grid =True,
                  quali_sup = True,
-                 color_sup = "red",
+                 color_sup = "blue",
                  marker_sup = "^",
                  short_labels=True,
                  add_ellipse=False, 
@@ -1774,15 +2037,19 @@ def fviz_famd_mod(self,
                  lim_cos2 = None,
                  lim_contrib = None,
                  repel=False,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
     
     """
-    
-    
+    Draw the Multiple Factor Analysis for Mixed Data (FAMD) variables/categories graphs
+    -----------------------------------------------------------------------------------
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an instance of class FAMD.")
+        raise ValueError("Error : 'self' must be an object of class FAMD.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -1949,10 +2216,18 @@ def fviz_famd_var(self,
                  vline_color="black",
                  vline_style ="dashed",
                  repel=False,
-                 ggtheme=pn.theme_gray()) -> plt:
+                 ggtheme=pn.theme_gray()) -> pn:
+    """
+    Draw the Multiple Factor Analysis for Mixed Data (FAMD) variables graphs
+    ------------------------------------------------------------------------
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
     
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an instance of class FAMD.")
+        raise ValueError("Error : 'self' must be an object of class FAMD.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -2053,11 +2328,40 @@ def fviz_famd_var(self,
     return p
 
 
-def fviz_famd(self,choice="ind",**kwargs)->plt:
+def fviz_famd(self,choice="ind",**kwargs) -> pn:
     """
+    Draw the Multiple Factor Analysis for Mixed Data (FAMD) graphs
+    --------------------------------------------------------------
     
-    
+    Description
+    -----------
+    It provides the graphical outputs associated with the principal component method for mixed data: FAMD.
+
+    Parameters
+    ----------
+    self : an object of class FAMD
+    choice : a string corresponding to the graph that you want to do.
+                - "ind" for the individual graphs
+                - "col" for the correlation circle
+                - "mod" for the categorical variables graphs
+                - "var" for all the variables (quantitatives and categorical)
+    **kwargs : 	further arguments passed to or from other methods
+
+    Return
+    ------
+    figure : The individuals factor map and the variables factor map.
+
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
+
+    if self.model_ != "famd":
+        raise ValueError("Error : 'self' must be an object of class FAMD.")
+    
+    if choice not in ["ind","col","mod","var"]:
+        raise ValueError("Error : 'choice' values allowed are 'ind','col','mod' and 'var'.")
+    
     if choice == "ind":
         return fviz_famd_ind(self,**kwargs)
     elif choice == "col":
@@ -2066,8 +2370,6 @@ def fviz_famd(self,choice="ind",**kwargs)->plt:
         return fviz_famd_mod(self,**kwargs)
     elif choice == "var":
         return fviz_famd_var(self,**kwargs)
-    else:
-        raise ValueError("Error : Allowed values are 'ind', 'col', 'mod' or 'var'.")
     
 
 ######################################################################################################################
@@ -2099,15 +2401,20 @@ def fviz_cmds(self,
             hline_style="dashed",
             vline_color="black",
             vline_style ="dashed",
-            repel=False,
-            ggtheme=pn.theme_gray()) -> plt:
+            repel=True,
+            ggtheme=pn.theme_gray()) -> pn:
     """
+    Draw the Classical multidimensional scaling (CMDSCALE) graphs
+    ----------------------------------------------------------
+
     
-    
+    Author
+    ------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "cmds":
-        raise ValueError("Error : 'self' must be an instance of class CMDSCALE.")
+        raise ValueError("Error : 'self' must be an object of class CMDSCALE.")
      
     if ((len(axis) !=2) or 
             (axis[0] < 0) or 
@@ -2202,7 +2509,7 @@ def fviz_mds(self,
             vline_color="black",
             vline_style ="dashed",
             repel=False,
-            ggtheme=pn.theme_gray()) -> plt:
+            ggtheme=pn.theme_gray()) -> pn:
     """
     
     
@@ -2825,6 +3132,7 @@ def fviz_contrib(self,
             if self.model_ == "famd":
                 contrib = np.append(contrib,self.var_contrib_[:,axis],axis=0)
                 labels = labels + self.quali_labels_
+                name = "Variables"
         else:
             name = "Categorical variables"
             contrib = self.var_contrib_[:,axis]
@@ -3212,82 +3520,6 @@ def fviz_corrplot(X,
     
     return p
     
-
-def fviz_corrcircle(self,
-                    axis=[0,1],
-                    xlabel=None,
-                    ylabel=None,
-                    title=None,
-                    color = "black",
-                    color_sup = "blue",
-                    text_type="text",
-                    arrow_length=0.1,
-                    text_size=8,
-                    arrow_angle=10,
-                    add_labels=True,
-                    add_circle=True,
-                    add_hline=True,
-                    add_vline=True,
-                    add_grid=True,
-                    ggtheme=pn.theme_gray()):
-    
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
-        (axis[0] > axis[1])) :
-        raise ValueError("Error : You must pass a valid 'axis'.")
-    
-    if self.model_ not in ["pca","mca","famd","mfa"]:
-        raise ValueError("Error : Factor method not allowed.")
-    
-    if self.model_ in ["pca","famd","mfa"]:
-        coord = pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_)
-    else:
-        if self.quanti_sup_labels_ is not None:
-            coord = pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_)
-
-    # Initialize
-    p = (pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))+
-         pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
-                                arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color))
-    if add_labels:
-            p = p + text_label(text_type,color=color,size=text_size,va="center",ha="center")
-        
-    if self.model_ in ["pca","famd"]:
-        if self.quanti_sup_labels_ is not None:
-            sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
-            p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
-                                 arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
-            if add_labels:
-                p  = p + text_label(text_type,data=sup_coord,
-                                    mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                    color=color_sup,size=text_size,va="center",ha="center")
-    # Create circle
-    if add_circle:
-        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color="black", fill=None)
-    
-    # Add additionnal        
-    proportion = self.eig_[2]
-    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-
-    if title is None:
-        title = "Correlation circle"
-    
-    p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+ pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
-
-    if add_hline:
-        p = p + pn.geom_hline(yintercept=0, colour="black", linetype ="dashed")
-    if add_vline:
-        p = p+ pn.geom_vline(xintercept=0, colour="black", linetype ="dashed")
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
-
-    # Add theme
-    p = p + ggtheme
-
-    return p
-
 ####################################################### Multiple Factor Analysie (MFA) plot #################################################
 
 

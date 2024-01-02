@@ -2,39 +2,115 @@
 from __future__ import annotations
 import pandas as pd
 import pyreadr 
-
-
+from pathlib import Path
 
 # https://husson.github.io/data.html
 # https://r-stat-sc-donnees.github.io/liste_don.html
 
+data_path = Path(__file__).parent / "data"
+
 ### Principal Components Analysis ############################
 
 def load_decathlon():
-    """The Decathlon dataset from FactoMineR."""
-    data = pd.read_excel("decathlon.xlsx",header=0,index_col=0)
+    """
+    Performance in decathlon (data)
+    -------------------------------
+
+    Description
+    -----------
+    The data used here refer to athletes' performance during two sporting events.
+
+    Format
+    ------
+    A data frame with 41 rows and 13 columns: the first ten columns corresponds to the performance 
+    of the athletes for the 10 events of the decathlon. The columns 11 and 12 correspond respectively 
+    to the rank and the points obtained. The last column is a categorical variable corresponding to 
+    the sporting event (2004 Olympic Game or 2004 Decastar)
+
+    Source
+    ------
+    The Decathlon dataset from FactoMineR. See https://rdrr.io/cran/FactoMineR/man/decathlon.html
+
+    Example
+    -------
+    from scientisttools.decomposition import PCA
+    from scientisttools.datasets import load_decathlon
+    decathlon = load_decathlon()
+    acp = PCA(normalize=True,
+            n_components = None,
+            row_labels=decathlon.index,
+            col_labels=decathlon.columns[:10],
+            row_sup_labels=None,
+            quanti_sup_labels=["Rank","Points"],
+            quali_sup_labels=["Competition"],
+            parallelize=True).fit(decathlon)
+    """
+    data = pd.read_excel(data_path/"decathlon.xlsx",header=0,index_col=0)
     data.name = "decathlon"
     return data
 
 def load_decathlon2():
-    """The Decathlon dataset from Factoextra."""
-    data = pd.read_excel("decathlon2.xlsx",header=0,index_col=0)
+    """
+    Athletes' performance in decathlon
+    ----------------------------------
+
+    Description
+    -----------
+    Athletes' performance during two sporting meetings
+
+    Format
+    ------
+    A data frame with 27 observations on the following 13 variables.
+
+    X100m : a numeric vector
+    Long.jump : a numeric vector
+    Shot.put : a numeric vector
+    High.jump : a numeric vector
+    X400m : a numeric vector
+    X110m.hurdle : a numeric vector
+    Discus : a numeric vector
+    Pole.vault : a numeric vector
+    Javeline : a numeric vector
+    X1500m : a numeric vector
+    Rank : a numeric vector corresponding to the rank
+    Points : a numeric vector specifying the point obtained
+    Competition : a factor with levels Decastar OlympicG
+
+    Source
+    ------
+    The Decathlon dataset from Factoextra. See https://rpkgs.datanovia.com/factoextra/reference/decathlon2.html
+
+    Example:
+    -------
+    from scientisttools.decomposition import PCA
+    from scientisttools.datasets import load_decathlon2
+    decathlon = load_decathlon2()
+    acp = PCA(normalize=True,
+            n_components = None,
+            row_labels=decathlon.index[:23],
+            col_labels=decathlon.columns[:10],
+            row_sup_labels=decathlon.index[23:],
+            quanti_sup_labels=["Rank","Points"],
+            quali_sup_labels=["Competition"],
+            parallelize=True).fit(decathlon)
+    """
+    data = pd.read_excel(data_path/"decathlon2.xlsx",header=0,index_col=0)
     data.name = "decathlon2"
     return data
 
 def load_autos():
     """Autos 2005 - Données sur 40 voitures"""
-    data = pd.read_excel("autos2005.xls",header=0,index_col=0)
+    data = pd.read_excel(data_path/"autos2005.xls",header=0,index_col=0)
     data.name = "autos_2005"
     return data
 
 def load_temperature():
-    data = pd.read_excel("temperature.xlsx",header=0,index_col=0)
+    data = pd.read_excel(data_path/"temperature.xlsx",header=0,index_col=0)
     data.name = "temperature"
     return data
 
 def load_temperature2():
-    data = pd.read_excel("temperature_acp.xlsx",header=0,index_col=0)
+    data = pd.read_excel(data_path/"temperature_acp.xlsx",header=0,index_col=0)
     data.name = "temperature2"
     return data
 
@@ -42,13 +118,13 @@ def load_temperature2():
 
 def load_woman_work():
     """"""
-    data = pd.read_csv("women_work.txt",sep="\t")
+    data = pd.read_csv(data_path/"women_work.txt",sep="\t")
     data.name = "woman_work"
     return data
 
 def load_femmes_travail():
     """"""
-    data = pd.read_csv("femme_travail.csv",delimiter=";",encoding =  "cp1252",index_col =0)
+    data = pd.read_csv(data_path/"femme_travail.csv",delimiter=";",encoding =  "cp1252",index_col =0)
     data.name = "femmes_travail"
     return data
 
@@ -67,7 +143,7 @@ def load_housetasks():
     Husband : a numeric vector
     Jointly : a numeric vector
     """
-    data = pyreadr.read_r("housetasks.rda")["housetasks"]
+    data = pyreadr.read_r(data_path/"housetasks.rda")["housetasks"]
     data.name = "housetasks"
     return data
 
@@ -75,13 +151,13 @@ def load_housetasks():
 
 def load_races_canines():
     """"""
-    data = pd.read_excel("races_canines.xls",header=0,index_col=0)
+    data = pd.read_excel(data_path/"races_canines.xls",header=0,index_col=0)
     data.name = "races_canines"
     return data
 
 def load_races_canines2():
     """"""
-    data = pd.read_excel("races_canines2.xlsx",header=0,index_col=0)
+    data = pd.read_excel(data_path/"races_canines2.xlsx",header=0,index_col=0)
     data.name = "races_canines2"
     return data
 
@@ -89,13 +165,13 @@ def load_races_canines3():
     """
     
     """
-    data = pd.read_excel("/races_canines_acm.xlsx",header=0,index_col=0)
+    data = pd.read_excel(data_path/"races_canines_acm.xlsx",header=0,index_col=0)
     data.name = "races_canines3"
     return data
 
 def load_tea():
     """"""
-    data = pd.read_excel("tea.xlsx",header=0,index_col=0)
+    data = pd.read_excel(data_path/"tea.xlsx",header=0,index_col=0)
     data.name = "tea"
     return data
 
@@ -103,7 +179,7 @@ def load_tea():
 
 def load_autos2():
     """FAMD Data - Données sur 45 voitures"""
-    data = pd.read_excel("autos2005_afdm.xlsx",header=0,index_col=0)
+    data = pd.read_excel(data_path/"autos2005_afdm.xlsx",header=0,index_col=0)
     data.name = "autos_2005"
     return data
 
@@ -201,7 +277,7 @@ def load_qtevie():
     """
     
     """
-    qtevie = pd.read_csv("QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
+    qtevie = pd.read_csv(data_path/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
     qtevie.info()
 
     data = pd.DataFrame(qtevie.values,
@@ -241,6 +317,6 @@ def load_qtevie():
 ########################################## Autres datasets
 
 def load_poison():
-    data = pyreadr.read_r("poison.rda")["poison"]
+    data = pyreadr.read_r(data_path/"poison.rda")["poison"]
     data.name = "poison"
     return data
