@@ -3901,6 +3901,8 @@ def fviz_candisc(self,
                 xlabel = None,
                 ylabel = None,
                 point_size = 1.5,
+                xlim =(-5,5),
+                ylim = (-5,5),
                 text_size = 8,
                 text_type = "text",
                 title = None,
@@ -3908,18 +3910,15 @@ def fviz_candisc(self,
                 add_hline = True,
                 add_vline=True,
                 marker = None,
-                color = None,
                 repel = False,
-                show_text = False, 
                 add_labels = True,
-                legend_title = None,
                 hline_color="black",
                 hline_style="dashed",
                 vline_color="black",
                 vline_style ="dashed",
                 ha = "center",
                 va = "center",
-                random_state= 0):
+                ggtheme=pn.theme_gray()):
     
 
     if self.model_ != "candisc":
@@ -3937,24 +3936,37 @@ def fviz_candisc(self,
     # Add target variable
     coord = pd.concat([coord, self.data_[self.target_]],axis=1)
 
-    # Initialize
     p = (pn.ggplot(data=coord,mapping=pn.aes(x = f"LD{axis[0]+1}",y=f"LD{axis[1]+1}",label=coord.index))+
-         pn.geom_point(pn.aes(color = str(self.target_[0])),size=point_size,shape=marker))
-    print(self.target_[0])
+        pn.geom_point(pn.aes(color=self.target_[0]),size=point_size,shape=marker))
+    
     if add_labels:
         if repel:
-            p = p + text_label(text_type,mapping=pn.aes(color=str(self.target_[0])),size=text_size,va=va,ha=ha,
-                               adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+            p = p + text_label(text_type,mapping=pn.aes(color=self.target_[0]),size=text_size,va=va,ha=ha,
+                            adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
         else:
-            p = p + text_label(text_type,mapping=pn.aes(color=self.target_),size=text_size,va=va,ha=ha)
-            # Add ellipse
-           # if add_ellipse:
-           #     p = p + pn.geom_point(pn.aes(color = habillage))
-            #    p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
-            
-            # Change color
-            #if palette is not None:
-            #    p = p + pn.scale_color_manual(values=palette)
+            p = p + text_label(text_type,mapping=pn.aes(color=self.target_[0]),size=text_size,va=va,ha=ha)
+
+    if xlabel is None:
+        xlabel = f"Canonical {axis[0]+1}"
+    
+    if ylabel is None:
+        ylabel = f"Canonical {axis[1]+1}"
+    
+    if title is None:
+        title = "Canonical Discriminant Analysis"
+    
+    p = p + pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
+    p = p + pn.xlim(xlim)+pn.ylim(ylim)
+    
+    if add_hline:
+        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
+    if add_vline:
+        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
+
+    # Add theme
+    p = p + ggtheme
     
     return p
 
