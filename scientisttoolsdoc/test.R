@@ -136,36 +136,64 @@ head(quanti.var$coord)
 head(quanti.var$cos2)
 # Contributions to the dimensions
 head(quanti.var$contrib)
+# Correlation
+head(quanti.var$cor)
 
 # Group of variables
 group <- get_mfa_var(res.mfa, "group")
-group
+group$coord
+group$cos2
+group$contrib
+group$dist2
+group$Lg
+group$RV
+group$correlation
+
+### Supp group
+group$coord.sup
+group$cos2.sup
+group$dist2.sup
 
 head(group$coord)
 
 
 
+
 # Individuals
 ind <- get_mfa_ind(res.mfa)
-ind
 head(ind$coord)
+head(ind$contrib)
+head(ind$cos2)
 head(ind$coord.partiel)
 head(ind$within.inertia)
 head(ind$within.partial.inertia)
-head(ind$contrib)
-head(ind$cos2)
 
 summary(res.mfa)
 
 res.mfa$eig
 res.mfa$separate.analyses
-res.mfa$group
+res.mfa$group$Lg
+res.mfa$group$RV
+
 res.mfa$partial.axes
 res.mfa$inertia.ratio
 res.mfa$ind
 res.mfa$quanti.var
-res.mfa$quanti.var.sup
-res.mfa$quali.var.sup
+
+# Supplementary continue variables
+res.mfa$quanti.var.sup$coord
+res.mfa$quanti.var.sup$cos2
+res.mfa$quanti.var.sup$cor
+
+# Supplementary qualitatives variables
+res.mfa$quali.var.sup$coord
+res.mfa$quali.var.sup$cos2
+res.mfa$quali.var.sup$v.test
+res.mfa$quali.var.sup$coord.partiel
+res.mfa$quali.var.sup$within.inertia
+res.mfa$quali.var.sup$within.partial.inertia
+
+
 res.mfa$summary.quanti
 res.mfa$summary.quali
 res.mfa.pca <- res.mfa$global.pca

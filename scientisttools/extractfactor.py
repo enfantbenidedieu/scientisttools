@@ -1895,19 +1895,53 @@ def get_mfa_ind(self):
     
     
     """
-    df = dict({
-        "coord" : pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_),
-        "contrib" : pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
-        "cos2" : pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
-        "coord_partial" : None,
-        "within_inertia" : None,
+    if self.model_ != "mfa":
+        raise ValueError("Error : 'self' must be an instance of class MFA.")
+
+
+    df = {
+        "coord"                  : pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_),
+        "contrib"                : pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
+        "cos2"                   : pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
+        "coord_partial"          : self.row_coord_partial_,
+        "within_inertia"         : None,
         "within_partial_inertia" : None
-    })
+    }
     
     return df
 
-def get_mfa_var(self):
-    raise ValueError("Error : This method is not yet implemented.")
+def get_mfa_var(self,element = "group"):
+    """
+    
+    """
+    if self.model_ != "mfa":
+        raise ValueError("Error : 'self' must be an instance of class MFA.")
+    
+    if element == "group":
+        df = {
+            "coord"       : self.group_coord_,
+            "correlation" : self.group_correlation_,
+            "contrib"     : None,
+            "cos2"        : None,
+            "lg"          : self.group_lg_,
+            "rv"          : self.group_rv_
+        }
+        if self.group_sup is not None:
+            pass
+    if element == "quanti_var":
+        df = {
+            "coord"   : pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_),
+            "contrib" : pd.DataFrame(self.col_contrib_,index=self.col_labels_,columns=self.dim_index_),
+            "cos2"    : pd.DataFrame(self.col_cos2_,index=self.col_labels_,columns=self.dim_index_),
+            "cor"     : pd.DataFrame(self.col_cor_,index=self.col_labels_,columns=self.dim_index_)
+        }
+        if self.col_sup_labels_ is not None:
+            df["quanti_sup"] = {
+                "coord" : pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
+                "cos2"  : pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
+                "cor"   : pd.DataFrame(self.col_sup_cor_,index=self.col_sup_labels_,columns=self.dim_index_)
+            }
+    return df
 
 
 def get_mfa(self,choice="row"):
