@@ -128,36 +128,17 @@ res.mfa <- MFA(wine,
 
 res.shiny = MFAshiny(res.mfa)
 
-# Quantitative Variables
-quanti.var <- get_mfa_var(res.mfa, "quanti.var")
-# Coordinates
-head(quanti.var$coord)
-# Cos2: quality on the factore map
-head(quanti.var$cos2)
-# Contributions to the dimensions
-head(quanti.var$contrib)
-# Correlation
-head(quanti.var$cor)
+# Separate analyses
+res.mfa$separate.analyses$origin
+res.mfa$separate.analyses$odor
+res.mfa$separate.analyses$visual
+res.mfa$separate.analyses$odor.after.shaking
+res.mfa$separate.analyses$taste
+res.mfa$separate.analyses$overall
 
-# Group of variables
-group <- get_mfa_var(res.mfa, "group")
-group$coord
-group$cos2
-group$contrib
-group$dist2
-group$Lg
-group$RV
-group$correlation
-
-### Supp group
-group$coord.sup
-group$cos2.sup
-group$dist2.sup
-
-head(group$coord)
-
-
-
+##########################################################
+# Individuals Results
+##########################################################
 
 # Individuals
 ind <- get_mfa_ind(res.mfa)
@@ -165,8 +146,52 @@ head(ind$coord)
 head(ind$contrib)
 head(ind$cos2)
 head(ind$coord.partiel)
+
+### à compléter
 head(ind$within.inertia)
 head(ind$within.partial.inertia)
+
+
+
+###########################################################"
+# Actives continues variables
+#########################################################
+
+# Quantitative Variables
+quanti.var <- get_mfa_var(res.mfa, "quanti.var")
+# Coordinates
+head(quanti.var$coord)
+head(quanti.var$cos2)
+head(quanti.var$contrib)
+head(quanti.var$cor)
+
+#### Supplementary continues variables
+quanti.var.sup <- res.mfa$quanti.var.sup
+head(quanti.var.sup$coord)
+head(quanti.var.sup$cos2)
+head(quanti.var.sup$cor)
+
+########################################################
+#  Group informations
+########################################################
+
+# Group of variables
+group <- get_mfa_var(res.mfa, "group")
+group$coord
+group$contrib
+group$Lg
+group$RV
+group$correlation
+
+# A chercher
+group$dist2
+group$cos2
+
+### Supp group
+group$coord.sup # trouver
+group$cos2.sup
+group$dist2.sup
+
 
 summary(res.mfa)
 
@@ -175,10 +200,26 @@ res.mfa$separate.analyses
 res.mfa$group$Lg
 res.mfa$group$RV
 
-res.mfa$partial.axes
+#############################################################
+# Partial axes
+##############################################################
+head(res.mfa$partial.axes$coord)
+head(res.mfa$partial.axes$cor)
+head(res.mfa$partial.axes$contrib)
+dim(res.mfa$partial.axes$cor.between)
+
+fviz_mfa_axes(res2.mfa)
+
+####################" Inertia
 res.mfa$inertia.ratio
-res.mfa$ind
-res.mfa$quanti.var
+
+res.mfa$call$col.w
+
+
+
+################################################################
+# Supplementary elements
+##############################################################"
 
 # Supplementary continue variables
 res.mfa$quanti.var.sup$coord
@@ -190,20 +231,16 @@ res.mfa$quali.var.sup$coord
 res.mfa$quali.var.sup$cos2
 res.mfa$quali.var.sup$v.test
 res.mfa$quali.var.sup$coord.partiel
+# A compléter
 res.mfa$quali.var.sup$within.inertia
 res.mfa$quali.var.sup$within.partial.inertia
 
+########################## Result summary
 
 res.mfa$summary.quanti
 res.mfa$summary.quali
+
 res.mfa.pca <- res.mfa$global.pca
-
-
-
-
-
-
-
 
 ###################### Discriminant Multiple Analysis
 library(TExPosition)

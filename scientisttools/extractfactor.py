@@ -1892,26 +1892,50 @@ def summaryCANDISC(self,digits=3,
 
 def get_mfa_ind(self):
     """
+    Extract the results for individuals MFA
+    ---------------------------------------
     
     
     """
     if self.model_ != "mfa":
         raise ValueError("Error : 'self' must be an instance of class MFA.")
 
-
     df = {
         "coord"                  : pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_),
         "contrib"                : pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
         "cos2"                   : pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
-        "coord_partial"          : self.row_coord_partial_,
-        "within_inertia"         : None,
-        "within_partial_inertia" : None
+        "coord_partiel"          : self.row_coord_partiel_,
+        "within_inertia"         : self.row_within_inertia_,
+        "within_partial_inertia" : self.row_within_partial_inertia_
     }
     
     return df
 
 def get_mfa_var(self,element = "group"):
     """
+    Extract the results for variables (quantitatives, qualitatives and groups) MFA
+    ------------------------------------------------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine and contributions) for the active quantitative variable/
+    qualitative variable categories/groups from Multiple Factor Analysis (MFA) outputs.
+
+    Parameters
+    ----------
+    res.mfa  : n object of class MFA
+    
+    element : the element to subset from the output. Possible values are "quanti_var", "quali_var", "group"
+
+    Value
+    -----
+    a dictionnary of matrices containing the results for the active qualitative variable categories/qualitative variable
+    categories/groups including :
+
+
+    Usage
+    -----
+
     
     """
     if self.model_ != "mfa":
@@ -1921,26 +1945,84 @@ def get_mfa_var(self,element = "group"):
         df = {
             "coord"       : self.group_coord_,
             "correlation" : self.group_correlation_,
-            "contrib"     : None,
+            "contrib"     : self.group_contrib_,
             "cos2"        : None,
-            "lg"          : self.group_lg_,
-            "rv"          : self.group_rv_
+            "dist"        : None,
+            "Lg"          : self.group_lg_,
+            "RV"          : self.group_rv_
         }
         if self.group_sup is not None:
-            pass
-    if element == "quanti_var":
-        df = {
-            "coord"   : pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_),
-            "contrib" : pd.DataFrame(self.col_contrib_,index=self.col_labels_,columns=self.dim_index_),
-            "cos2"    : pd.DataFrame(self.col_cos2_,index=self.col_labels_,columns=self.dim_index_),
-            "cor"     : pd.DataFrame(self.col_cor_,index=self.col_labels_,columns=self.dim_index_)
-        }
-        if self.col_sup_labels_ is not None:
-            df["quanti_sup"] = {
-                "coord" : pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
-                "cos2"  : pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
-                "cor"   : pd.DataFrame(self.col_sup_cor_,index=self.col_sup_labels_,columns=self.dim_index_)
+            df["sup"] = {
+                "coord"  : self.group_sup_coord_
             }
+    if element == "quanti_var":
+        df = {}
+        # Extract active continues variables
+        for grp, cols in self.group_.items():
+            if self.all_nums_[grp]:
+                df = {
+                        "coord"   : pd.DataFrame(self.col_coord_,columns=self.dim_index_,index=self.col_labels_),
+                        "contrib" : pd.DataFrame(self.col_contrib_,columns=self.dim_index_,index=self.col_labels_),
+                        "cos2"    : pd.DataFrame(self.col_cos2_,columns=self.dim_index_,index=self.col_labels_),
+                        "cor"     : pd.DataFrame(self.col_cor_,columns=self.dim_index_,index=self.col_labels_)
+                    }
+        # Check in supplementary group
+        if self.group_sup is not None:
+            # Check if supplementary continues columns in supplementary group
+            for grp,cols in self.group_sup_.items():
+                if self.all_nums_[grp]:
+                    df["sup"] = {
+                            "coord" : pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
+                            "cos2"  : pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
+                            "cor"   : pd.DataFrame(self.col_sup_cor_,index=self.col_sup_labels_,columns=self.dim_index_)
+                        }
+    if element == "quali_var":
+        df = {}
+        # Extract active categories
+        for grp, cols in self.group_.items():
+            if self.all_cats_[grp]:
+                df = {
+                        "coord"                  : self.mod_coord_,
+                        "contrib"                : self.mod_contrib_,
+                        "cos2"                   : self.mod_cos2_,
+                        "vtest"                  : self.mod_vtest_,
+                        "coord_partiel"          : self.mod_coord_partiel_,
+                        "within_inertia"         : None,
+                        "within_partial_inertia" : None
+                    }
+        # Check if supplementary group
+        if self.group_sup is not None:
+            for grp, cols in self.group_sup_.items():
+                if self.all_cats_[grp]:
+                    df["sup"] = {
+                        "stats"         :   self.mod_sup_stats_,
+                        "coord"         :   self.mod_sup_coord_,
+                        "cos2"          :   self.mod_sup_cos2_,
+                        "dist"          :   self.mod_sup_disto_,
+                        "vtest"         :   self.mod_sup_vtest_,
+                        "coord_partiel" :   self.mod_sup_coord_partiel_
+                        }
+    
+    return df
+
+def get_mfa_partial_axes(self):
+    """
+    
+    """
+    if self.model_ != "mfa":
+        raise ValueError("Error : 'self' must be an instance of class MFA.")
+    
+    df = {
+        "coord"       : self.partial_axes_coord_,
+        "cor"         : self.partial_axes_cor_,
+        "contrib"     : None,
+        "cor_between" : self.partial_axes_cor_between_
+    }
+    if self.group_sup is not None:
+        df["sup"] = {
+            "coord" : self.partial_axes_sup_coord_,
+            "cor"   : self.partial_axes_sup_cor_
+        }
     return df
 
 
