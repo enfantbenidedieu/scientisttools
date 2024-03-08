@@ -7,6 +7,313 @@ from scipy.cluster import hierarchy
 from scientisttools.utils import eta2
 import scipy.stats as st
 
+
+################## Eigenvalues
+def get_eig(self) -> pd.DataFrame:
+
+    """
+    Extract the eigenvalues/variances of dimensions
+    -----------------------------------------------
+
+    Description
+    -----------
+    Eigenvalues correspond to the amount of the variation explained by each principal component.
+
+    Parameters:
+    -----------
+    self : an object of class PCA, PartialPCA, CA, MCA, FAMD, MFA,CMDS, MFA, HMFA
+
+    Returns
+    -------
+    eigenvalue, difference, variance percent and cumulative variance of percent
+    """
+    if self.model_ in ["pca","ppca","ca","mca","famd","mfa","cmds","candisc","hmfa"]:
+        return self.eig_
+    else:
+        raise ValueError("Error : 'self' must be an object of class PCA, PPCA, CA, MCA, FAMD, MFA, CMDS, HMFA")
+
+def get_eigenvalue(self) -> pd.DataFrame:
+
+    """
+    Extract the eigenvalues/variances of dimensions
+    -----------------------------------------------
+
+    Description
+    -----------
+    Eigenvalues correspond to the amount of the variation explained by each principal component.
+
+    Parameters:
+    -----------
+    self : an object of class PCA, PartialPCA, CA, MCA, FAMD, MFA,CMDS, MFA, HMFA
+
+    Returns
+    -------
+    eigenvalue, difference, variance percent and cumulative variance of percent
+    """
+    return get_eig(self)
+
+######################################## Principal Components Analysis (PCA) extractions ######################################################
+
+############ Principal Components Analysis
+
+def get_pca_ind(self) -> dict:
+
+    """
+    Extract the results for individuals - PCA
+    -----------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine, contributions) for the active individuals from Principal Component Analysis (PCA) outputs.
+
+    Parameters:
+    -----------
+    self : an object of class PCA
+
+    Returns
+    -------
+    Principal Component Analysis - Results for individuals
+    ===============================================================
+        Names       Description
+    1   "coord"     "coordinates for the individuals"
+    2   "cos2"      "cos2 for the individuals"
+    3   "contrib"   "contributions of the individuals"
+    4   "dist"      "square distance between individuals and origin"
+    5   "infos"     "additionnal informations for the individuals :"
+                        - square distance between individuals and origin
+                        - weight for the individuals
+                        - inertia for the individuals
+    
+    Author(s)
+    --------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "pca":
+        raise ValueError("Error : 'self' must be an object of class PCA.")
+    return  self.res_["ind"]
+
+### Extract variables
+def get_pca_var(self) -> dict:
+
+    """
+    Extract the results for variables - PCA
+    ---------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine, contributions) for the active variables from Principal Component Analysis (PCA) outputs.
+
+    Parameters
+    ----------
+    self : an object of class PCA
+
+    Returns
+    -------
+    Principal Component Analysis - Results for variables
+    ==============================================================
+        Names       Description
+    1   "coord"     "coordinates for the continuous variables"
+    2   "cor"       "correlations between variables and dimensions"
+    3   "cos2"      "cos2 for the continuous variables"
+    4   "contrib"   "contributions of the continuous variables"
+    5   "weighted"  "weighted Peron correlation between continuous variables"
+    6   "infos"     "additionnal informations for the variables :"
+                        - square distance between variables and origin
+                        - weight for the variables
+                        - inertia for the variables
+    
+    Author(s)
+    --------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "pca":
+        raise ValueError("Error : 'self' must be an object of class PCA")
+    return self.res_["var"]
+
+def get_pca(self,element = "ind")-> dict:
+
+    """
+    Extract the results for individuals/variables - PCA
+    ---------------------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine, contributions) for the active individuals/variables from Principal Component Analysis (PCA) outputs.
+
+    *   get_pca() : Extract the results for variables and individuals
+    *   get_pca_ind() : Extract the results for individuals only
+    *   get_pca_var() : Extract the results for variables only
+
+    Parameters
+    ----------
+    self : an object of class PCA
+
+    element : the element to subset from the output. Allowed values are "var" (for active variables) or "ind" (for active individuals), default = "ind"
+
+    Returns
+    -------
+    a dictionary of dataframes containing all the results for the active individuals/variables including:
+    - coord : coordinates for the individuals/variables
+    - cos2: cos2 for the individuals/variables
+    - contrib : contributions of the individuals/variables
+
+    Author(s)
+    --------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "pca":
+        raise ValueError("Error : 'self' must be an object of class PCA.")
+
+    if element not in ["ind","var"]:
+        raise ValueError("Error : Allowed values for the argument element are : 'ind' or 'var'.")
+
+    if element == "ind":
+        return get_pca_ind(self)
+    elif element == "var":
+        return get_pca_var(self)
+
+##### Summary 
+def summaryPCA(self,
+               digits=3,
+               nb_element=10,
+               ncp=3,
+               to_markdown=False,
+               tablefmt = "pipe",
+               **kwargs):
+    """
+    Printing summaries of PCA objects
+    ---------------------------------
+
+    Description
+    -----------
+    Printing summaries of principal component analysis (PCA) objects
+
+    Parameters
+    ----------
+    self        :   an obect of class PCA.
+    digits      :   int, default=3. Number of decimal printed
+    nb_element  :   int, default = 10. Number of element
+    ncp         :   int, default = 3. Number of componennts
+    to_markdown :   Print DataFrame in Markdown-friendly format.
+    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    **kwargs    :   These parameters will be passed to tabulate.
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+
+    ind = self.res_["ind"]
+    var = self.res_["var"]
+
+    # Define number of components
+    ncp = min(ncp,self.n_components_)
+    nb_element = min(nb_element,len(self.row_names_))
+
+    # Principal Components Analysis Results
+    print("                     Principal Component Analysis - Results                     \n")
+
+    # Add eigenvalues informations
+    print("Importance of components")
+    eig = self.res_["eig"].T.round(decimals=digits)
+    eig.index = ["Variance","Difference","% of var.","Cumulative % of var."]
+    if to_markdown:
+        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(eig)
+    
+    # Add individuals informations
+    print(f"\nIndividuals (the {nb_element} first)\n")
+    ind_infos = ind["infos"]
+    for i in np.arange(0,ncp,1):
+        ind_coord = ind["coord"].iloc[:,i]
+        ind_cos2 = ind["cos2"].iloc[:,i]
+        ind_cos2.name = "cos2"
+        ind_ctr = ind["contrib"].iloc[:,i]
+        ind_ctr.name = "ctr"
+        ind_infos = pd.concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
+    ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(ind_infos)
+
+    # Add supplementary individuals
+    if self.ind_sup is not None:
+        print(f"\nSupplementary Individuals\n")
+        # Save all informations
+        ind_sup = self.res_["ind_sup"]
+        ind_sup_infos = ind_sup["dist"]
+        for i in np.arange(0,ncp,1):
+            ind_sup_coord = ind_sup["coord"].iloc[:,i]
+            ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
+            ind_sup_cos2.name = "cos2"
+            ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
+        ind_sup_infos = ind_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(ind_sup_infos)
+
+    # Add variables informations
+    print(f"\nContinues variables\n")
+    var_infos = pd.DataFrame(index=self.col_names_).astype("float")
+    for i in np.arange(0,ncp,1):
+        var_coord = var["coord"].iloc[:,i]
+        var_cos2 = var["cos2"].iloc[:,i]
+        var_cos2.name = "cos2"
+        var_ctr = var["contrib"].iloc[:,i]
+        var_ctr.name = "ctr"
+        var_infos = pd.concat([var_infos,var_coord,var_ctr,var_cos2],axis=1)
+    var_infos = var_infos.round(decimals=digits)
+    if to_markdown:
+        print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(var_infos)
+    
+    # Add supplementary continuous variables informations
+    if self.quanti_sup is not None:
+        print(f"\nSupplementary continuous variables\n")
+        quanti_sup_infos = pd.DataFrame(index=self.quanti_sup_names_).astype("float")
+        quanti_sup = self.res_["quanti_sup"]
+        for i in np.arange(0,ncp,1):
+            quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
+            quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
+            quanti_sup_cos2.name = "cos2"
+            quanti_sup_infos =pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
+        quanti_sup_infos = quanti_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quanti_sup_infos)
+    
+    # Add Supplementary categories – Variable illustrative qualitative
+    if self.quali_sup is not None:
+        print("\nSupplementary categories\n")
+        quali_sup = self.res_["quali_sup"]
+        quali_sup_infos = quali_sup["dist"]
+        for i in np.arange(0,ncp,1):
+            quali_sup_coord = quali_sup["coord"].iloc[:,i]
+            quali_sup_cos2 = quali_sup["cos2"].iloc[:,i]
+            quali_sup_cos2.name = "cos2"
+            quali_sup_vtest = quali_sup["vtest"].iloc[:,i]
+            quali_sup_vtest.name = "v.test"
+            quali_sup_infos = pd.concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
+        quali_sup_infos = quali_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quali_sup_infos)
+        
+        # Add supplementary qualitatives - correlation ratio
+        print("\nSupplementary categorical variable (eta2)\n")
+        quali_sup_eta2 = quali_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
+        if to_markdown:
+            print(quali_sup_eta2.to_markdown(tablefmt=tablefmt))
+        else:
+            print(quali_sup_eta2)
+
+
 def get_ca_row(self)-> dict:
 
     """
@@ -228,35 +535,6 @@ def get_efa(self,choice = "row")-> dict:
     else:
         raise ValueError("Allowed values for the argument choice are : 'row' or 'var'.")
 
-################## Eigenvalues
-
-def get_eig(self) -> pd.DataFrame:
-
-    """
-    self : an instance of class PCA, PartialPCA, CA, MCA, FAMD, MFA,CMDS
-
-    Returns
-    -------
-    eigenvalue, difference, variance percent and cumulative variance of percent
-    """
-    if self.model_ in ["pca","ppca","ca","mca","famd","mfa","cmds","candisc"]:
-        eig = pd.DataFrame(self.eig_.T,columns=["eigenvalue","difference","proportion","cumulative"],index = self.dim_index_)
-        return eig
-    else:
-        raise ValueError("Error : 'self' must be an instance of class PCA, PPCA, CA, MCA, FAMD, MFA, CMDS")
-
-def get_eigenvalue(self) -> pd.DataFrame:
-
-    """
-    self : an instance of class PCA, PartialPCA, CA, MCA, FAMD, MFA, MDS
-
-    Returns
-    -------
-    eigenvalue, variance percent and cumulative variance of percent
-    """
-    return get_eig(self)
-
-
 ############ Factor analysis of mixed data
 
 def get_famd_ind(self) -> dict:
@@ -325,16 +603,14 @@ def get_famd_col(self) -> dict:
         "pcorr"      :   pd.DataFrame(self.col_pcorr_,index=self.col_labels_,columns=self.col_labels_),
         "coord"     :   pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_), 
         "cos2"      :   pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_),
-        "contrib"   :   pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_),
-        "ftest"     :   pd.DataFrame(self.col_ftest_,index = self.col_labels_,columns=self.dim_index_)
+        "contrib"   :   pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_)
     }
     if self.quanti_sup_labels_ is not None:
         # Add supplementary continuous variables informations
         df["quanti_sup"] = {
             "corr"  :   pd.DataFrame(self.col_sup_corr_,index=self.col_sup_labels_,columns=self.col_labels_),
             "coord" :   pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
-            "cos2"  :   pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
-            "ftest" :   pd.DataFrame(self.col_sup_ftest_,index=self.col_sup_labels_,columns=self.dim_index_)
+            "cos2"  :   pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_)
         }
     return df
 
@@ -405,9 +681,9 @@ def get_famd_var(self):
 
     df = {
         "chi2"      :   self.chi2_test_,
-        "eta2"      :   pd.DataFrame(self.var_eta2_,index=self.quali_labels_,columns=self.dim_index_),
-        "cos2"      :   pd.DataFrame(self.var_cos2_,index=self.quali_labels_,columns=self.dim_index_),
-        "contrib"   :   pd.DataFrame(self.var_contrib_,index=self.quali_labels_,columns=self.dim_index_)
+        "eta2"      :   pd.DataFrame(self.quali_eta2_,index=self.quali_labels_,columns=self.dim_index_),
+        "cos2"      :   pd.DataFrame(self.quali_cos2_,index=self.quali_labels_,columns=self.dim_index_),
+        "contrib"   :   pd.DataFrame(self.quali_contrib_,index=self.quali_labels_,columns=self.dim_index_)
     }
     if self.quali_sup_labels_ is not None:
         df["quali_sup"] = {
@@ -694,154 +970,6 @@ def get_mds(self) -> dict:
         "res.dist"  : pd.DataFrame(self.res_dist_,index=self.labels_,columns=self.labels_)
     })
     return df
-
-############ Principal Components Analysis
-
-def get_pca_ind(self) -> dict:
-
-    """
-    self : an instance of class PCA
-
-    Returns
-    -------
-    Principal Component Analysis - Results for individuals
-    ===============================================================
-        Names       Description
-    1   "coord"     "coordinates for the individuals"
-    2   "cos2"      "cos2 for the individuals"
-    3   "contrib"   "contributions of the individuals"
-    4   "infos"     "additionnal informations for the individuals :"
-                        - distance between individuals and inertia
-                        - weight for the individuals
-                        - inertia for the individuals
-    """
-    if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an object of class PCA.")
-
-    # Store informations
-    df = dict({
-        "coord"     :   pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_), 
-        "cos2"      :   pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
-        "contrib"   :   pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
-        "infos"     :   pd.DataFrame(self.row_infos_,columns= ["d(i,G)","p(i)","I(i,G)"],index=self.row_labels_)
-        })
-    if self.row_sup_labels_ is not None:
-        df["ind_sup"] = dict({
-            "coord" :   pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_),
-            "cos2"  :   pd.DataFrame(self.row_sup_cos2_,index=self.row_sup_labels_,columns=self.dim_index_),
-            "dist"  :   pd.DataFrame(np.c_[self.row_sup_disto_],index=self.row_sup_labels_,columns=["d(i,G)"])
-            })   
-    return df
-
-def get_pca_var(self) -> dict:
-
-    """
-    self : an instance of class PCA
-
-    Returns
-    -------
-    Principal Component Analysis - Results for variables
-    ==============================================================
-        Names       Description
-    1   "corr"      "Pearson correlation between continuous variables"
-    2   "pcorr"     "Partial correlation between continuous variables"
-    3   "coord"     "Coordinates for the continuous variables"
-    4   "cos2"      "Cos2 for the continuous variables"
-    5   "contrib"   "Contributions of the continuous variables"
-    6   "ftest"     "Fisher test of the continuous variables"
-    7   "cor"       "correlations between variables and dimensions"
-    """
-    if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an object of class PCA")
-    
-    # Store informations
-    df = dict({
-        "corr"      :   pd.DataFrame(self.col_corr_,index=self.col_labels_,columns=self.col_labels_),
-        "pcorr"     :   pd.DataFrame(self.col_pcorr_,index=self.col_labels_,columns=self.col_labels_),
-        "coord"     :   pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_), 
-        "cos2"      :   pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_),
-        "contrib"   :   pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_),
-        "ftest"     :   pd.DataFrame(self.col_ftest_,index = self.col_labels_,columns=self.dim_index_),
-        "cor"       :   pd.DataFrame(self.col_cor_,index=self.col_labels_,columns=self.dim_index_)
-    })
-    
-    if ((self.quanti_sup_labels_ is not None) and (self.quali_sup_labels_ is not None)):
-        # Add supplementary quantitatives informations
-        df["quanti_sup"] = dict({
-            "corr"  :  pd.DataFrame(self.col_sup_corr_,index=self.quanti_sup_labels_,columns=self.col_labels_), 
-            "coord" :  pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
-            "cos2"  :  pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
-            "ftest" :  pd.DataFrame(self.col_sup_ftest_,index=self.col_sup_labels_,columns=self.dim_index_)
-        })
-        # Add supplementary categories informations
-        df["quali_sup"] = dict({
-            "stats"    :   pd.DataFrame(self.mod_sup_stats_,columns=["n(k)","p(k)"],index=self.mod_sup_labels_),
-            "coord"     :  pd.DataFrame(self.mod_sup_coord_,index=self.mod_sup_labels_,columns=self.dim_index_),
-            "cos2"     :   pd.DataFrame(self.mod_sup_cos2_,index=self.mod_sup_labels_,columns=self.dim_index_), 
-            "dist"     :   pd.DataFrame(self.mod_sup_disto_,index=self.mod_sup_labels_,columns=["dist"]),
-            "eta2"     :   pd.DataFrame(self.quali_sup_eta2_,index=self.quali_sup_labels_,columns=self.dim_index_),
-            "vtest"    :   pd.DataFrame(self.mod_sup_vtest_,index=self.mod_sup_labels_,columns=self.dim_index_)
-            })
-    elif self.quanti_sup_labels_ is not None:
-        # Add supplementary quantitatives informations
-        df["quanti_sup"] = dict({
-            "corr"  :  pd.DataFrame(self.col_sup_corr_,index=self.quanti_sup_labels_,columns=self.col_labels_), 
-            "coord" :  pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
-            "cos2"  :  pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
-            "ftest" :  pd.DataFrame(self.col_sup_ftest_,index=self.col_sup_labels_,columns=self.dim_index_)
-        })
-    elif self.quali_sup_labels_ is not None:
-        # Add supplementary categories informations
-        df["quali_sup"] = dict({
-            "stats"    :   pd.DataFrame(self.mod_sup_stats_,columns=["n(k)","p(k)"],index=self.mod_sup_labels_),
-            "coord"     :  pd.DataFrame(self.mod_sup_coord_,index=self.mod_sup_labels_,columns=self.dim_index_),
-            "cos2"     :   pd.DataFrame(self.mod_sup_cos2_,index=self.mod_sup_labels_,columns=self.dim_index_), 
-            "dist"     :   pd.DataFrame(self.mod_sup_disto_,index=self.mod_sup_labels_,columns=["dist"]),
-            "eta2"     :   pd.DataFrame(self.quali_sup_eta2_,index=self.quali_sup_labels_,columns=self.dim_index_),
-            "vtest"    :   pd.DataFrame(self.mod_sup_vtest_,index=self.mod_sup_labels_,columns=self.dim_index_)
-        })
-    return df
-
-def get_pca(self,choice = "row")-> dict:
-
-    """
-    self : an instance of class PCA
-
-    choice : {"row", "var"}, default= "row"
-
-    Returns
-    -------
-    if choice == "row":
-        Principal Component Analysis - Results for individuals
-        ===================================================
-            Names       Description
-        1   "coord"     "coordinates for the individuals"
-        2   "cos2"      "cos2 for the individuals"
-        3   "contrib"   "contributions of the individuals"
-        4   "infos"     "additionnal informations for the individuals :"
-                            - distance between individuals and inertia
-                            - weight for the individuals
-                            - inertia for the individuals
-    elif choice == "var":
-        Principal Component Analysis - Results for variables
-        ===================================================
-            Names       Description
-        1   "corr"      "Pearson correlation between continuous variables"
-        2   "pcorr"     "Partial correlation between continuous variables"
-        3   "coord"     "Coordinates for the continuous variables"
-        4   "cos2"      "Cos2 for the continuous variables"
-        5   "contrib"   "Contributions of the continuous variables"
-        6   "ftest"     "Fisher test of the continuous variables"
-        7   "cor"       "correlations between variables and dimensions"
-    """
-    if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an object of class PCA.")
-    if choice == "row":
-        return get_pca_ind(self)
-    elif choice == "var":
-        return get_pca_var(self)
-    else:
-        raise ValueError("Allowed values for the argument choice are : 'row' or 'var'.")
 
 ########## Partial Principal Components Analysis
 def get_ppca_ind(self) -> dict:
@@ -1492,138 +1620,6 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     
 ###### PCA
 
-def summaryPCA(self,
-               digits=3,
-               nb_element=10,
-               ncp=3,
-               to_markdown=False,
-               tablefmt = "pipe",
-               **kwargs):
-    """Printing summaries of principal component analysis model
-
-    Parameters
-    ----------
-    self        :   an obect of class PCA.
-    digits      :   int, default=3. Number of decimal printed
-    nb_element  :   int, default = 10. Number of element
-    ncp         :   int, default = 3. Number of componennts
-    to_markdown :   Print DataFrame in Markdown-friendly format.
-    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
-    **kwargs    :   These parameters will be passed to tabulate.
-    """
-
-    row = get_pca(self,choice="row")
-    col = get_pca(self,choice="var")
-
-
-    ncp = min(ncp,self.n_components_)
-    nb_element = min(nb_element,len(self.row_labels_))
-
-    # Principal Components Analysis Results
-    print("                     Principal Component Analysis - Results                     \n")
-
-    # Add eigenvalues informations
-    print("Importance of components")
-    eig = pd.DataFrame(self.eig_,columns=self.dim_index_,
-                       index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
-    if to_markdown:
-        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(eig)
-    
-    # Add individuals informations
-    print(f"\nIndividuals (the {nb_element} first)\n")
-    row_infos = row["infos"]
-    for i in np.arange(0,ncp,1):
-        row_coord = row["coord"].iloc[:,i]
-        row_cos2 = row["cos2"].iloc[:,i]
-        row_cos2.name = "cos2"
-        row_ctr = row["contrib"].iloc[:,i]
-        row_ctr.name = "ctr"
-        row_infos = pd.concat([row_infos,row_coord,row_ctr,row_cos2],axis=1)
-    row_infos = row_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(row_infos)
-
-    # Add supplementary individuals
-    if self.row_sup_labels_ is not None:
-        print(f"\nSupplementary Individuals\n")
-        # Save all informations
-        row_sup = row["ind_sup"]
-        row_sup_infos = row_sup["dist"]
-        for i in np.arange(0,ncp,1):
-            row_sup_coord = row_sup["coord"].iloc[:,i]
-            row_sup_cos2 = row_sup["cos2"].iloc[:,i]
-            row_sup_cos2.name = "cos2"
-            row_sup_infos = pd.concat([row_sup_infos,row_sup_coord,row_sup_cos2],axis=1)
-        row_sup_infos = row_sup_infos.round(decimals=digits)
-        if to_markdown:
-            print(row_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(row_sup_infos)
-
-    # Add variables informations
-    print(f"\nContinues variables\n")
-    col_infos = pd.DataFrame(index=self.col_labels_).astype("float")
-    for i in np.arange(0,ncp,1):
-        col_coord = col["coord"].iloc[:,i]
-        col_cos2 = col["cos2"].iloc[:,i]
-        col_cos2.name = "cos2"
-        col_ctr = col["contrib"].iloc[:,i]
-        col_ctr.name = "ctr"
-        col_infos = pd.concat([col_infos,col_coord,col_ctr,col_cos2],axis=1)
-    col_infos = col_infos.round(decimals=digits)
-    if to_markdown:
-        print(col_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(col_infos)
-    
-    # Add supplementary continuous variables informations
-    if self.quanti_sup_labels_ is not None:
-        print(f"\nSupplementary continuous variable\n")
-        col_sup_infos = pd.DataFrame(index=self.quanti_sup_labels_).astype("float")
-        col_sup = col["quanti_sup"]
-        for i in np.arange(0,ncp,1):
-            col_sup_coord = col_sup["coord"].iloc[:,i]
-            col_sup_cos2 = col_sup["cos2"].iloc[:,i]
-            col_sup_cos2.name = "cos2"
-            col_sup_infos =pd.concat([col_sup_infos,col_sup_coord,col_sup_cos2],axis=1)
-        col_sup_infos = col_sup_infos.round(decimals=digits)
-
-        if to_markdown:
-            print(col_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(col_sup_infos)
-    
-    # Add Supplementary categories – Variable illustrative qualitative
-    if self.quali_sup_labels_ is not None:
-        print("\nSupplementary categories\n")
-        mod_sup = col["quali_sup"]
-        mod_sup_infos = mod_sup["dist"]
-        for i in np.arange(0,ncp,1):
-            mod_sup_coord = mod_sup["coord"].iloc[:,i]
-            mod_sup_cos2 = mod_sup["cos2"].iloc[:,i]
-            mod_sup_cos2.name = "cos2"
-            mod_sup_vtest = mod_sup["vtest"].iloc[:,i]
-            mod_sup_vtest.name = "v.test"
-            mod_sup_infos = pd.concat([mod_sup_infos,mod_sup_coord,mod_sup_cos2,mod_sup_vtest],axis=1)
-        mod_sup_infos = mod_sup_infos.round(decimals=digits)
-
-        if to_markdown:
-            print(mod_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(mod_sup_infos)
-        
-        # Add supplementary qualitatives - correlation ration
-        print("\nSupplementatry categorical variable (eta2)\n")
-        corr_ratio = mod_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
-        if to_markdown:
-            print(corr_ratio.to_markdown(tablefmt=tablefmt))
-        else:
-            print(corr_ratio)
-
 ########### Partial PCA
 
 def summaryPPCA(self,
@@ -1946,14 +1942,18 @@ def get_mfa_var(self,element = "group"):
             "coord"       : self.group_coord_,
             "correlation" : self.group_correlation_,
             "contrib"     : self.group_contrib_,
-            "cos2"        : None,
-            "dist"        : None,
+            "cos2"        : self.group_cos2_,
+            "dist"        : self.group_disto_,
             "Lg"          : self.group_lg_,
             "RV"          : self.group_rv_
         }
         if self.group_sup is not None:
             df["sup"] = {
-                "coord"  : self.group_sup_coord_
+                "coord"  : self.group_sup_coord_,
+                "dist"   : self.group_sup_disto_,
+                "cos2"   : self.group_sup_cos2_,
+                "Lg"     : self.group_sup_lg_,
+                "RV"     : self.group_sup_rv_
             }
     if element == "quanti_var":
         df = {}
@@ -1987,8 +1987,8 @@ def get_mfa_var(self,element = "group"):
                         "cos2"                   : self.mod_cos2_,
                         "vtest"                  : self.mod_vtest_,
                         "coord_partiel"          : self.mod_coord_partiel_,
-                        "within_inertia"         : None,
-                        "within_partial_inertia" : None
+                        "within_inertia"         : self.mod_within_inertia_,
+                        "within_partial_inertia" : self.mod_within_partial_inertia_
                     }
         # Check if supplementary group
         if self.group_sup is not None:
@@ -2015,13 +2015,15 @@ def get_mfa_partial_axes(self):
     df = {
         "coord"       : self.partial_axes_coord_,
         "cor"         : self.partial_axes_cor_,
-        "contrib"     : None,
+        "cos2"        : self.partial_axes_cos2_,
+        "contrib"     : self.partial_axes_contrib_,
         "cor_between" : self.partial_axes_cor_between_
     }
     if self.group_sup is not None:
         df["sup"] = {
             "coord" : self.partial_axes_sup_coord_,
-            "cor"   : self.partial_axes_sup_cor_
+            "cor"   : self.partial_axes_sup_cor_,
+            "cos2"  : self.partial_axes_sup_cos2_ 
         }
     return df
 
@@ -2068,7 +2070,8 @@ def summaryMFA(self,
 
     # Add eigenvalues informations
     print("Importance of components")
-    eig = pd.DataFrame(self.eig_,columns=self.dim_index_,index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
+    eig = pd.DataFrame(self.eig_,columns=["Dim."+str(x+1) for x in range(self.eig_.shape[1])],
+                       index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
     if to_markdown:
         print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
     else:

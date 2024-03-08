@@ -84,6 +84,31 @@ model4 <- PCA(decathlon2, ind.sup = 24:27,
               quanti.sup = 11:12, quali.sup = 13, graph=FALSE)
 res.shiny = PCAshiny(model4)
 
+X.quanti.sup <- model4$call$quanti.sup
+row.w <- model4$call$row.w
+dist2 <- as.vector(crossprod(rep(1,nrow(X.quanti.sup)),as.matrix(X.quanti.sup^2*row.w)))
+
+as.matrix(X.quanti.sup^2*row.w)
+
+row_coord <- cbind.data.frame(res.pca$ind$coord[,c(1,2)],
+                       Competition=decathlon2[(1:23),13])
+df <- row_coord
+find_hull <- function(row_coord){
+  row_coord[chull(row_coord$Dim.1,row_coord$Dim.2),]
+}
+hulls <- plyr::ddply(df,"Competition",find_hull)
+
+
+fig <- ggplot(row_coord,aes(x=Dim.1,y=Dim.2,colour=Competition,fill=Competition))+
+  geom_point()+
+  geom_polygon(data = hulls,alpha=0.5)
+
+
+fviz_pca_ind(res.pca,
+             habillage = "Competition",
+             addEllipses =TRUE, ellipse.type = "confidence",
+             palette = "jco", repel = TRUE)
+
 
 library("FactoMineR")
 data(wine)

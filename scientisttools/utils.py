@@ -7,6 +7,7 @@ from typing import Hashable
 from pandas.core.frame import DataFrame
 import numpy as np
 import pandas as pd
+from mapply.mapply import mapply
 from sklearn.utils.validation import check_array
 from factor_analyzer.factor_analyzer import calculate_bartlett_sphericity
 import pingouin as pg
@@ -573,5 +574,194 @@ def cramer_v(x,y):
 
 def tschuprow_t(x,y):
     pass
+
+
+####### 
+def svd_triplet(X,row_weights=None,col_weights=None,n_components=None):
+    """
+    Singular Value Decomposition of a Matrix
+    ----------------------------------------
+
+    Description
+    -----------
+    Compute the singular value decomposition of a rectangular matrix with weights for rows and columns
+
+    Parameters
+    ----------
+
+
+    Return
+    -------
+    
+    
+    """
+
+    # Set row weights
+    if row_weights is None:
+        row_weights = np.ones(X.shape[0])/X.shape[0]
+    else:
+        row_weights = np.array([x/sum(row_weights) for x in row_weights])
+    
+    # Set columns weights
+    if col_weights is None:
+        col_weights = np.ones(X.shape[1])
+    
+    # Set number of components
+    if n_components is None:
+        n_components = min(X.shape[0] - 1, X.shape[1])
+    else:
+        n_components = min(n_components, X.shape[0] - 1, X.shape[1])
+
+    row_weights = row_weights.astype(float)
+    col_weights = col_weights.astype(float)
+    ################### Compute SVD using row weights and columns weights
+    X = np.apply_along_axis(func1d=lambda x : x*np.sqrt(row_weights),axis=0,arr=X*np.sqrt(col_weights))
+
+    ####### Singular Value Decomposition (SVD) ################################
+    if X.shape[1] < X.shape[0]:
+        # Singular Value Decomposition
+        svd = np.linalg.svd(X,full_matrices=False)
+        #### Extract U and V
+        U = svd[0]
+        V = svd[2].T
+
+        if n_components > 1:
+            # Find sign
+            mult = np.sign(V.sum(axis=0))
+
+            # Replace signe 0 by 1
+            mult = np.array(list(map(lambda x: 1 if x == 0 else x, mult)))
+
+            #####
+            U = np.apply_along_axis(func1d=lambda x : x*mult,axis=1,arr=U)
+            V = np.apply_along_axis(func1d=lambda x : x*mult,axis=1,arr=V)
+
+        ### Recalibrate U and V using row weight and col weight
+        U = np.apply_along_axis(func1d=lambda x : x/np.sqrt(row_weights),axis=0,arr=U)
+        V = np.apply_along_axis(func1d=lambda x : x/np.sqrt(col_weights),axis=0,arr=V)
+    else:
+        # SVD to transpose X
+        svd = np.linalg.svd(X.T,full_matrices=False)
+
+        ##### Extract U and V
+        U = svd[2].T
+        V = svd[0]
+
+        if n_components > 1:
+            # Find sign
+            mult = np.sign(V.sum(axis=0))
+
+            # Replace signe 0 by 1
+            mult = np.array(list(map(lambda x: 1 if x == 0 else x, mult)))
+
+            #####
+            U = np.apply_along_axis(func1d=lambda x : x*mult,axis=1,arr=U)
+            V = np.apply_along_axis(func1d=lambda x : x*mult,axis=1,arr=V)
+
+        ### Recalibrate U and V using row weight and col weight
+        U = np.apply_along_axis(func1d=lambda x : x/np.sqrt(row_weights),axis=0,arr=U)
+        V = np.apply_along_axis(func1d=lambda x : x/np.sqrt(col_weights),axis=0,arr=V)
+
+    ######## Set number of columns using n_cp
+    U = U[:,:n_components]
+    V = V[:,:n_components]
+
+    #### Set delta length
+    vs = svd[1][:min(X.shape[1],X.shape[0]-1)]
+
+    ################### 
+    vs_filter = list(map(lambda x : True if x < 1e-15 else False, vs[:n_components]))
+
+    # Select index which respect the criteria
+    num = [idx for idx, i in enumerate(vs[:n_components]) if vs_filter[idx] == True]
+    vs_num = [i for idx, i in enumerate(vs[:n_components]) if vs_filter[idx] == True]
+
+    #######
+    if len(num) == 1:
+        U[:,num] = U[:,num].reshape(-1,1)*np.array(vs_num)
+        V[:,num] = V[:,num].reshape(-1,1)*np.array(vs_num)
+    elif len(num)>1:
+        U[:,num] = np.apply_along_axis(func1d=lambda x : x*vs_num,axis=1,arr=U[:,num])
+        V[:,num] = np.apply_along_axis(func1d=lambda x : x*vs_num,axis=1,arr=V[:,num])
+
+    # Store Singular Value Decomposition (SVD) information
+    return {"vs" : vs, "U" : U, "V" : V}
+
+############################## Correlation ratio ###########################""
+def function_eta2(X,lab,x,weights,n_workers):
+    ####
+    #### Compute dummies 
+    def fct_eta2(idx):
+        tt = pd.get_dummies(X[lab],prefix=lab,prefix_sep='_')
+        ni  = mapply(tt, lambda k : k*weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        num = mapply(mapply(tt,lambda k : k*x[:,idx],axis=0,progressbar=False,n_workers=n_workers),
+                        lambda k : k*weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)**2
+        num = sum([num[k]/ni[k] for k in num.index])
+        denom = sum(x[:,idx]*x[:,idx]*weights)
+        return num/denom
+    res = pd.DataFrame(np.array(list(map(lambda i : fct_eta2(i),range(x.shape[1])))).reshape(1,-1),
+                        index=[lab],columns=["Dim."+str(x+1) for x in range(x.shape[1])])
+    return res
+
+############################ Weighted correlation ####################################################
+def weightedcorrcoef(x,y=None,w=None):
+    """
+    Weighted pearson correlation
+    ----------------------------
+
+    Parameters
+    ----------
+    x : array_like
+        A 1-D or 2-D array containing multiple variables and observations. Each row of x 
+        represents a variable, and each column a single observation of all those variables.
+    
+    y : array_like, optional
+        An additional set of variables and observations. y has the same shape as x.
+    
+    w : None or 1-D ndarray
+        weights for each observation, with same length as zero axis of data.
+    
+    Return
+    ------
+    corrcoef : 
+        weighted correlation with default ddof=0
+    """
+    # Weighted covariance
+    def wcov(x, y, w):
+        """Weighted Covariance"""
+        return np.sum(w * (x - np.average(a=x,weights=w)) * (y - np.average(a=x,weights=w))) / np.sum(w)
+    # Weighted correlation
+    def wcorr(x, y, w):
+        """Weighted Correlation"""
+        return wcov(x, y, w) / np.sqrt(wcov(x, x, w) * wcov(y, y, w))
+
+    if w is None:
+        corrcoef = np.corrcoef(x=x,y=y,rowvar=False,ddof=0)
+    else:
+        w = np.asarray(w)
+        if y is None:
+            if x.ndim !=1 :
+                x = np.asarray(x)
+                corrcoef = np.zeros(shape=(x.shape[1],x.shape[1]))
+                for i in range(x.shape[1]):
+                    for j in range(x.shape[1]):
+                        corrcoef[i,j] = wcorr(x[:,i],x[:,j],w=w)
+            else:
+                raise ValueError("Error : x is a 1-D array, y must not be None.")
+        else:
+            x = np.append(np.asarray(x),np.asarray(y),axis=1)
+            corrcoef = np.zeros(shape=(x.shape[1],x.shape[1]))
+            for i in range(x.shape[1]):
+                for j in range(x.shape[1]):
+                    corrcoef[i,j] = wcorr(x[:,i],x[:,j],w=w)
+    return corrcoef
+
+
+
+
+    
+
+    
+    
 
 

@@ -10,7 +10,6 @@ res2.mfa <- MFA(poison, group=c(2,2,5,6), type=c("s","n","n","n"),
                 name.group=c("desc","desc2","symptom","eat"),
                 num.group.sup=1:2,graph = FALSE)
 
-
 ################################################################
 # Eigenvalues
 ###############################################################
@@ -34,7 +33,6 @@ head(ind$coord)
 head(ind$cos2)
 head(ind$contrib)
 head(ind$coord.partiel)
-
 head(ind$within.inertia)
 head(ind$within.partial.inertia)
 
@@ -48,8 +46,8 @@ head(quali_var$contrib)
 head(quali_var$v.test)
 head(quali_var$coord.partiel)
 
-head(quali_var$within.inertia) 
-head(quali_var$within.partial.inertia)
+head(quali_var$within.inertia) # A compléter
+head(quali_var$within.partial.inertia) # A compléter
 
 ############################################################
 # Group
@@ -60,15 +58,13 @@ head(group$contrib)
 head(group$correlation)
 head(group$Lg)
 head(group$RV)
-
-
-head(group$dist2) # A chercher
-head(group$cos2) # A chercher
+head(group$dist2) 
+head(group$cos2)
 
 ###### Supplementary group infos
-group$coord.sup
-group$cos2.sup # A implémenter
-group$dist2.sup # A implémenter
+head(group$coord.sup)
+group$dist2.sup
+head(group$cos2.sup)
 
 #############################################################
 # Partial axes
@@ -105,16 +101,47 @@ head(quanti_var_sup$cos2)
 head(quanti_var_sup$cor)
 
 ###############################################################
-#
+# Summary
 ##############################################################
-res2.mfa$summary.quali$group
-res2.mfa$summary.quali$variable
-res2.mfa$summary.quali$modalite
-res2.mfa$summary.quali$effectif
+res2.mfa$summary.quali
+res2.mfa$summary.quanti
 
 
+fct.eta2 <- function(vec,x,weights) {  
+  VB <- function(xx) {
+    return(sum((colSums((tt*xx)*weights)^2)/ni))
+  }
+  tt <- tab.disjonctif(vec)
+  ni <- colSums(tt*weights)
+  unlist(lapply(as.data.frame(x),VB))/colSums(x*x*weights)
+}
 
+X.quali.sup <- wine[,c("Label","Soil")]
 
+row.w <- res.mfa$global.pca$call$row.w
+t(sapply(X.quali.sup,fct.eta2,res.mfa$ind$coord,weights=row.w))
+
+tt <- tab.disjonctif(X.quali.sup[,c("Label")])
+ni <- colSums(tt*row.w)
+sum((colSums((tt*res.mfa$ind$coord[,1])*row.w)^2)/ni)
+
+(tt*res.mfa$ind$coord[,1]) *row.w
+
+VB <- function(xx) {
+  
+  return(sum((colSums((tt*xx)*row.w)^2)/ni))
+}
+
+lapply(as.data.frame(res.mfa$ind$coord),VB)
+unlist(lapply(as.data.frame(res.mfa$ind$coord),VB))
+
+sum((colSums((tt*res.mfa$ind$coord[,1])*row.w)^2)/ni)
+
+colSums(res.mfa$ind$coord[,1]*res.mfa$ind$coord[,1]*row.w)
+
+sum(res.mfa$ind$coord[,1]*res.mfa$ind$coord[,1]*row.w)
+
+VB(as.data.frame(res.mfa$ind$coord[,1]))
 
 
 

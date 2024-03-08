@@ -87,9 +87,9 @@ def load_decathlon2():
     decathlon = load_decathlon2()
     acp = PCA(normalize=True,
             n_components = None,
-            row_labels=decathlon.index[:23],
-            col_labels=decathlon.columns[:10],
-            row_sup_labels=decathlon.index[23:],
+            row_labels=decathlon.index.tolist()[:23],
+            col_labels=decathlon.columns.tolist()[:10],
+            row_sup_labels=decathlon.index.tolist()[23:],
             quanti_sup_labels=["Rank","Points"],
             quali_sup_labels=["Competition"],
             parallelize=True).fit(decathlon)
