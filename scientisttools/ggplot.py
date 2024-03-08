@@ -660,6 +660,7 @@ def fviz_ca_row(self,
     Parameters
     ----------
     self : an object of class CA
+    axis : a numeric list or vector of length 2 specifying the dimensions to be plotted, default = [0,1]
 
 
     Return
@@ -895,6 +896,7 @@ def fviz_ca_col(self,
     Parameters
     ----------
     self : an object of class CA
+    axis : a numeric list or vector of length 2 specifying the dimensions to be plotted, default = [0,1]
 
 
     Return
@@ -1035,6 +1037,7 @@ def fviz_ca_biplot(self,
                    y_lim = None,
                    x_label = None,
                    y_label = None,
+                   title = None,
                    row_geom_type = ["point","text"],
                    col_geom_type = ["point","text"],
                    row_color = "black",
@@ -1182,6 +1185,8 @@ def fviz_ca_biplot(self,
     # Add theme
     p = p + ggtheme
 
+    return p
+
 
 def fviz_ca(self,choice,**kwargs)->pn:
     """
@@ -1212,14 +1217,16 @@ def fviz_ca(self,choice,**kwargs)->pn:
     if self.model_ != "ca":
         raise ValueError("Error : 'self' must be an object of class CA.")
     
-    if choice not in ["row","col"]:
-        raise ValueError("Error : Allowed values for choice are :'row' or 'col'.")
+    if choice not in ["row","col","biplot"]:
+        raise ValueError("Error : Allowed values for choice are :'row', 'col' or 'biplot'.")
 
 
     if choice == "row":
         return fviz_ca_row(self,**kwargs)
     elif choice == "col":
         return fviz_ca_col(self,**kwargs)
+    elif choice == "biplot":
+        return fviz_ca_biplot(self,**kwargs)
 
 
 ########################################################
