@@ -81,7 +81,7 @@ def get_pca_ind(self) -> dict:
     4   "dist"      "square distance between individuals and origin"
     5   "infos"     "additionnal informations for the individuals :"
                         - square distance between individuals and origin
-                        - weight for the individuals
+                        - weights for the individuals
                         - inertia for the individuals
     
     Author(s)
@@ -90,7 +90,7 @@ def get_pca_ind(self) -> dict:
     """
     if self.model_ != "pca":
         raise ValueError("Error : 'self' must be an object of class PCA.")
-    return  self.res_["ind"]
+    return  self.ind_
 
 ### Extract variables
 def get_pca_var(self) -> dict:
@@ -119,7 +119,7 @@ def get_pca_var(self) -> dict:
     5   "weighted"  "weighted Peron correlation between continuous variables"
     6   "infos"     "additionnal informations for the variables :"
                         - square distance between variables and origin
-                        - weight for the variables
+                        - weights for the variables
                         - inertia for the variables
     
     Author(s)
@@ -128,7 +128,7 @@ def get_pca_var(self) -> dict:
     """
     if self.model_ != "pca":
         raise ValueError("Error : 'self' must be an object of class PCA")
-    return self.res_["var"]
+    return self.var_
 
 def get_pca(self,element = "ind")-> dict:
 
@@ -158,7 +158,7 @@ def get_pca(self,element = "ind")-> dict:
     - contrib : contributions of the individuals/variables
 
     Author(s)
-    --------
+    ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     if self.model_ != "pca":
@@ -203,19 +203,19 @@ def summaryPCA(self,
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
-    ind = self.res_["ind"]
-    var = self.res_["var"]
+    ind = self.ind_
+    var = self.var_
 
     # Define number of components
-    ncp = min(ncp,self.n_components_)
-    nb_element = min(nb_element,len(self.row_names_))
+    ncp = min(ncp,self.call_["n_components"])
+    nb_element = min(nb_element,self.call_["X"].shape[0])
 
     # Principal Components Analysis Results
     print("                     Principal Component Analysis - Results                     \n")
 
     # Add eigenvalues informations
     print("Importance of components")
-    eig = self.res_["eig"].T.round(decimals=digits)
+    eig = self.eig_.T.round(decimals=digits)
     eig.index = ["Variance","Difference","% of var.","Cumulative % of var."]
     if to_markdown:
         print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -240,9 +240,9 @@ def summaryPCA(self,
 
     # Add supplementary individuals
     if self.ind_sup is not None:
-        print(f"\nSupplementary Individuals\n")
+        print(f"\nSupplementary individuals\n")
         # Save all informations
-        ind_sup = self.res_["ind_sup"]
+        ind_sup = self.ind_sup_
         ind_sup_infos = ind_sup["dist"]
         for i in np.arange(0,ncp,1):
             ind_sup_coord = ind_sup["coord"].iloc[:,i]
@@ -257,7 +257,7 @@ def summaryPCA(self,
 
     # Add variables informations
     print(f"\nContinues variables\n")
-    var_infos = pd.DataFrame(index=self.col_names_).astype("float")
+    var_infos = var["infos"]
     for i in np.arange(0,ncp,1):
         var_coord = var["coord"].iloc[:,i]
         var_cos2 = var["cos2"].iloc[:,i]
@@ -274,8 +274,8 @@ def summaryPCA(self,
     # Add supplementary continuous variables informations
     if self.quanti_sup is not None:
         print(f"\nSupplementary continuous variables\n")
-        quanti_sup_infos = pd.DataFrame(index=self.quanti_sup_names_).astype("float")
-        quanti_sup = self.res_["quanti_sup"]
+        quanti_sup_infos = pd.DataFrame().astype("float")
+        quanti_sup = self.quanti_sup_
         for i in np.arange(0,ncp,1):
             quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
             quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
@@ -290,7 +290,7 @@ def summaryPCA(self,
     # Add Supplementary categories – Variable illustrative qualitative
     if self.quali_sup is not None:
         print("\nSupplementary categories\n")
-        quali_sup = self.res_["quali_sup"]
+        quali_sup = self.quali_sup_
         quali_sup_infos = quali_sup["dist"]
         for i in np.arange(0,ncp,1):
             quali_sup_coord = quali_sup["coord"].iloc[:,i]
@@ -313,123 +313,580 @@ def summaryPCA(self,
         else:
             print(quali_sup_eta2)
 
-
+#############################
 def get_ca_row(self)-> dict:
-
     """
-    self. : an instance of class CA
+    Extract the resultst for rows - CA
+    ----------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine, contributions and inertia) for the active row variables from Correspondence Analysis (CA) outputs.
+
+    Parameters
+    ----------
+    self. : an object of class CA
 
     Returns
     -------
-    Correspondence Analysis - Results for rows
-    =========================================================
-        Name        Description
-    1   "coord"     "coordinates for the rows"
-    2   "cos2"      "cos2 for the rows"
-    3   "constrib"  "contributions of the rows"
-    4   "dist"      "Rows distance"
-    5   "res.dist"  "Restitued distance"
-    6   "infos"     "additionnal informations for the rows:"
-                        - distance between rows and inertia
-                        - weight for the rows
-                        - inertia for the rows
+    a dictionary of dataframes containing the results for the active rows including :
+    coord   : coordinates for the rows of shape (n_rows, n_components)
+    cos2    : cos2 for the rows of shape (n_rows, n_components)
+    contrib : contributions for the rows of shape (n_rows, n_components)
+    infos   : additionnal informations for the rows:
+                - square root distance between rows and inertia
+                - marge for the rows
+                - inertia for the rows
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     if self.model_ != "ca":
-        raise ValueError("Error : 'self' must be an instance of class CA.")
-    df = dict({"coord"      :   pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_), 
-               "cos2"       :   pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
-               "contrib"    :   pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
-               "dist"       :   pd.DataFrame(self.row_dist_,index=self.row_labels_,columns=self.row_labels_),
-               "res.dist"  :   pd.DataFrame(self.res_row_dist_,index=self.row_labels_,columns=self.row_labels_),
-               "infos"      :   pd.DataFrame(self.row_infos_,columns= ["d(i,G)","p(i)","I(i,G)"],index=self.row_labels_)
-            })
-    if self.row_sup_labels_ is not None:
-        df["row_sup"] = dict({
-            "coord" : pd.DataFrame(self.row_sup_coord_,columns=self.dim_index_,index=self.row_sup_labels_)
-            })
+        raise ValueError("Error : 'self' must be an object of class CA.")
     
-    return df
+    return self.row_
 
 def get_ca_col(self)-> dict:
 
     """
-    self : an instance of class CA
+    Extract the results for columns - CA
+    ------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine, contributions and inertia) for the active column variables from Correspondence Analysis (CA) outputs.
+
+    Parameters
+    ----------
+    self : an object of class CA
 
     Returns
     -------
-    Correspondence Analysis - Results for columns
-    =========================================================
-        Name        Description
-    1   "coord"     "coordinates for the columns"
-    2   "cos2"      "cos2 for the columns"
-    3   "constrib"  "contributions of the columns"
-    4   "dist"      "Columns distance"
-    5   "res.dist"  "Restitued distance"
-    6   "infos"     "additionnal informations for the columns :"
-                        - distance between columns and inertia
-                        - weight for the columns
-                        - inertia for the columns
+    a dictionary of dataframes containing the results for the active columns including :
+    coord   : coordinates for the columns of shape (n_cols, n_components)
+    cos2    : cos2 for the columns of shape (n_cols, n_components)
+    contrib : contributions for the columns of shape (n_cols, n_components)
+    infos   : additionnal informations for the columns:
+                - square root distance between columns and inertia
+                - marge for the columns
+                - inertia for the columns
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     if self.model_ != "ca":
         raise ValueError("Error : 'self' must be an object of class CA.")
-    df = dict({"coord"      :   pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_), 
-               "cos2"       :   pd.DataFrame(self.col_cos2_,index = self.col_labels_,columns=self.dim_index_),
-               "contrib"    :   pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_),
-               "dist"       :   pd.DataFrame(self.col_dist_,index=self.col_labels_,columns=self.col_labels_),
-               "res.dist"   :   pd.DataFrame(self.res_col_dist_,index=self.col_labels_,columns=self.col_labels_),
-               "infos"      :   pd.DataFrame(self.col_infos_,columns= ["d(k,G)","p(k)","I(k,G)"],index=self.col_labels_)
-               })
-    if self.col_sup_labels_ is not None:
-        df["col_sup"] = dict({
-            "coord" : pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
-            })
     
-    return df
+    return self.col_
 
 def get_ca(self,choice = "row")-> dict:
-
     """
-    self : an instance of class CA
+    Extract the results for rows/columns - CA
+    -----------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine, contributions and inertia) for the active row/column variables from Correspondence Analysis (CA) outputs.
+
+    * get_ca() : Extract the results for rows and columns
+    * get_ca_row() : Extract the results for rows only
+    * get_ca_col() : Extract the results for columns only
+
+    Parameters
+    ----------
+    self : an object of class CA
 
     choice : {"row", "col"}, default= "row"
 
-    Returns
-    -------
-    if choice == "row":
-        Correspondence Analysis - Results for rows
-        =========================================================
-            Name        Description
-        1   "coord"     "coordinates for the rows"
-        2   "cos2"      "cos2 for the rows"
-        3   "constrib"  "contributions of the rows"
-        4   "dist"      "Rows distance"
-        5   "res.dist"  "Restitued distance"
-        6   "infos"     "additionnal informations for the rows:"
-                            - distance between rows and inertia
-                            - weight for the rows
-                            - inertia for the rows
-    if choice == "col":
-        Correspondence Analysis - Results for columns
-        =========================================================
-            Name        Description
-        1   "coord"     "coordinates for the columns"
-        2   "cos2"      "cos2 for the columns"
-        3   "constrib"  "contributions of the columns"
-        4   "dist"      "Columns distance"
-        5   "res.dist"  "Restitued distance"
-        6   "infos"     "additionnal informations for the columns :"
-                            - distance between columns and inertia
-                            - weight for the columns
-                            - inertia for the columns
+    Return
+    ------
+    a dictionary of dataframes containing the results for the active rows/columns including :
+    coord   : coordinates for the rows/columns
+    cos2    : cos2 for the rows/columns
+    contrib	: contributions of the rows/columns
+    infos   : additionnal informations for the row/columns:
+                - square root distance between rows/columns and inertia
+                - marge for the rows/columns
+                - inertia for the rows/columns
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     if self.model_ != "ca":
         raise ValueError("Error : 'self' must be an object of class CA.")
+    
+    if choice not in ["row","col"]:
+        raise ValueError("Error : Allowed values for the argument choice are : 'row' or 'col'.")
+    
     if choice == "row":
         return get_ca_row(self)
     elif choice == "col":
         return get_ca_col(self)
+    
+
+def summaryCA(self,
+              digits=3,
+              nb_element=10,
+              ncp=3,
+              to_markdown=False,
+              tablefmt="pipe",
+              **kwargs):
+    """Printing summaries of correspondence analysis model
+
+    Parameters
+    ----------
+    self        :   an obect of class CA.
+    digits      :   int, default=3. Number of decimal printed
+    nb_element  :   int, default = 10. Number of element
+    ncp         :   int, default = 3. Number of componennts
+    to_markdown :   Print DataFrame in Markdown-friendly format.
+    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    **kwargs    :   These parameters will be passed to tabulate.
+    """
+
+    row = get_ca(self,choice="row")
+    col = get_ca(self,choice="col")
+
+    # Set number of components
+    ncp = min(ncp,self.call_["n_components"])
+    # Set number of elements
+    nb_element = min(nb_element,len(row["coord"].index.tolist()))
+
+    # Principal Components Analysis Results
+    print("                     Correspondence Analysis - Results                     \n")
+
+    # Add eigenvalues informations
+    print("Importance of components")
+    eig = self.eig_.T.round(decimals=digits)
+    eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
+    
+    if to_markdown:
+        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
-        raise ValueError("Error : Allowed values for the argument choice are : 'row' or 'col'.")
+        print(eig)
+    
+    # Add individuals informations
+    print(f"\nRows\n")
+    row_infos = row["infos"]
+    for i in np.arange(0,ncp,1):
+        row_coord = row["coord"].iloc[:,i]
+        row_cos2 = row["cos2"].iloc[:,i]
+        row_cos2.name = "cos2"
+        row_ctr = row["contrib"].iloc[:,i]
+        row_ctr.name = "ctr"
+        row_infos = pd.concat([row_infos,row_coord,row_ctr,row_cos2],axis=1)
+    row_infos = row_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(row_infos)
+
+    # Add supplementary individuals
+    if self.row_sup is not None:
+        print(f"\nSupplementary rows\n")
+        # Save all informations
+        row_sup = self.row_sup_
+        row_sup_infos = row_sup["dist"]
+        for i in np.arange(0,ncp,1):
+            row_sup_coord = row_sup["coord"].iloc[:,i]
+            row_sup_cos2  = row_sup["cos2"].iloc[:,i]
+            row_sup_cos2.name = "cos2"
+            row_sup_infos = pd.concat([row_sup_infos,row_sup_coord,row_sup_cos2],axis=1)
+        row_sup_infos = row_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        if to_markdown:
+            print(row_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(row_sup_infos)
+
+    # Add variables informations
+    print(f"\nColumns\n")
+    col_infos = col["infos"]
+    for i in np.arange(0,ncp,1):
+        col_coord = col["coord"].iloc[:,i]
+        col_cos2 = col["cos2"].iloc[:,i]
+        col_cos2.name = "cos2"
+        col_ctr = col["contrib"].iloc[:,i]
+        col_ctr.name = "ctr"
+        col_infos = pd.concat([col_infos,col_coord,col_ctr,col_cos2],axis=1)
+    col_infos = col_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(col_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(col_infos)
+    
+    # Add supplementary columns informations
+    if self.col_sup is not None:
+        print(f"\nSupplementary columns\n")
+        col_sup = self.col_sup_
+        col_sup_infos = col_sup["dist"]
+        for i in np.arange(0,ncp,1):
+            col_sup_coord = col_sup["coord"].iloc[:,i]
+            col_sup_cos2 = col_sup["cos2"].iloc[:,i]
+            col_sup_cos2.name = "cos2"
+            col_sup_infos = pd.concat([col_sup_infos,col_sup_coord,col_sup_cos2],axis=1)
+        col_sup_infos = col_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        if to_markdown:
+            print(col_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(col_sup_infos)
+    
+    # Add supplementary quantitatives informations
+    if self.quanti_sup is not None:
+        print(f"\nSupplementary quantitatives columns\n")
+        quanti_sup = self.quanti_sup_
+        quanti_sup_infos = pd.DataFrame().astype("float")
+        for i in np.arange(0,ncp,1):
+            quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
+            quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
+            quanti_sup_cos2.name = "cos2"
+            quanti_sup_infos = pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
+        quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        if to_markdown:
+            print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quanti_sup_infos)
+    
+    # Add supplementary qualitatives informations
+    if self.quali_sup is not None:
+        print(f"\nSupplementary categories\n")
+        quali_sup = self.quali_sup_
+        quali_sup_infos = quali_sup["dist"]
+        for i in np.arange(0,ncp,1):
+            quali_sup_coord = quali_sup["coord"].iloc[:,i]
+            quali_sup_cos2 = quali_sup["cos2"].iloc[:,i]
+            quali_sup_cos2.name = "cos2"
+            quali_sup_vtest = quali_sup["vtest"].iloc[:,i]
+            quali_sup_vtest.name = "vtest"
+            quali_sup_infos = pd.concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
+        quali_sup_infos = quali_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        if to_markdown:
+            print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quali_sup_infos)
+        
+        # Add supplementary qualitatives - correlation ratio
+        print("\nSupplementary qualitatives variables (eta2)\n")
+        quali_sup_eta2 = quali_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
+        if to_markdown:
+            print(quali_sup_eta2.to_markdown(tablefmt=tablefmt))
+        else:
+            print(quali_sup_eta2)
+
+
+########## Multiple Correspondence Analysis
+
+def get_mca_ind(self,choice="ind") -> dict:
+    """
+    Extract the results for individuals - MCA
+    -----------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine and contributions) for the active individuals 
+    from Multiple Correspondence Analysis (MCA) outputs.
+
+    Parameters
+    ----------
+    self : an object of class MCA
+
+    choice  : the element to subset from the output. Possible values are :
+                - "ind" for individuals, 
+                - "ind_sup" for supplementary individuals.
+
+    Return
+    ------
+    a dictionary of dataframes containing the results for the active individuals categories including :
+
+    coord   : coordinates for the individuals
+
+    cos2    : cos2 for the individuals
+
+    contrib : contributions of the individuals
+
+    infos   : additionnal informations for the individuals :
+                - square root distance between individuals and inertia
+                - weights for the individuals
+                - inertia for the individuals
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "mca":
+        raise ValueError("Error : 'self' must be an object of class MCA.")
+    if choice == "ind":
+        return self.ind_
+    elif choice == "ind_sup":
+        if self.ind_sup is not None:
+            return self.ind_sup_
+        else:
+            raise ValueError("Error : No supplementary individuals.")
+
+def get_mca_var(self,choice="var") -> dict:
+    """
+    Extract the results for the variables - MCA
+    -------------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine and contributions) for the active variable 
+    categories from Multiple Correspondence Analysis (MCA) outputs.
+
+    Parameters
+    ----------
+    self : an object of class MCA
+
+    choice  : the element to subset from the output. Possible values are :
+                - "var" for variables, 
+                - "quanti_sup" for quantitative supplementary variables,
+                - "quali_sup" for qualitatives supplementary variables
+
+    Returns
+    -------
+    a dictionary of dataframes containing the results for the active variable categories including :
+
+    coord           : coordinates for the variables categories
+
+    corrected_coord : corrected coordinates for the variables categories
+
+    cos2            : cos2 for the variables categories
+
+    contrib         : contributions of the variables categories
+
+    infos           : additionnal informations for the variables categories :
+                        - square root distance between variables categories and inertia
+                        - weights for the variables categories
+                        - inertia for the variables categories
+
+    vtest           : v-test for the variables categories
+
+    eta2            : squared correlation ratio for the variables
+
+    inertia         : inertia of the variables
+
+    var_contrib     : contributions of the variables
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+
+    if self.model_ != "mca":
+        raise ValueError("Error : 'self' must be an object of class MCA.")
+    
+    if choice not in ["var","quanti_sup","quali_sup"]:
+        raise ValueError("Error : 'choice' should be one of 'var', 'quanti_sup', 'quali_sup'")
+
+    if choice == "var":
+        return self.var_
+    elif choice == "quanti_sup":
+        if self.quanti_sup is not None:
+            return self.quanti_sup_
+        else:
+            raise ValueError("Error : No quantitatives supplementary variables.")
+    elif choice == "quali_sup":
+        if self.quali_sup is not None:
+            return self.quali_sup_
+        else:
+            raise ValueError("Error : No qualitatives supplementary variables.")
+
+
+def get_mca(self,choice="ind") -> dict:
+    """
+    Extract the results for individuals/variables - MCA
+    ---------------------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine and contributions) for the active individuals/variable 
+    categories from Multiple Correspondence Analysis (MCA) outputs.
+
+    * get_mca()     : Extract the results for vriables and individuals
+    * get_mca_ind() : Extract the results for individuals only
+    * get_mca_var() : Extract the results for variables only
+
+    Parameters
+    ----------
+    self    : an object of class MCA
+
+    choice  : the element to subset from the output. Possible values are :
+                - "var" for variables, 
+                - "ind" for individuals, 
+                - "ind_sup" for supplementary individuals,
+                - "quanti_sup" for quantitative supplementary variables,
+                - "quali_sup" for qualitatives supplementary variables
+    
+    Return
+    ------
+    a dictionary of dataframes containing the results for the active individuals/variable categories including :
+
+    coord : coordinates for the individuals/variable categories
+
+    cos2 : cos2 for the individuals/variable categories
+
+    contrib	: contributions of the individuals/variable categories
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "mca":
+        raise ValueError("Error : 'self' must be an object of class MCA.")
+    
+    if choice not in ["ind","ind_sup","var","quanti_sup","quali_sup"]:
+        raise ValueError("Error : 'choice' should be one of : 'ind', 'ind_sup', 'var', 'quanti_sup', 'quali_sup'")
+
+    if choice in ["ind","ind_sup"]:
+        return get_mca_ind(self,choice=choice)
+    else:
+        return get_mca_var(self,choice=choice)
+    
+
+def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
+    """
+    Printing summaries of multiple correspondence analysis model
+    ------------------------------------------------------------
+
+    Parameters
+    ----------
+    self        :   an object of class MCA.
+    digits      :   int, default=3. Number of decimal printed
+    nb_element  :   int, default = 10. Number of element
+    ncp         :   int, default = 3. Number of componennts
+    to_markdown :   Print DataFrame in Markdown-friendly format.
+    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    **kwargs    :   These parameters will be passed to tabulate.
+    """
+
+    ncp = min(ncp,self.call_["n_components"])
+    nb_element = min(nb_element,self.ind_["coord"].shape[0],self.var_["coord"].shape[0])
+
+    # Multiple correspondance Analysis - Results
+    print("                     Multiple Correspondance Analysis - Results                     \n")
+
+    # Add eigenvalues informations
+    print("Importance of components")
+    eig = self.eig_.T.round(decimals=digits)
+    eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
+    
+    if to_markdown:
+        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(eig)
+    
+    # Add individuals informations
+    print(f"\nIndividuals (the {nb_element} first)\n")
+    ind = self.ind_
+    ind_infos = ind["infos"]
+    for i in np.arange(0,ncp,1):
+        ind_coord = ind["coord"].iloc[:,i]
+        ind_cos2 = ind["cos2"].iloc[:,i]
+        ind_cos2.name = "cos2"
+        ind_ctr = ind["contrib"].iloc[:,i]
+        ind_ctr.name = "ctr"
+        ind_infos = pd.concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
+    ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(ind_infos)
+
+    # Add supplementary individuals
+    if self.ind_sup is not None:
+        nb_elt = min(nb_element,self.ind_sup_["coord"].shape[0])
+        print(f"\nSupplementary Individuals\n")
+        # Save all informations
+        ind_sup = self.ind_sup_
+        ind_sup_infos = ind_sup["dist"]
+        for i in np.arange(0,ncp,1):
+            ind_sup_coord = ind_sup["coord"].iloc[:,i]
+            ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
+            ind_sup_cos2.name = "cos2"
+            ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
+        ind_sup_infos = ind_sup_infos.iloc[:nb_elt,:].round(decimals=digits)
+        if to_markdown:
+            print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(ind_sup_infos)
+
+    # Add variables informations
+    print(f"\nCategories (the {nb_element} first)\n")
+    var = self.var_
+    var_infos = var["infos"]
+    for i in np.arange(0,ncp,1):
+        var_coord = var["coord"].iloc[:,i]
+        var_cos2 = var["cos2"].iloc[:,i]
+        var_cos2.name = "cos2"
+        var_ctr = var["contrib"].iloc[:,i]
+        var_ctr.name = "ctr"
+        var_vtest = var["vtest"].iloc[:,i]
+        var_vtest.name = "vtest"
+        var_infos = pd.concat([var_infos,var_coord,var_ctr,var_cos2,var_vtest],axis=1)
+    var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(var_infos)
+    
+    # Add variables
+    print("\nCategorical variables (eta2)\n")
+    quali_var_infos = var["inertia"]
+    for i in np.arange(0,ncp,1):
+        quali_var_eta2 = var["eta2"].iloc[:,i]
+        quali_var_eta2.name = "Dim."+str(i+1)
+        quali_var_contrib = var["var_contrib"].iloc[:,i]
+        quali_var_contrib.name = "ctr"
+        quali_var_infos = pd.concat([quali_var_infos,quali_var_eta2,quali_var_contrib],axis=1)
+    quali_var_infos = quali_var_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(quali_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(quali_var_infos)
+
+    # Add Supplementary categories – Variable illustrative qualitative
+    if self.quali_sup is not None:
+        print("\nSupplementary categories\n")
+        var_sup = self.quali_sup_
+        var_sup_infos = var_sup["dist"]
+        for i in np.arange(0,ncp,1):
+            var_sup_coord = var_sup["coord"].iloc[:,i]
+            var_sup_cos2 = var_sup["cos2"].iloc[:,i]
+            var_sup_cos2.name = "cos2"
+            var_sup_vtest = var_sup["vtest"].iloc[:,i]
+            var_sup_vtest.name = "v.test"
+            var_sup_infos = pd.concat([var_sup_infos,var_sup_coord,var_sup_cos2,var_sup_vtest],axis=1)
+        var_sup_infos = var_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(var_sup_infos)
+        
+        print("\nSupplementary categorical variables (eta2)\n")
+        quali_var_sup_infos = var_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
+        if to_markdown:
+            print(quali_var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quali_var_sup_infos)
+
+    # Add supplementary continuous variables informations
+    if self.quanti_sup is not None:
+        print(f"\nSupplementary continuous variable\n")
+        quanti_sup = self.quanti_sup_
+        quanti_sup_infos = pd.DataFrame().astype("float")
+        for i in np.arange(0,ncp,1):
+            quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
+            quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
+            quanti_sup_cos2.name = "cos2"
+            quanti_sup_infos = pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
+        quanti_sup_infos = quanti_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quanti_sup_infos) 
+        
 
 # -*- coding: utf-8 -*-
 
@@ -775,177 +1232,6 @@ def get_hclust(X, method='single', metric='euclidean', optimal_ordering=False):
                 "merge":Z[:,:2],"n_obs":Z[:,3],"data":X})
 
 
-########## Multiple Correspondence Analysis
-
-def get_mca_ind(self) -> dict:
-    """
-    self : an instance of class MCA
-
-    Returns
-    -------
-    Multiple Correspondence Analysis - Results for individuals
-    ===============================================================
-        Names       Description
-    1   "coord"     "coordinates for the individuals"
-    2   "cos2"      "cos2 for the individuals"
-    3   "contrib"   "contributions of the individuals"
-    4   "infos"     "additionnal informations for the individuals :"
-                        - distance between individuals and inertia
-                        - weight for the individuals
-                        - inertia for the individuals
-    """
-    if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an object of class MCA.")
-
-    # Store informations
-    df = {
-        "coord"     :   pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_), 
-        "cos2"      :   pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
-        "contrib"   :   pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
-        "infos"     :   pd.DataFrame(self.row_infos_,columns= ["d(i,G)","p(i)","I(i,G)"],index=self.row_labels_)
-        }
-    if self.row_sup_labels_ is not None:
-        df["ind_sup"] = {
-            "coord" :   pd.DataFrame(self.row_sup_coord_,index=self.row_sup_labels_,columns=self.dim_index_),
-            "cos2"  :   pd.DataFrame(self.row_sup_cos2_,index=self.row_sup_labels_,columns=self.dim_index_)
-            }   
-    return df
-
-def get_mca_mod(self) -> dict:
-
-    """
-    self : an instance of class MCA
-
-    Returns
-    -------
-    Multiple Correspondence Analysis - Results for categories
-    =====================================================================
-        Names               Description
-    1   "coord"             "coordinates for the categories"
-    2   "corrected_coord"   "Coorected coordinates for the categories"
-    3   "cos2"              "cos2 for the categories"
-    4   "contrib"           "contributions of the categories"
-    5   "infos"             "additionnal informations for the categories :"
-                                - distance between categories and inertia
-                                - weight for the categories
-                                - inertia for the categories
-    """
-    if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an object of class MCA.")
-
-    # Store informations
-    df = {
-        "coord"             :   pd.DataFrame(self.mod_coord_,index=self.mod_labels_,columns=self.dim_index_), 
-        "corrected_coord"   :   pd.DataFrame(self.corrected_mod_coord_,index=self.mod_labels_,columns=self.dim_index_),
-        "cos2"              :   pd.DataFrame(self.mod_cos2_,index=self.mod_labels_,columns=self.dim_index_),
-        "contrib"           :   pd.DataFrame(self.mod_contrib_,index=self.mod_labels_,columns=self.dim_index_),
-        "vtest"             :   pd.DataFrame(self.mod_vtest_,index = self.mod_labels_,columns=self.dim_index_),
-        "infos"             :   pd.DataFrame(self.mod_infos_,columns= ["d(k,G)","p(k)","I(k,G)"],index=self.mod_labels_)
-        }
-    if self.quali_sup_labels_ is not None:
-        df["sup"] = {
-            "stats"     :   pd.DataFrame(self.mod_sup_stats_, index = self.mod_sup_labels_,columns = ["n(k)","p(k)"]),
-            "coord"     :   pd.DataFrame(self.mod_sup_coord_, index =self.mod_sup_labels_,columns=self.dim_index_),
-            "cos2"      :   pd.DataFrame(self.mod_sup_cos2_,  index =self.mod_sup_labels_,columns=self.dim_index_),
-            "dist"      :   pd.DataFrame(self.mod_sup_disto_, index = self.mod_sup_labels_,columns=["Dist"]),
-            "vtest"     :   pd.DataFrame(self.mod_sup_vtest_, index =self.mod_sup_labels_,columns=self.dim_index_)
-            }
-    return df
-
-def get_mca_var(self) -> dict:
-    """
-    self : an instance of class MCA
-
-    Returns
-    -------
-    Multiple Correspondence Analysis - Results for categories variables
-    =====================================================================
-        Names           Description
-    1   "chi2"          "chi-squared tests and p-values"
-    2   "inertia"       "Categories variables inertia"
-    3   "eta2"          "Correlation ratio"
-    4   "cos2"          "cosines of the categories variables"
-    5   "contrib"       "contributions of the categories variables"
-    """
-
-    if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an object of class MCA.")
-
-    df = {
-        "chi2"      :   self.chi2_test_,
-        "inertia"   :   pd.DataFrame(self.var_inertia_,index=self.var_labels_,columns=["I(j,G)"]),
-        "eta2"      :   pd.DataFrame(self.var_eta2_,index=self.var_labels_,columns=self.dim_index_),
-        "cos2"      :   pd.DataFrame(self.var_cos2_,index=self.var_labels_,columns=self.dim_index_),
-        "contrib"   :   pd.DataFrame(self.var_contrib_,index=self.var_labels_,columns=self.dim_index_)
-    }
-
-    if self.quanti_sup_labels_ is not None:
-        df["quanti_sup"] = {
-            "coord" :   pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
-            "cos2"  :   pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_)
-        }
-    if self.quali_sup_labels_ is not None:
-        df["quali_sup"] = {
-            "eta2"  :    self.quali_sup_eta2_,
-            "cos2"  :    self.quali_sup_cos2_ 
-        }
-
-    return df
-
-def get_mca(self,choice="ind") -> dict:
-    """
-
-    Parameters
-    ---------
-    self    : an instance of class MCA
-    choice  : {'ind','mod','var'}
-
-    if choice == "ind":
-        -------
-        Multiple Correspondence Analysis - Results for individuals
-        ===============================================================
-            Names       Description
-        1   "coord"     "coordinates for the individuals"
-        2   "cos2"      "cos2 for the individuals"
-        3   "contrib"   "contributions of the individuals"
-        4   "infos"     "additionnal informations for the individuals :"
-                            - distance between individuals and inertia
-                            - weight for the individuals
-                            - inertia for the individuals
-    elif choice == "mod":
-         Multiple Correspondence Analysis - Results for categories
-        =====================================================================
-            Names               Description
-        1   "coord"             "coordinates for the categories"
-        2   "corrected_coord"   "Coorected coordinates for the categories"
-        3   "cos2"              "cos2 for the categories"
-        4   "contrib"           "contributions of the categories"
-        5   "infos"             "additionnal informations for the categories :"
-                                    - distance between categories and inertia
-                                    - weight for the categories
-                                    - inertia for the categories
-    elif choice == "var":
-        Multiple Correspondence Analysis - Results for categories variables
-        =====================================================================
-            Names           Description
-        1   "chi2"          "chi-squared tests and p-values"
-        2   "inertia"       "Categories variables inertia"
-        3   "eta2"          "Correlation ratio"
-        4   "cos2"          "cosines of the categories variables"
-        5   "contrib"       "contributions of the categories variables"
-    """
-    if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an object of class MCA.")
-    
-    if choice == "ind":
-        return get_mca_ind(self)
-    elif choice == "mod":
-        return get_mca_mod(self)
-    elif choice == "var":
-        return get_mca_var(self)
-    else:
-        raise ValueError("Error : Allowed values for the argument 'choice' are : 'ind','var' and 'mod'.")
-    
 ################## MDS
 
 def get_mds(self) -> dict:
@@ -1067,98 +1353,6 @@ def get_ppca(self,choice = "row")-> dict:
         return get_ppca_var(self)
     else:
         raise ValueError("Allowed values for the argument choice are : 'row' or 'var'.")
-
-
-################## Summarize functions
-
-def summaryCA(self,
-              digits=3,
-              nb_element=10,
-              ncp=3,
-              to_markdown=False,
-              tablefmt="pipe",
-              **kwargs):
-    """Printing summaries of correspondence analysis model
-
-    Parameters
-    ----------
-    self        :   an obect of class CA.
-    digits      :   int, default=3. Number of decimal printed
-    nb_element  :   int, default = 10. Number of element
-    ncp         :   int, default = 3. Number of componennts
-    to_markdown :   Print DataFrame in Markdown-friendly format.
-    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
-    **kwargs    :   These parameters will be passed to tabulate.
-    """
-
-    row = get_ca(self,choice="row")
-    col = get_ca(self,choice="col")
-
-    ncp = min(ncp,self.n_components_)
-    nb_element = min(nb_element,len(self.row_labels_))
-
-    # Principal Components Analysis Results
-    print("                     Correspondence Analysis - Results                     \n")
-
-    # Add eigenvalues informations
-    print("Importance of components")
-    eig = pd.DataFrame(self.eig_,columns=self.dim_index_,
-                       index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
-    if to_markdown:
-        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(eig)
-    
-    # Add individuals informations
-    print(f"\nRows\n")
-    row_infos = row["infos"]
-    for i in np.arange(0,ncp,1):
-        row_coord = row["coord"].iloc[:,i]
-        row_cos2 = row["cos2"].iloc[:,i]
-        row_cos2.name = "cos2"
-        row_ctr = row["contrib"].iloc[:,i]
-        row_ctr.name = "ctr"
-        row_infos = pd.concat([row_infos,row_coord,row_ctr,row_cos2],axis=1)
-    row_infos = row_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(row_infos)
-
-    # Add supplementary individuals
-    if self.row_sup_labels_ is not None:
-        print(f"\nSupplementary rows\n")
-        # Save all informations
-        row_sup_coord = row["row_sup"]["coord"].iloc[:,:ncp].round(decimals=digits)
-        if to_markdown:
-            print(row_sup_coord.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(row_sup_coord)
-
-    # Add variables informations
-    print(f"\nColumns\n")
-    col_infos = col["infos"]
-    for i in np.arange(0,ncp,1):
-        col_coord = col["coord"].iloc[:,i]
-        col_cos2 = col["cos2"].iloc[:,i]
-        col_cos2.name = "cos2"
-        col_ctr = col["contrib"].iloc[:,i]
-        col_ctr.name = "ctr"
-        col_infos = pd.concat([col_infos,col_coord,col_ctr,col_cos2],axis=1)
-    col_infos = col_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(col_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(col_infos)
-    
-    # Add supplementary columns informations
-    if self.col_sup_labels_ is not None:
-        print(f"\nSupplementary columns\n")
-        col_sup_coord = col["col_sup"]["coord"].iloc[:,:ncp].round(decimals=digits)
-        if to_markdown:
-            print(col_sup_coord.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(col_sup_coord)
 
 
 def summaryEFA(self,
@@ -1461,163 +1655,7 @@ def summaryFAMD(self,
         else:
             print(var_sup_infos)
 
-########" MCA"
 
-def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
-    """Printing summaries of multiple correspondence analysis model
-    Parameters
-    ----------
-    self        :   an obect of class MCA.
-    digits      :   int, default=3. Number of decimal printed
-    nb_element  :   int, default = 10. Number of element
-    ncp         :   int, default = 3. Number of componennts
-    to_markdown :   Print DataFrame in Markdown-friendly format.
-    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
-    **kwargs    :   These parameters will be passed to tabulate.
-    """
-
-    row = get_mca(self,choice="ind")
-    mod = get_mca(self,choice="mod")
-    var = get_mca(self,choice="var")
-
-
-    ncp = min(ncp,self.n_components_)
-    nb_element = min(nb_element,len(self.row_labels_),len(self.mod_labels_))
-
-    # Multiple correspondance Analysis - Results
-    print("                     Multiple Correspondance Analysis - Results                     \n")
-
-    # Add eigenvalues informations
-    print("Importance of components")
-    eig = pd.DataFrame(self.eig_,columns=self.dim_index_,
-                       index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
-    if to_markdown:
-        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(eig)
-    
-    # Add individuals informations
-    print(f"\nIndividuals (the {nb_element} first)\n")
-    row_infos = row["infos"]
-    for i in np.arange(0,ncp,1):
-        row_coord = row["coord"].iloc[:,i]
-        row_cos2 = row["cos2"].iloc[:,i]
-        row_cos2.name = "cos2"
-        row_ctr = row["contrib"].iloc[:,i]
-        row_ctr.name = "ctr"
-        row_infos = pd.concat([row_infos,row_coord,row_ctr,row_cos2],axis=1)
-    row_infos = row_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(row_infos)
-
-    # Add supplementary individuals
-    if self.row_sup_labels_ is not None:
-        nb_elt = min(nb_element,len(self.row_sup_labels_))
-        print(f"\nSupplementary Individuals\n")
-        # Save all informations
-        row_sup_infos = pd.DataFrame(index=self.row_sup_labels_).astype("float")
-        row_sup = row["ind_sup"]
-        for i in np.arange(0,ncp,1):
-            row_sup_coord = row_sup["coord"].iloc[:,i]
-            row_sup_cos2 = row_sup["cos2"].iloc[:,i]
-            row_sup_cos2.name = "cos2"
-            row_sup_infos = pd.concat([row_sup_infos,row_sup_coord,row_sup_cos2],axis=1)
-        row_sup_infos = row_sup_infos.iloc[:nb_elt,:].round(decimals=digits)
-        if to_markdown:
-            print(row_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(row_sup_infos)
-
-    # Add variables informations
-    print(f"\nCategories (the {nb_element} first)\n")
-    mod_infos = mod["infos"]
-    for i in np.arange(0,ncp,1):
-        mod_coord = mod["coord"].iloc[:,i]
-        mod_cos2 = mod["cos2"].iloc[:,i]
-        mod_cos2.name = "cos2"
-        mod_ctr = mod["contrib"].iloc[:,i]
-        mod_ctr.name = "ctr"
-        mod_vtest = mod["vtest"].iloc[:,i]
-        mod_vtest.name = "vtest"
-        mod_infos = pd.concat([mod_infos,mod_coord,mod_ctr,mod_cos2,mod_vtest],axis=1)
-    mod_infos = mod_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(mod_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(mod_infos)
-    
-    # Add variables
-    print("\nCategorical variables\n")
-    var_infos = var["inertia"]
-    for i in np.arange(0,ncp,1):
-        var_eta2 = var["eta2"].iloc[:,i]
-        var_eta2.name = "Dim."+str(i+1)
-        var_cos2 = var["cos2"].iloc[:,i]
-        var_cos2.name = "cos2"
-        var_contrib = var["contrib"].iloc[:,i]
-        var_contrib.name = "ctr"
-        var_infos = pd.concat([var_infos,var_eta2,var_cos2,var_contrib],axis=1)
-    
-    var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(var_infos)
-
-    # Add Supplementary categories – Variable illustrative qualitative
-    if self.quali_sup_labels_ is not None:
-        print("\nSupplementary categories\n")
-        mod_sup = mod["sup"]
-        mod_sup_infos = np.sqrt(mod_sup["dist"])
-        for i in np.arange(0,ncp,1):
-            mod_sup_coord = mod_sup["coord"].iloc[:,i]
-            mod_sup_cos2 = mod_sup["cos2"].iloc[:,i]
-            mod_sup_cos2.name = "cos2"
-            mod_sup_vtest = mod_sup["vtest"].iloc[:,i]
-            mod_sup_vtest.name = "v.test"
-            mod_sup_infos = pd.concat([mod_sup_infos,mod_sup_coord,mod_sup_cos2,mod_sup_vtest],axis=1)
-        mod_sup_infos = mod_sup_infos.round(decimals=digits)
-
-        if to_markdown:
-            print(mod_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(mod_sup_infos)
-        
-        print("\nSupplementary categorical variables\n")
-        var_sup_infos = pd.DataFrame().astype("float")
-        var_sup = var['quali_sup']
-        for i in np.arange(0,ncp,1):
-            var_sup_eta2 = var_sup["eta2"].iloc[:,i]
-            var_sup_eta2.name = "Dim."+str(i+1)
-            var_sup_cos2 = var_sup["cos2"].iloc[:,i]
-            var_sup_cos2.name = "cos2"
-            var_sup_infos = pd.concat([var_sup_infos,var_sup_eta2,var_sup_cos2],axis=1)
-        
-        var_sup_infos = var_sup_infos.round(decimals=digits)
-        if to_markdown:
-            print(var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(var_sup_infos)
-
-    # Add supplementary continuous variables informations
-    if self.quanti_sup_labels_ is not None:
-        print(f"\nSupplementary continuous variable\n")
-        col_sup_infos = pd.DataFrame().astype("float")
-        col_sup= var["quanti_sup"]
-        for i in np.arange(0,ncp,1):
-            col_sup_coord = col_sup["coord"].iloc[:,i]
-            col_sup_cos2 = col_sup["cos2"].iloc[:,i]
-            col_sup_cos2.name = "cos2"
-            col_sup_infos = pd.concat([col_sup_infos,col_sup_coord,col_sup_cos2],axis=1)
-        
-        col_sup_infos = col_sup_infos.round(decimals=digits)
-        if to_markdown:
-            print(col_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(col_sup_infos)
-    
 ###### PCA
 
 ########### Partial PCA

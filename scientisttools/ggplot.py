@@ -96,7 +96,7 @@ def fviz_screeplot(self,
         raise ValueError("Error : 'self' must be an object of class PCA, CA, MCA, FAMD, MFA, HMFA")
 
     eig = get_eigenvalue(self)
-    eig = eig.iloc[:min(ncp,self.n_components),:]
+    eig = eig.iloc[:min(ncp,self.call_["n_components"]),:]
 
     if choice == "eigenvalue":
         eig = eig["eigenvalue"]
@@ -163,6 +163,299 @@ def fviz_eig(self,**kwargs) -> pn:
     """
     return fviz_screeplot(self,**kwargs)
 
+##################################################################################################
+#                       Visualize the contributions of row/column elements
+###################################################################################################
+
+def fviz_contrib(self,
+                 choice="ind",
+                 axis=None,
+                 y_label=None,
+                 top_contrib=None,
+                 bar_width=None,
+                 add_grid=True,
+                 fill_color = "steelblue",
+                 color = "steelblue",
+                 palette = "Set2",
+                 sort_contrib = "desc",
+                 xtickslab_rotation = 45,
+                 ggtheme=pn.theme_minimal()) -> pn:
+    
+    """
+    Visualize the contributions of row/columns elements
+    ---------------------------------------------------
+
+    Description
+    -----------
+    This function can be used to visualize the contribution of rows/columns from the results of Principal Component Analysis (PCA), 
+    Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), and Multiple Factor Analysis (MFA) functions.
+    
+
+    For the selected axis, the graph represents the row or column
+    cosines sorted in descending order.            
+        
+    Parameters
+    ----------
+    choice : {'ind','var','mod'}.
+            'ind' :   individuals
+            'var' :   continues/categorical variables
+            'mod' :   categories
+        
+    axis : None or int.
+        Select the axis for which the row/col contributions are plotted. If None, axis = 0.
+        
+    xlabel : None or str (default).
+        The label text.
+        
+    top_contrib : None or int.
+        Set the maximum number of values to plot.
+        If top_contrib is None : all the values are plotted.
+            
+    bar_width : None, float or array-like.
+        The width(s) of the bars.
+
+    add_grid : bool or None, default = True.
+        Whether to show the grid lines.
+
+    color : color or list of color, default = "steelblue".
+        The colors of the bar faces.
+
+    short_labels : bool, default = False
+        
+    Returns
+    -------
+    None
+    """    
+        
+    if choice not in ["row","col","var","ind","quanti_var","quali_var","group","partial_axes"]:
+        raise ValueError("Error : 'choice' should be one of 'row', 'col', 'var', 'ind', 'quanti_var', 'quali_var', 'group' or 'partial_axes'.")
+
+    ncp = self.call_["n_components"]
+    if axis is None:
+        axis = 0
+    elif not isinstance(axis,int):
+        raise ValueError("Error : 'axis' must be an integer.")
+    elif axis not in list(range(0,ncp)):
+        raise ValueError(f"Error : 'axis' must be an integer between 0 and {ncp-1}.")
+            
+    if bar_width is None:
+        bar_width = 0.8
+
+    ################## set
+    if self.model_ == "pca" and choice not in ["ind","var"]:
+        raise ValueError("Error : 'choice' should be one of 'var', 'ind'.")
+    
+    if self.model_ == "ca" and choice not in ["row","col"]:
+        raise ValueError("Error : 'choice' should be one of 'row', 'col'.")
+    
+    if sort_contrib not in ["desc","asc","none"]:
+        raise ValueError("Error : 'sort_contrib' should be one of 'desc', 'asc' or 'none'.")
+
+    #### Set names
+    if choice == "ind":
+        name = "individuals"
+    elif choice == "var":
+        name = "variables"
+    elif choice == "row":
+        name = "rows"
+    elif choice == "col":
+        name = "columns"
+    
+    # Extract contribution
+    if choice == "ind":
+        contrib = self.ind_["contrib"]
+    elif choice == "var":
+        contrib = self.var_["contrib"]
+    elif choice == "row":
+        contrib = self.row_["contrib"]
+    elif choice == "col":
+        contrib = self.col_["contrib"]
+    
+    ####
+    contrib = contrib.iloc[:,[axis]].reset_index()
+    contrib.columns = ["name","contrib"]
+
+    # Add hline
+    hvalue = 100/contrib.shape[0]
+    
+    #####
+    if top_contrib is not None:
+            contrib = contrib.sort_values(by="contrib",ascending=False).head(top_contrib)
+    
+    p = pn.ggplot()
+    if choice == "quanti_var" and self.model_ == "mfa":
+        pass
+    else:
+        if sort_contrib == "desc":
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),
+                                fill=fill_color,color=color,width=bar_width,stat="identity")
+        elif sort_contrib == "asc":
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1),
+                                fill=fill_color,color=color,width=bar_width,stat="identity")
+        else:
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="contrib",y="contrib",group = 1),
+                                fill=fill_color,color=color,width=bar_width,stat="identity")
+    
+    if y_label is None:
+        y_label = "Contributions (%)"
+    title = f"Contribution of {name} to Dim-{axis+1}"
+    p = p + pn.labs(title=title,y=y_label,x="")
+    
+    # if not (choice == "var" and self.model_ =="mca"):
+    p = p + pn.geom_hline(yintercept=hvalue,linetype="dashed",color="red")
+
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
+    p = p + ggtheme
+
+    if xtickslab_rotation > 5:
+        ha = "right"
+    if xtickslab_rotation == 90:
+        ha = "center"
+
+    # Rotation
+    p = p + pn.theme(axis_text_x = pn.element_text(rotation = xtickslab_rotation,ha=ha))
+
+    return p
+
+##################################################################################################
+#                       Visualize the cosines of row/column elements
+###################################################################################################
+
+def fviz_cosines(self,
+                 choice="ind",
+                 axis=None,
+                 xlabel=None,
+                 top_cos2=10,
+                 bar_width=None,
+                 add_grid=True,
+                 color="steelblue",
+                 short_labels=False,
+                 ggtheme=pn.theme_gray()) -> plt:
+    
+    """ Plot the row and columns cosines graph
+            
+        For the selected axis, the graph represents the row or column
+        cosines sorted in descending order.            
+        
+        Parameters
+        ----------
+        choice : {'ind','var','mod','quanti_sup','quali_sup','ind_sup'}
+                    'ind' :   individuals
+                    'var' :   continues variables
+                    'mod' :   categories
+                    'quanti_sup' : supplementary continues variables
+                    'quali_sup' : supplementary categories variables
+                    'ind_sup ' : supplementary individuals
+        
+        axis : None or int
+            Select the axis for which the row/col cosines are plotted. If None, axis = 0.
+        
+        xlabel : None or str (default)
+            The label text.
+        
+        top_cos2 : int
+            Set the maximum number of values to plot.
+            If top_cos2 is None : all the values are plotted.
+            
+        bar_width : None, float or array-like.
+            The width(s) of the bars.
+
+        add_grid : bool or None, default = True.
+            Whether to show the grid lines
+
+        color : color or list of color, default = "steelblue".
+            The colors of the bar faces.
+
+        short_labels : bool, default = False
+        
+        Returns
+        -------
+        None
+        """
+
+    if choice not in ["row","col","ind","var","mod","quanti_var","quali_var","ind_sup"]:
+        raise ValueError("Error : 'choice' not allowed.")
+    
+    if axis is None:
+        axis = 0
+    elif not isinstance(axis,int):
+        raise ValueError("Error : 'axis' must be an integer.")
+    elif axis < 0 or axis > self.n_components_:
+        raise ValueError(f"Error : 'axis' must be an integer between 0 and {self.n_components_ - 1}")
+
+    if xlabel is None:
+        xlabel = "Cos2 - Quality of representation"
+    if bar_width is None:
+        bar_width = 0.5
+    if top_cos2 is None:
+        top_cos2 = 10
+        
+    if choice == "ind":
+        name = "individuals"
+        if self.model_ == "ca":
+            name = "rows"
+        cos2 = self.row_cos2_[:,axis]
+        labels = self.row_labels_
+    elif choice == "var" :
+        if self.model_ != "mca":
+            name = "continues variables"
+            cos2 = self.col_cos2_[:,axis]
+            labels  = self.col_labels_
+            if self.model_ == "ca":
+                name = "columns"
+        else:
+            name = "categorical variables"
+            cos2 = self.var_cos2_[:,axis]
+            labels  = self.var_labels_
+    elif choice == "mod" and self.model_ in ["mca","famd"]:
+        name = "categories"
+        cos2 = self.mod_cos2_[:,axis]
+        if short_labels:
+            labels = self.short_labels_
+        else:
+            labels = self.mod_labels_
+    elif choice == "quanti_sup" and self.model_ != "ca":
+        if ((self.quanti_sup_labels_ is not None) and (len(self.col_sup_labels_) >= 2)):
+            name = "supplementary continues variables"
+            cos2 = self.col_sup_cos2_[:,axis]
+            labels = self.col_sup_labels_
+        else:
+            raise ValueError("Error : Factor Model must have at least two supplementary continuous variables.")
+    elif choice == "quali_sup" and self.model_ !="ca":
+        if self.quali_sup_labels_ is not None:
+            name = "supplementary categories"
+            cos2 = self.mod_sup_cos2_[:,axis]
+            if short_labels:
+                labels = self.short_sup_labels_
+            else:
+                labels = self.mod_sup_labels_
+    
+    # Start
+    n = len(labels)
+    n_labels = len(labels)
+    if (top_cos2 is not None) & (top_cos2 < n_labels):
+        n_labels = top_cos2
+        
+    limit = n - n_labels
+    cos2_sorted = np.sort(cos2)[limit:n]
+    labels_sort = pd.Series(labels)[np.argsort(cos2)][limit:n]
+
+    df = pd.DataFrame({"labels" : labels_sort, "cos2" : cos2_sorted})
+
+    p = pn.ggplot(df,pn.aes(x = "reorder(labels,cos2)", y = "cos2"))+pn.geom_bar(stat="identity",fill=color,width=bar_width)
+
+    title = f"Cosinus of {name} to Dim-{axis+1}"
+    p = p + pn.ggtitle(title)+pn.xlab(name)+pn.ylab(xlabel)
+    p = p + pn.coord_flip()
+
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"),
+                         axis_text_x = pn.element_text(angle = 60, ha = "center", va = "center"))
+
+    return p+ggtheme
+
+
 ####################################################################################
 #       Principal Components Analysis (PCA)
 ####################################################################################
@@ -170,8 +463,10 @@ def fviz_eig(self,**kwargs) -> pn:
 # Individuals Factor Map
 def fviz_pca_ind(self,
                  axis=[0,1],
-                 xlim=None,
-                 ylim=None,
+                 x_lim=None,
+                 y_lim=None,
+                 x_label = None,
+                 y_label = None,
                  title =None,
                  color ="black",
                  geom_type = ["point","text"],
@@ -220,31 +515,36 @@ def fviz_pca_ind(self,
 
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
+        (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
 
     #### Extract individuals coordinates
-    coord = self.res_["ind"]["coord"]
+    coord = self.ind_["coord"]
 
     # Add Active Data
     coord = pd.concat([coord,self.call_["X"]],axis=1)
 
-    # Add categorical supplementary variables
-    if self.quali_sup is not None:
-        quali_name = [name for i, name in enumerate(self.data_.columns.tolist()) if i in self.quali_sup_]
-        coord[quali_name] = self.data_[quali_name]
-    
-    # Add Supplementary continous variables
+    ################ Add supplementary quantitatives columns
     if self.quanti_sup is not None:
-        quanti_name = [name for i, name in enumerate(self.data_.columns.tolist()) if i in self.quanti_sup_]
-        coord[quanti_name] = self.data_[quanti_name]
+        X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
+        if self.ind_sup is not None:
+            X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+        coord = pd.concat([coord,X_quanti_sup],axis=1)
+    
+    ################ Add supplementary qualitatives columns
+    if self.quali_sup is not None:
+        X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+        if self.ind_sup is not None:
+            X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+        coord = pd.concat([coord,X_quali_sup],axis=1)
+    
     
     # Using lim cos2
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.res_["ind"]["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = self.ind_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -254,7 +554,7 @@ def fviz_pca_ind(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = self.res_["ind"]["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = self.ind_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -265,11 +565,11 @@ def fviz_pca_ind(self,
 
     if isinstance(color,str):
         if color == "cos2":
-            c = self.res_["ind"]["cos2"].iloc[:,axis].sum(axis=1).values
+            c = self.ind_["cos2"].iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "cos2"
         elif color == "contrib":
-            c = self.res_["ind"]["contrib"].iloc[:,axis].sum(axis=1).values
+            c = self.ind_["contrib"].iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Contrib"
         elif color in coord.columns.tolist():
@@ -335,7 +635,7 @@ def fviz_pca_ind(self,
     ##### Add supplementary individuals coordinates
     if ind_sup:
         if self.ind_sup is not None:
-            sup_coord = self.res_["ind_sup"]["coord"]
+            sup_coord = self.ind_sup_["coord"]
             if "point" in geom_type:
                 p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                     color = color_sup,shape = marker_sup,size=point_size)
@@ -351,7 +651,7 @@ def fviz_pca_ind(self,
     if quali_sup:
         if self.quali_sup is not None:
             if habillage is None:
-                mod_sup_coord = self.res_["quali_sup"]["coord"]
+                mod_sup_coord = self.quali_sup_["coord"]
                 if "point" in geom_type:
                     p = p + pn.geom_point(mod_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
                                         color=color_quali_sup,size=point_size)
@@ -365,18 +665,24 @@ def fviz_pca_ind(self,
                                            color =color_quali_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
-    proportion = self.res_["eig"].iloc[:,2].values
-    x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-
+    proportion = self.eig_.iloc[:,2].values
+    # Set x label
+    if x_label is None:
+        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    # Set y label
+    if y_label is None:
+        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+    # Set title
     if title is None:
         title = "Individuals factor map - PCA"
     p = p + pn.labs(title=title,x=x_label,y = y_label)
     
-    if xlim is not None:
-        p = p + pn.xlim(xlim)
-    if ylim is not None:
-        p = p + pn.ylim(ylim)
+    # Set x limits
+    if x_lim is not None:
+        p = p + pn.xlim(x_lim)
+    # Set y limits
+    if y_lim is not None:
+        p = p + pn.ylim(y_lim)
 
     if add_hline:
         p = p + pn.geom_hline(yintercept=0,colour=hline_color,linetype =hline_style)    
@@ -392,6 +698,8 @@ def fviz_pca_ind(self,
 # Variables Factor Map
 def fviz_pca_var(self,
                  axis=[0,1],
+                 x_label = None,
+                 y_label = None,
                  title =None,
                  color ="black",
                  geom_type = ["arrow","text"],
@@ -433,17 +741,17 @@ def fviz_pca_var(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
+        (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
 
-    coord = self.res_["var"]["coord"]
+    coord = self.var_["coord"]
 
     # Using lim cos2
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.res_["var"]["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = self.var_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -453,7 +761,7 @@ def fviz_pca_var(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = self.res_["var"]["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = self.var_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -461,11 +769,11 @@ def fviz_pca_var(self,
 
     if isinstance(color,str):
         if color == "cos2":
-            c = self.res_["var"]["cos2"].iloc[:,axis].sum(axis=1).values
+            c = self.var_["cos2"].iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "cos2"
         elif color == "contrib":
-            c = self.res_["var"]["contrib"].iloc[:,axis].sum(axis=1).values
+            c = self.var_["contrib"].iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
@@ -502,7 +810,7 @@ def fviz_pca_var(self,
     # Add supplmentary continuous variables
     if quanti_sup:
         if self.quanti_sup is not None:
-            sup_coord = self.res_["quanti_sup"]["coord"]
+            sup_coord = self.quanti_sup_["coord"]
             if "arrow" in geom_type:
                 p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype=linestyle_sup)
@@ -513,10 +821,11 @@ def fviz_pca_var(self,
         p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=color_circle, fill=None)
     
     # Add additionnal        
-    proportion = self.res_["eig"].iloc[:,2].values
-    x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-
+    proportion = self.eig_.iloc[:,2].values
+    if x_label is None:
+        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    if y_label is None:
+        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
         title = "Variables factor map - PCA"
     
@@ -543,7 +852,7 @@ def fviz_pca_biplot(self,axis=[0,1],circle_prob=0.69,scale=1) ->pn :
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
+        (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
 
@@ -677,7 +986,7 @@ def fviz_ca_row(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.n_components-1)  or
+        (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
 
@@ -689,23 +998,23 @@ def fviz_ca_row(self,
 
     ################ Add supplementary columns
     if self.col_sup is not None:
-        X_col_sup = self.call_["Xtot"].iloc[:,self.col_sup].astype("float")
+        X_col_sup = self.call_["Xtot"].loc[:,self.col_sup_["coord"].index.tolist()].astype("float")
         if self.row_sup is not None:
-            X_col_sup = X_col_sup.drop(index=[name for i, name in enumerate(self.call_["Xtot"].index.tolist()) if i in self.row_sup])
+            X_col_sup = X_col_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.row_sup_["coord"].index.tolist()])
         coord = pd.concat([coord,X_col_sup],axis=1)
 
     ################ Add supplementary quantitatives columns
     if self.quanti_sup is not None:
-        X_quanti_sup = self.call_["Xtot"].iloc[:,self.quanti_sup].astype("float")
+        X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
         if self.row_sup is not None:
-            X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(self.call_["Xtot"].index.tolist()) if i in self.row_sup])
+            X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.row_sup_["coord"].index.tolist()])
         coord = pd.concat([coord,X_quanti_sup],axis=1)
     
     ################ Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].iloc[:,self.quali_sup].astype("object")
+        X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
         if self.row_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(self.call_["Xtot"].index.tolist()) if i in self.row_sup])
+            X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.row_sup_["coord"].index.tolist()])
         coord = pd.concat([coord,X_quali_sup],axis=1)
     
     # Using lim cos2
@@ -913,7 +1222,7 @@ def fviz_ca_col(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.n_components-1)  or
+        (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
 
@@ -1093,7 +1402,7 @@ def fviz_ca_biplot(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.n_components-1)  or
+        (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
 
@@ -1203,14 +1512,15 @@ def fviz_ca(self,choice,**kwargs)->pn:
     choice : the graph to plot
                 - 'row' for the row points factor map
                 - 'col' for the columns points factor map
+                - 'biplot' for biplot and row and columns factor map
     **kwargs : 	further arguments passed to or from other methods
 
     Return
     ------
-    figure : The row points factor map and the columns points factor map.
+    a plotnine
 
-    Author
-    ------
+    Author(s)
+    ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
@@ -1228,86 +1538,6 @@ def fviz_ca(self,choice,**kwargs)->pn:
     elif choice == "biplot":
         return fviz_ca_biplot(self,**kwargs)
 
-
-########################################################
-def fviz_corrcircle(self,
-                    axis=[0,1],
-                    xlabel=None,
-                    ylabel=None,
-                    title=None,
-                    color = "black",
-                    color_sup = "blue",
-                    text_type="text",
-                    arrow_length=0.1,
-                    text_size=8,
-                    arrow_angle=10,
-                    add_labels=True,
-                    add_circle=True,
-                    add_hline=True,
-                    add_vline=True,
-                    add_grid=True,
-                    ggtheme=pn.theme_gray()) -> pn:
-    """
-    
-    """
-    
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.n_components_-1)  or
-        (axis[0] > axis[1])) :
-        raise ValueError("Error : You must pass a valid 'axis'.")
-    
-    if self.model_ not in ["pca","mca","famd","mfa"]:
-        raise ValueError("Error : Factor method not allowed.")
-    
-    if self.model_ in ["pca","famd","mfa"]:
-        coord = pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_)
-    else:
-        if self.quanti_sup_labels_ is not None:
-            coord = pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_)
-
-    # Initialize
-    p = (pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))+
-         pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
-                                arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color))
-    if add_labels:
-            p = p + text_label(text_type,color=color,size=text_size,va="center",ha="center")
-        
-    if self.model_ in ["pca","famd"]:
-        if self.quanti_sup_labels_ is not None:
-            sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
-            p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
-                                 arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
-            if add_labels:
-                p  = p + text_label(text_type,data=sup_coord,
-                                    mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                    color=color_sup,size=text_size,va="center",ha="center")
-    # Create circle
-    if add_circle:
-        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color="black", fill=None)
-    
-    # Add additionnal        
-    proportion = self.eig_[2]
-    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-
-    if title is None:
-        title = "Correlation circle"
-    
-    p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+ pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
-
-    if add_hline:
-        p = p + pn.geom_hline(yintercept=0, colour="black", linetype ="dashed")
-    if add_vline:
-        p = p+ pn.geom_vline(xintercept=0, colour="black", linetype ="dashed")
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
-
-    # Add theme
-    p = p + ggtheme
-
-    return p
-
 ######################################################################################################
 ##                             Multiple Correspondence Analysis (MCA)
 ######################################################################################################
@@ -1318,11 +1548,11 @@ def fviz_mca_ind(self,
                  ylim=None,
                  title =None,
                  color ="black",
+                 geom_type = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
                  text_type = "text",
-                 add_labels=True,
                  marker = "o",
                  legend_title=None,
                  add_grid =True,
@@ -1918,6 +2148,87 @@ def fviz_mca(self,choice="ind",**kwargs)->pn:
             return fviz_corrcircle(self,**kwargs)
         else:
             raise ValueError("Error : No supplementary continuous variables available.")
+
+
+########################################################
+def fviz_corrcircle(self,
+                    axis=[0,1],
+                    xlabel=None,
+                    ylabel=None,
+                    title=None,
+                    color = "black",
+                    color_sup = "blue",
+                    text_type="text",
+                    arrow_length=0.1,
+                    text_size=8,
+                    arrow_angle=10,
+                    add_labels=True,
+                    add_circle=True,
+                    add_hline=True,
+                    add_vline=True,
+                    add_grid=True,
+                    ggtheme=pn.theme_gray()) -> pn:
+    """
+    
+    """
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.n_components_-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("Error : You must pass a valid 'axis'.")
+    
+    if self.model_ not in ["pca","mca","famd","mfa"]:
+        raise ValueError("Error : Factor method not allowed.")
+    
+    if self.model_ in ["pca","famd","mfa"]:
+        coord = pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_)
+    else:
+        if self.quanti_sup_labels_ is not None:
+            coord = pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_)
+
+    # Initialize
+    p = (pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))+
+         pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
+                                arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color))
+    if add_labels:
+            p = p + text_label(text_type,color=color,size=text_size,va="center",ha="center")
+        
+    if self.model_ in ["pca","famd"]:
+        if self.quanti_sup_labels_ is not None:
+            sup_coord = pd.DataFrame(self.col_sup_coord_,columns=self.dim_index_,index=self.col_sup_labels_)
+            p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
+                                 arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
+            if add_labels:
+                p  = p + text_label(text_type,data=sup_coord,
+                                    mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                    color=color_sup,size=text_size,va="center",ha="center")
+    # Create circle
+    if add_circle:
+        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color="black", fill=None)
+    
+    # Add additionnal        
+    proportion = self.eig_[2]
+    xlabel = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    ylabel = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+
+    if title is None:
+        title = "Correlation circle"
+    
+    p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+ pn.ggtitle(title)+ pn.xlab(xlab=xlabel)+pn.ylab(ylab=ylabel)
+
+    if add_hline:
+        p = p + pn.geom_hline(yintercept=0, colour="black", linetype ="dashed")
+    if add_vline:
+        p = p+ pn.geom_vline(xintercept=0, colour="black", linetype ="dashed")
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
+
+    # Add theme
+    p = p + ggtheme
+
+    return p
+
 
 ####################################################################################################################
 #               Factor Analyis of Mixed Data (FAMD)
@@ -3306,302 +3617,6 @@ def fviz_efa(self,choice="ind",**kwargs)->plt:
     else:
         raise ValueError("Error : Allowed values are 'ind' or 'var'.")
     
-
-##################################################################################################
-#                       Visualize the contributions of row/column elements
-###################################################################################################
-
-def fviz_contrib(self,
-                 choice="ind",
-                 axis=None,
-                 xlabel=None,
-                 top_contrib=10,
-                 bar_width=None,
-                 add_grid=True,
-                 color="steelblue",
-                 palette = "Set2",
-                 short_labels=False,
-                 ggtheme=pn.theme_gray()) -> plt:
-    
-    """ Plot the row and column contributions graph
-            
-    For the selected axis, the graph represents the row or column
-    cosines sorted in descending order.            
-        
-    Parameters
-    ----------
-    choice : {'ind','var','mod'}.
-            'ind' :   individuals
-            'var' :   continues/categorical variables
-            'mod' :   categories
-        
-    axis : None or int.
-        Select the axis for which the row/col contributions are plotted. If None, axis = 0.
-        
-    xlabel : None or str (default).
-        The label text.
-        
-    top_contrib : None or int.
-        Set the maximum number of values to plot.
-        If top_contrib is None : all the values are plotted.
-            
-    bar_width : None, float or array-like.
-        The width(s) of the bars.
-
-    add_grid : bool or None, default = True.
-        Whether to show the grid lines.
-
-    color : color or list of color, default = "steelblue".
-        The colors of the bar faces.
-
-    short_labels : bool, default = False
-        
-    Returns
-    -------
-    None
-    """    
-        
-    if choice not in ["ind","var","mod"]:
-        raise ValueError("Error : 'choice' not allowed.")
-
-    if axis is None:
-        axis = 0
-    elif not isinstance(axis,int):
-        raise ValueError("Error : 'axis' must be an integer.")
-    elif axis < 0 or axis > self.n_components_:
-        raise ValueError(f"Error : 'axis' must be an integer between 0 and {self.n_components_ - 1}.")
-            
-    if xlabel is None:
-        xlabel = "Contributions (%)"
-            
-    if bar_width is None:
-        bar_width = 0.5
-    if top_contrib is None:
-        top_contrib = 10
-    elif not isinstance(top_contrib,int):
-        raise ValueError("Error : 'top_contrib' must be an integer.")
-        
-    if choice == "ind":
-        name = "individuals"
-        contrib = self.row_contrib_[:,axis]
-        labels = self.row_labels_
-        if self.model_ == "ca":
-            name = "rows"
-    elif choice == "var":
-        if self.model_ != "mca":
-            name = "continues variables"
-            contrib = self.col_contrib_[:,axis]
-            labels  = self.col_labels_
-            if self.model_ == "ca":
-                name = "columns"
-            if self.model_ == "famd":
-                contrib = np.append(contrib,self.quali_contrib_[:,axis],axis=0)
-                labels = labels + self.quali_labels_
-                name = "Variables"
-        else:
-            name = "Categorical variables"
-            contrib = self.var_contrib_[:,axis]
-            labels = self.var_labels_     
-    elif choice == "mod" and self.model_ in ["mca","famd"]:
-        name = "categories"
-        contrib = self.mod_contrib_[:,axis]
-        if short_labels:
-            labels = self.short_labels_
-        else:
-            labels = self.mod_labels_
-    
-    n = len(labels)
-    n_labels = len(labels)
-        
-    if (top_contrib is not None) & (top_contrib < n_labels):
-        n_labels = top_contrib
-        
-    limit = n - n_labels
-    contrib_sorted = np.sort(contrib)[limit:n]
-    labels_sort = pd.Series(labels)[np.argsort(contrib)][limit:n]
-
-    # Add group
-    if (choice == "var" and self.model_ == "mfa"):
-        group_sort = pd.Series(self.col_group_labels_)[np.argsort(contrib)][limit:n]
-
-    # Add hline
-    if self.model_ == "pca":
-        hvalue = 100/len(self.col_labels_)
-    elif self.model_ == "ca":
-        hvalue = 100/(min(len(self.row_labels_)-1,len(self.col_labels_)-1))
-    elif self.model_ == "mca":
-        hvalue = 100/len(self.mod_labels_)
-    elif self.model_ == "famd":
-        hvalue = 100/(len(self.quanti_labels_) + len(self.mod_labels_) - len(self.quali_labels_))
-    elif self.model_ == "mfa":
-        if self.global_pca_.model_ == "pca":
-            hvalue = 100/len(self.col_labels_)
-        elif self.global_pca_.model_ == "mca":
-            hvalue = 100/len(self.mod_labels_)
-
-    df = pd.DataFrame({"labels" : labels_sort, "contrib" : contrib_sorted})
-
-    if (choice == "var" and self.model_ == "mfa"):
-        df["Groups"] = group_sort
-        p = (pn.ggplot(df,pn.aes(x = "reorder(labels,contrib)", y = "contrib",fill="Groups"))+
-             pn.geom_bar(stat="identity",width=bar_width))
-        if palette is not None:
-            p = p + pn.scale_color_brewer(type="qual",palette=palette)
-    else:
-        p = (pn.ggplot(df,pn.aes(x = "reorder(labels,contrib)", y = "contrib"))+
-             pn.geom_bar(stat="identity",fill=color,width=bar_width))
-
-    title = f"Contribution of {name} to Dim-{axis+1}"
-    p = p + pn.ggtitle(title)+pn.xlab(name)+pn.ylab(xlabel)
-    p = p + pn.coord_flip()
-    
-    if not (choice == "var" and self.model_ =="mca"):
-        p = p + pn.geom_hline(yintercept=hvalue,linetype="dashed",color="red")
-
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"),
-                         axis_text_x = pn.element_text(angle = 90, ha = "center", va = "center"))
-
-    return p+ggtheme
-
-##################################################################################################
-#                       Visualize the cosines of row/column elements
-###################################################################################################
-
-def fviz_cosines(self,
-                 choice="ind",
-                 axis=None,
-                 xlabel=None,
-                 top_cos2=10,
-                 bar_width=None,
-                 add_grid=True,
-                 color="steelblue",
-                 short_labels=False,
-                 ggtheme=pn.theme_gray()) -> plt:
-    
-    """ Plot the row and columns cosines graph
-            
-        For the selected axis, the graph represents the row or column
-        cosines sorted in descending order.            
-        
-        Parameters
-        ----------
-        choice : {'ind','var','mod','quanti_sup','quali_sup','ind_sup'}
-                    'ind' :   individuals
-                    'var' :   continues variables
-                    'mod' :   categories
-                    'quanti_sup' : supplementary continues variables
-                    'quali_sup' : supplementary categories variables
-                    'ind_sup ' : supplementary individuals
-        
-        axis : None or int
-            Select the axis for which the row/col cosines are plotted. If None, axis = 0.
-        
-        xlabel : None or str (default)
-            The label text.
-        
-        top_cos2 : int
-            Set the maximum number of values to plot.
-            If top_cos2 is None : all the values are plotted.
-            
-        bar_width : None, float or array-like.
-            The width(s) of the bars.
-
-        add_grid : bool or None, default = True.
-            Whether to show the grid lines
-
-        color : color or list of color, default = "steelblue".
-            The colors of the bar faces.
-
-        short_labels : bool, default = False
-        
-        Returns
-        -------
-        None
-        """
-
-    if choice not in ["ind","var","mod","quanti_sup","quali_sup","ind_sup"]:
-        raise ValueError("Error : 'choice' not allowed.")
-    
-    if axis is None:
-        axis = 0
-    elif not isinstance(axis,int):
-        raise ValueError("Error : 'axis' must be an integer.")
-    elif axis < 0 or axis > self.n_components_:
-        raise ValueError(f"Error : 'axis' must be an integer between 0 and {self.n_components_ - 1}")
-
-    if xlabel is None:
-        xlabel = "Cos2 - Quality of representation"
-    if bar_width is None:
-        bar_width = 0.5
-    if top_cos2 is None:
-        top_cos2 = 10
-        
-    if choice == "ind":
-        name = "individuals"
-        if self.model_ == "ca":
-            name = "rows"
-        cos2 = self.row_cos2_[:,axis]
-        labels = self.row_labels_
-    elif choice == "var" :
-        if self.model_ != "mca":
-            name = "continues variables"
-            cos2 = self.col_cos2_[:,axis]
-            labels  = self.col_labels_
-            if self.model_ == "ca":
-                name = "columns"
-        else:
-            name = "categorical variables"
-            cos2 = self.var_cos2_[:,axis]
-            labels  = self.var_labels_
-    elif choice == "mod" and self.model_ in ["mca","famd"]:
-        name = "categories"
-        cos2 = self.mod_cos2_[:,axis]
-        if short_labels:
-            labels = self.short_labels_
-        else:
-            labels = self.mod_labels_
-    elif choice == "quanti_sup" and self.model_ != "ca":
-        if ((self.quanti_sup_labels_ is not None) and (len(self.col_sup_labels_) >= 2)):
-            name = "supplementary continues variables"
-            cos2 = self.col_sup_cos2_[:,axis]
-            labels = self.col_sup_labels_
-        else:
-            raise ValueError("Error : Factor Model must have at least two supplementary continuous variables.")
-    elif choice == "quali_sup" and self.model_ !="ca":
-        if self.quali_sup_labels_ is not None:
-            name = "supplementary categories"
-            cos2 = self.mod_sup_cos2_[:,axis]
-            if short_labels:
-                labels = self.short_sup_labels_
-            else:
-                labels = self.mod_sup_labels_
-    
-    # Start
-    n = len(labels)
-    n_labels = len(labels)
-    if (top_cos2 is not None) & (top_cos2 < n_labels):
-        n_labels = top_cos2
-        
-    limit = n - n_labels
-    cos2_sorted = np.sort(cos2)[limit:n]
-    labels_sort = pd.Series(labels)[np.argsort(cos2)][limit:n]
-
-    df = pd.DataFrame({"labels" : labels_sort, "cos2" : cos2_sorted})
-
-    p = pn.ggplot(df,pn.aes(x = "reorder(labels,cos2)", y = "cos2"))+pn.geom_bar(stat="identity",fill=color,width=bar_width)
-
-    title = f"Cosinus of {name} to Dim-{axis+1}"
-    p = p + pn.ggtitle(title)+pn.xlab(name)+pn.ylab(xlabel)
-    p = p + pn.coord_flip()
-
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"),
-                         axis_text_x = pn.element_text(angle = 60, ha = "center", va = "center"))
-
-    return p+ggtheme
-
-
 
 #################################################################################################################
 #                   Hierarchical Clustering on Principal Components (HCPC)
