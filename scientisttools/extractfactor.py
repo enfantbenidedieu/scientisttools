@@ -27,10 +27,10 @@ def get_eig(self) -> pd.DataFrame:
     -------
     eigenvalue, difference, variance percent and cumulative variance of percent
     """
-    if self.model_ in ["pca","partialpca","ca","mca","famd","mfa","cmds","candisc","hmfa"]:
+    if self.model_ in ["pca","partialpca","ca","mca","famd","efa","mfa","cmds","candisc","hmfa"]:
         return self.eig_
     else:
-        raise ValueError("Error : 'self' must be an object of class PCA, PartialPCA, CA, MCA, FAMD, MFA, CMDS, HMFA")
+        raise ValueError("Error : 'self' must be an object of class PCA, PartialPCA, CA, MCA, FAMD, EFA, MFA, CMDS, HMFA")
 
 def get_eigenvalue(self) -> pd.DataFrame:
 
@@ -1397,6 +1397,162 @@ def summaryPartialPCA(self,
         print(var_infos)
 
 # -*- coding: utf-8 -*-
+        
+################### Exploratory factor analysis
+
+def get_efa_ind(self,choice = "ind") -> dict:
+
+    """
+    Extract the results for individuals - PCA
+    -----------------------------------------
+
+    Parameters
+    ----------
+    self : an object of class EFA
+
+    Returns
+    -------
+    
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "efa":
+        raise ValueError("Error : 'self' must be an object of class EFA.")
+
+    if choice not in ["ind","ind_sup"]:
+        raise ValueError("Error : 'choice' should be one of 'ind', 'ind_sup'")
+    
+    if choice == "ind":
+        return self.ind_
+    elif choice == "ind_sup":
+        if self.ind_sup is None:
+            raise ValueError("Error : No supplementary individuals")
+        return self.ind_sup_
+
+def get_efa_var(self) -> dict:
+
+    """
+    Extract the results for variables - EFA
+    ---------------------------------------
+
+    Parameters
+    ----------
+    self : an instance of class EFA
+
+    Returns
+    -------
+    
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "efa":
+        raise ValueError("Error : 'self' must be an object of class EFA.")
+    return self.var_
+
+def get_efa(self,choice = "ind")-> dict:
+
+    """
+    Extract the results for individuals/variables - EFA
+    ---------------------------------------------------
+
+    Parameters
+    ---------
+    self : an instance of class EFA
+
+    choice : 
+
+    Returns
+    -------
+    
+
+    Author(s)
+    --------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "efa":
+        raise ValueError("Error : 'self' must be an object of class EFA.")
+
+    if choice not in ["ind","ind_sup","var"]:
+        raise ValueError("Error : 'choice' should be one of 'ind', 'ind_sup', 'var'")
+    if choice in ["ind", "ind_sup"]:
+        return get_efa_ind(self,choice=choice)
+    elif choice == "var":
+        return get_efa_var(self)
+
+def summaryEFA(self,
+               digits=3,
+               nb_element=10,
+               ncp=3,
+               to_markdown=False,
+               tablefmt = "pipe",
+               **kwargs):
+    """Printing summaries of exploratory factor analysis model
+
+    Parameters
+    ----------
+    self        :   an obect of class EFA.
+    digits      :   int, default=3. Number of decimal printed
+    nb_element  :   int, default = 10. Number of element
+    ncp         :   int, default = 3. Number of componennts
+    to_markdown :   Print DataFrame in Markdown-friendly format.
+    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    **kwargs    :   These parameters will be passed to tabulate.
+    """
+
+    ncp = min(ncp,self.call_["n_components"])
+    nb_element = min(nb_element,self.ind_["coord"].shape[0],self.var_["coord"].shape[0])
+
+    # Exploratory Factor Analysis Results
+    print("                     Exploratory Factor Analysis - Results                     \n")
+
+    # Add eigenvalues informations
+    eig = self.eig_.iloc[:self.call_["n_components"],:].T.round(decimals=digits)
+    eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
+    if to_markdown:
+        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(eig)
+    
+    # Add individuals informations
+    print(f"\nIndividuals (the {nb_element} first) \n")
+    ind_coord = self.ind_["coord"].iloc[:nb_element,:ncp].round(decimals=digits)
+    if to_markdown:
+        print(ind_coord.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(ind_coord)
+
+    # Add supplementary individuals
+    if self.ind_sup is not None:
+        nb_elt = min(nb_element,self.ind_sup_["coord"].shape[0])
+        print(f"\nSupplementary Individuals\n")
+        # Save all informations
+        ind_sup_infos = self.ind_sup_["coord"].iloc[:nb_elt,:ncp].round(decimals=digits)
+        if to_markdown:
+            print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(ind_sup_infos)
+
+    # Add variables informations
+    print(f"\nContinues Variables\n")
+    var = self.var_
+    var_infos = pd.DataFrame().astype("float")
+    for i in np.arange(0,ncp,1):
+        var_coord = var["coord"].iloc[:,i]
+        var_ctr = var["contrib"].iloc[:,i]
+        var_ctr.name = "ctr"
+        var_infos = pd.concat([var_infos,var_coord,var_ctr],axis=1)
+    var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(var_infos)
+    
+    
+
 
 def StandardScaler(X):
     return (X - X.mean())/X.std(ddof=0)
@@ -1413,91 +1569,7 @@ def get_dist(X, method = "euclidean",normalize=False,**kwargs) -> dict:
         dist = pdist(X.values,metric=method,**kwargs)
     return dict({"dist" :dist,"labels":X.index})
 
-################### Exploratory factor analysis
 
-def get_efa_ind(self) -> dict:
-
-    """
-    self : an instance of class EFA
-
-    Returns
-    -------
-    Exploratoty Factor Analysis - Results for individuals
-    ===============================================================
-        Names       Description
-    1   "coord"     "coordinates for the individuals"
-    """
-    if self.model_ != "efa":
-        raise ValueError("Error : 'self' must be an object of class EFA.")
-
-    # Store informations
-    df = dict({
-        "coord"     :   pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_)
-        })   
-    return df
-
-def get_efa_var(self) -> dict:
-
-    """
-    self : an instance of class EFA
-
-    Returns
-    -------
-    Exploratory Factor Analysis - Results for variables
-    ==============================================================
-        Names           Description
-    1   "coord"         "coordinates for the variables"
-    2   "contrib"       "contributions of the variables"
-    3   "communality"   "Communality of the variables"
-    4   "variance"      "Percentage of variance"
-    5   "fscore"        "Factor score"
-    """
-    if self.model_ != "efa":
-        raise ValueError("Error : 'self' must be an object of class EFA.")
-    
-    # Store informations
-    df = dict({
-        "coord"         :   pd.DataFrame(self.col_coord_,index = self.col_labels_,columns=self.dim_index_), 
-        "contrib"       :   pd.DataFrame(self.col_contrib_,index = self.col_labels_,columns=self.dim_index_),
-        "communality"   :   pd.DataFrame(np.c_[self.initial_communality_,self.estimated_communality_],columns=["initial","estimated"],index = self.col_labels_),
-        "variance"      :   pd.DataFrame(self.percentage_variance_,index=self.col_labels_,columns=["% var."]),
-        "fscore"        :   pd.DataFrame(self.factor_score_,index=self.col_labels_, columns=self.dim_index_)
-    })
-    return df
-
-def get_efa(self,choice = "row")-> dict:
-
-    """
-    self : an instance of class EFA
-
-    choice : {"row", "var"}, default= "row"
-
-    Returns
-    -------
-    if choice == "row":
-        Exploratory Factor Analysis - Results for individuals
-        ===================================================
-            Names       Description
-        1   "coord"     "coordinates for the individuals"
-    
-    if choice == "var":
-        Exploratory Factor Analysis - Results for variables
-        ===================================================
-            Names           Description
-        1   "coord"         "coordinates for the variables"
-        2   "contrib"       "contributions of the variables"
-        3   "communality"   "Communality of the variables"
-        4   "variance"      "Percentage of variance"
-        5   "fscore"        "Factor score"
-    """
-    if self.model_ != "efa":
-        raise ValueError("Error : 'self' must be an object of class EFA.")
-    if choice == "row":
-        return get_efa_ind(self)
-    elif choice == "var":
-        return get_efa_var(self)
-    else:
-        raise ValueError("Allowed values for the argument choice are : 'row' or 'var'.")
 
 
 
@@ -1542,128 +1614,6 @@ def get_mds(self) -> dict:
 
 
 
-def summaryEFA(self,
-               digits=3,
-               nb_element=10,
-               ncp=3,
-               to_markdown=False,
-               tablefmt = "pipe",
-               **kwargs):
-    """Printing summaries of exploratory factor analysis model
-
-    Parameters
-    ----------
-    self        :   an obect of class EFA.
-    digits      :   int, default=3. Number of decimal printed
-    nb_element  :   int, default = 10. Number of element
-    ncp         :   int, default = 3. Number of componennts
-    to_markdown :   Print DataFrame in Markdown-friendly format.
-    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
-    **kwargs    :   These parameters will be passed to tabulate.
-    """
-
-    row = get_efa(self,choice="row")
-    col = get_efa(self,choice="var")
-
-
-    ncp = min(ncp,self.n_components_)
-    nb_element = min(nb_element,len(self.row_labels_),len(self.col_labels_))
-
-    # Exploratory Factor Analysis Results
-    print("                     Exploratory Factor Analysis - Results                     \n")
-
-    # Add eigenvalues informations
-    print("Importance of components")
-    eig = pd.DataFrame(self.eig_,columns=self.dim_index_,
-                       index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
-    if to_markdown:
-        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(eig)
-    
-    # Add individuals informations
-    print(f"\nIndividuals (the {nb_element} first) \n")
-    row_coord = row["coord"].iloc[:nb_element,:ncp].round(decimals=digits)
-    if to_markdown:
-        print(row_coord.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(row_coord)
-
-    # Add supplementary individuals
-    if self.row_sup_labels_ is not None:
-        nb_elt = min(nb_element,len(self.row_sup_labels_))
-        print(f"\nSupplementary Individuals\n")
-        # Save all informations
-        row_sup_infos = pd.DataFrame(index=self.row_sup_labels_).astype("float")
-        row_sup = row["ind_sup"]
-        for i in np.arange(0,ncp,1):
-            row_sup_coord = row_sup["coord"].iloc[:,i]
-            row_sup_cos2 = row_sup["cos2"].iloc[:,i]
-            row_sup_cos2.name = "cos2"
-            row_sup_infos = pd.concat([row_sup_infos,row_sup_coord,row_sup_cos2],axis=1)
-        row_sup_infos = row_sup_infos.iloc[:nb_elt,:].round(decimals=digits)
-        if to_markdown:
-            print(row_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(row_sup_infos)
-
-    # Add variables informations
-    print(f"\nContinues Variables\n")
-    col_infos = pd.DataFrame(index=self.col_labels_).astype("float")
-    for i in np.arange(0,ncp,1):
-        col_coord = col["coord"].iloc[:,i]
-        col_ctr = col["contrib"].iloc[:,i]
-        col_ctr.name = "ctr"
-        col_infos = pd.concat([col_infos,col_coord,col_ctr],axis=1)
-    col_infos = col_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(col_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(col_infos)
-    
-    # Add supplementary continuous variables informations
-    if self.quanti_sup_labels_ is not None:
-        print(f"\nSupplementary continuous variable\n")
-        col_sup_infos = pd.DataFrame(index=self.quanti_sup_labels_).astype("float")
-        col_sup = col["quanti_sup"]
-        for i in np.arange(0,ncp,1):
-            col_sup_coord = col_sup["coord"].iloc[:,i]
-            col_sup_cos2 = col_sup["cos2"].iloc[:,i]
-            col_sup_cos2.name = "cos2"
-            col_sup_infos =pd.concat([col_sup_infos,col_sup_coord,col_sup_cos2],axis=1)
-        col_sup_infos = col_sup_infos.round(decimals=digits)
-
-        if to_markdown:
-            print(col_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(col_sup_infos)
-    
-    # Add Supplementary categories – Variable illustrative qualitative
-    if self.quali_sup_labels_ is not None:
-        print("\nSupplementary categories\n")
-        mod_sup = col["quali_sup"]
-        mod_sup_infos = np.sqrt(mod_sup["dist"])
-        for i in np.arange(0,ncp,1):
-            mod_sup_coord = mod_sup["coord"].iloc[:,i]
-            mod_sup_cos2 = mod_sup["cos2"].iloc[:,i]
-            mod_sup_cos2.name = "cos2"
-            mod_sup_vtest = mod_sup["vtest"].iloc[:,i]
-            mod_sup_vtest.name = "v.test"
-            mod_sup_infos = pd.concat([mod_sup_infos,mod_sup_coord,mod_sup_cos2,mod_sup_vtest],axis=1)
-        mod_sup_infos = mod_sup_infos.round(decimals=digits)
-
-        if to_markdown:
-            print(mod_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-        else:
-            print(mod_sup_infos)
-        
-        # Add supplementary qualitatives - correlation ration
-        print("\nSupplementatry categorical variable\n")
-        corr_ratio = mod_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
-        if to_markdown:
-            print(corr_ratio.to_markdown(tablefmt=tablefmt))
-        else:
-            print(corr_ratio)
 
 ###### PCA
 ###############################################################################################
@@ -2079,7 +2029,7 @@ def dimdesc(self,axis=None,proba=0.05):
     """
     if self.model_ == "pca":
         # Active data
-        data = self.active_data_
+        data = self.call_["X"]
         row_coord = get_pca_ind(self)["coord"]
         # Select axis
         if axis is not None:
@@ -2088,42 +2038,40 @@ def dimdesc(self,axis=None,proba=0.05):
                 row_coord = row_coord.to_frame()
 
         # Add supplementary continuous variables
-        if self.quanti_sup_labels_ is not None:
-            quanti_sup = self.data_[self.quanti_sup_labels_]
-            # Drop supplementary row
-            if self.row_sup_labels_ is not None:
-                quanti_sup = quanti_sup.drop(index=self.row_sup_labels_)
-                data = pd.concat([data,quanti_sup],axis=1)
+        if self.quanti_sup is not None:
+            X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
+            if self.ind_sup is not None:
+                X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            data = pd.concat([data,X_quanti_sup],axis=1)
+    
     
         corrdim = {}
         for idx in row_coord.columns:
             # For continuous variables
             corDim = pd.DataFrame(columns=["correlation","pvalue"]).astype("float")
             for col in data.columns:
-                if (data[col].dtypes in ["float64","int64","float32","int32"]):
+                if np.issubdtype(data[col].dtype, np.number): #(data[col].dtypes in ["float64","int64","float32","int32"]):
                     res = st.pearsonr(data[col],row_coord[idx])
                     row_RD = pd.DataFrame({"correlation" : res.statistic,"pvalue":res.pvalue},index = [col])
                     corDim = pd.concat([corDim,row_RD],axis=0)
             # Filter by pvalue
-            corDim = (corDim.query(f'pvalue < {proba}')
-                            .sort_values(by="correlation",ascending=False))
+            corDim = corDim.query('pvalue < @proba').sort_values(by="correlation",ascending=False)
 
             # For categorical variables
-            if self.quali_sup_labels_ is not None:
-                quali_sup = self.data_[self.quali_sup_labels_]
-                if self.row_sup_labels_ is not None:
-                    quali_sup = quali_sup.drop(index=self.row_sup_labels_)
+            if self.quali_sup is not None:
+                quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+                if self.ind_sup is not None:
+                    quali_sup = quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
                 
                 corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','correlation ratio','F-stats','pvalue'])
-                for col in quali_sup.columns:
+                for col in quali_sup.columns.tolist():
                     row_RD = pd.DataFrame(eta2(quali_sup[col],row_coord[idx],digits=8),index=[col])
                     corqDim = pd.concat([corqDim,row_RD],axis=0)
                 # Filter by pvalue
-                corqDim = (corqDim.query(f'pvalue < {proba}')
-                                  .sort_values(by="correlation ratio",ascending=False)
+                corqDim = (corqDim.query('pvalue < @proba').sort_values(by="correlation ratio",ascending=False)
                                   .rename(columns={"R2": "correlation ratio"}))
             
-            if self.quali_sup_labels_ is None:
+            if self.quali_sup is None:
                 res = corDim
             else:
                 if corqDim.shape[0] != 0 :
@@ -2279,40 +2227,47 @@ def dimdesc(self,axis=None,proba=0.05):
 
     return corrdim
 
-
 ###############################################" Fonction de reconstruction #######################################################
 
 def reconst(self,n_components=None):
     """
     Reconstitution of data
+    ----------------------
 
     This function reconstructs a data set from the result of a PCA 
 
     Parameters:
     -----------
-    self : an instance of class PCA
+    self : an object of class PCA
+
     n_components : int, the number of dimensions to use to reconstitute data.
 
     Return
     ------
     X : Reconstitution data.
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
     if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an instance of class PCA.")
+        raise ValueError("Error : 'self' must be an object of class PCA.")
     if n_components is not None:
-        if n_components > self.n_components_:
+        if n_components > self.call_["n_components"]:
             raise ValueError("Error : Enter good number of n_components" )
     else:
         raise ValueError("Error : 'n_components' must be pass.")
     
     # Valeurs centrées
-    Z = np.dot(self.row_coord_[:,:n_components],self.eigen_vectors_[:,:n_components].T)
+    Z = np.dot(self.ind_["coord"].iloc[:,:n_components],self.svd_["V"][:,:n_components].T)
+    
+    #np.dot(self.row_coord_[:,:n_components],self.eigen_vectors_[:,:n_components].T)
 
     # Déstandardisation et décentrage
-    X = self.active_data_.copy()
-    for k in np.arange(len(self.col_labels_)):
-        X.iloc[:,k] = Z[:,k]*self.std_[0][k] + self.means_[0][k]
+    X = self.call_["X"].copy()
+    for k in np.arange(self.var_["coord"].shape[0]):
+        X.iloc[:,k] = Z[:,k]*self.call_["std"].values[k] + self.call_["means"].values[k]
     
     return X
 

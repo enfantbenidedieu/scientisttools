@@ -2149,7 +2149,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         quanti_coord =  global_pca.var_["coord"].loc[X_quant.columns.tolist(),:]
         quanti_contrib = global_pca.var_["contrib"].loc[X_quant.columns.tolist(),:]
         quanti_cos2 = global_pca.var_["cos2"].loc[X_quant.columns.tolist(),:]
-        self.quanti_var_ = {"coord" : quanti_coord, "contrib" : quanti_contrib,"cor":quanti_coord,"cos2" : quanti_cos2}
+        self.quanti_var_ = {"coord" : quanti_coord, "contrib" : quanti_contrib,"cor":quanti_coord,"cos2" : quanti_cos2,"corr" : col_corr}
         
         # Extract categories coordinates form PCA
         pca_coord_mod = global_pca.var_["coord"].loc[dummies.columns.tolist(),:]
@@ -2353,9 +2353,6 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         summary_quanti = X.describe().T.reset_index().rename(columns={"index" : "variable"})
         summary_quanti["count"] = summary_quanti["count"].astype("int")
         self.summary_quanti_ = summary_quanti
-
-        # Apply weights
-        X = mapply(X*np.sqrt(var_weights),lambda x : x*np.sqrt(ind_weights),axis=0,progressbar=False,n_workers=n_workers)
         
         ####### weighted Pearson correlation
         weighted_corr = weightedcorrcoef(x=X,w=ind_weights)
@@ -2376,15 +2373,13 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
         # Extract coefficients and intercept
         coef = pd.DataFrame(np.zeros((len(partial)+1,X.shape[1])),index = [*["intercept"],*partial],columns=X.columns.tolist())
-        rsquared = pd.Series(index=X.columns.tolist(),name="rsquared").astype("float")
-        rmse = pd.Series(index=X.columns.tolist(),name="rmse").astype("float")
+        metrics = pd.DataFrame(index=X.columns.tolist(),columns=["rsquared","rmse"]).astype("float")
         resid = pd.DataFrame(np.zeros((X.shape[0],X.shape[1])),index=X.index.tolist(),columns=X.columns.tolist()) # Résidu de régression
 
         for lab in X.columns.tolist():
             res = smf.ols(formula="{}~{}".format(lab,"+".join(self.partial)), data=Xtot).fit()
             coef.loc[:,lab] = res.params.values
-            rsquared[lab] = res.rsquared
-            rmse[lab] = mean_squared_error(X[lab],res.fittedvalues,squared=False)
+            metrics.loc[lab,:] = [res.rsquared,mean_squared_error(Xtot[lab],res.fittedvalues,squared=False)]
             resid.loc[:,lab] = res.resid
         
         ############# Compute average mean and standard deviation
@@ -2436,8 +2431,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         self.var_ = global_pca.var_
         self.others_["coef"] = coef
         self.others_["normalized_coef"] = normalized_coef
-        self.others_["rsquared"] = rsquared
-        self.others_["rmse"] = rmse
+        self.others_["metrics"] = metrics
 
         self.model_ = "partialpca"
 
@@ -2546,25 +2540,23 @@ class EFA(BaseEstimator,TransformerMixin):
 
     """
     def __init__(self,
-                normalize=True,
+                standardize =True,
                 n_components = None,
-                row_labels = None,
-                col_labels = None,
-                method = "principal",
-                row_sup_labels = None,
-                quanti_sup_labels = None,
-                quali_sup_labels = None):
-        self.normalize = normalize
+                ind_sup = None,
+                ind_weights = None,
+                var_weights = None,
+                parallelize = False):
+        self.standardize = standardize
         self.n_components =n_components
-        self.row_labels = row_labels
-        self.col_labels = col_labels
-        self.method = method
-        self.row_sup_labels = row_sup_labels
-        self.quanti_sup_labels = quanti_sup_labels
-        self.quali_sup_labels = quali_sup_labels
+        self.ind_sup = ind_sup
+        self.ind_weights = ind_weights
+        self.var_weights = var_weights
+        self.parallelize = parallelize
 
     def fit(self,X,y=None):
-        """Fit the model to X
+        """
+        Fit the model to X
+        ------------------
 
         Parameters
         ----------
@@ -2584,103 +2576,88 @@ class EFA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        # Extract supplementary rows
-        self.row_sup_labels_ = self.row_sup_labels
-        if self.row_sup_labels_ is not None:
-            _X = X.drop(index = self.row_sup_labels_)
-            row_sup = X.loc[self.row_sup_labels_,:]
+        
+        # set parallelize
+        if self.parallelize:
+            n_workers = -1
         else:
-            _X = X
+            n_workers = 1
 
-        # Extract supplementary numeric or categorical columns
-        self.quanti_sup_labels_ = self.quanti_sup_labels
-        self.quali_sup_labels_ = self.quali_sup_labels
-        if ((self.quali_sup_labels_ is not None) and (self.quanti_sup_labels_ is not None)):
-            X_ = _X.drop(columns = self.quali_sup_labels_).drop(columns = self.quanti_sup_labels_)
-            if self.row_sup_labels_ is not None:
-                row_sup = row_sup.drop(columns = self.quali_sup_labels_).drop(columns = self.quanti_sup_labels_)
-        elif self.quali_sup_labels_ is not None:
-            X_= _X.drop(columns = self.quali_sup_labels_)
-            if self.row_sup_labels_ is not None:
-                row_sup = row_sup.drop(columns = self.quali_sup_labels_)
-        elif self.quanti_sup_labels_ is not None:
-            X_ = _X.drop(columns = self.quanti_sup_labels_)
-            if self.row_sup_labels_ is not None:
-                row_sup  = row_sup.drop(columns = self.quanti_sup_labels_)
-        else:
-            X_ = _X
+        ###############################################################################################################"
+        # Drop level if ndim greater than 1 and reset columns name
+        ###############################################################################################################
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+
+        # Check if individuls supplementary
+        if self.ind_sup is not None:
+            if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
+                ind_sup = [int(self.ind_sup)]
+            elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
+                ind_sup = [int(x) for x in self.ind_sup]
 
         # Save dataframe
-        self.data_ = X
-        self.active_data_ = X_
+        Xtot = X
 
-        # Dimension
-        self.n_rows_, self.n_cols_ = X_.shape
-
-        # Set row labels
-        self.row_labels_ = self.row_labels
-        if ((self.row_labels_ is None) or (len(self.row_labels_) != self.n_rows_)):
-            self.row_labels_ = ["row_" + str(i+1) for i in np.arange(0,self.n_rows_)]
-
-        # Set col labels
-        self.col_labels_ = self.col_labels
-        if ((self.col_labels_ is None) or (len(self.col_labels_) != self.n_cols_)):
-            self.col_labels_ = ["col_" + str(k+1) for k in np.arange(0,self.n_cols_)]
-
-        # Initialisation
-        self.uniqueness_    = None
-        self.row_sup_coord_ = None
-        self.col_sup_coord_ = None
-
-        #
-        self.estimated_communality_ = None
-        self.col_coord_             = None
-        self.col_contrib_           = None
-        self.explained_variance_    = None
-        self.percentage_variance_   = None
-        self.factor_score_          = None
-        self.factor_fidelity_       = None
-        self.row_coord_             = None
-
-        # Correlation Matrix
-        self.correlation_matrix_ = X_.corr(method= "pearson")
-
-        # Rsquared
-        self.initial_communality_ =  np.array([1 - (1/x) for x in np.diag(np.linalg.inv(self.correlation_matrix_))])
-        # Total inertia
-        self.inertia_ = np.sum(self.initial_communality_)
-
-        # Scale - data
-        self.means_ = np.mean(X_.values, axis=0).reshape(1,-1)
-        if self.normalize:
-            self.std_ = np.std(X_.values,axis=0,ddof=0).reshape(1,-1)
-            Z = (X_ - self.means_)/self.std_
+        ######################################## Drop supplementary individuls  ##############################################
+        if self.ind_sup is not None:
+            # Extract supplementary individuals
+            X_ind_sup = X.iloc[self.ind_sup,:]
+            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+        
+        ################################################################################################
+        # Set individuals weight
+        if self.ind_weights is None:
+            ind_weights = np.ones(X.shape[0])/X.shape[0]
+        elif not isinstance(self.ind_weights,list):
+            raise ValueError("Error : 'ind_weights' must be a list of individuals weights.")
+        elif len(self.ind_weights) != X.shape[0]:
+            raise ValueError(f"Error : 'ind_weights' must be a list with length {X.shape[0]}.")
         else:
-            Z = X_ - self.means_
+            ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
 
-        self.normalized_data_ = Z
+        # Set variables weight
+        if self.var_weights is None:
+            var_weights = np.ones(X.shape[1])
+        elif not isinstance(self.var_weights,list):
+            raise ValueError("Error : 'var_weights' must be a list of variables weights.")
+        elif len(self.var_weights) != X.shape[1]:
+            raise ValueError(f"Error : 'var_weights' must be a list with length {X.shape[1]}.")
+        else:
+            var_weights = np.array(self.var_weights)
+        
+        ################## Summary quantitatives variables ####################
+        summary_quanti = X.describe().T.reset_index().rename(columns={"index" : "variable"})
+        summary_quanti["count"] = summary_quanti["count"].astype("int")
+        self.summary_quanti_ = summary_quanti
+        
+        ####### weighted Pearson correlation
+        weighted_corr = pd.DataFrame(weightedcorrcoef(x=X,w=ind_weights),index=X.columns.tolist(),columns=X.columns.tolist())
+        
+        # Rsquared
+        initial_communality = pd.Series([1 - (1/x) for x in np.diag(np.linalg.inv(weighted_corr))],index=X.columns.tolist(),name="initial")
+        
+        #################### Standardize
+        ############# Compute average mean and standard deviation
+        d1 = DescrStatsW(X,weights=ind_weights,ddof=0)
 
-        if self.method == "principal":
-            self._compute_principal(X_)
-        elif self.method == "harris":
-            self._compute_harris(X_)
+        # Initializations - scale data
+        means = d1.mean.reshape(1,-1)
+        if self.standardize:
+            std = d1.std.reshape(1,-1)
+        else:
+            std = np.ones(X.shape[1]).reshape(1,-1)
+        # Z = (X - mu)/sigma
+        Z = (X - means)/std
 
-        # Compute supplementrary rows statistics
-        if self.row_sup_labels_ is not None:
-            self._compute_row_sup_stats(X=row_sup)
-
-        self.model_ = "efa"
-
-        return self
-
-    def _compute_eig(self,X):
-        """Compute eigen decomposition
-
-        """
-
+        ###################################### Replace Diagonal of correlation matrix with commu
+        # Store initial weighted correlation matrix
+        weighted_corr_copy = weighted_corr.copy()
+        for col in X.columns.tolist():
+            weighted_corr_copy.loc[col,col] = initial_communality[col]
+        
         # Eigen decomposition
-        eigenvalue, eigenvector = np.linalg.eigh(X)
+        eigenvalue, eigenvector = np.linalg.eigh(weighted_corr_copy)
 
         # Sort eigenvalue
         eigen_values = np.flip(eigenvalue)
@@ -2689,136 +2666,91 @@ class EFA(BaseEstimator,TransformerMixin):
         cumulative = np.cumsum(proportion)
 
         # Set n_components_
-        self.n_components_ = self.n_components
-        if self.n_components_ is None:
-            self.n_components_ = (eigenvalue > 0).sum()
+        if self.n_components is None:
+            n_components = (eigenvalue > 0).sum()
+        elif not isinstance(self.n_components,int):
+            raise ValueError("Error : 'n_components' must be an integer.")
+        elif self.n_components < 1:
+            raise ValueError("Error : 'n_components' must be equal or greater than 1.")
+        else:
+            n_components = min(self.n_components,(eigenvalue > 0).sum())
+        
+        eig = np.c_[eigen_values,difference,proportion,cumulative]
+        self.eig_ = pd.DataFrame(eig,columns=["eigenvalue","difference","proportion","cumulative"],index = ["Dim."+str(x+1) for x in range(eig.shape[0])])
+        
+        #Store call informations  : X = Z, M = diag(col_weight), D = diag(row_weight) : t(X)DXM
+        self.call_ = {"Xtot":Xtot,
+                      "X" : X,
+                      "Z" : Z,
+                      "var_weights" : pd.Series(var_weights,index=X.columns.tolist(),name="weight"),
+                      "row_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
+                      "means" : pd.Series(means[0],index=X.columns.tolist(),name="average"),
+                      "std" : pd.Series(std[0],index=X.columns.tolist(),name="scale"),
+                      "n_components" : n_components,
+                      "standardize" : self.standardize}
 
-        self.eig_ = np.array([eigen_values[:self.n_components_],
-                              difference[:self.n_components_],
-                              proportion[:self.n_components_],
-                              cumulative[:self.n_components_]])
-
-        self.eigen_vectors_ = eigenvector
-        return eigenvalue, eigenvector
-
-    def _compute_principal(self,X):
-        """Compute EFA using principal approach
-
-
-        """
-        # Compute Pearson correlation matrix
-        corr_prim = X.corr(method="pearson")
-
-        # Fill diagonal with nitial communality
-        np.fill_diagonal(corr_prim.values,self.initial_communality_)
-
-        # eigen decomposition
-        eigen_value,eigen_vector = self._compute_eig(corr_prim)
-        eigen_value = np.flip(eigen_value)
-        eigen_vector = np.fliplr(eigen_vector)
-
+        ##########################################################################################################################
         # Compute columns coordinates
-        col_coord = eigen_vector*np.sqrt(eigen_value)
-        self.col_coord_ = col_coord[:,:self.n_components_]
-
-        # Variance restituées
-        explained_variance = np.sum(np.square(self.col_coord_),axis=0)
-
-        # Communalité estimée
-        estimated_communality = np.sum(np.square(self.col_coord_),axis=1)
-
-        # Pourcentage expliquée par variables
-        percentage_variance = estimated_communality/self.initial_communality_
+        var_coord = np.apply_along_axis(func1d=lambda x : x*np.sqrt(np.flip(eigenvalue)[:n_components]),axis=1,arr=np.fliplr(eigenvector)[:,:n_components])
+        var_coord = pd.DataFrame(var_coord,columns = ["Dim."+str(x+1) for x in range(var_coord.shape[1])],index=X.columns.tolist())
 
         # F - scores
-        factor_score = np.dot(np.linalg.inv(X.corr(method="pearson")),self.col_coord_)
-
-        # Contribution des variances
-        col_contrib = np.square(factor_score)/np.sum(np.square(factor_score),axis=0)
+        factor_score = np.dot(np.linalg.inv(weighted_corr),var_coord)
+        factor_score = pd.DataFrame(factor_score,columns = ["Dim."+str(x+1) for x in range(factor_score.shape[1])],index=X.columns.tolist())
 
         # Fidélité des facteurs
-        factor_fidelity = np.sum(factor_score*self.col_coord_,axis=0)
+        factor_fidelity = np.sum(factor_score*var_coord,axis=0)
+        factor_fidelity = pd.Series(factor_fidelity,index=["Dim."+str(x+1) for x in range(len(factor_fidelity))],name="fidelity")
 
-        # Row coordinates
-        row_coord = np.dot(self.normalized_data_,factor_score)
+        # Contribution des variances
+        var_contrib = 100*np.square(factor_score)/np.sum(np.square(factor_score),axis=0)
+        var_contrib = pd.DataFrame(var_contrib,columns = ["Dim."+str(x+1) for x in range(var_contrib.shape[1])],index=X.columns.tolist())
+        self.var_ = {"coord" : var_coord, "contrib" : var_contrib, "normalized_score_coef" : factor_score,"fidelity" : factor_fidelity}
 
-        # Broken stick threshold
-        broken_stick_threshold = np.flip(np.cumsum(1/np.arange(self.n_cols_,0,-1)))
+        #################################################################################################################################
+        # Individuals coordinates
+        ind_coord = np.dot(Z,factor_score)
+        ind_coord = pd.DataFrame(ind_coord,columns = ["Dim."+str(x+1) for x in range(ind_coord.shape[1])],index=X.index.tolist())
+        self.ind_ = {"coord" : ind_coord}
 
-        # Karlis - Saporta - Spinaki threshold
-        kss = 1 + 2*np.sqrt((self.n_rows_-1)/(self.n_rows_-1))
+        ################################################# Others
+        # Variance restituées
+        explained_variance = mapply(var_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        explained_variance.name = "variance"
+        # Communalité estimée
+        estimated_communality = mapply(var_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=n_workers).sum(axis=1)
+        estimated_communality.name = "estimated"
+        communality = pd.concat((initial_communality,estimated_communality),axis=1)
+        # Pourcentage expliquée par variables
+        communality = communality.assign(percentage_variance=lambda x : x.estimated/x.initial)
+        # Total inertia
+        inertia = np.sum(initial_communality)
+        self.others_ = {"communality" : communality,"explained_variance" : explained_variance, "inertia" : inertia}
 
-        # Store all result
-        self.estimated_communality_ = estimated_communality
+        ##############################################################################################################################################
+        #                                        Compute supplementrary individuals statistics
+        ###################################################################################################################################################
+        if self.ind_sup is not None:
+            ###################### Transform to float ##############################
+            X_ind_sup = X_ind_sup.astype("float")
 
-        self.col_contrib_ = col_contrib[:,:self.n_components_]
-        self.explained_variance_ = explained_variance
-        self.percentage_variance_ = percentage_variance
-        self.factor_score_ = factor_score
-        self.factor_fidelity_ = factor_fidelity
-        self.row_coord_ = row_coord[:,:self.n_components_]
-        self.dim_index_ = ["Dim."+str(x+1) for x in np.arange(0,self.n_components_)]
+            ########### Standarddize data
+            Z_ind_sup = (X_ind_sup - means)/std
 
-        # Add eigenvalue threshold informations
-        self.kaiser_threshold_ = 1.0
-        self.kaiser_proportion_threshold_ = 100/self.inertia_
-        self.kss_threshold_ = kss
-        self.broken_stick_threshold_ = broken_stick_threshold[:self.n_components_]
+            # Individuals coordinates
+            ind_sup_coord = np.dot(Z_ind_sup,factor_score)
+            ind_sup_coord = pd.DataFrame(ind_coord,columns = ["Dim."+str(x+1) for x in range(ind_coord.shape[1])],index=X.index.tolist())
 
+            self.ind_sup_ = {"coord" : ind_sup_coord}
 
-    def _compute_harris(self,X):
-        """Compute EFA using harris method
+        self.model_ = "efa"
 
-        """
-
-        self.uniqueness_ = 1 - self.initial_communality_
-
-        # Save
-        corr_prim = X.corr(method="pearson")
-        np.fill_diagonal(corr_prim.values,self.initial_communality_)
-
-        #  New correlation matrix
-        corr_snd = np.zeros((self.n_cols_,self.n_cols_))
-        for k in np.arange(0,self.n_cols_,1):
-            for l in np.arange(0,self.n_cols_,1):
-                corr_snd[k,l] = corr_prim.iloc[k,l]/np.sqrt(self.uniqueness_[k]*self.uniqueness_[l])
-
-        eigen_value,eigen_vector = self._compute_eig(corr_snd)
-
-    def _compute_row_sup_stats(self,X,y=None):
-        """Compute statistics supplementary row
-
-        """
-        if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        if self.method == "principal":
-            if self.normalize:
-                Z = (X - self.means_)/self.std_
-            else:
-                Z = X - self.means_
-
-            self.row_sup_coord_ = np.dot(Z,self.factor_score_)[:,:self.n_components_]
-        else:
-            raise NotImplementedError("Error : This method is not implemented yet.")
-
-    def _compute_quanti_sup_stats(self,X,y=None):
-        """Compute quantitative supplementary variables
-
-        """
-        raise NotImplementedError("Error : This method is not implemented yet.")
-
-    def _compute_quali_sup_stats(self,X,y=None):
-        """Compute qualitative supplementary variables
-
-        """
-        raise NotImplementedError("Error : This method is not implemented yet.")
+        return self
 
     def transform(self,X,y=None):
-        """Apply the dimensionality reduction on X
+        """
+        Apply the dimensionality reduction on X
+        ---------------------------------------
 
         X is projected on the first axes previous extracted from a training set.
 
@@ -2846,17 +2778,14 @@ class EFA(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-        if self.method == "principal":
-            if self.normalize:
-                Z = (X - self.means_)/self.std_
-            else:
-                Z = X - self.means_
-            return np.dot(Z,self.factor_score_)[:,:self.n_components_]
-        else:
-            raise NotImplementedError("Error : This method is not implemented yet.")
+        Z = (X - self.call_["means"].values.reshape(1,-1))/self.call_["std"].values.reshape(1,-1)
+            
+        return np.dot(Z,self.var_["factor_score"])
 
     def fit_transform(self,X,y=None):
-        """Fit the model with X and apply the dimensionality reduction on X.
+        """
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
 
         Parameters
         ----------
@@ -2870,7 +2799,7 @@ class EFA(BaseEstimator,TransformerMixin):
         """
 
         self.fit(X)
-        return self.row_coord_
+        return self.ind_["coord"].values
 
 ################################################################################################
 #                                   CORRESPONDENCE ANALYSIS (CA)
