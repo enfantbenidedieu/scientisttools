@@ -524,7 +524,7 @@ def per_item_kmo_index(x):
   A = np.sum(corr**2, axis=0)
   B = np.sum(pcorr**2, axis=0)
   kmo_per_item = A /(A+B)
-  return pd.DataFrame(kmo_per_item,index=x.columns,columns = ["KMO"])
+  return pd.Series(kmo_per_item,index=x.columns.tolist(),name="KMO")
 
 
 def paste(*args, sep = ' ', collapse = None):

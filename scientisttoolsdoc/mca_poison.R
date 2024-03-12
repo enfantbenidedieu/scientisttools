@@ -26,3 +26,14 @@ res <- FAMD(geomorphology,graph = FALSE)
 
 head(res$quanti.var$coord)
 head(res$var$coord)
+
+
+
+
+get_mca_var(res.mca)
+x = get_mca(res.mca,element = "quanti.sup")
+x = get_mca_var(res.mca,element = "quanti.sup")
+x = get_mca_var(res.mca,element = "mca.cor")
+
+
+fviz_mca_var(res.mca,choice = "quanti.sup")
