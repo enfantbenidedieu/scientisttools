@@ -2536,7 +2536,7 @@ def fviz_famd_ind(self,
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                         color=color_sup,size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
+                                        adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                         color = color_sup,size=text_size,va=va,ha=ha)
@@ -3116,6 +3116,9 @@ def fviz_partialpca_ind(self,
                  text_type = "text",
                  legend_title=None,
                  marker = "o",
+                 ind_sup = True,
+                 color_sup = "blue",
+                 marker_sup = "^",
                  add_grid =True,
                  add_hline = True,
                  add_vline=True,
@@ -3243,6 +3246,22 @@ def fviz_partialpca_ind(self,
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
+    
+    ############################## Add supplementary individuals informations
+    if ind_sup:
+        if self.ind_sup is not None:
+            sup_coord = self.ind_sup_["coord"]
+            if "point" in geom_type:
+                p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                      color = color_sup,shape = marker_sup,size=point_size)
+            if "text" in geom_type:
+                if repel:
+                    p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                        color=color_sup,size=text_size,va=va,ha=ha,
+                                        adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                else:
+                    p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                        color = color_sup,size=text_size,va=va,ha=ha)
     
     # Add additionnal        
     proportion = self.eig_.iloc[:,2].values
@@ -3564,8 +3583,7 @@ def fviz_efa_ind(self,
             if "text" in geom_type:
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
-                                        color=color_sup,size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
+                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                         color = color_sup,size=text_size,va=va,ha=ha)
@@ -3836,13 +3854,8 @@ def fviz_mfa_ind(self,
     # Initialize coordinates
     coord = self.ind_["coord"]
 
-    ##### Add actives variables
-    Xtot = self.call_["Xtot"]
-    Xtot.columns = Xtot.columns.droplevel()
-
     # Concatenate
-    coord = pd.concat((coord,Xtot),axis=1)
-    print(coord.columns)
+    coord = pd.concat((coord,self.call_["Xtot"]),axis=1)
 
     #### Drop supplementary rows
     if self.ind_sup is not None:
@@ -3862,7 +3875,7 @@ def fviz_mfa_ind(self,
     if lim_contrib is not None:
         if isinstance(lim_contrib,float) or isinstance(lim_contrib,int):
             lim_contrib = float(lim_contrib)
-            contrib = self.ind_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query(f"contrib > {lim_contrib}")
+            contrib = self.ind_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -4008,6 +4021,8 @@ def fviz_mfa_ind(self,
 
 def fviz_mfa_col(self,
                  axis=[0,1],
+                 x_label = None,
+                 y_label = None,
                  title =None,
                  color ="group",
                  geom = ["arrow","text"],

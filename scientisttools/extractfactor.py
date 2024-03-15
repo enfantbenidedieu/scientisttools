@@ -2193,8 +2193,7 @@ def dimdesc(self,axis=None,proba=0.05):
                     row_RD = pd.DataFrame(eta2(quali_sup[col],row_coord[idx],digits=8),index=[col])
                     corqDim = pd.concat([corqDim,row_RD],axis=0)
                 # Filter by pvalue
-                corqDim = (corqDim.query('pvalue < @proba').sort_values(by="correlation ratio",ascending=False)
-                                  .rename(columns={"R2": "correlation ratio"}))
+                corqDim = (corqDim.query('pvalue < @proba').sort_values(by="correlation ratio",ascending=False).rename(columns={"R2": "correlation ratio"}))
             
             if self.quali_sup is None:
                 res = corDim
@@ -2207,18 +2206,18 @@ def dimdesc(self,axis=None,proba=0.05):
             corrdim[idx] = res
     elif self.model_ == "ca":
         # Extract row coordinates
-        row_coord = get_ca_row(self)["coord"]
+        row_coord = self.row_["coord"]
         # Exctrac columns coordinates
-        col_coord = get_ca_col(self)["coord"]
+        col_coord = self.col_["coord"]
 
         # Add Supplementary row
-        if self.row_sup_labels_ is not None:
-            row_coord_sup = get_ca_row(self)["row_sup"]["coord"]
-            row_coord = pd.concat([row_coord,row_coord_sup],axis=0)
+        if self.row_sup is not None:
+            row_sup_coord = self.row_sup_["coord"]
+            row_coord = pd.concat([row_coord,row_sup_coord],axis=0)
         
         # Add supplmentary columns
-        if self.col_sup_labels_ is not None:
-            col_coord_sup = get_ca_col(self)["col_sup"]["coord"]
+        if self.col_sup is not None:
+            col_coord_sup = self.col_sup_["coord"]
             col_coord = pd.concat([col_coord,col_coord_sup],axis=0)
 
         # Select axis
@@ -2231,58 +2230,51 @@ def dimdesc(self,axis=None,proba=0.05):
         
         corrdim = {}
         for idx in row_coord.columns:
-            corrdim[idx] = {"row" : (row_coord[idx].to_frame()
-                                                   .sort_values(by=idx,ascending=True)
-                                                   .rename(columns={idx:"coord"})),
-                            "col" : (col_coord[idx].to_frame()
-                                                   .sort_values(by=idx,ascending=True)
-                                                   .rename(columns={idx:"coord"}))}
+            corrdim[idx] = {"row" : (row_coord[idx].to_frame().sort_values(by=idx,ascending=True).rename(columns={idx:"coord"})),
+                            "col" : (col_coord[idx].to_frame().sort_values(by=idx,ascending=True).rename(columns={idx:"coord"}))}
     elif self.model_ == "mca":
         # Select data
-        data = self.original_data_
-        # Extract row coordinates
-        row_coord = get_mca_ind(self)["coord"]
+        data = self.call_["X"]
+        # Extract individuals coordinates
+        ind_coord = self.ind_["coord"]
         # Select axis
         if axis is not None:
-            row_coord = row_coord.iloc[:,axis]
-            if isinstance(row_coord,pd.Series):
-                row_coord = row_coord.to_frame()
+            ind_coord = ind_coord.iloc[:,axis]
+            if isinstance(ind_coord,pd.Series):
+                ind_coord = ind_coord.to_frame()
 
-        if self.quali_sup_labels_ is not None:
-            quali_sup = self.data_[self.quali_sup_labels_]
-            data = pd.concat([data,quali_sup],axis=1)
-            if self.row_sup_labels_ is not None:
-                data = data.drop(index=self.row_sup_labels_)
+        if self.quali_sup is not None:
+            X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+            if self.ind_sup is not None:
+                X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+                data = pd.concat([data,X_quali_sup],axis=1)
 
         corrdim = {}
-        for idx in row_coord.columns:
+        for idx in ind_coord.columns:
             # Pearson correlation test
-            if self.quanti_sup_labels_ is not None:
-                quanti_sup = self.data_[self.quanti_sup_labels_]
-                if self.row_sup_labels_ is not None:
-                    quanti_sup = quanti_sup.drop(index=self.row_sup_labels_)
+            if self.quanti_sup is not None:
+                X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
+                if self.ind_sup is not None:
+                    X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
                 
                 corDim = pd.DataFrame(columns=["statistic","pvalue"]).astype("float")
-                for col in quanti_sup.columns:
-                    if (quanti_sup[col].dtypes in ["float64","int64","float32","int32"]):
-                        res = st.pearsonr(quanti_sup[col],row_coord[idx])
+                for col in X_quanti_sup.columns.tolist():
+                    if (X_quanti_sup[col].dtypes in ["float64","int64","float32","int32"]):
+                        res = st.pearsonr(X_quanti_sup[col],ind_coord[idx])
                         row_RD = pd.DataFrame({"statistic" : res.statistic,"pvalue":res.pvalue},index = [col])
                         corDim = pd.concat([corDim,row_RD])
                 # Filter by pvalue
-                corDim = (corDim.query(f'pvalue < {proba}')
-                                .sort_values(by="statistic",ascending=False))
+                corDim = (corDim.query('pvalue < @proba').sort_values(by="statistic",ascending=False))
 
             # Correlation ratio (eta2)
-            corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','correlation ratio','F-stats','pvalue'])
-            for col in data.columns:
-                row_RD = pd.DataFrame(eta2(data[col],row_coord[idx],digits=8),index=[col])
+            corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','correlation ratio','F-stats','pvalue']).astype("float")
+            for col in data.columns.tolist():
+                row_RD = pd.DataFrame(eta2(data[col],ind_coord[idx],digits=8),index=[col])
                 corqDim = pd.concat([corqDim,row_RD])
             # Filter by pvalue
-            corqDim = (corqDim.query(f'pvalue < {proba}')
-                              .sort_values(by="correlation ratio",ascending=False)
-                              .rename(columns={"correlation ratio" : "R2"}))
+            corqDim = (corqDim.query('pvalue < @proba').sort_values(by="correlation ratio",ascending=False).rename(columns={"correlation ratio" : "R2"}))
         
-            if self.quanti_sup_labels_ is None:
+            if self.quanti_sup is None:
                 res = corqDim
             else:
                 if corDim.shape[0] != 0 :
@@ -2292,54 +2284,51 @@ def dimdesc(self,axis=None,proba=0.05):
             corrdim[idx] = res
     elif self.model_ == "famd":
         # Extract row coord
-        row_coord = get_famd_ind(self)["coord"]
+        ind_coord = self.ind_["coord"]
         # Select axis
         if axis is not None:
-            row_coord = row_coord.iloc[:,axis]
-            if isinstance(row_coord,pd.Series):
-                row_coord = row_coord.to_frame()
+            ind_coord = ind_coord.iloc[:,axis]
+            if isinstance(ind_coord,pd.Series):
+                ind_coord = ind_coord.to_frame()
         
         # Select continuous active data
-        quanti_data = self.active_data_[self.quanti_labels_]
+        quanti_data = self.call_["X"][self.quanti_var_["coord"].index.tolist()]
         # Add supplementary continuous variables
-        if self.quanti_sup_labels_ is not None:
-            quanti_sup = self.data_[self.quanti_sup_labels_]
-            if self.row_sup_labels_ is not None:
-                quanti_sup = quanti_sup.drop(index=self.row_sup_labels_)
-                quanti_data = pd.concat([quanti_data,quanti_sup],axis=1)
+        if self.quanti_sup is not None:
+            X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
+            if self.ind_sup is not None:
+                X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            quanti_data = pd.concat([quanti_data,X_quanti_sup],axis=1)
 
         # Select categorical active variables
-        quali_data = self.active_data_[self.quali_labels_]
+        quali_data = self.call_["X"].drop(columns=quanti_data.columns.tolist())
         # Add supplementary categorical variables
-        if self.quali_sup_labels is not None:
-            quali_sup = self.data_[self.quali_sup_labels_]
-            if self.row_sup_labels_ is not None:
-                quali_sup = quali_sup.drop(index=self.row_sup_labels_)
-                quali_data = pd.concat([quali_data,quali_sup],axis=1)
+        if self.quali_sup is not None:
+            X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+            if self.ind_sup is not None:
+                X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            quali_data = pd.concat([quali_data,X_quali_sup],axis=1)
         
         # Correlation between coninuous variable and axis
         corrdim = {}
-        for idx in row_coord.columns:
+        for idx in ind_coord.columns:
             # For continuous variables
             corDim = pd.DataFrame(columns=["correlation","pvalue"]).astype("float")
-            for col in quanti_data.columns:
+            for col in quanti_data.columns.tolist():
                 if (quanti_data[col].dtypes in ["float64","int64","float32","int32"]):
-                    res = st.pearsonr(quanti_data[col],row_coord[idx])
+                    res = st.pearsonr(quanti_data[col],ind_coord[idx])
                     row_RD = pd.DataFrame({"correlation" : res.statistic,"pvalue":res.pvalue},index = [col])
                     corDim = pd.concat([corDim,row_RD],axis=0)
             # Filter by pvalue
-            corDim = (corDim.query(f'pvalue < {proba}')
-                            .sort_values(by="correlation",ascending=False))
+            corDim = (corDim.query('pvalue < @proba').sort_values(by="correlation",ascending=False))
 
             # For categorical variable    
             corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','correlation ratio','F-stats','pvalue'])
-            for col in quali_data.columns:
-                row_RD = pd.DataFrame(eta2(quali_data[col],row_coord[idx],digits=8),index=[col])
+            for col in quali_data.columns.tolist():
+                row_RD = pd.DataFrame(eta2(quali_data[col],ind_coord[idx],digits=8),index=[col])
                 corqDim = pd.concat([corqDim,row_RD],axis=0)
             # Filter by pvalue
-            corqDim = (corqDim.query(f'pvalue < {proba}')
-                              .sort_values(by="correlation ratio",ascending=False)
-                              .rename(columns={"correlation ratio" : "R2"}))
+            corqDim = (corqDim.query('pvalue < @proba').sort_values(by="correlation ratio",ascending=False).rename(columns={"correlation ratio" : "R2"}))
 
             if corDim.shape[0] == 0 and corqDim.shape[0] != 0:
                 res = corqDim
