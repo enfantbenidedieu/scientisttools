@@ -1551,7 +1551,335 @@ def summaryEFA(self,
     else:
         print(var_infos)
     
+#############################################################################################
+#           Multiple Factor Analysis (MFA)
+#############################################################################################
+
+def get_mfa_ind(self):
+    """
+    Extract the results for individuals - MFA
+    -----------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine and contributions) for the active individuals
+    from Multiple Factor Analysis (MFA) outputs.
+
+    Parameters
+    ----------
+    self : an object of class MFA
+
+    Return
+    ------
+    a dictionnary of dataframes containing the results for the active individuals including :
+    coord	: coordinates for the individuals
     
+    cos2	: cos2 for the individuals
+    
+    contrib	: contributions of the individuals
+    
+    inertia	: inertia of the individuals
+
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "mfa":
+        raise ValueError("Error : 'self' must be an object of class MFA.")
+    
+    return self.ind_
+
+def get_mfa_var(self,choice = "group"):
+    """
+    Extract the results for variables (quantitatives and groups) MFA
+    ------------------------------------------------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine and contributions) for the active quantitative variable/groups 
+    from Multiple Factor Analysis (MFA) outputs.
+
+    Parameters
+    ----------
+    self  : an object of class MFA
+    
+    choice : the element to subset from the output. Possible values are "quanti_var","group"
+
+    Value
+    -----
+    a dictionnary of dataframes containing the results for the active quantitative variable/roups including :
+
+    coord	: coordinates for the quantitative variable/groups
+    
+    cos2	: cos2 for the quantitative variable/groups
+    
+    contrib	: contributions of the quantitative variable/groups
+
+    Usage
+    -----
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ != "mfa":
+        raise ValueError("Error : 'self' must be an object of class MFA.")
+    
+    if choice not in ["group","quanti_var"]:
+        raise ValueError("Error : 'choice' should be one of 'group', 'quanti_var'")
+    
+    if choice == "group":
+        return self.group_
+    if choice == "quanti_var":
+        return self.quanti_var_
+
+def get_mfa_partial_axes(self):
+    """
+    Extract the results for partial axes - MFA
+    ------------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine and contributions) for the active 
+    partial axes from Multiple Factor Analysis (MFA) outputs.
+
+    Parameters
+    ----------
+    self : an object of class MFA
+
+    Return
+    ------
+
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    
+    """
+    if self.model_ != "mfa":
+        raise ValueError("Error : 'self' must be an object of class MFA.")
+    
+    return self.partial_axes_
+
+def get_mfa(self,choice="ind"):
+    """
+    Extract the results for individuals/variables/group/partial axes - MFA
+    ----------------------------------------------------------------------
+
+    Description
+    -----------
+    Extract all the results (coordinates, squared cosine and contributions) for the active individuals/quantitative 
+    variables/groups/partial axes from Multiple Factor Analysis (MFA) outputs.
+    
+    * get_mfa(): Extract the results for variables and individuals
+    
+    * get_mfa_ind(): Extract the results for individuals only
+    
+    * get_mfa_var(): Extract the results for variables (quantitatives and groups)
+    
+    * get_mfa_partial_axes(): Extract the results for partial axes only
+
+    Parameters
+    ----------
+    self : an object of class MFA
+
+    choice : he element to subset from the output. Possible values are "ind", "quanti_var", "group" or "partial_axes".
+
+    Return
+    ------
+    a dictionary of dataframes containing the results for the active individuals/quantitative variable groups/partial axes including :
+
+    coord	: coordinates for the individuals/quantitative variable/groups/partial axes
+    
+    cos2	: cos2 for the individuals/quantitative variable/groups/partial axes
+
+    contrib	: contributions of the individuals/quantitative variable/groups/partial axes
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+
+    if self.model_ != "mfa":
+        raise ValueError("Error : 'self' must be an object of class MFA.")
+
+    if choice not in ["ind","quanti_var","group","partial_axes"]:
+        raise ValueError("Error : 'choice' should be one of 'ind', 'quanti_var', 'group'")
+    
+    if choice == "ind":
+        return get_mfa_ind(self)
+    elif choice == "partial_axes":
+        return get_mfa_partial_axes(self)
+    else:
+        return get_mfa_var(self,choice=choice)
+    
+def summaryMFA(self,
+               digits=3,
+               nb_element=10,
+               ncp=3,
+               to_markdown=False,
+               tablefmt = "pipe",
+               **kwargs):
+    """
+    Printing summaries of Multiple Factor Analysis model
+    ----------------------------------------------------
+
+    Parameters
+    ----------
+    self        :   an object of class MFA.
+    digits      :   int, default=3. Number of decimal printed
+    nb_element  :   int, default = 10. Number of element
+    ncp         :   int, default = 3. Number of componennts
+    to_markdown :   Print DataFrame in Markdown-friendly format.
+    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    **kwargs    :   These parameters will be passed to tabulate.
+    """
+
+
+    ncp = min(ncp,self.call_["n_components"])
+    nb_element = min(nb_element,self.ind_["coord"].shape[0])
+
+    # Principal Components Analysis Results
+    print("                     Multiple Factor Analysis - Results                     \n")
+
+    # Add eigenvalues informations
+    print("Importance of components")
+    eig = self.eig_.iloc[:self.call_["n_components"],:].T.round(decimals=digits)
+    eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
+    if to_markdown:
+        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(eig)
+    
+    # Add group informations
+    print("\nGroups\n")
+    group = self.group_
+    group_infos = group["dist"]
+    for i in range(ncp):
+        group_coord = group["coord"].iloc[:,i]
+        group_contrib = group["contrib"].iloc[:,i]
+        group_contrib.name = "ctr"
+        group_cos2 = group["cos2"].iloc[:,i]
+        group_cos2.name = "cos2"
+        group_infos = pd.concat((group_infos,group_coord,group_contrib,group_cos2),axis=1)
+    group_infos = group_infos.round(decimals=digits)
+    if to_markdown:
+        print(group_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(group_infos)
+    
+    if self.group_sup is not None:
+        print("\nSupplementary groups\n")
+        group_sup_infos = group["dist_sup"]
+        for i in range(ncp):
+            group_sup_coord = group["coord_sup"].iloc[:,i]
+            group_sup_cos2 = group["cos2_sup"].iloc[:,i]
+            group_sup_cos2.name = "cos2"
+            group_sup_infos = pd.concat((group_sup_infos,group_sup_coord,group_sup_cos2),axis=1)
+        group_sup_infos = group_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(group_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(group_sup_infos)
+
+    # Add individuals informations
+    if self.ind_["coord"].shape[0] > nb_element:
+        print(f"\nIndividuals (the {nb_element} first)\n")
+    else:
+        print("\nIndividuals")
+    ind = self.ind_
+    ind_infos = ind["infos"]
+    for i in range(ncp):
+        ind_coord = ind["coord"].iloc[:,i]
+        ind_contrib = ind["contrib"].iloc[:,i]
+        ind_contrib.name = "ctr"
+        ind_cos2 = ind["cos2"].iloc[:,i]
+        ind_cos2.name = "cos2"
+        ind_infos = pd.concat((ind_infos,ind_coord,ind_contrib,ind_cos2),axis=1)
+    ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(ind_infos)
+    
+    # Add supplementary individuals
+    if self.ind_sup is not None:
+        ind_sup = self.ind_sup_
+    
+    # Add continuous variables
+    if self.quanti_var_["coord"].shape[0] > nb_element:
+        print(f"\nContinuous variables (the {nb_element} first)\n")
+    else:
+        print("\nContinuous variables")
+    quanti_var = self.quanti_var_
+    quanti_var_infos = pd.DataFrame().astype("float")
+    for i in range(ncp):
+        quanti_var_coord = quanti_var["coord"].iloc[:,i]
+        quanti_var_contrib = quanti_var["contrib"].iloc[:,i]
+        quanti_var_contrib.name = "ctr"
+        quanti_var_cos2 = quanti_var["cos2"].iloc[:,i]
+        quanti_var_cos2.name = "cos2"
+        quanti_var_infos = pd.concat((quanti_var_infos,quanti_var_coord,quanti_var_contrib,quanti_var_cos2),axis=1)
+    quanti_var_infos = quanti_var_infos.iloc[:nb_element,:].round(decimals=digits)
+    if to_markdown:
+        print(quanti_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(quanti_var_infos)
+
+    # Add Supplementary quantitatives variables
+    if self.group_sup is not None:
+        if self.quanti_var_sup_ is not None:
+            if self.quanti_var_sup_["coord"].shape[0] > nb_element:
+                print(f"\nSupplementary Continuous variables (the {nb_element} first)\n")
+            else:
+                print("\nSupplementary Continuous variables")
+            quanti_var_sup = self.quanti_var_sup_
+            quanti_var_sup_infos = pd.DataFrame().astype("float")
+            for i in range(ncp):
+                quanti_var_sup_coord = quanti_var_sup["coord"].iloc[:,i]
+                quanti_var_sup_cos2 = quanti_var_sup["cos2"].iloc[:,i]
+                quanti_var_sup_cos2.name = "cos2"
+                quanti_var_sup_infos = pd.concat((quanti_var_sup_infos,quanti_var_sup_coord,quanti_var_sup_cos2),axis=1)
+            quanti_var_sup_infos = quanti_var_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+            if to_markdown:
+                print(quanti_var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+            else:
+                print(quanti_var_sup_infos)
+        
+        if self.quali_var_sup_ is not None:
+            if self.quali_var_sup_["coord"].shape[0] > nb_element:
+                print(f"\nSupplementary categories (the {nb_element} first)\n")
+            else:
+                print("\nSupplementary categories")
+            quali_var_sup = self.quali_var_sup_
+            quali_var_sup_infos = quali_var_sup["dist"]
+            for i in range(ncp):
+                quali_var_sup_coord = quali_var_sup["coord"].iloc[:,i]
+                quali_var_sup_cos2 = quali_var_sup["cos2"].iloc[:,i]
+                quali_var_sup_cos2.name = "cos2"
+                quali_var_sup_vtest = quali_var_sup["vtest"].iloc[:,i]
+                quali_var_sup_vtest.name = "vtest"
+                quali_var_sup_infos = pd.concat((quali_var_sup_infos,quali_var_sup_coord,quali_var_sup_cos2,),axis=1)
+            quali_var_sup_infos = quali_var_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+            if to_markdown:
+                print(quali_var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+            else:
+                print(quali_var_sup_infos)
+
+            # Add correlation ratio
+            if self.quali_var_sup_["coord"].shape[0] > nb_element:
+                print(f"\nSupplementary categories eta2 (the {nb_element} first)\n")
+            else:
+                print("\nSupplementary categories (eta2)")
+            quali_var_sup_eta2 = quali_var_sup["eta2"].iloc[:nb_element,:].round(decimals=digits)
+            if to_markdown:
+                print(quali_var_sup_eta2.to_markdown(tablefmt=tablefmt,**kwargs))
+            else:
+                print(quali_var_sup_eta2)
+    
+    
+
 
 
 def StandardScaler(X):
@@ -1804,209 +2132,6 @@ def summaryCANDISC(self,digits=3,
         print(var_infos)
 
 
-#############################################################################################
-#           Multiple Factor Analysis (MFA)
-#############################################################################################
-
-def get_mfa_ind(self):
-    """
-    Extract the results for individuals MFA
-    ---------------------------------------
-    
-    
-    """
-    if self.model_ != "mfa":
-        raise ValueError("Error : 'self' must be an instance of class MFA.")
-
-    df = {
-        "coord"                  : pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_),
-        "contrib"                : pd.DataFrame(self.row_contrib_,index=self.row_labels_,columns=self.dim_index_),
-        "cos2"                   : pd.DataFrame(self.row_cos2_,index=self.row_labels_,columns=self.dim_index_),
-        "coord_partiel"          : self.row_coord_partiel_,
-        "within_inertia"         : self.row_within_inertia_,
-        "within_partial_inertia" : self.row_within_partial_inertia_
-    }
-    
-    return df
-
-def get_mfa_var(self,element = "group"):
-    """
-    Extract the results for variables (quantitatives, qualitatives and groups) MFA
-    ------------------------------------------------------------------------------
-
-    Description
-    -----------
-    Extract all the results (coordinates, squared cosine and contributions) for the active quantitative variable/
-    qualitative variable categories/groups from Multiple Factor Analysis (MFA) outputs.
-
-    Parameters
-    ----------
-    res.mfa  : n object of class MFA
-    
-    element : the element to subset from the output. Possible values are "quanti_var", "quali_var", "group"
-
-    Value
-    -----
-    a dictionnary of matrices containing the results for the active qualitative variable categories/qualitative variable
-    categories/groups including :
-
-
-    Usage
-    -----
-
-    
-    """
-    if self.model_ != "mfa":
-        raise ValueError("Error : 'self' must be an instance of class MFA.")
-    
-    if element == "group":
-        df = {
-            "coord"       : self.group_coord_,
-            "correlation" : self.group_correlation_,
-            "contrib"     : self.group_contrib_,
-            "cos2"        : self.group_cos2_,
-            "dist"        : self.group_disto_,
-            "Lg"          : self.group_lg_,
-            "RV"          : self.group_rv_
-        }
-        if self.group_sup is not None:
-            df["sup"] = {
-                "coord"  : self.group_sup_coord_,
-                "dist"   : self.group_sup_disto_,
-                "cos2"   : self.group_sup_cos2_,
-                "Lg"     : self.group_sup_lg_,
-                "RV"     : self.group_sup_rv_
-            }
-    if element == "quanti_var":
-        df = {}
-        # Extract active continues variables
-        for grp, cols in self.group_.items():
-            if self.all_nums_[grp]:
-                df = {
-                        "coord"   : pd.DataFrame(self.col_coord_,columns=self.dim_index_,index=self.col_labels_),
-                        "contrib" : pd.DataFrame(self.col_contrib_,columns=self.dim_index_,index=self.col_labels_),
-                        "cos2"    : pd.DataFrame(self.col_cos2_,columns=self.dim_index_,index=self.col_labels_),
-                        "cor"     : pd.DataFrame(self.col_cor_,columns=self.dim_index_,index=self.col_labels_)
-                    }
-        # Check in supplementary group
-        if self.group_sup is not None:
-            # Check if supplementary continues columns in supplementary group
-            for grp,cols in self.group_sup_.items():
-                if self.all_nums_[grp]:
-                    df["sup"] = {
-                            "coord" : pd.DataFrame(self.col_sup_coord_,index=self.col_sup_labels_,columns=self.dim_index_),
-                            "cos2"  : pd.DataFrame(self.col_sup_cos2_,index=self.col_sup_labels_,columns=self.dim_index_),
-                            "cor"   : pd.DataFrame(self.col_sup_cor_,index=self.col_sup_labels_,columns=self.dim_index_)
-                        }
-    if element == "quali_var":
-        df = {}
-        # Extract active categories
-        for grp, cols in self.group_.items():
-            if self.all_cats_[grp]:
-                df = {
-                        "coord"                  : self.mod_coord_,
-                        "contrib"                : self.mod_contrib_,
-                        "cos2"                   : self.mod_cos2_,
-                        "vtest"                  : self.mod_vtest_,
-                        "coord_partiel"          : self.mod_coord_partiel_,
-                        "within_inertia"         : self.mod_within_inertia_,
-                        "within_partial_inertia" : self.mod_within_partial_inertia_
-                    }
-        # Check if supplementary group
-        if self.group_sup is not None:
-            for grp, cols in self.group_sup_.items():
-                if self.all_cats_[grp]:
-                    df["sup"] = {
-                        "stats"         :   self.mod_sup_stats_,
-                        "coord"         :   self.mod_sup_coord_,
-                        "cos2"          :   self.mod_sup_cos2_,
-                        "dist"          :   self.mod_sup_disto_,
-                        "vtest"         :   self.mod_sup_vtest_,
-                        "coord_partiel" :   self.mod_sup_coord_partiel_
-                        }
-    
-    return df
-
-def get_mfa_partial_axes(self):
-    """
-    
-    """
-    if self.model_ != "mfa":
-        raise ValueError("Error : 'self' must be an instance of class MFA.")
-    
-    df = {
-        "coord"       : self.partial_axes_coord_,
-        "cor"         : self.partial_axes_cor_,
-        "cos2"        : self.partial_axes_cos2_,
-        "contrib"     : self.partial_axes_contrib_,
-        "cor_between" : self.partial_axes_cor_between_
-    }
-    if self.group_sup is not None:
-        df["sup"] = {
-            "coord" : self.partial_axes_sup_coord_,
-            "cor"   : self.partial_axes_sup_cor_,
-            "cos2"  : self.partial_axes_sup_cos2_ 
-        }
-    return df
-
-
-def get_mfa(self,choice="row"):
-    """
-    
-    """
-    if choice == "row":
-        return get_mfa_ind(self)
-    elif choice == "col":
-        return get_mfa_var(self)
-    else:
-        raise ValueError("Error : Allowed values are 'row' and 'var'.")
-    
-
-def summaryMFA(self,
-               digits=3,
-               nb_element=10,
-               ncp=3,
-               to_markdown=False,
-               tablefmt = "pipe",
-               **kwargs):
-    """Printing summaries of Multiple Factor Analysis model
-
-    Parameters
-    ----------
-    self        :   an obect of class MFA.
-    digits      :   int, default=3. Number of decimal printed
-    nb_element  :   int, default = 10. Number of element
-    ncp         :   int, default = 3. Number of componennts
-    to_markdown :   Print DataFrame in Markdown-friendly format.
-    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
-    **kwargs    :   These parameters will be passed to tabulate.
-    """
-
-    row = get_mfa(self,choice="row")
-
-    ncp = min(ncp,self.n_components_)
-    nb_element = min(nb_element,len(self.row_labels_))
-
-    # Principal Components Analysis Results
-    print("                     Multiple Factor Analysis - Results                     \n")
-
-    # Add eigenvalues informations
-    print("Importance of components")
-    eig = pd.DataFrame(self.eig_,columns=["Dim."+str(x+1) for x in range(self.eig_.shape[1])],
-                       index=["Variance","Difference","% of var.","Cumulative of % of var."]).round(decimals=digits)
-    if to_markdown:
-        print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(eig)
-    
-    # Add individuals informations
-    print(f"\nIndividuals (the {nb_element} first)\n")
-    row_infos = row["coord"].iloc[:,:ncp]
-    row_infos = row_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(row_infos)
 
 
 ###################################################""

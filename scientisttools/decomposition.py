@@ -88,27 +88,6 @@ class PCA(BaseEstimator,TransformerMixin):
 
     Attributes
     ----------
-    n_components_ : int
-        The estimated number of components.
-
-    row_sup_labels_ : array of strings or None
-        Labels of supplementary individuals labels
-
-    quanti_sup_labels_ : arrays of strings or None
-        Labels of quantitative supplementary variables
-
-    quali_sup_labels_ : arrays of strings or None
-
-    mod_sup_labels_ : list of strings
-                        labels for the categories supplementary
-
-    short_sup_labels_ : list of strings
-                        Short labels for the categories supplementary
-
-    eig_ : array of float
-        A 4 x n_components_ matrix containing all the eigenvalues
-        (1st row), difference (2nd row) the percentage of variance (3rd row) and the
-        cumulative percentage of variance (4th row).
 
     
     
@@ -5755,6 +5734,9 @@ class MFA(BaseEstimator,TransformerMixin):
         
         # Remove supplementary group
         if self.group_sup is not None:
+            # Set default values to None
+            self.quali_var_sup_ = None
+            self.quanti_var_sup_ = None
             if isinstance(self.group_sup,int):
                 group_sup = [int(self.group_sup)]
             elif ((isinstance(self.group_sup,list) or isinstance(self.group_sup,tuple)) and len(self.group_sup)>=1):
@@ -5778,7 +5760,7 @@ class MFA(BaseEstimator,TransformerMixin):
 
         ####################################### Save the base in a new variables
         # Store data
-        Xtot = X
+        Xtot = X.copy()
 
         group_name = X.columns.get_level_values(0).unique().tolist()
         group_index = [group_name.index(x) for x in group_name]
@@ -5881,12 +5863,12 @@ class MFA(BaseEstimator,TransformerMixin):
 
         ##################### Compute group disto
         group_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group.keys())]
-        group_dist2 = pd.Series(group_dist2,index=list(group.keys()),name="dist2")
+        group_dist2 = pd.Series(group_dist2,index=list(group.keys()),name="dist")
 
         ##### Compute group
         if self.group_sup is not None:
             group_sup_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_sup_dict.keys())]
-            group_sup_dist2 = pd.Series(group_sup_dist2,index=list(group_sup_dict.keys()),name="dist2")
+            group_sup_dist2 = pd.Series(group_sup_dist2,index=list(group_sup_dict.keys()),name="dist")
 
         ##### Store separate analysis
         self.separate_analyses_ = model
@@ -5967,7 +5949,10 @@ class MFA(BaseEstimator,TransformerMixin):
                     self.quali_var_sup_ = global_pca.quali_sup_
                     self.summary_quali_ = global_pca.summary_quali_
                     self.summary_quali_.insert(0,"group",group_name.index(grp))
-    
+
+
+        ##########################################
+        self.global_pca_ = global_pca
         ####################################################################################################
         #  Eigenvalues
         ####################################################################################################
@@ -6146,7 +6131,7 @@ class MFA(BaseEstimator,TransformerMixin):
                 
         ###############
         self.partial_axes_ = {"coord" : partial_axes_coord,"cor" : partial_axes_coord,"contrib" : partial_axes_contrib,"cos2":partial_axes_cos2,"cor_between" : all_coord.corr()}
-
+        
         #################################################################################################################
         # Group informations : coord
         #################################################################################################################
@@ -6234,7 +6219,7 @@ class MFA(BaseEstimator,TransformerMixin):
                         # Weighted the sum using the eigenvalues of each group
                         weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_corr2
                         Lg.loc[grp1,grp2] = weighted_corr2
-                        Lg.loc[grp1,grp2] = weighted_corr2
+                        Lg.loc[grp2,grp1] = weighted_corr2
                     elif all(pd.api.types.is_string_dtype(X2[c]) for c in cols2):
                         # Sum of square correlation ratio
                         sum_eta2 = np.array([eta2(X2[col2],X1[col1],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
@@ -6252,7 +6237,7 @@ class MFA(BaseEstimator,TransformerMixin):
             for grp2 in Lg.columns:
                 RV.loc[grp1,grp2] = Lg.loc[grp1,grp2]/(np.sqrt(Lg.loc[grp1,grp1])*np.sqrt(Lg.loc[grp2,grp2]))
         
-        self.group_ = {"coord" : group_coord, "contrib" : group_contrib, "cos2" : group_cos2,"correlation" : group_correlation,"Lg" : Lg, "dist2" : group_dist2}
+        self.group_ = {"coord" : group_coord, "contrib" : group_contrib, "cos2" : group_cos2,"correlation" : group_correlation,"Lg" : Lg, "dist" : np.sqrt(group_dist2),"RV" : RV}
 
         ##### Add supplementary elements
         if self.group_sup is not None:
@@ -6283,9 +6268,9 @@ class MFA(BaseEstimator,TransformerMixin):
             #################################### group sup cos2 ###########################################################
             group_sup_cos2 = pd.concat((((group_sup_coord.loc[grp,:]**2)/group_sup_dist2.loc[grp]).to_frame(grp).T for grp in group_sup_coord.index.tolist()),axis=0)
             
-            self.group_ = {"coord_sup" : group_sup_coord, "dist2_sup" : group_sup_dist2,"cos2_sup" : group_sup_cos2}
-
-
+            # Append two dictionnaries
+            self.group_ = {**self.group_,**{"coord_sup" : group_sup_coord, "dist_sup" : np.sqrt(group_sup_dist2),"cos2_sup" : group_sup_cos2}}
+            
         self.model_ = "mfa"
         return self
     
