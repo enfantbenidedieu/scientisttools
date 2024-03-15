@@ -9,7 +9,7 @@ library(FactoMineR)
 library(factoextra)
 data(wine)
 res.mfa <- MFA(wine, 
-               ncp  = NULL,
+               # ncp  = NULL,
                group = c(2, 5, 3, 10, 9, 2), 
                type = c("n", "s", "s", "s", "s", "s"),
                name.group = c("origin","odor","visual",
@@ -117,3 +117,4 @@ head(quali_var_sup$within.partial.inertia) # A implémenter
 res.mfa$summary.quanti
 res.mfa$summary.quali
 
+res.mfa$inertia.ratio
