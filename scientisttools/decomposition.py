@@ -5255,7 +5255,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                 Z_ind_sup = pd.concat((Z_ind_sup,X_ind_sup[grp]),axis=0)
             # Apply PCA
             global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),ind_sup=ind_sup,parallelize = self.parallelize).fit(Z_ind_sup)
-            self.ind_sup_ = global_pca.ind_sup_
+            self.ind_sup_ = global_pca.ind_sup_.copy()
 
         ###### Add supplementary group
         if self.group_sup is not None:
