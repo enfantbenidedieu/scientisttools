@@ -72,7 +72,7 @@ head(group$cos2.sup)
 partial_axes <- get_mfa_partial_axes(res2.mfa)
 head(partial_axes$coord)
 head(partial_axes$cor)
-head(partial_axes$contrib) # A implémenter
+head(partial_axes$contrib)
 head(partial_axes$cor.between)
 
 ################################################################
@@ -144,4 +144,8 @@ sum(res.mfa$ind$coord[,1]*res.mfa$ind$coord[,1]*row.w)
 VB(as.data.frame(res.mfa$ind$coord[,1]))
 
 
+res2.mfa$global.pca$var$coord
+res2.mfa$global.pca$quali.sup$coord
 
+res2.mfa$global.pca$quali.sup$cos2
+res2.mfa$global.pca$var$cos2

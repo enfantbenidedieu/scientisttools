@@ -40,6 +40,7 @@ res.mfa$separate.analyses$visual
 res.mfa$separate.analyses$odor.after.shaking
 res.mfa$separate.analyses$taste
 
+res.mfa$call$col.w
 ################################################################################
 # Individuals informations
 ################################################################################
@@ -118,3 +119,5 @@ res.mfa$summary.quanti
 res.mfa$summary.quali
 
 res.mfa$inertia.ratio
+
+res.mfa$partial.axes$coord

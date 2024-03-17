@@ -3854,12 +3854,24 @@ def fviz_mfa_ind(self,
     # Initialize coordinates
     coord = self.ind_["coord"]
 
-    # Concatenate
-    coord = pd.concat((coord,self.call_["Xtot"]),axis=1)
+    # Concatenate with actives columns
+    for grp in self.call_["X"].columns.get_level_values(0).unique():
+        coord = pd.concat((coord,self.call_["X"][grp]),axis=1)
 
-    #### Drop supplementary rows
-    if self.ind_sup is not None:
-        coord = coord.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+    #### Add supplementary columns
+    if self.group_sup is not None:
+        not_in = [x for x in self.call_["Xtot"].columns.get_level_values(0).unique() if x not in self.call_["X"].columns.get_level_values(0).unique()]
+        if len(not_in)!=1:
+            X_group_sup = self.call_["Xtot"][not_in]
+            if self.ind_sup is not None:
+                X_group_sup = X_group_sup.drop(index=[name for i, name in enumerate(self.call_["Xtot"].index.tolist()) if i in self.ind_sup_["coord"].index.toliost()])
+            for grp in not_in:
+                coord = pd.concat((coord,X_group_sup[grp]),axis=1)
+        else:
+            X_group_sup = self.call_["Xtot"][not_in]
+            if self.ind_sup is not None:
+                X_group_sup = X_group_sup.drop(index=[name for i, name in enumerate(self.call_["Xtot"].index.tolist()) if i in self.ind_sup_["coord"].index.toliost()])
+            coord = pd.concat((coord,X_group_sup),axis=1)
 
     # Using lim cos2
     if lim_cos2 is not None:
@@ -3897,7 +3909,6 @@ def fviz_mfa_ind(self,
             if not np.issubdtype(coord[color].dtype, np.number):
                 raise ValueError("Error : 'color' must me a numeric variable.")
             c = coord[color].values
-            print(c)
             if legend_title is None:
                 legend_title = color
     elif isinstance(color,np.ndarray):
