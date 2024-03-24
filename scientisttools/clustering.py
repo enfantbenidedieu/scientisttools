@@ -1,13 +1,12 @@
 
 import numpy as np
 import pandas as pd
-from plydata import *
 import scipy.stats as st
 from scientisttools.utils import eta2
 from mapply.mapply import mapply
-from scipy.cluster import hierarchy
 from scientistmetrics import scientistmetrics
-from scipy.spatial.distance import squareform, pdist
+from scipy.cluster import hierarchy
+from scipy.spatial.distance import squareform
 from sklearn.cluster import KMeans
 from yellowbrick.cluster import KElbowVisualizer
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -18,7 +17,9 @@ from scientisttools.utils import from_dummies
 ###################################################################################################################
 
 class HCPC(BaseEstimator,TransformerMixin):
-    """Hierarchical Clustering on Principal Components
+    """
+    Hierarchical Clustering on Principal Components (HCPC)
+    ------------------------------------------------------
 
     Compute hierarchical clustering on principal components
     
@@ -357,31 +358,6 @@ class HCPC(BaseEstimator,TransformerMixin):
         self.desc_var_quali_ = res1
         self.var_quali_infos_ = dummies_stats
         self.desc_var_category_ = pd.concat(var_category,axis=0)
-
-
-#########################################################################################################################
-#       Clustering of Variables
-###########################################################################################################################
-class VARCLUS(BaseEstimator,TransformerMixin):
-    """Clustering of variables
-    
-    
-    
-    """
-    def __init__(self,
-                 nb_clusters=None,
-                 matrix_type = "completed",
-                 metric = "dice",
-                 col_labels = None,
-                 row_labels = None):
-        self.nb_clusters = nb_clusters
-        self.matrix_type = matrix_type
-        self.metric = metric
-        self.row_labels = row_labels
-        self.col_labels = col_labels
-
-    def fit(self,X,y=None):
-        raise NotImplementedError("Error : This method is not yet implemented.")
     
 ##################################################################################################################################
 #           Hierarchical Clustering Analysis of Continuous Variables (VARHCA)
@@ -575,7 +551,6 @@ class VARHCA(BaseEstimator,TransformerMixin):
         """
         
         """
-
         self.fit(X)
         return self.linkage_matrix_
 
@@ -963,34 +938,3 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.linkage_matrix_
-
-###############################################################################################################################
-#                   Variables Kmeans (VARKMEANS)
-###############################################################################################################################
-
-class VARKMEANS(BaseEstimator,TransformerMixin):
-    """
-    
-    
-    
-    """
-    def __init__(self,
-                 n_clusters=None):
-        self.n_clusters = n_clusters
-    
-    def fit(self,X,y=None):
-        raise NotImplementedError("Error : This method is not yet implemented.")
-
-
-
-
-
-
-
-        
-        
-
-
-
-
-    

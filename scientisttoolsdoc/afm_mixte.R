@@ -11,7 +11,8 @@ colnames(Biometrie2)
 
 # L'AFM est réalisée sur les seules six premières colonnes avec toutes les options par défaut
 
-res=MFA(Biometrie2[,1:6],group=c(3,3),type=c("n","s"),graph = FALSE)
+res=MFA(Biometrie2,group=c(6,3,3),
+        type=c("m","n","s"),graph = FALSE)
 
 ####################################################
 # Eigenvalues informations
@@ -63,13 +64,17 @@ head(group$cos2)
 
 x <- group$Lg[c(1,2),c(1,2)]
 
+res$group$coord.sup
+res$group$cos2.sup
+res$group$dist2.sup
+
 #############################################################
 # Partial axes
 ##############################################################
 partial_axes <- get_mfa_partial_axes(res)
 partial_axes$coord
 partial_axes$cor
-partial_axes$contrib # A implémenter
+partial_axes$contrib
 partial_axes$cor.between
 
 ################################################################
@@ -109,7 +114,7 @@ points(varco[1:3,1],varco[1:3,3],type="o")
 points(varco[6:8,1],varco[6:8,3],type="o")
 
 # Carré des liaisons 
-res=MFA(Biometrie2,group=c(3,3,rep(1,6)),type=c("n","s",rep("n",3),rep("s",3)),num.group.sup=c(3:8),name.group=c("G1qualitatif","G2quantitatif","LongQuali","PoidQuali","LargQuali","LongQuanti","PoidQuanti","LargQuanti"))
+res=MFA(Biometrie2,group=c(3,3,rep(1,6)),type=c("n","s",rep("n",3),rep("s",3)),num.group.sup=c(3:8),name.group=c("G1qualitatif","G2quantitatif","LongQuali","PoidQuali","LargQuali","LongQuanti","PoidQuanti","LargQuanti"),graph = F)
 
 ### Tableau 8.5 (corrélations entre axes partiels)
 round(res$partial.axes$cor.between[6:8,1:3],2)

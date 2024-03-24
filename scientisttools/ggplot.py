@@ -92,8 +92,8 @@ def fviz_screeplot(self,
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
         
-    if self.model_ not in ["pca","ca","mca","famd","partialpca","efa","mfa","hmfa"]:
-        raise ValueError("Error : 'self' must be an object of class PCA, CA, MCA, FAMD, PartialPCA, EFA, MFA, HMFA")
+    if self.model_ not in ["pca","ca","mca","famd","partialpca","efa","mfa","mfaqual","mfamix","hmfa"]:
+        raise ValueError("Error : 'self' must be an object of class PCA, CA, MCA, FAMD, PartialPCA, EFA, MFA, MFAQUAL, MFAMIX, HMFA")
 
     eig = get_eigenvalue(self)
     eig = eig.iloc[:min(ncp,self.call_["n_components"]),:]

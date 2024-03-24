@@ -35,8 +35,8 @@ eig
 # Separate analyses
 ################################################################################
 res.mfa$separate.analyses$origin
-res.mfa$separate.analyses$odor
-res.mfa$separate.analyses$visual
+res.mfa$separate.analyses$odor$var$coord
+res.mfa$separate.analyses$visual$eig
 res.mfa$separate.analyses$odor.after.shaking
 res.mfa$separate.analyses$taste
 
@@ -68,6 +68,7 @@ head(quanti.var$cor)
 res.mfa$quanti.var.sup$coord
 res.mfa$quanti.var.sup$cor
 res.mfa$quanti.var.sup$cos2
+
 
 ###############################################################################
 # Group informations

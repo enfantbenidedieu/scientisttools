@@ -3,30 +3,27 @@
 # https://kiwidamien.github.io/making-a-python-package.html
 ##################################### Chargement des librairies
 from functools import reduce
+import itertools
 import numpy as np
 import pandas as pd
+import polars as pl
 from mapply.mapply import mapply
 import pingouin as pg
 import statsmodels.formula.api as smf
 from statsmodels.stats.weightstats import DescrStatsW
-from scipy.spatial.distance import pdist,squareform
 from scipy.sparse import issparse
 import scipy.stats as st
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import mean_squared_error
 from scientisttools.utils import (
-    orthonormalize,
-    random_orthonormal,
-    weighted_mean,
-    solve_weighted,
-    check_array_with_weights,
     global_kmo_index,
     per_item_kmo_index,
     eta2,
     from_dummies,
     svd_triplet,
     function_eta2,
-    weightedcorrcoef)
+    weightedcorrcoef,
+    revaluate_cat_variable)
 
 ####################################################################################################
 #                       PRINCIPAL COMPONENTS ANALYSIS (PCA)
@@ -43,7 +40,7 @@ class PCA(BaseEstimator,TransformerMixin):
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     This is a standard Principal Component Analysis implementation
-    bases on the Singular Value Decomposition
+    based on the Singular Value Decomposition
 
     Performs Principal Component Analysis (PCA) with supplementary
     individuals, supplementary quantitative variables and supplementary
@@ -51,51 +48,80 @@ class PCA(BaseEstimator,TransformerMixin):
 
     Missing values are replaced by the column mean.
 
-    Usage
-    -----
-    PCA(normalize=True,
-        n_components=None,
-        row_labels=None,
-        col_labels=None,
-        row_sup_labels =None,
-        quanti_sup_labels = None,
-        quali_sup_labels = None,
-        parallelize=False).fit(X)
-
-    where X a data frame with n_rows (individuals) and p columns (numeric variables).
-
     Parameters
     ----------
-    normalize : bool, default = True
+    standardize : a boolean, default = True
         - If True : the data are scaled to unit variance.
         - If False : the data are not scaled to unit variance.
 
-    n_components : int or None, default = 5
+    n_components : number of dimensions kept in the results (by default 5)
 
-    row_sup_labels : array of strings or None, defulat = None
-        This array provides the supplementary individuals labels
+    ind_weights : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform individuals weights),
+                    the weights are given only for active individuals.
+    
+    var_weights : an optional variables weights (by default, a list/tuple of 1 for uniform variables weights), the weights are given only for
+                    the active variables
+    
+    ind_sup : a list/tuple indicating the indexes of the supplementary individuals
 
-    quanti_sup_labels : arrays of strings or None, default = None
-        This array provides the quantitative supplementary variables labels
+    quanti_sup : a list/tuple indicating the indexes of the quantitative supplementary variables
 
-    quali_sup_labels : array of strings or None, default = None
-        This array provides the categorical supplementary variables labels
+    quali_sup : a list/tuple indicating the indexes of the categorical supplementary variables
 
-    parallelize : bool, default = False
+    parallelize : boolean, default = False
         If model should be parallelize
             - If True : parallelize using mapply
             - If False : parallelize using apply
 
-    Attributes
+    Return
+    ------
+    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+
+    var_ : a dictionary of pandas dataframe containing all the results for the active variables (coordinates, correlation between variables and axes, square cosine, contributions)
+
+    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine, contributions)
+
+    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
+
+    quanti_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates, correlation between variables and axes)
+
+    quali_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of each categories of each variables, v.test which is a 
+                 criterion with a Normal distribution, and eta2 which is the square correlation corefficient between a qualitative variable and a dimension)
+    
+    summary_ quali_	: a summary of the results for the categorical variables if quali_sup is not None
+
+    summary_quanti_	: a summary of the results for the quantitative variables
+    
+    call_ : a dictionary with some statistics
+
+    model_ : string. The model fitted = 'pca'
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
     ----------
+    Escofier B, Pagès J (2008), Analyses Factorielles Simples et Multiples.4ed, Dunod
 
-    
-    
+    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
 
-    model_ : string
-        The model fitted = 'pca'
+    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+
+    See Also
+    --------
+    get_pca_ind, get_pca_var, get_pca, summaryPCA, dimdesc, reconstruct
+
+    Examples
+    --------
+    > X = decathlon2 # from factoextra R package
+
+    > res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X2.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+
+    > res_pca.fit(X)
+
+    > summaryPCA(res_pca)
     """
-
     def __init__(self,
                  standardize=True,
                  n_components=5,
@@ -115,11 +141,13 @@ class PCA(BaseEstimator,TransformerMixin):
         self.parallelize = parallelize
 
     def fit(self,X,y=None):
-        """Fit the model to X
+        """
+        Fit the model to X
+        ------------------
 
         Parameters
         ----------
-        X : pandas DataFrame of float, shape (n_rows, n_columns)
+        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
 
         y : None
             y is ignored
@@ -129,15 +157,16 @@ class PCA(BaseEstimator,TransformerMixin):
         self : object
                 Returns the instance itself
         """
-
-        # Return data
-
-
         # Check if sparse matrix
         if issparse(X):
-            raise TypeError("PCA does not support sparse input.")
+            raise TypeError("Error : PCA does not support sparse input.")
+        
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
         # Check if X is an instance of pd.DataFrame class
-        elif not isinstance(X,pd.DataFrame):
+        if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
@@ -437,6 +466,10 @@ class PCA(BaseEstimator,TransformerMixin):
             
             ######################################## Barycentre of DataFrame ########################################
             X_quali_sup = X_quali_sup.astype("object")
+            ############################################################################################################
+            # Check if two columns have the same categories
+            X_quali_sup = revaluate_cat_variable(X_quali_sup)
+
             ####################################" Correlation ratio #####################################################
             quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,
                                                       n_workers=n_workers) for col in X_quali_sup.columns.tolist()),axis=0)
@@ -496,7 +529,9 @@ class PCA(BaseEstimator,TransformerMixin):
         return self
 
     def transform(self,X,y=None):
-        """Apply the dimensionality reduction on X
+        """
+        Apply the dimensionality reduction on X
+        ---------------------------------------
 
         X is projected on the first axes previous extracted from a training set.
 
@@ -518,6 +553,11 @@ class PCA(BaseEstimator,TransformerMixin):
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
+        # Check if X is a pandas DataFrame
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -545,7 +585,9 @@ class PCA(BaseEstimator,TransformerMixin):
         return coord
 
     def fit_transform(self,X,y=None):
-        """Fit the model with X and apply the dimensionality reduction on X.
+        """
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
 
         Parameters
         ----------
@@ -579,60 +621,71 @@ class CA(BaseEstimator,TransformerMixin):
 
     It Performs Correspondence Analysis (CA) including supplementary row and/or column points.
 
-    Usage
-    -----
-    CA(n_components=None,
-       row_labels=None,
-       col_labels=None,
-       row_sup_labels=None,
-       col_sup_labels=None,
-       parallelize = False).fit(X)
-
-    where X a data frame or a table with n rows and p columns, i.e. a contingency table.
-
     Parameters
     ----------
-    n_components : int, float or None
-        Number of components to keep.
-        - If n_components is None, keep all the components.
-        - If 0 <= n_components < 1, select the number of components such
-          that the amount of variance that needs to be explained is
-          greater than the percentage specified by n_components.
-        - If 1 <= n_components :
-            - If n_components is int, select a number of components
-              equal to n_components.
-            - If n_components is float, select the higher number of
-              components lower than n_components.
+    n_components : number of dimensions kept in the results (by default 5)
 
-    row_labels : list of strings or None
-        - If row_labels is a list of strings : this array provides the
-          row labels.
-              If the shape of the array doesn't match with the number of
-              rows : labels are automatically computed for each row.
-        - If row_labels is None : labels are automatically computed for
-          each row.
+    row_weights : an optional row weights (by default, a list/tuple of 1 and each row has a weight equals to its margin); the weights are given only for the active rows
 
-    col_labels : list of strings or None
-        - If col_labels is a list of strings : this array provides the
-          column labels.
-              If the shape of the array doesn't match with the number of
-              columns : labels are automatically computed for each
-              column.
-        - If col_labels is None : labels are automatically computed for
-          each column.
+    row_sup : a list/tuple indicating the indexes of the supplementary rows
 
-    row_sup_labels : list of strings or None
-        - If row_sup_labels is a list of strings : this array provides the
-          supplementary row labels.
+    col_sup : a list/tuple indicating the indexes of the supplementary columns
 
-    col_sup_labels :  list of strings or None
-        - If col_sup_labels is a list of strings : this array provides the
-          supplementary columns labels.
+    quanti_sup : a list/tuple indicating the indexes of the supplementary continuous variables
 
-    The sum of the absolute frequencies in the X array.
+    quali_sup : a list/tuple indicating the indexes of the categorical supplementary variables
 
-    model_ : string
-        The model fitted = 'ca'
+    parallelize : boolean, default = False
+        If model should be parallelize
+            - If True : parallelize using mapply
+            - If False : parallelize using apply
+
+    Return
+    ------
+    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+
+    col_ : 	a dictionary of pandas dataframe with all the results for the column variable (coordinates, square cosine, contributions, inertia)
+
+    row_ : a dictionary of pandas dataframe with all the results for the row variable (coordinates, square cosine, contributions, inertia)
+
+    col_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary column points (coordinates, square cosine)
+
+    row_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary row points (coordinates, square cosine)
+
+    quanti_sup_ : if quanti_sup is not None, a dictionary of pandas dataframe containing the results for the supplementary continuous variables (coordinates, square cosine)
+
+    quali_sup_ : if quali.sup is not None, a dictionary of pandas dataframe with all the results for the supplementary categorical variables (coordinates of each categories 
+                    of each variables, v.test which is a criterion with a Normal distribution, square correlation ratio)
+    
+    call_ : a dictionary with some statistics
+
+    model_ : string. The model fitted = 'ca'
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    Escofier B, Pagès J (2008), Analyses Factorielles Simples et Multiples.4ed, Dunod
+
+    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+
+    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+
+    See Also
+    --------
+    get_ca_row, get_ca_col, get_ca, summaryCA, dimdesc
+
+    Examples
+    --------
+    > X = children # from FactoMineR R package
+
+    > res_ca = CA(row_sup=list(range(14,18)),col_sup=list(range(5,8)),parallelize=True)
+
+    > res_ca.fit(X)
+
+    > summaryCA(res_ca)
     """
 
     def __init__(self,
@@ -652,21 +705,29 @@ class CA(BaseEstimator,TransformerMixin):
         self.parallelize = parallelize
 
     def fit(self,X,y=None):
-        """ Fit the model to X
+        """
+        Fit the model to X
+        ------------------
+
         Parameters
         ----------
-        X : array of float, shape (n_rows, n_columns)
+        X : a pandas/polars DataFrame of shape (n_rows, n_columns)
             Training data, where n_rows in the number of rows and
             n_columns is the number of columns.
             X is a contingency table containing absolute frequencies.
 
         y : None
             y is ignored.
+        
         Returns
         -------
         self : object
             Returns the instance itself.
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -1070,6 +1131,11 @@ class CA(BaseEstimator,TransformerMixin):
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+
+        # Checif if X is a pandas DataFrame
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -1087,10 +1153,8 @@ class CA(BaseEstimator,TransformerMixin):
         row_sum = X.sum(axis=1)
         coord = mapply(X,lambda x : x/row_sum,axis=0,progressbar=False,n_workers=n_workers).dot(self.svd_["V"])
         coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
-        
         return coord
             
-
     def fit_transform(self,X,y=None):
         """
         Fit the model with X and apply the dimensionality reduction on X
@@ -1125,19 +1189,80 @@ class MCA(BaseEstimator,TransformerMixin):
 
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
-    This class performs Multiple Correspondence Analysis (MCA) with supplementary
+    Performs Multiple Correspondence Analysis (MCA) with supplementary
     individuals, supplementary quantitative variables and supplementary
     categorical variables.
 
-    Usage
-    ----
-
     Parameters
     ----------
+    n_components : number of dimensions kept in the results (by default 5)
 
+    ind_weights : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform row weights); 
+                    the weights are given only for the active individuals
+    
+    var_weights : an optional variables weights (by default, a list/tuple of 1/(number of active variables) for uniform row weights); 
+                    the weights are given only for the active variables
+    
+    benzecri : boolean, if True benzecri correction is applied
+
+    greenacre : boolean, if True greenacre correction is applied
+
+    ind_sup : a list/tuple indicating the indexes of the supplementary individuals
+
+    quali_sup : a list/tuple indicating the indexes of the categorical supplementary variables
+
+    quanti_sup : a list/tuple indicating the indexes of the quantitative supplementary variables
+
+    parallelize : boolean, default = False
+        If model should be parallelize
+            - If True : parallelize using mapply
+            - If False : parallelize using apply
+
+    Return
+    ------
+    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+
+    var_ : a dictionary of pandas dataframe containing all the results for the active variables (coordinates, correlation between variables and axes, square cosine, contributions)
+
+    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine, contributions)
+
+    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
+
+    quanti_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates, correlation between variables and axes)
+
+    quali_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of each categories of each variables, v.test which is a 
+                 criterion with a Normal distribution, and eta2 which is the square correlation corefficient between a qualitative variable and a dimension)
+    
+    call_ : a dictionary with some statistics
+
+    model_ : string. The model fitted = 'mca'
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    Escofier B, Pagès J (2008), Analyses Factorielles Simples et Multiples.4ed, Dunod
+
+    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+
+    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+
+    See Also
+    --------
+    get_mca_ind, get_mca_var, get_mca, summaryMCA, dimdesc
+
+    Examples
+    --------
+    > X = poison # from FactoMineR R package
+
+    > res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+
+    > res_mca.fit(X)
+
+    > summaryMCA(res_mca)
     """
-
-
     def __init__(self,
                  n_components = None,
                  ind_weights = None,
@@ -1147,7 +1272,6 @@ class MCA(BaseEstimator,TransformerMixin):
                  ind_sup = None,
                  quali_sup = None,
                  quanti_sup = None,
-                 na_method = "drop",
                  parallelize = False):
         self.n_components = n_components
         self.ind_weights = ind_weights
@@ -1157,22 +1281,34 @@ class MCA(BaseEstimator,TransformerMixin):
         self.ind_sup = ind_sup
         self.quali_sup = quali_sup
         self.quanti_sup = quanti_sup
-        self.na_method = na_method
         self.parallelize = parallelize
 
     def fit(self,X,y=None):
         """
+        Fit the model to X
+        ------------------
 
+        Parameters
+        ----------
+        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
+
+        y : None
+            y is ignored
+
+        Returns:
+        --------
+        self : object
+                Returns the instance itself
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
         if not isinstance(X,pd.DataFrame):
            raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        ######
-        if self.na_method not in ["drop","include"]:
-            raise ValueError("Error : 'na_method' should be one of 'drop', 'include'")
 
         # Set parallelize
         if self.parallelize:
@@ -1213,15 +1349,6 @@ class MCA(BaseEstimator,TransformerMixin):
                 ind_sup = list(int(self.ind_sup))
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
-        
-        ####################################### Check NA in quantitatives variables
-        if X.isnull().any().any():
-            if self.quanti_sup is not None:
-                X.iloc[:,quanti_sup] = mapply(X.iloc[:,quanti_sup], lambda x : x.fillna(x.mean(),inplace=True),axis=0,progressbar=False,n_workers=n_workers)
-            else:
-                col_list = [x for x in list(range(X.shape[0])) if x not in quali_sup]
-                X.iloc[:,col_list] = X.iloc[:,col_list].fillna(X[:,col_list].mean())
-            raise Warning("Missing values are imputed by the mean of the variable.")
 
         ####################################### Save the base in a new variables
         # Store data
@@ -1242,7 +1369,8 @@ class MCA(BaseEstimator,TransformerMixin):
             X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
         
         ####################################### Multiple Correspondence Anlysis (MCA) ##################################################
-            
+        # Check if 
+        X = revaluate_cat_variable(X)
         #########################################################################################################
         # Compute statistiques
         summary_quali = pd.DataFrame()
@@ -1296,15 +1424,15 @@ class MCA(BaseEstimator,TransformerMixin):
             ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
 
         ################### Set variables weights ##################################################
-        var_weights = {}
+        var_weights = pd.Series(name="weight").astype("float")
         if self.var_weights is None:
             for col in X.columns.tolist():
                 var_weights[col] = 1/X.shape[1]
-        elif not isinstance(self.var_weights,dict):
-            raise ValueError("Error : 'var_weights' must be a dictionary where keys are variables names and values are variables weights.")
+        elif not isinstance(self.var_weights,pd.Series):
+            raise ValueError("Error : 'var_weights' must be a pandas series where index are variables names and values are variables weights.")
         else:
-            for col in self.var_labels_:
-                var_weights[col] = self.var_weights[col]/sum(self.var_weights.values())
+            for col in X.columns.tolist():
+                var_weights[col] = self.var_weights[col]/self.var_weights.values.sum()
 
         #############################################################################################
         # Effectif par modalite
@@ -1646,6 +1774,11 @@ class MCA(BaseEstimator,TransformerMixin):
             row points onto the axes.
         """
 
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+
+        # Check if X is a pandas DataFrame
         if not isinstance(X,pd.DataFrame):
            raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -1697,7 +1830,6 @@ class MCA(BaseEstimator,TransformerMixin):
         -------
         X_new : array-like, shape (n_samples, n_components)
         """
-
         self.fit(X)
         return self.ind_["coord"]
     
@@ -1708,19 +1840,95 @@ class MCA(BaseEstimator,TransformerMixin):
 
 class FAMD(BaseEstimator,TransformerMixin):
     """
-    Factor Analysis of Mixed Data
-    ------------------------------
+    Factor Analysis of Mixed Data (FAMD)
+    ------------------------------------
 
     Description
     -----------
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
     Performs Factor Analysis of Mixed Data (FAMD) with supplementary
     individuals, supplementary quantitative variables and supplementary
     categorical variables.
 
-    Parameters:
-    -----------
-    see scientisttools.decomposition.PCA and scientisttools.decomposition.MCA
+    FAMD is a principal component method dedicated to explore data with both continuous and categorical variables. 
+    It can be seen roughly as a mixed between PCA and MCA. More precisely, the continuous variables are scaled 
+    to unit variance and the categorical variables are transformed into a disjunctive data table (crisp coding) 
+    and then scaled using the specific scaling of MCA. This ensures to balance the influence of both continous and 
+    categorical variables in the analysis. It means that both variables are on a equal foot to determine the dimensions 
+    of variability. This method allows one to study the similarities between individuals taking into account mixed 
+    variables and to study the relationships between all the variables.
 
+    Parameters
+    ----------
+    n_components : number of dimensions kept in the results (by default 5)
+
+    ind_weights : an optional individuals weights (by default, 1/(number of active individuals) for uniform individuals weights); 
+                    the weights are given only for the active individuals
+    
+    quanti_weights : an optional quantitatives variables weights (by default, a list/tuple of 1 for uniform quantitative variables weights), 
+                        the weights are given only for the active quantitative variables
+    
+    quali_weights : an optional qualitatives variables weights (by default, a list/tuple of 1/(number of active qualitative variable) for uniform qualitative variables weights), 
+                        the weights are given only for the active qualitative variables
+    
+    ind_sup : a list/tuple indicating the indexes of the supplementary individuals
+
+    quanti_sup : a list/tuple indicating the indexes of the quantitative supplementary variables
+
+    quali_sup : a list/tuple indicating the indexes of the categorical supplementary variables
+
+    parallelize : boolean, default = False
+        If model should be parallelize
+            - If True : parallelize using mapply
+            - If False : parallelize using apply
+
+    Return
+    ------
+    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+
+    var_  : a dictionary of pandas dataframe containing all the results for the variables considered as group (coordinates, square cosine, contributions)
+    
+    ind_ : a dictionary of pandas dataframe with all the results for the individuals (coordinates, square cosine, contributions)
+
+    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
+
+    quali_var_ : a dictionary of pandas dataframe with all the results for the categorical variables (coordinates, square cosine, contributions, v.test)
+    
+    quanti_var_ : a dictionary of pandas datafrme with all the results for the quantitative variables (coordinates, correlation, square cosine, contributions)
+
+    call_ : a dictionary with some statistics
+
+    model_ : string. The model fitted = 'mca'
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    Escofier B, Pagès J (2008), Analyses Factorielles Simples et Multiples.4ed, Dunod
+
+    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+
+    Pages J. (2004). Analyse factorielle de donnees mixtes. Revue Statistique Appliquee. LII (4). pp. 93-111.
+
+    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+
+    See Also
+    --------
+    get_famd_ind, get_famd_var, get_famd, summaryFAMD, dimdesc
+
+    Examples
+    --------
+    > X = wine # from FactoMineR R package
+
+    > res_famd = FAMD(parallelize=True)
+
+    > res_famd.fit(X)
+
+    > summaryFAMD(res_famd)
     """
     def __init__(self,
                  n_components = None,
@@ -1742,9 +1950,24 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     def fit(self,X, y=None):
         """
+        Fit the model to X
+        ------------------
 
+        Parameters
+        ----------
+        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
 
+        y : None
+            y is ignored
+
+        Returns:
+        --------
+        self : object
+                Returns the instance itself
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
 
         # Chack if X is a DataFrame
         if not isinstance(X,pd.DataFrame):
@@ -1781,7 +2004,6 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             raise TypeError("Error : No quantitatives columns in data. Please use MCA function instead.")
 
-        
         ############################
         # Check is quali sup
         if self.quali_sup is not None:
@@ -2217,6 +2439,11 @@ class FAMD(BaseEstimator,TransformerMixin):
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+
+        # check if X is a pandas DataFrame
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -2228,7 +2455,6 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             n_workers = 1
         
-
         # Store continuous and categorical variables
         X_sup_quant = X[self.call_["quanti"].columns.tolist()]
         X_sup_qual = X[self.call_["quali"].columns.tolist()]
@@ -2252,7 +2478,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         return  coord
 
     def fit_transform(self,X,y=None):
-        """Fit the model with X and apply the dimensionality reduction on X.
+        """
+        Fit the model with X and apply the dimensionality reduction on X.
+        ----------------------------------------------------------------
 
         Parameters
         ----------
@@ -2271,33 +2499,76 @@ class FAMD(BaseEstimator,TransformerMixin):
         self.fit(X)
         return self.ind_["coord"]
 
-
-
 ##########################################################################################
-#           PARTIAL PRINCIPAL COMPONENTS ANALYSIS (PPCA)
+#           PARTIAL PRINCIPAL COMPONENT ANALYSIS (PPCA)
 ##########################################################################################
 
 class PartialPCA(BaseEstimator,TransformerMixin):
     """
-    Partial Principal Components Analysis (PartialPCA)
+    Partial Principal Component Analysis (PartialPCA)
     --------------------------------------------------
 
     Description
     -----------
 
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
+    Performs Partial Principal Component Analysis with supplementary individuals
 
     Parameters:
     -----------
+    standardize : a boolean, if True (value set by default) then data are scaled to unit variance
 
+    n_components : number of dimensions kept in the results (by default None)
 
+    partiel : name of the partial variables
 
+    ind_weights : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform row weights); 
+                    the weights are given only for the active individuals
+    
+    var_weights : an optional variables weights (by default, uniform column weights); 
+                    the weights are given only for the active variables
+    
+    ind_sup : a vector indicating the indexes of the supplementary individuals
 
-    Returns:
+    parallelize : boolean, default = False
+        If model should be parallelize
+            - If True : parallelize using mapply
+            - If False : parallelize using apply
+
+    Return
+    ------
+    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+
+    var_  : a dictionary of pandas dataframe containing all the results for the variables considered as group (coordinates, square cosine, contributions)
+    
+    ind_ : a dictionary of pandas dataframe with all the results for the individuals (coordinates, square cosine, contributions)
+
+    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
+
+    call_ : a dictionary with some statistics
+
+    others_ : a dictionary of others statistics
+
+    model_ : string. The model fitted = 'partialpca'
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    A. Boudou (1982), Analyse en composantes principales partielle, Statistique et analyse des données, tome 7, n°2 (1982), p. 1-21
+
+    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+
+    See Also
     --------
+    get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
     """
     def __init__(self,
-                 n_components=None,
                  standardize=True,
+                 n_components=None,
                  partial=None,
                  ind_weights = None,
                  var_weights = None,
@@ -2313,24 +2584,43 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
     def fit(self,X,y=None):
         """
+        Fit the model to X
+        ------------------
+
+        Parameters
+        ----------
+        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
+
+        y : None
+            y is ignored
+
+        Returns:
+        --------
+        self : object
+                Returns the instance itself
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
+        # Check if X is a pandas Dataframe
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        # Set parallelize option
-        if self.parallelize:
-            n_workers = -1
-        else:
-            n_workers = 1
+        
+        ###############################################################################################################"
+        # Drop level if ndim greater than 1 and reset columns name
+        ###############################################################################################################
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
         
         ####################################
         if self.partial is None:
             raise TypeError("Error :  'partial' must be assigned.")
         
-        # 
+        # check if partial is set
         if isinstance(self.partial,str):
             partial = [self.partial]
         elif ((isinstance(self.partial,list) or isinstance(self.partial,tuple)) and len(self.partial)>=1):
@@ -2372,7 +2662,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
                         "partial_corr" : pcorr}
         
         ###### Store initial data
-        Xtot = X
+        Xtot = X.copy()
 
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
@@ -2421,7 +2711,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         # Z = (X - mu)/sigma
         Z = (Xtot - means)/std
 
-         ###################################### Set number of components ##########################################
+        ###################################### Set number of components ##########################################
         if self.n_components is None:
             n_components = min(resid.shape[0]-1,resid.shape[1])
         elif not isinstance(self.n_components,int):
@@ -2524,7 +2814,12 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         X_new : DataFrame of float, shape (n_rows_sup, n_components_)
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
-        """
+        """ 
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+
+        # Check if X is a pandas DataFrame
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -2557,50 +2852,52 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
 class EFA(BaseEstimator,TransformerMixin):
     """
-    Exploratory Factor Analysis - EFA
+    Exploratory Factor Analysis (EFA)
     ---------------------------------
+
+    Description
+    ------------
 
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
-    EFA performs a Exploratory Factor Analysis, given a table of
+    This class performs a Exploratory Factor Analysis, given a table of
     numeric variables; shape = n_rows x n_columns
 
     Parameters
     ----------
-    normalize : bool
-        - If true : the data are scaled to unit variance
-        - If False : the data are not scaled to unit variance
+    standardize : a boolean, default = True
+        - If True : the data are scaled to unit variance.
+        - If False : the data are not scaled to unit variance.
 
-    n_components: int or None
-        number of components to keep
+    n_components : number of dimensions kept in the results (by default 5)
 
-    row_labels : list of string or None
-        The list provides the row labels
+    ind_sup : a list/tuple indicating the indexes of the supplementary individuals
 
-    col_labels : list of strings or None
-        The list provides the columns labels
+    ind_weights : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform individuals weights),
+                    the weights are given only for active individuals.
+    
+    var_weights : an optional variables weights (by default, a list/tuple of 1 for uniform variables weights), the weights are given only for
+                    the active variables
 
-    method : {"principal","harris"}
-        - If method = "principal" : performs Exploratory Factor Analyis using principal approach
-        - If method = "harris" : performs Exploratory Factor Analysis using Harris approach
-
-    row_sup_labels : list of strings or None
-        The list provides the supplementary row labels
-
-    quanti_sup_labels : list of strings or None
-        The list provides the supplementary continuous columns
-
-    quali_sup_labels : list of strings or None
-        The list provides the supplementary categorical variables
-
-    graph : bool or None
-        - If True : return graph
-
-    figsize = tuple of int or None
-
+    parallelize : boolean, default = False
+        If model should be parallelize
+            - If True : parallelize using mapply
+            - If False : parallelize using apply
+    
     Returns:
     --------
 
+    Author(s)
+    --------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+
+    See Also
+    --------
+    get_efa_ind, get_efa_var, get_eaf, summaryEFA
     """
     def __init__(self,
                 standardize =True,
@@ -2634,6 +2931,11 @@ class EFA(BaseEstimator,TransformerMixin):
                 Returns the instance itself
         """
 
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+
+        # cgeck if X is a pandas DataFrame
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -2660,7 +2962,7 @@ class EFA(BaseEstimator,TransformerMixin):
                 ind_sup = [int(x) for x in self.ind_sup]
 
         # Save dataframe
-        Xtot = X
+        Xtot = X.copy()
 
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
@@ -2835,6 +3137,11 @@ class EFA(BaseEstimator,TransformerMixin):
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
+        # Check if X a pandas DataFrame
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -2862,1520 +3169,134 @@ class EFA(BaseEstimator,TransformerMixin):
         -------
         X_new : array-like, shape (n_samples, n_components)
         """
-
         self.fit(X)
         return self.ind_["coord"]
-
-################################################################################################
-#                                   CORRESPONDENCE ANALYSIS (CA)
-################################################################################################
-
-def which(self):
-    try:
-        self = list(iter(self))
-    except TypeError as e:
-        raise Exception("""'which' method can only be applied to iterables.
-        {}""".format(str(e)))
-    indices = [i for i, x in enumerate(self) if bool(x) == True]
-    return(indices)
-
-
-#################################################################################################################
-#   CANONICAL CORRESPONDENCE ANALYSIS (CCA)
-#################################################################################################################
-    
-class CCA(BaseEstimator,TransformerMixin):
-    """
-    CANONICAL CORRESPONDENCE ANALYSIS (CCA)
-    ---------------------------------------
-    
-    """
-    def __init__(self):
-        pass
-
-
-################################################################################################################
-#    PARTIEL CANONICAL CORRESPONDENCE ANALYSIS (PCCA)
-###############################################################################################################
-
-class PCCA(BaseEstimator,TransformerMixin):
-    """
-    PARTIEL CANONICAL CORRESPONDENCE ANALYSIS (PCCA)
-    ------------------------------------------------
-
-    Description
-    -----------
-    
-    
-    
-    """
-    def __init__(self):
-        pass
-
-
-################################################################################################################
-#   PARTIAL LEAST SQUARE CANONICAL CORRESPONDENCE ANALYSIS (PLSCCA)
-###############################################################################################################
-
-class PLSCCA(BaseEstimator,TransformerMixin):
-    """
-    PARTIAL LEAST SQUARE CANONICAL CORRESPONDENCE ANALYSIS (PLSCCA)
-    ---------------------------------------------------------------
-    
-    
-    
-    """
-    def __init__(self):
-        pass
-
-
-
-######################################################################################################
-#               Multiple Factor Analysis (MFA)
-#####################################################################################################
-
-# https://husson.github.io/MOOC_AnaDo/AFM.html
-# https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r
-# https://eudml.org/subject/MSC/62H25
-
-class MFA2(BaseEstimator,TransformerMixin):
-    """Multiple Factor Analysis (MFA)
-
-    Performs Multiple Factor Analysis
-
-    Parameters:
-    ----------
-    normalize :
-    n_components :
-
-    group : list of string
-
-    group : list of string
-
-    group_sup : list of string
-
-    row_labels : list of string
-
-    row_sup_labels : lits of string
-
-    row_weight : list
-
-    col_weight_mfa : dict
-
-    parallelize : 
-
-    Return
-    ------
-
-
-
-    """
-    def __init__(self,
-                 n_components=5,
-                 group=None,
-                 group_sup = None,
-                 row_labels = None,
-                 row_sup_labels = None,
-                 row_weights = None,
-                 col_weights_mfa = None,
-                 parallelize=False):
-        self.n_components = n_components
-        self.group = group
-        self.group_sup = group_sup
-        self.row_labels = row_labels
-        self.row_sup_labels = row_sup_labels
-        self.row_weights = row_weights
-        self.col_weights_mfa = col_weights_mfa
-        self.parallelize = parallelize
-
-    def fit(self,X,y=None):
-        """
-
-        """
-
-        # Check if X is a DataFrame
-        if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        ######## Check if columns is level 2
-        if X.columns.nlevels != 2:
-            raise ValueError("Error : X must have a MultiIndex columns with 2 levels.")
-
-         # set parallelize
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
-        # Check if groups is None
-        if self.group is None:
-            raise ValueError("Error : 'group' must be assigned.")
-
-        ##### Extract supplementary rows in dataframe
-        self.row_sup_labels_ = self.row_sup_labels
-        if self.row_sup_labels_ is not None:
-            _X = X.drop(index = self.row_sup_labels_)
-            row_sup = X.loc[self.row_sup_labels_,:]
-        else:
-            _X = X
-
-        # Remove supplementary group
-        if self.group_sup is not None:
-            diff = [i for i in self.group + self.group_sup if i not in self.group or i not in self.group_sup]
-            if len(diff)==0:
-                raise ValueError("Error : ")
-            else:
-                Xsup = _X[self.group_sup]
-                X_ = _X[self.group]
-        else:
-            X_ = _X
-
-        # Save data
-        self.data_ = X
-        self.active_data_ = X_
-
-        ############################## Initialise elements ################################
-        self.mod_labels_ = None
-
-        # Compute stats
-        self._compute_stats(X_)
-
-        # Compute columns supplementary coordinates
-        if self.group_sup is not None:
-            self._compute_groups_sup_coord(X=Xsup)
-
-
-        return self
-
-    def _compute_stats(self,X):
-        """
-
-        """
-
-        # Check if all columns are numerics
-        all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist())
-        # Check if all columns are categoricals
-        all_cat = all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist())
-
-        # Shape of X
-        self.n_rows_, self.n_cols_= X.shape
-
-        # Set row labels
-        self.row_labels_ = self.row_labels
-        if ((self.row_labels_ is None) or (len(self.row_labels_) != self.n_rows_)):
-            self.row_labels_ = ["row_" + str(i+1) for i in np.arange(0,self.n_rows_)]
-        
-        ########### Set row weight and columns weight
-        # Set row weight
-        if self.row_weights is None:
-            self.row_weights_ = np.ones(self.n_rows_)/self.n_rows_
-        elif not isinstance(self.row_weights,list):
-            raise ValueError("Error : 'row_weights' must be a list of row weight.")
-        elif len(self.row_weights) != self.n_rows_:
-            raise ValueError(f"Error : 'row_weights' must be a list with length {self.n_rows_}.")
-        else:
-            self.row_weights_ = np.array([x/np.sum(self.row_weights) for x in self.row_weights])
-
-        # Checks groups are provided
-        self.group_ = self._determine_groups(X=X,groups=self.group)
-
-        # Check group types are consistent
-        self.all_nums_ = {}
-        self.all_cats_ = {}
-        for grp, cols in self.group_.items():
-            all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in cols)
-            all_cat = all(pd.api.types.is_string_dtype(X[c]) for c in cols)
-            if not (all_num or all_cat):
-                raise ValueError(f"Not all columns in '{grp}' group are of the same type. Used HMFA function instead.")
-            self.all_nums_[grp] = all_num
-            self.all_cats_[grp] = all_cat
-        
-        ############################# Set columns weight MFA
-        self.col_weights_mfa_ = self.col_weights_mfa
-        if self.col_weights_mfa_ is None:
-            self.col_weights_mfa_ = {}
-            for grp, cols in self.group_.items():
-                if self.all_nums_[grp]:
-                    self.col_weights_mfa_[grp] = np.ones(len(cols))
-        else:
-            self.col_weights_mfa_ = {}
-            for grp, cols in self.group_.items():
-                if self.all_nums_[grp]:
-                    self.col_weights_mfa_[grp] = np.array(self.col_weights_mfa[grp])
-        
-        # Number of components
-        self.n_components_ = self.n_components
-        if self.n_components_ is None:
-            self.n_components_ = min(self.n_rows_-1,self.n_cols_)
-        else:
-            self.n_components_ = min(self.n_components_,self.n_rows_-1,self.n_cols_)
-
-        # Run a Factor Analysis in each group
-        col_labels       = []
-        col_group_labels = []
-        var_labels       = []
-        var_group_labels = []
-        model            = {}
-        for grp, cols in self.group_.items():
-            Xg = X[grp]
-            if self.all_nums_[grp]:
-                # Principal Components Anlysis (PCA)
-                fa = PCA(normalize=True,
-                         n_components=self.n_components_,
-                         row_labels=self.row_labels_,
-                         row_weights=self.row_weights_.tolist(),
-                         col_weights=self.col_weights_mfa_[grp].tolist(),
-                         col_labels=Xg.columns.tolist(),
-                         parallelize=self.parallelize)
-                # Set col labels name
-                col_labels = col_labels + Xg.columns.tolist()
-                # Set group labels name
-                col_group_labels = col_group_labels + [grp]*Xg.shape[1]
-            elif self.all_cats_[grp]:
-                # Multiple Correspondence Analysis (MCA)
-                fa = MCA(n_components=self.n_components_,
-                         row_labels=self.row_labels_,
-                         var_labels=Xg.columns.tolist(),
-                         parallelize=self.parallelize)
-                # Set variables labels
-                var_labels = var_labels + Xg.columns.tolist()
-                # Set group variables labels
-                var_group_labels = var_group_labels + [grp]*Xg.shape[1]
-            # Fit the model
-            model[grp] = fa.fit(Xg)
-        
-        ##################### Compute group disto
-        group_disto = np.array([np.sum(model[grp].eig_[0]**2)/model[grp].eig_[0][0]**2 for grp, cols in self.group_.items()])
-        group_disto = pd.Series(group_disto,index=[grp for grp,cols in self.group_.items()],name="dist2")
-
-        ########
-        self.separate_analyses_ = model
-        self.col_labels_        = col_labels
-        self.col_group_labels_  = col_group_labels
-        self.var_labels_        = var_labels
-        self.var_group_labels_  = var_group_labels
-
-        # Normalize data
-        means      = {}
-        std        = {}
-        base       = pd.DataFrame().astype("float")
-        col_weights = pd.Series().astype("float")
-        for grp,cols in self.group_.items():
-            Xg = X[grp]
-            # All variables in group are numericals
-            if self.all_nums_[grp]:
-                ############################### Compute Mean and Standard deviation #################################
-                d1 = DescrStatsW(Xg.values,weights=self.row_weights_,ddof=0)
-                # Compute Mean
-                means_ = d1.mean.reshape(1,-1)
-                # Compute Sandard Error
-                std_ = d1.std.reshape(1,-1)
-                ########################### Concatenate #################################################################################
-                Z = (Xg - means_)/std_
-                ###################" Concatenate
-                base = pd.concat([base,Z],axis=1)
-                ##################################"
-                std[grp] = std_
-                means[grp] = means_
-                ################################ Col weight
-                weights = pd.Series(np.repeat(a=1/model[grp].eig_[0][0],repeats=len(cols)),index=Xg.columns.tolist())
-                # Ajout de la pondération de la variable
-                weights = weights*self.col_weights_mfa_[grp]
-                col_weights = pd.concat((col_weights,weights),axis=0)
-            # All variables in group are categoricals
-            elif self.all_cats_[grp]:
-                # Dummies tables :  0/1
-                dummies = pd.get_dummies(Xg)
-                # Effectif par modalite
-                I_k = dummies.sum(axis=0)
-                Z = pd.concat((dummies.loc[:,k]*(self.n_rows_/I_k[k])-1 for k  in dummies.columns.tolist()),axis=1)
-                # Weight of categories
-                m_k = (1/(self.n_rows_*Xg.shape[1]*model[grp].eig_[0][0]))*I_k
-                # Concatenate
-                base = pd.concat([base,Z],axis=1)
-                ############# Weighted of categories
-                weights = pd.Series(m_k,index=dummies.columns.tolist())
-                col_weights = pd.concat((col_weights,weights),axis=0)
-            else:
-                raise ValueError(f"Error : Mixed of variables in {grp} group. Used HMFA function instead.")
-
-       # Set
-        self.mean_ = means
-        self.std_  = std
-
-        # Set columns weights
-        self.col_weights_ = col_weights
-
-        ###########################################################################################################
-        # Fit global PCA
-        ###########################################################################################################
-        global_pca = PCA(normalize = False,
-                         n_components = self.n_components_,
-                         row_labels = base.index.tolist(),
-                         col_labels = base.columns.tolist(),
-                         row_weights = self.row_weights_.tolist(),
-                         col_weights = self.col_weights_.tolist(),
-                         parallelize = self.parallelize).fit(base)
-
-        ############################################# Removing duplicate value in cumulative percent #######################"
-        cumulative = sorted(list(set(global_pca.eig_[3])))
-        
-        dim_index = ["Dim."+str(x+1) for x in np.arange(self.n_components_)]
-        self.dim_index_ = dim_index
-
-        # Global Principal Components Analysis (PCA)
-        self.global_pca_ = global_pca
-
-        ####################################################################################################
-        #
-        ####################################################################################################
-        # Global
-        self.global_pca_normalized_data_ = global_pca.normalized_data_
-
-        ####################################################################################################
-        #   Eigen values informations
-        ##################################################################################################
-        # Store all informations
-        self.eig_ = global_pca.eig_[:,:len(cumulative)]
-
-        # Eigenvectors
-        self.eigen_vectors_ = global_pca.eigen_vectors_[:,:self.n_components_]
-
-        ####################################################################################################
-        #    Individuals/Rows informations : coord, cos2, contrib
-        ###################################################################################################
-
-        # Row coordinates
-        self.row_coord_ = global_pca.row_coord_[:,:self.n_components_]
-
-        # Row contributions
-        self.row_contrib_ = global_pca.row_contrib_[:,:self.n_components_]
-
-        # Row - Quality of representation
-        self.row_cos2_ = global_pca.row_cos2_[:,:self.n_components_]
-
-        ##########################################################################################################
-        #####  Coordonnées des colonnes : Variables continues/Modalités des variables qualitatives
-        ##########################################################################################################
-        # Continues
-        col_coord      = pd.DataFrame().astype("float")
-        col_contrib    = pd.DataFrame().astype("float")
-        col_cos2       = pd.DataFrame().astype("float")
-        summary_quanti = pd.DataFrame().astype("float")
-        # Categories
-        mod_coord      = pd.DataFrame().astype("float")
-        mod_contrib    = pd.DataFrame().astype("float")
-        mod_disto      = pd.DataFrame().astype("float")
-        mod_cos2       = pd.DataFrame().astype("float")
-        mod_vtest      = pd.DataFrame().astype("float")
-        quali_eta2     = pd.DataFrame().astype("float")
-        summary_quali  = pd.DataFrame().astype("float")
-
-        # If all columns in Data are numerics
-        if all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist()):
-            # Make a copy
-            X_nums = X.copy()
-            X_nums.columns = X_nums.columns.droplevel()
-
-            ###################################################################################################
-            ################## Compute statistiques
-            stats = X_nums.describe().T
-            stats = stats.reset_index().rename(columns={"index" : "variable"})
-            stats.insert(0,"group",[x[0] for x in X.columns.tolist()])
-            stats["count"] = stats["count"].astype("int")
-            summary_quanti = pd.concat([summary_quanti,stats],axis=0,ignore_index=True)
-
-            ####################################################################################################
-            # Correlation between variables en axis
-            coord = np.corrcoef(X_nums.values,self.row_coord_,rowvar=False)[:X_nums.shape[1],X_nums.shape[1]:]
-            coord = pd.DataFrame(coord,index=X_nums.columns.tolist(),columns=self.dim_index_)
-            col_coord = pd.concat([col_coord,coord],axis=0)
-
-            ####################################################################################################
-            # Contribution
-            contrib = pd.DataFrame(global_pca.col_contrib_[:,:self.n_components_],index=X_nums.columns.tolist(),columns=self.dim_index_)
-            col_contrib = pd.concat([col_contrib,contrib],axis=0)
-
-            ###################################################################################################
-            # Cos2
-            cos2 = pd.DataFrame(global_pca.col_cos2_[:,:self.n_components_],index=X_nums.columns.tolist(),columns=self.dim_index_)
-            col_cos2 = pd.concat([col_cos2,cos2],axis=0)
-        # If all columns are categoricals
-        elif all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist()):
-            # Make a copy of original Data
-            X_cats = X.copy()
-            X_cats.columns = X_cats.columns.droplevel()
-
-            ###################################################################################################
-            # Compute statisiques
-            stats = pd.DataFrame()
-            for col_grp in X.columns.tolist():
-                grp, col = col_grp
-                eff = X_cats[col].value_counts().to_frame("effectif").reset_index().rename(columns={col : "modalite"})
-                eff.insert(0,"variable",col)
-                eff.insert(0,"group",grp)
-                stats = pd.concat([stats,eff],axis=0,ignore_index=True)
-            summary_quali = pd.concat([summary_quali,stats],axis=0,ignore_index=True)
-
-            ######################################################################################################################
-            # Compute Dummies table : 0/1
-            dummies = pd.concat((pd.get_dummies(X_cats[col],prefix=col,prefix_sep='_') for col in X_cats.columns.tolist()),axis=1)
-            n_k = dummies.sum(axis=0)
-            p_k = dummies.mean(axis=0)
-
-            ############################################################################################################################
-            # Compute categories coordinates
-            coord = pd.concat((pd.concat((pd.DataFrame(self.row_coord_[:,:self.n_components_],index=self.row_labels_,columns=self.dim_index_),dummies[col]),axis=1)
-                                    .groupby(col)
-                                    .mean().iloc[1,:]
-                                    .to_frame(name=col).T for col in dummies.columns.tolist()),axis=0)
-            mod_coord = pd.concat([mod_coord,coord],axis=0)
-
-            ###############################################################################################################
-            # v-test
-            vtest = mapply(mapply(coord,lambda x : x/np.sqrt((self.n_rows_- n_k)/((self.n_rows_-1)*n_k)),axis=0,progressbar=False,n_workers=self.n_workers_),
-                           lambda x : x/np.sqrt(self.eig_[0][:self.n_components_]),axis=1,progressbar=False,n_workers=self.n_workers_)
-            mod_vtest = pd.concat([mod_vtest,vtest],axis=0)
-
-            ##############################################################################################################
-            ######### Contribution
-            contrib = pd.DataFrame(self.global_pca_.col_contrib_[:,:self.n_components_],index=self.global_pca_.col_labels_,columns=self.dim_index_)[self.dim_index_]
-            contrib.index = contrib.index.droplevel()
-            mod_contrib = pd.concat([mod_contrib,contrib],axis=0)
-
-            #########################################################################################################################
-            ##################### Conditionnal mean using Standardize data
-            Z = pd.DataFrame(self.global_pca_.normalized_data_,columns=self.global_pca_.col_labels_,index=self.global_pca_.row_labels_)
-            Z_coord = pd.concat((pd.concat((Z,dummies[col]),axis=1)
-                                .groupby(col)
-                                .mean().iloc[1,:]
-                                .to_frame(name=col).T for col in dummies.columns.tolist()),axis=0)
-            # Distance au carré
-            disto = mapply(Z_coord,lambda x : np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_)
-            mod_disto = pd.concat([mod_disto,disto.to_frame("dist")],axis=0)
-
-            ################## Cos2
-            cos2 = mapply(coord,lambda x : x**2/disto.values,axis=0,progressbar=False,n_workers=self.n_workers_)
-            mod_cos2 = pd.concat([mod_cos2,cos2],axis=0)
-
-            ############################################################################################################
-            ############## Correlation ratio
-            var_eta2 = pd.concat(((mapply(coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_)
-                                     .mul(p_k,axis="index")
-                                     .loc[filter(lambda x: x.startswith(col),coord.index.tolist()),:]
-                                     .sum(axis=0).to_frame(name=col).T.div(self.eig_[0][:self.n_components_])) for col in X_cats.columns.tolist()),axis=0)
-            quali_eta2 = pd.concat([quali_eta2,var_eta2],axis=0)
-        else:
-            for grp, cols in self.group_.items():
-                Xg = X[grp]
-                if all(pd.api.types.is_numeric_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                    ###################################################################################################
-                    ################## Compute statistiques
-                    stats = Xg.describe().T
-                    stats = stats.reset_index().rename(columns={"index" : "variable"})
-                    stats.insert(0,"group",[grp]*len(cols))
-                    stats["count"] = stats["count"].astype("int")
-                    summary_quanti = pd.concat([summary_quanti,stats],axis=0,ignore_index=True)
-
-                    ####################################################################################################
-                    ########## Correlation between variables en axis
-                    ###################################################################################################
-                    coord = np.corrcoef(Xg.values,self.row_coord_,rowvar=False)[:Xg.shape[1],Xg.shape[1]:]
-                    coord = pd.DataFrame(coord,index=Xg.columns.tolist(),columns=self.dim_index_)
-                    col_coord = pd.concat([col_coord,coord],axis=0)
-
-                    ###################################################################################################
-                    #   Contributions
-                    ###################################################################################################
-                    # Extract contributions from global PCA
-                    contrib = pd.DataFrame(self.global_pca_.col_contrib_[:,:self.n_components_],columns=self.dim_index_,
-                                           index=self.global_pca_.col_labels_)
-                    contrib.index = contrib.index.droplevel()
-                    col_contrib = pd.concat([col_contrib,contrib.loc[Xg.columns.tolist(),:]],axis=0)
-
-                    ###################################################################################################
-                    #   Cos2
-                    ###################################################################################################
-                     # Extract cos2 from global PCA
-                    cos2 = pd.DataFrame(self.global_pca_.col_cos2_[:,:self.n_components_],columns=self.dim_index_,
-                                        index=self.global_pca_.col_labels_)
-                    cos2.index = cos2.index.droplevel()
-                    col_cos2 = pd.concat([col_cos2,cos2.loc[Xg.columns.tolist(),:]],axis=0)
-                elif all(pd.api.types.is_string_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                    ###################################################################################################
-                    # Compute statisiques
-                    stats = pd.DataFrame()
-                    for col in Xg.columns.tolist():
-                        eff = Xg[col].value_counts().to_frame("effectif").reset_index().rename(columns={col : "modalite"})
-                        eff.insert(0,"variable",col)
-                        eff.insert(0,"group",grp)
-                        stats = pd.concat([stats,eff],axis=0,ignore_index=True)
-                    summary_quali = pd.concat([summary_quali,stats],axis=0,ignore_index=True)
-
-                    ######################################################################################################################
-                    # Compute Dummies table : 0/1
-                    dummies = pd.concat((pd.get_dummies(Xg[col],prefix=col,prefix_sep='_') for col in Xg.columns.tolist()),axis=1)
-                    n_k = dummies.sum(axis=0)
-                    p_k = dummies.mean(axis=0)
-
-                    ############################################################################################################################
-                    # Compute categories coordinates
-                    coord = pd.concat((pd.concat((pd.DataFrame(self.row_coord_,index=self.row_labels_,columns=self.dim_index_),dummies[col]),axis=1)
-                                            .groupby(col)
-                                            .mean().iloc[1,:]
-                                            .to_frame(name=col).T for col in dummies.columns.tolist()),axis=0)
-                    mod_coord = pd.concat([mod_coord,coord],axis=0)
-
-                    ###############################################################################################################
-                    # v-test
-                    vtest = mapply(mapply(coord,lambda x : x/np.sqrt((self.n_rows_- n_k)/((self.n_rows_-1)*n_k)),axis=0,progressbar=False,n_workers=self.n_workers_),
-                                lambda x : x/np.sqrt(self.eig_[0][:self.n_components_]),axis=1,progressbar=False,n_workers=self.n_workers_)
-                    mod_vtest = pd.concat([mod_vtest,vtest],axis=0)
-
-                    ###################################################################################################
-                    #   Contributions
-                    ###################################################################################################
-                    # Extract contributions from global PCA
-                    contrib = pd.DataFrame(self.global_pca_.col_contrib_[:,:self.n_components_],columns=self.dim_index_,
-                                           index=self.global_pca_.col_labels_)
-                    contrib.index = contrib.index.droplevel()
-                    mod_contrib = pd.concat([mod_contrib,contrib.loc[dummies.columns.tolist(),:]],axis=0)
-
-                    #########################################################################################################################
-                    ##################### Conditionnal mean using Standardize data
-                    Z = pd.DataFrame(self.global_pca_.normalized_data_,columns=self.global_pca_.col_labels_,index=self.global_pca_.row_labels_)
-                    Z_coord = pd.concat((pd.concat((Z,dummies[col]),axis=1)
-                                        .groupby(col)
-                                        .mean().iloc[1,:]
-                                        .to_frame(name=col).T for col in dummies.columns.tolist()),axis=0)
-                    # Distance au carré
-                    disto = mapply(Z_coord,lambda x : np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_)
-                    mod_disto = pd.concat([mod_disto,disto.to_frame("dist")],axis=0)
-
-                    ################## Cos2
-                    cos2 = mapply(coord,lambda x : x**2/disto.values,axis=0,progressbar=False,n_workers=self.n_workers_)
-                    mod_cos2 = pd.concat([mod_cos2,cos2],axis=0)
-
-                    ############################################################################################################
-                    ############## Correlation ratio
-                    var_eta2 = pd.concat(((mapply(coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_)
-                                            .mul(p_k,axis="index")
-                                            .loc[filter(lambda x: x.startswith(col),coord.index.tolist()),:]
-                                            .sum(axis=0).to_frame(name=col).T.div(self.eig_[0][:self.n_components_])) for col in Xg.columns.tolist()),axis=0)
-                    quali_eta2 = pd.concat([quali_eta2,var_eta2],axis=0)
-
-        # Set
-        self.col_coord_   = col_coord.iloc[:,:].values
-        self.col_contrib_ = col_contrib.iloc[:,:].values
-        self.col_cos2_    = col_cos2.iloc[:,:].values
-        self.col_cor_     = col_coord.iloc[:,:].values
-        # categories
-        self.mod_coord_   = mod_coord
-        self.mod_contrib_ = mod_contrib
-        self.mod_disto_   = mod_disto
-        self.mod_cos2_    = mod_cos2
-        self.mod_vtest_   = mod_vtest
-        self.quali_eta2_  = quali_eta2
-
-        self.summary_quanti_ = summary_quanti
-        self.summary_quali_  = summary_quali
-
-        ####################################################################################################
-        #   Partiel Row Coordinates
-        ####################################################################################################
-        # Partiel row coordinates
-        self.row_coord_partiel_ = self._row_coord_partiel(X=X)
-
-        #################################################################################################
-        ##### Categories partiel coordinates
-        mod_coord_partiel = pd.DataFrame().astype("float")
-        if all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist()):
-            for grp, cols in self.group_.items():
-                # Make a copy of original Data
-                X_cats = X.copy()
-                X_cats.columns = X_cats.columns.droplevel()
-                ######################################################################################################################
-                # Compute Dummies table : 0/1
-                dummies = pd.concat((pd.get_dummies(X_cats[col],prefix=col,prefix_sep='_') for col in X_cats.columns.tolist()),axis=1)
-                ############################################################################################################################
-                # Compute categories coordinates
-                coord_partiel = pd.concat((pd.concat((self.row_coord_partiel_[grp],dummies[col]),axis=1)
-                                        .groupby(col)
-                                        .mean().iloc[1,:]
-                                        .to_frame(name=col).T for col in dummies.columns.tolist()),axis=0)
-                coord_partiel.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partiel.columns.tolist()])
-                mod_coord_partiel = pd.concat([mod_coord_partiel,coord_partiel],axis=1)
-        else:
-            for grp, cols in self.group_.items():
-                if self.all_cats_[grp]:
-                    # Make a copy of original Data
-                    X_cats = X.loc[:,cols][grp]
-                    #######################################################################################################################
-                    # Compute Dummies table : 0/1
-                    dummies = pd.concat((pd.get_dummies(X_cats[col],prefix=col,prefix_sep='_') for col in X_cats.columns.tolist()),axis=1)
-                    ############################################################################################################################
-                    # Compute categories coordinates
-                    for grp2, cols2 in self.group_.items():
-                        coord_partiel = pd.concat((pd.concat((self.row_coord_partiel_[grp2],dummies[col]),axis=1)
-                                            .groupby(col)
-                                            .mean().iloc[1,:]
-                                            .to_frame(name=col).T for col in dummies.columns.tolist()),axis=0)
-                        coord_partiel.columns = pd.MultiIndex.from_tuples([(grp2,col) for col in coord_partiel.columns.tolist()])
-                        mod_coord_partiel = pd.concat([mod_coord_partiel,coord_partiel],axis=1)
-
-        self.mod_coord_partiel_ = mod_coord_partiel
-
-        ##################################################################################################
-        #   Partial axes informations
-        #################################################################################################
-
-        ########################################### Partial axes coord
-        partial_axes_coord = pd.DataFrame().astype("float")
-        for grp, cols in self.group_.items():
-            data = self.separate_analyses_[grp].row_coord_
-            correl = np.corrcoef(self.row_coord_,data,rowvar=False)[:self.n_components_,self.n_components_:]
-            coord = pd.DataFrame(correl,index=self.dim_index_,columns=self.separate_analyses_[grp].dim_index_)
-            coord.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord.columns.tolist()])
-            partial_axes_coord = pd.concat([partial_axes_coord,coord],axis=1)
-        
-        ############################################## Partial axes cos2
-        partial_axes_cos2 = mapply(partial_axes_coord,lambda x : x**2, axis=0,progressbar=False,n_workers=self.n_workers_)
-
-        #########" Partial correlation between
-        all_coord = pd.DataFrame().astype("float")
-        for grp, cols in self.group_.items():
-            data = pd.DataFrame(self.separate_analyses_[grp].row_coord_,index=self.separate_analyses_[grp].row_labels_,
-                                columns=self.separate_analyses_[grp].dim_index_)
-            data.columns = pd.MultiIndex.from_tuples([(grp,col) for col in data.columns.tolist()])
-            all_coord = pd.concat([all_coord,data],axis=1)
-        
-        #################################### Partial axes contrib ################################################"
-        axes_contrib = pd.DataFrame().astype("float")
-        for grp, cols in self.group_.items():
-            nbcol = min(self.n_components_,self.separate_analyses_[grp].row_coord_.shape[1])
-            eig = self.separate_analyses_[grp].eig_[0][:nbcol]/self.separate_analyses_[grp].eig_[0][0]
-            contrib = mapply(partial_axes_coord[grp].iloc[:,:nbcol],lambda x : (x**2)*eig,axis=1,progressbar=False,n_workers=self.n_workers_)
-            contrib.columns = pd.MultiIndex.from_tuples([(grp,col) for col in contrib.columns.tolist()])
-            axes_contrib  = pd.concat([axes_contrib,contrib],axis=1)
-        
-        partial_axes_contrib = mapply(axes_contrib,lambda x : 100*x/np.sum(x),axis=1,progressbar=False,n_workers=self.n_workers_)
-
-        ###############
-        self.partial_axes_coord_       = partial_axes_coord
-        self.partial_axes_cor_         = partial_axes_coord
-        self.partial_axes_cos2_        = partial_axes_cos2
-        self.partial_axes_contrib_     = partial_axes_contrib
-        self.partial_axes_cor_between_ = all_coord.corr()
-
-        ################################################################################################"
-        #    Inertia Ratios
-        ################################################################################################
-
-        #### "Between" inertia on axis s
-        between_inertia = len(self.group)*np.apply_along_axis(func1d=lambda x : np.sum(x**2),axis=0,arr = self.row_coord_)
-
-        ### Total inertial on axis s
-        total_inertia = [np.sum((self.row_coord_partiel_.loc[:, (slice(None),dim)]**2).sum()) for dim in self.dim_index_]
-
-        ### Inertia ratio
-        inertia_ratio = pd.Series([between_inertia[x]/total_inertia[x] for x in range(len(self.dim_index_))],
-                                  index=self.dim_index_,name = "inertia ratio")
-        self.inertia_ratio_ = inertia_ratio
-
-        ############################### Within inertia ################################################################
-        row_within_inertia = pd.DataFrame(index=self.row_labels_,columns=self.dim_index_).astype("float")
-        for i, dim in enumerate(self.dim_index_):
-            data = mapply(self.row_coord_partiel_.loc[:, (slice(None),dim)],lambda x : (x - self.row_coord_[:,i])**2,axis=0,
-                          progressbar=False,n_workers=self.n_workers_).sum(axis=1)
-            row_within_inertia.loc[:,dim] = mapply(data.to_frame(dim),lambda x : 100*x/np.sum(x),axis=0,progressbar=False,n_workers=self.n_workers_)
-
-        self.row_within_inertia_ = row_within_inertia
-
-        ######################################## Within partial inertia ################################################
-        data = pd.DataFrame().astype("float")
-        for i,dim in enumerate(self.dim_index_):
-            data1 = mapply(self.row_coord_partiel_.loc[:, (slice(None),dim)],lambda x : (x - self.row_coord_[:,i])**2,axis=0,
-                           progressbar=False,n_workers=self.n_workers_)
-            data1 = 100*data1/data1.sum().sum()
-            data = pd.concat([data,data1],axis=1)
-
-        ######## Rorder inertia by group
-        row_within_partial_inertia = pd.DataFrame().astype("float")
-        for grp, cols in self.group_.items():
-            partial_inertia = data[grp]
-            partial_inertia.columns = pd.MultiIndex.from_tuples([(grp,col) for col in partial_inertia.columns.tolist()])
-            row_within_partial_inertia = pd.concat([row_within_partial_inertia,partial_inertia],axis=1)
-
-        self.row_within_partial_inertia_ = row_within_partial_inertia
-
-        ################################################################################################################
-        ############################### Modalities Within inertia ################################################################
-        if all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist()):
-            mod_within_inertia = pd.DataFrame(index=self.mod_labels_,columns=self.dim_index_).astype("float")
-            for dim in self.dim_index_:
-                data = mapply(self.mod_coord_partiel_.loc[:, (slice(None),dim)],lambda x : (x - self.mod_coord_[dim].values)**2,axis=0,
-                              progressbar=False,n_workers=self.n_workers_).sum(axis=1)
-                mod_within_inertia.loc[:,dim] = len(self.group_)*mapply(data.to_frame(dim),lambda x : 100*x/np.sum(x),axis=0,
-                                                       progressbar=False,n_workers=self.n_workers_)
-
-            self.mod_within_inertia_ = mod_within_inertia
-
-            ######################################## Within partial inertia ################################################
-            data = pd.DataFrame().astype("float")
-            for dim in self.dim_index_:
-                data1 = mapply(self.mod_coord_partiel_.loc[:, (slice(None),dim)],lambda x : (x - self.mod_coord_[dim].values)**2,axis=0,
-                               progressbar=False,n_workers=self.n_workers_)
-                data1 = 100*data1/data1.sum().sum()
-                data = pd.concat([data,data1],axis=1)
-
-            ######## Rorder inertia by group
-            mod_within_partial_inertia = pd.DataFrame().astype("float")
-            for grp, cols in self.group_.items():
-                partial_inertia = data[grp]
-                partial_inertia.columns = pd.MultiIndex.from_tuples([(grp,col) for col in partial_inertia.columns.tolist()])
-                mod_within_partial_inertia = len(self.group_)*pd.concat([mod_within_partial_inertia,partial_inertia],axis=1)
-            self.mod_within_partial_inertia_ = mod_within_partial_inertia
-        else:
-            for grp, cols in self.group_.items():
-                if self.all_cats_[grp]:
-                    mod_within_inertia = pd.DataFrame(index=self.mod_labels_,columns=self.dim_index_).astype("float")
-                    for dim in self.dim_index_:
-                        data = mapply(self.mod_coord_partiel_.loc[:, (slice(None),dim)],lambda x : (x - self.mod_coord_[dim].values)**2,axis=0,
-                                      progressbar=False,n_workers=self.n_workers_).sum(axis=1)
-                        mod_within_inertia.loc[:,dim] = mapply(data.to_frame(dim),lambda x : 100*x/np.sum(x),axis=0,
-                                                               progressbar=False,n_workers=self.n_workers_)
-                    self.mod_within_inertia_ = mod_within_inertia
-
-                    ######################################## Within partial inertia ################################################
-                    data = pd.DataFrame().astype("float")
-                    for dim in self.dim_index_:
-                        data1 = mapply(self.mod_coord_partiel_.loc[:, (slice(None),dim)],lambda x : (x - self.mod_coord_[dim].values)**2,axis=0,
-                                       progressbar=False,n_workers=self.n_workers_)
-                        data1 = 100*data1/data1.sum().sum()
-                        data = pd.concat([data,data1],axis=1)
-                    ######## Rorder inertia by group
-                    mod_within_partial_inertia = pd.DataFrame().astype("float")
-                    for grp, cols in self.group_.items():
-                        partial_inertia = data[grp]
-                        partial_inertia.columns = pd.MultiIndex.from_tuples([(grp,col) for col in partial_inertia.columns.tolist()])
-                        mod_within_partial_inertia = pd.concat([mod_within_partial_inertia,partial_inertia],axis=1)
-                    self.mod_within_partial_inertia_ = mod_within_partial_inertia
-
-        #################################################################################################################
-        # Measuring how similar groups
-        #################################################################################################################
-        Lg = pd.DataFrame().astype("float")
-        for grp1,cols1 in self.group_.items():
-            for grp2,cols2 in self.group_.items():
-                X1, X2 = X.loc[:,cols1][grp1], X.loc[:,cols2][grp2]
-                if (self.all_nums_[grp1] and self.all_nums_[grp2]):
-                    # Sum of square coefficient of correlation
-                    sum_corr2 = np.array([(np.corrcoef(X1[col1],X2[col2],rowvar=False)[0,1])**2 for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using the eigenvalues of each group
-                    weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]))*sum_corr2
-                    Lg.loc[grp1,grp2] = weighted_corr2
-                elif (self.all_cats_[grp1] and self.all_cats_[grp2]):
-                    # Sum of chi-squared
-                    sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X1[col1],X2[col2]),correction=False).statistic for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
-                    weighted_chi2 = (1/(self.n_rows_*X1.shape[1]*X2.shape[1]*self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]))*sum_chi2
-                    Lg.loc[grp1,grp2] = weighted_chi2
-                elif (self.all_nums_[grp1] and self.all_cats_[grp2]):
-                    # Sum of square correlation ratio
-                    sum_eta2 = np.array([eta2(X2[col1],X1[col2],digits=10)["correlation ratio"] for col1 in X2.columns.tolist() for col2 in X1.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues and number of categoricals variables
-                    weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]*X2.shape[1]))*sum_eta2
-                    Lg.loc[grp1,grp2] = weighted_eta2
-                    Lg.loc[grp2,grp1] = Lg.loc[grp1,grp2]
-                elif (self.all_cats_[grp1] and self.all_nums_[grp2]):
-                    # Sum of square correlation ratio
-                    sum_eta2 = np.array([eta2(X1[col1],X2[col2],digits=10)["correlation ratio"] for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues and number of categoricals variables
-                    weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*X1.shape[0]*self.separate_analyses_[grp2].eig_[0][0]))*sum_eta2
-                    Lg.loc[grp1,grp2] = weighted_eta2
-                    Lg.loc[grp2,grp1] = Lg.loc[grp1,grp2]
-
-        ## RV Coefficient
-        RV = pd.DataFrame().astype("float")
-        for grp1 in Lg.index:
-            for grp2 in Lg.columns:
-                RV.loc[grp1,grp2] = Lg.loc[grp1,grp2]/(np.sqrt(Lg.loc[grp1,grp1])*np.sqrt(Lg.loc[grp2,grp2]))
-
-        # group coordinates
-        group_coord = pd.DataFrame(columns = self.dim_index_,index=Lg.index).astype("float")
-        for grp, cols in self.group_.items():
-            Xg = X[grp]
-            if all(pd.api.types.is_numeric_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                data = self.separate_analyses_[grp].normalized_data_
-                coord =  (np.corrcoef(data,self.row_coord_,
-                                      rowvar=False)[:data.shape[1],data.shape[1]:]**2).sum(axis=0)/self.separate_analyses_[grp].eig_[0][0]
-            elif all(pd.api.types.is_string_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                data = quali_eta2.loc[self.separate_analyses_[grp].var_labels_,:]
-                coord = (data.sum(axis=0)/(len(cols)*self.separate_analyses_[grp].eig_[0][0])).values
-            group_coord.loc[grp,self.dim_index_] = coord
-
-        ######################################## group cos2 ################################################################
-        group_cos2 = pd.concat((((group_coord.loc[grp,:]**2)/group_disto.loc[grp]).to_frame(grp).T for grp in group_coord.index.tolist()),axis=0)
-
-        ########################################### Group contributions ############################################
-        group_contrib = mapply(group_coord,lambda x : 100*x/np.sum(x),axis=0,progressbar=False,n_workers=self.n_workers_)
-
-        ########################################### Group correlations ###############################################
-        group_corr = pd.DataFrame(columns = self.dim_index_,index=Lg.index).astype("float")
-        for grp in Lg.index:
-            group_corr.loc[grp,:] = np.diag(np.corrcoef(self.row_coord_partiel_[grp].values,
-                                                         self.row_coord_,rowvar=False)[:self.n_components_,self.n_components_:])
-        # Groups
-        self.group_coord_        = group_coord
-        self.group_contrib_      = group_contrib
-        self.group_correlation_  = group_corr
-        self.group_disto_        = group_disto
-        self.group_cos2_         = group_cos2
-        self.group_lg_           = Lg
-        self.group_rv_           = RV
-
-        # Model Name
-        self.model_ = "mfa"
-
-    def _row_coord_partiel(self,X):
-        """
-
-
-        """
-        if not isinstance(X,pd.DataFrame):
-            raise ValueError("X must be a dataframe.")
-
-        row_coord_partiel = pd.DataFrame()
-        # If all variables in Data are numerics
-        if all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist()):
-            for grp, cols in self.group_.items():
-                # Extract categorical variables
-                X_cats = X[grp]
-                # Compute Dummies table : 0/1
-                dummies = pd.concat((pd.get_dummies(X_cats[col],prefix=col,prefix_sep='_') for col in X_cats.columns.tolist()),axis=1)
-                #
-                coord_partial = mapply(dummies.dot(self.mod_coord_.loc[dummies.columns.tolist(),:]),
-                                       lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_[0][0]),axis=0,
-                                       progressbar=False,n_workers=self.n_workers_)
-                coord_partial = len(self.group_)*mapply(coord_partial,lambda x : x/self.eig_[0][:self.n_components_],axis=1,progressbar=False,n_workers=self.n_workers_)
-                coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
-                row_coord_partiel = pd.concat([row_coord_partiel,coord_partial],axis=1)
-        # If all variables in Data are categoricals
-        elif all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist()):
-            for grp, cols in self.group_.items():
-                # Standardisze data
-                Z = (X[grp] - self.mean_[grp])/self.std_[grp]
-                # Set columns coordinates
-                col_coord = pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_)
-                # Partial coordinates
-                coord_partial = mapply(Z.dot(col_coord.loc[Z.columns.tolist(),:]),
-                                       lambda x : x/self.separate_analyses_[grp].eig_[0][0],axis=0,
-                                       progressbar=False,n_workers=self.n_workers_)
-                coord_partial = len(self.group_)*mapply(coord_partial,lambda x : x/np.sqrt(self.eig_[0][:self.n_components_]),axis=1,progressbar=False,n_workers=self.n_workers_)
-                coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
-                row_coord_partiel = pd.concat([row_coord_partiel,coord_partial],axis=1)
-        # Otherwises
-        else:
-            # For each group in data
-            for grp, cols in self.group_.items():
-                Xg = X[grp]
-                # if all variables in group are numerics
-                if all(pd.api.types.is_numeric_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                    # Standardize the Data
-                    Z = (Xg - self.mean_[grp])/self.std_[grp]
-                    # Set columns coordinates
-                    col_coord = pd.DataFrame(self.col_coord_,columns=self.dim_index_,index=self.col_labels_)
-                    # Partiel coordinates
-                    coord_partial = mapply(Z.dot(col_coord.loc[Z.columns.tolist(),:]),
-                                           lambda x : x/self.separate_analyses_[grp].eig_[0][0],axis=0,
-                                        progressbar=False,n_workers=self.n_workers_)
-                    coord_partial = len(self.group_)*mapply(coord_partial,lambda x : x/np.sqrt(self.eig_[0][:self.n_components_]),axis=1,progressbar=False,n_workers=self.n_workers_)
-                    coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
-                    row_coord_partiel = pd.concat([row_coord_partiel,coord_partial],axis=1)
-                # If all variables in group are categoricals
-                elif all(pd.api.types.is_string_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                    # Compute Dummies table : 0/1
-                    dummies = pd.concat((pd.get_dummies(Xg[col],prefix=col,prefix_sep='_') for col in Xg.columns.tolist()),axis=1)
-                    # Partiel coordinates
-                    coord_partial = mapply(dummies.dot(self.mod_coord_.loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_[0][0]),axis=0,
-                                        progressbar=False,n_workers=self.n_workers_)
-                    coord_partial = len(self.group_)*mapply(coord_partial,lambda x : x/self.eig_[0][:self.n_components_],axis=1,progressbar=False,n_workers=self.n_workers_)
-                    coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
-                    row_coord_partiel = pd.concat([row_coord_partiel,coord_partial],axis=1)
-
-        return row_coord_partiel
-
-    def _determine_groups(self,X,groups):
-        """
-
-
-        """
-
-        if isinstance(groups,list):
-            if not isinstance(X.columns,pd.MultiIndex):
-                raise ValueError("Error : Groups have to be provided as a dict when X is not a MultiIndex")
-            groups = { g: [(g, c) for c in X.columns.get_level_values(1)[X.columns.get_level_values(0) == g]] for g in groups}
-        else:
-            groups = groups
-
-        return groups
-
-    def _compute_groups_sup_coord(self,X):
-        """
-        Fit supplementary group
-        -----------------------
-
-        Parameters
-        ----------
-        X : pandas DataFrame, shape (n_rows, n_cols_sup)
-
-
-        """
-
-        if not isinstance(X,pd.DataFrame):
-            raise ValueError("X must be a dataframe.")
-        
-        if X.columns.nlevels != 2:
-            raise ValueError("Error : X must be")
-
-        # Put supplementary as dict
-        self.group_sup_ = self._determine_groups(X=X,groups=self.group_sup)
-
-        # Chack group types are consistent
-        for grp, cols in self.group_sup_.items():
-            all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in cols)
-            all_cat = all(pd.api.types.is_string_dtype(X[c]) for c in cols)
-            if not (all_num or all_cat):
-                raise ValueError(f'Not all columns in "{grp}" group are of the same type. Used HMFA instead.')
-            self.all_nums_[grp] = all_num
-            self.all_cats_[grp] = all_cat
-
-        ####################################################################################
-        col_sup_coord        = pd.DataFrame().astype("flot")
-        col_sup_cos2         = pd.DataFrame().astype("float")
-        col_sup_labels       = []
-        col_sup_group_labels = []
-        #########
-        mod_sup_coord        = pd.DataFrame().astype("float")
-        mod_sup_disto        = pd.Series(name="dist2").astype("float")
-        mod_sup_cos2         = pd.DataFrame().astype("float")
-        mod_sup_vtest        = pd.DataFrame().astype("float")
-        quali_sup_eta2       = pd.DataFrame().astype("float")
-        mod_sup_labels       = []
-        var_sup_labels       = []
-        var_sup_group_labels = []
-
-        if all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist()):
-            # Make a copy of original Data
-            X_nums = X.copy()
-            X_nums.columns = X_nums.columns.droplevel()
-            ####################################################################################################
-            # Correlation between variables and axis
-            coord = np.corrcoef(X_nums.values,self.row_coord_,rowvar=False)[:X_nums.shape[1],X_nums.shape[1]:]
-            coord = pd.DataFrame(coord,index=X_nums.columns.tolist(),columns=self.dim_index_)
-            col_sup_coord = pd.concat([col_sup_coord,coord],axis=0)
-
-            #####################################################################################################
-            # Cos 2 between variables and axis
-            cos2 = mapply(coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_)
-            col_sup_cos2 = pd.concat([col_sup_cos2,cos2],axis=0)
-
-            #########################################
-            # Set columns labels
-            col_sup_labels = col_sup_labels + X_nums.columns.tolist()
-            col_sup_group_labels = col_sup_group_labels + [x[0] for x in X.columns.tolist()]
-
-            ###################################################################################################
-            ######################################### Add statistics to summary quanti
-            stats = X_nums.describe().T
-            stats = stats.reset_index().rename(columns={"index" : "variable"})
-            stats.insert(0,"group",[x[0] for x in X.columns.tolist()])
-            stats["count"] = stats["count"].astype("int")
-            self.summary_quanti_ = pd.concat([self.summary_quanti_,stats],axis=0,ignore_index=True)
-
-        elif all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist()):
-            # Make a copy of original Data
-            X_cats = X.copy()
-            X_cats.columns = X_cats.columns.droplevel()
-            #######################################################################################################################
-            # Compute Dummies table : 0/1
-            dummies = pd.concat((pd.get_dummies(X_cats[col],prefix=col,prefix_sep='_') for col in X_cats.columns.tolist()),axis=1)
-
-            ############################################################################################################################
-            # Compute categories coordinates
-            vsqual = self.global_pca_._compute_quali_sup_stats(X_cats)
-            coord = vsqual["coord"]
-            mod_sup_coord = pd.concat([mod_sup_coord,coord],axis=0)
-
-            ###############################################################################################################
-            # v-test
-            vtest = vsqual["vtest"]
-            mod_sup_vtest = pd.concat([mod_sup_vtest,vtest],axis=0)
-
-            ################################################################################################################
-            ##### Correlation ratio
-            sup_eta2 = vsqual["eta2"]
-            quali_sup_eta2 = pd.concat([quali_sup_eta2,sup_eta2],axis=0)
-
-            #########################################################################################################################
-            ##################### Distance to G
-            mod_sup_disto = pd.concat([mod_sup_disto,vsqual["dist"]],axis=0)
-
-            ################## Cos2
-            sup_cos2 = vsqual["cos2"]
-            mod_sup_cos2 = pd.concat([mod_sup_cos2,sup_cos2],axis=0)
-
-            ###################################################################################################
-            # Compute statisiques
-            stats = pd.DataFrame()
-            for col_grp in X.columns.tolist():
-                grp, col = col_grp
-                eff = X_cats[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
-                eff.insert(0,"variable",col)
-                eff.insert(0,"group",grp)
-                stats = pd.concat([stats,eff],axis=0,ignore_index=True)
-            self.summary_quali_ = pd.concat([self.summary_quali_,stats],axis=0,ignore_index=True)
-
-            #########################################
-            # Set columns labels
-            mod_sup_labels = mod_sup_labels + dummies.columns.tolist()
-            var_sup_labels = var_sup_labels + X_cats.columns.tolist()
-            var_sup_group_labels = var_sup_group_labels + [x[0] for x in X.columns.tolist()]
-
-        else:
-            for grp, cols in self.group_sup_.items():
-                Xg = X[grp]
-                # If all variables in groups are numrerics
-                if all(pd.api.types.is_numeric_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                    ####################################################################################################
-                    # Correlation between variables and axis
-                    coord = np.corrcoef(Xg.values,self.row_coord_,rowvar=False)[:Xg.shape[1],Xg.shape[1]:]
-                    coord = pd.DataFrame(coord,index=Xg.columns.tolist(),columns=self.dim_index_)
-                    col_sup_coord = pd.concat([col_sup_coord,coord],axis=0)
-
-                    #####################################################################################################
-                    # Cos 2 between variables and axis
-                    cos2 = mapply(coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_)
-                    col_sup_cos2 = pd.concat([col_sup_cos2,cos2],axis=0)
-
-                    #########################################
-                    # Set columns labels
-                    col_sup_labels = col_sup_labels + Xg.columns.tolist()
-                    col_sup_group_labels = col_sup_group_labels + [grp]*len(Xg.columns.tolist())
-
-                    ######################################### Add statistics to summary quant
-                    ###################################################################################################
-                    ################## Compute statistiques
-                    stats = Xg.describe().T
-                    stats = stats.reset_index().rename(columns={"index" : "variable"})
-                    stats.insert(0,"group",grp)
-                    stats["count"] = stats["count"].astype("int")
-                    self.summary_quanti_ = pd.concat([self.summary_quanti_,stats],axis=0,ignore_index=True)
-
-                # If all variables in group are categoricals
-                elif all(pd.api.types.is_string_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                    # Compute the dummies
-                    dummies = pd.get_dummies(Xg)
-                    # Categories statistiques
-                    mod_sup_stats = dummies.agg(func=[np.sum,np.mean]).T
-
-                    #########################################################################################################################
-                    # Compute supplementary using PCA compute quali sup stats function
-                    vsqual = self.global_pca_._compute_quali_sup_stats(Xg)
-
-                    ############################################################################################################################
-                    # Compute categories coordinates
-                    coord = vsqual["coord"]
-                    mod_sup_coord = pd.concat([mod_sup_coord,coord],axis=0)
-
-                    ###############################################################################################################
-                    # v-test
-                    vtest = vsqual["vtest"]
-                    mod_sup_vtest = pd.concat([mod_sup_vtest,vtest],axis=0)
-
-                    ###################################################################################################################
-                    ################## Correlation ratio
-                    sup_eta2 = vsqual["eta2"]
-                    quali_sup_eta2 = pd.concat([quali_sup_eta2,sup_eta2],axis=0)
-
-                    #########################################################################################################################
-                    # Distance au carré
-                    sup_disto = vsqual["dist"]
-                    mod_sup_disto = pd.concat([mod_sup_disto,sup_disto],axis=0)
-
-                    ################## Cos2
-                    sup_cos2 = vsqual["cos2"]
-                    mod_sup_cos2 = pd.concat([mod_sup_cos2,sup_cos2],axis=0)
-
-                    ###################################################################################################
-                    # Compute statisiques
-                    stats = pd.DataFrame()
-                    for col in Xg.columns.tolist():
-                        eff = Xg[col].value_counts().to_frame("effectif").reset_index().rename(columns={col : "modalite"})
-                        eff.insert(0,"variable",col)
-                        eff.insert(0,"group",grp)
-                        stats = pd.concat([stats,eff],axis=0,ignore_index=True)
-                    self.summary_quali_ = pd.concat([self.summary_quali_,stats],axis=0,ignore_index=True)
-
-                    #########################################
-                    # Set columns labels
-                    mod_sup_labels = mod_sup_labels + dummies.columns.tolist()
-                    var_sup_labels = var_sup_labels + Xg.columns.tolist()
-                    var_sup_group_labels = var_sup_group_labels + [grp]*len(Xg.columns.tolist())
-
-        ##########################################################################################################
-        #   Partial Categories coordinates
-        ##########################################################################################################
-        mod_sup_coord_partiel = pd.DataFrame().astype("float")
-        if all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist()):
-            for grp, cols in self.group_.items():
-                for grp_sup, cols_sup in self.group_sup_.items():
-                    # Make a copy of original Data
-                    X_cats = X[grp_sup]
-                    #######################################################################################################################
-                    # Compute Dummies table : 0/1
-                    dummies = pd.get_dummies(Xg)
-                    ############################################################################################################################
-                    # Compute categories coordinates
-                    coord_partiel = pd.concat((pd.concat((self.row_coord_partiel_[grp],dummies[col]),axis=1)
-                                        .groupby(col)
-                                        .mean().iloc[1,:]
-                                        .to_frame(name=col).T for col in dummies.columns.tolist()),axis=0)
-                    coord_partiel.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partiel.columns.tolist()])
-                    mod_sup_coord_partiel = pd.concat([mod_sup_coord_partiel,coord_partiel],axis=1)
-        else:
-            for grp_sup, col_sup in self.group_sup_.items():
-                if self.all_cats_[grp_sup]:
-                    # Make a copy of original Data
-                    Xg = X[grp_sup]
-                    #######################################################################################################################
-                    # Compute Dummies table : 0/1
-                    dummies = pd.concat((pd.get_dummies(Xg[col]) for col in Xg.columns.tolist()),axis=1)
-                    for grp, cols in self.group_.items():
-                        ############################################################################################################################
-                        # Compute categories coordinates
-                        coord_partiel = pd.concat((pd.concat((self.row_coord_partiel_[grp],dummies[col]),axis=1)
-                                            .groupby(col)
-                                            .mean().iloc[1,:]
-                                            .to_frame(name=col).T for col in dummies.columns.tolist()),axis=0)
-                        coord_partiel.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partiel.columns.tolist()])
-                        mod_sup_coord_partiel = pd.concat([mod_sup_coord_partiel,coord_partiel],axis=1)
-
-        ###########################################################################################################
-        #   Supplementary Group Coordinates
-        ###########################################################################################################
-        group_sup_disto = pd.Series(name="dist",index=[grp for grp, cols in self.group_sup_.items()]).astype("float")
-        group_sup_coord = pd.DataFrame(columns = self.dim_index_,index=[grp for grp, cols in self.group_sup_.items()]).astype("float")
-        for grp, cols in self.group_sup_.items():
-            Xg = X[grp]
-            if all(pd.api.types.is_numeric_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                ################# Principal Components Analysis (PCA) #######################################"
-                fa = PCA(normalize=True,
-                         n_components=None,
-                         row_labels=Xg.index.tolist(),
-                         col_labels=Xg.columns.tolist(),
-                         parallelize=self.parallelize)
-                fa.fit(Xg)
-                self.separate_analyses_[grp] = fa
-
-                # Calculate group sup coordinates
-                coord = np.sum((np.corrcoef(fa.normalized_data_,self.row_coord_,rowvar=False)[:Xg.shape[1],Xg.shape[1]:]**2),axis=0)/fa.eig_[0][0]
-                group_sup_coord.loc[grp,self.dim_index_] = coord
-
-            elif all(pd.api.types.is_string_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                #################### Multiple Correspondence Analysis (MCA) ######################################
-                fa = MCA(n_components=None,
-                         row_labels=Xg.index.tolist(),
-                         var_labels=Xg.columns.tolist(),
-                         parallelize=self.parallelize)
-                fa.fit(Xg)
-                self.separate_analyses_[grp] = fa
-
-                # Calculate group sup coordinates
-                data = quali_sup_eta2.loc[fa.var_labels_,:]
-                coord = (data.sum(axis=0)/(Xg.shape[1]*fa.eig_[0][0])).values
-                group_sup_coord.loc[grp,self.dim_index_] = coord
-            else:
-                pass
-            # Calculate group sup disto
-            group_sup_disto.loc[grp] = np.sum(fa.eig_[0]**2)/fa.eig_[0][0]**2
-        
-        #################################### group sup cos2 ###########################################################
-        group_sup_cos2 = pd.concat((((group_sup_coord.loc[grp,:]**2)/group_sup_disto.loc[grp]).to_frame(grp).T for grp in group_sup_coord.index.tolist()),axis=0)
-
-        #################################################################################################################
-        # Measuring how similar groups
-        #################################################################################################################
-        Lg = pd.DataFrame().astype("float")
-        for grp1,cols1 in self.group_sup_.items():
-            for grp2,cols2 in self.group_sup_.items():
-                ##### Extract Data
-                X1, X2 = X.loc[:,cols1][grp1], X.loc[:,cols2][grp2]
-                # Check if 
-                if (self.all_nums_[grp1] and self.all_nums_[grp2]):
-                    # Sum of square coefficient of correlation
-                    sum_corr2 = np.array([(np.corrcoef(X1[col1],X2[col2],rowvar=False)[0,1])**2 for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using the eigenvalues of each group
-                    weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]))*sum_corr2
-                    Lg.loc[grp1,grp2] = weighted_corr2
-                elif (self.all_cats_[grp1] and self.all_cats_[grp2]):
-                    # Sum of chi-squared
-                    sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X1[col1],X2[col2]),correction=False).statistic for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
-                    weighted_chi2 = (1/(self.n_rows_*X1.shape[1]*X2.shape[1]*self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]))*sum_chi2
-                    Lg.loc[grp1,grp2] = weighted_chi2
-                elif (self.all_nums_[grp1] and self.all_cats_[grp2]):
-                    # Sum of correlatio ratio
-                    sum_eta2 = np.array([eta2(X2[col1],X1[col2],digits=10)["correlation ratio"] for col1 in X2.columns.tolist() for col2 in X1.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues and number of categoricals variables
-                    weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]*X2.shape[1]))*sum_eta2
-                    Lg.loc[grp1,grp2] = weighted_eta2
-                    Lg.loc[grp2,grp1] = Lg.loc[grp1,grp2]
-                elif (self.all_cats_[grp1] and self.all_nums_[grp2]):
-                    # Sum of correlatio ratio
-                    sum_eta2 = np.array([eta2(X1[col1],X2[col2],digits=10)["correlation ratio"] for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues and number of categoricals variables
-                    weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*X1.shape[0]*self.separate_analyses_[grp2].eig_[0][0]))*sum_eta2
-                    Lg.loc[grp1,grp2] = weighted_eta2
-                    Lg.loc[grp2,grp1] = Lg.loc[grp1,grp2]
-
-        ################################################### Lg between active group and supplementary group ###################################################
-        Lg2 = pd.DataFrame().astype("float")
-        for grp1, cols1 in self.group_sup_.items():
-            for grp2, cols2 in self.group_.items():
-                X1, X2 = X.loc[:,cols1][grp1], self.active_data_.loc[:,cols2][grp2]
-                if (self.all_nums_[grp1] and self.all_nums_[grp2]):
-                    # Sum of square coefficient of correlation
-                    sum_corr2 = np.array([(np.corrcoef(X1[col1],X2[col2],rowvar=False)[0,1])**2 for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using the eigenvalues of each group
-                    weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]))*sum_corr2
-                    Lg2.loc[grp1,grp2] = weighted_corr2
-                elif (self.all_cats_[grp1] and self.all_cats_[grp2]):
-                    # Sum of chi-squared
-                    sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X1[col1],X2[col2]),correction=False).statistic for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
-                    weighted_chi2 = (1/(self.n_rows_*X1.shape[1]*X2.shape[1]*self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]))*sum_chi2
-                    Lg2.loc[grp1,grp2] = weighted_chi2
-                elif (self.all_nums_[grp1] and self.all_cats_[grp2]):
-                    # Sum of correlatio ratio
-                    sum_eta2 = np.array([eta2(X2[col1],X1[col2],digits=10)["correlation ratio"] for col1 in X2.columns.tolist() for col2 in X1.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues and number of categoricals variables
-                    weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*self.separate_analyses_[grp2].eig_[0][0]*X2.shape[1]))*sum_eta2
-                    Lg2.loc[grp1,grp2] = weighted_eta2
-                elif (self.all_cats_[grp1] and self.all_nums_[grp2]):
-                    # Sum of correlatio ratio
-                    sum_eta2 = np.array([eta2(X1[col1],X2[col2],digits=10)["correlation ratio"] for col1 in X1.columns.tolist() for col2 in X2.columns.tolist()]).sum()
-                    # Weighted the sum using eigenvalues and number of categoricals variables
-                    weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_[0][0]*X1.shape[1]*self.separate_analyses_[grp2].eig_[0][0]))*sum_eta2
-                    Lg2.loc[grp1,grp2] = weighted_eta2
-                    
-        ############################# Coefficient RV ##########################################################
-        rv = pd.DataFrame(index=Lg.index,columns=Lg.columns).astype("float")
-        for grp1 in Lg.index.tolist():
-            for grp2 in Lg.columns.tolist():
-                rv.loc[grp1,grp2] = Lg.loc[grp1,grp2]/(np.sqrt(Lg.loc[grp1,grp1]*Lg.loc[grp2,grp2]))
-        
-        rv2 = pd.DataFrame(index=Lg2.index,columns=Lg2.columns).astype("float")
-        for grp1 in rv2.index.tolist():
-            for grp2 in rv2.columns.tolist():
-                rv2.loc[grp1,grp2] = Lg2.loc[grp1,grp2]/(np.sqrt(Lg.loc[grp1,grp1]*self.group_lg_.loc[grp2,grp2]))
-
-        #################################################################################################################################
-        ####################################################### Partial axes coord
-        partial_axes_sup_coord = pd.DataFrame().astype("float")
-        for grp, cols in self.group_sup_.items():
-            data = self.separate_analyses_[grp].row_coord_
-            correl = np.corrcoef(self.row_coord_,data,rowvar=False)[:self.n_components_,self.n_components_:]
-            coord = pd.DataFrame(correl,index=self.dim_index_,columns=self.separate_analyses_[grp].dim_index_)
-            coord.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord.columns.tolist()])
-            partial_axes_sup_coord = pd.concat([partial_axes_sup_coord,coord],axis=1)
-        
-        ############################################################# Partial axes cos2
-        partial_axes_sup_cos2 = mapply(partial_axes_sup_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=self.n_workers_)
-
-        ########################################################################################################################################
-
-        # Numeric columns
-        self.col_sup_labels_       = col_sup_labels
-        self.col_sup_group_labels_ = col_sup_group_labels
-        self.col_sup_coord_        = col_sup_coord.iloc[:,:].values
-        self.col_sup_cor_          = col_sup_coord.iloc[:,:].values
-        self.col_sup_cos2_         = col_sup_cos2.iloc[:,:].values
-
-        # Categorical
-        self.mod_sup_stats_         = mod_sup_stats
-        self.mod_sup_coord_         = mod_sup_coord
-        self.mod_sup_coord_partiel_ = mod_sup_coord_partiel
-        self.mod_sup_disto_         = mod_sup_disto
-        self.mod_sup_cos2_          = mod_sup_cos2
-        self.mod_sup_vtest_         = mod_sup_vtest
-        self.mod_sup_labels_        = mod_sup_labels
-
-        ####
-        self.quali_sup_eta2_   = quali_sup_eta2
-
-        ################# Supplementary group informations
-        self.group_sup_coord_ = group_sup_coord
-        self.group_sup_disto_ = group_sup_disto
-        self.group_sup_cos2_  = group_sup_cos2
-        self.group_sup_lg_    = pd.concat([Lg,Lg2],axis=1)
-        self.group_sup_rv_    = pd.concat([rv,rv2],axis=1)
-
-        #### Supplementary partial axis
-        self.partial_axes_sup_coord_  = partial_axes_sup_coord
-        self.partial_axes_sup_cor_    = partial_axes_sup_coord
-        self.partial_axes_sup_cos2_   = partial_axes_sup_cos2
-
-    def fit_transform(self,X,y=None):
-        """
-        Fit to data, then transform it.
-
-        Parameters:
-        ----------
-        X : pandas DataFrame of shape (n_rows_,n_cols_)
-
-        y : None
-            y is ignored
-
-        """
-        self.fit(X)
-        return self.row_coord_
-
-    def transform(self,X,y=None):
-        """
-        Apply the dimensionality reduction on X
-        ----------------------------------------
-
-        X is projected on the first axes previous extracted from a
-        training set
-
-        Parameters
-        ----------
-        X : pandas DataFrame of shape (n_rows_sup, n_cols_)
-            New data, where n_rows_sup is the number of supplementary
-            row points and n_cols_ is the number of columns.
-            X rows correspond to supplementary row points that are projected
-            on the axes.
-        
-        y : None
-            y is ignored
-        
-        Return
-        ------
-        X_new : array of float, shape (n_row_sup, n_components_)
-                X_new : coordinates of the projections of the supplementary
-                row points on the axes.
-        """
-        
-        # Check if X is a DataFrame
-        if not isinstance(X,pd.DataFrame):
-            raise ValueError("X must be a dataframe.")
-
-        ######## Check if columns is level 2
-        if X.columns.nlevels != 2:
-            raise ValueError("Error : X must have a MultiIndex columns with 2 levels.")
-
-        # Check New Data has same group
-        nrows = X.shape[0]
-        row_coord = pd.DataFrame(np.zeros(shape=(nrows,self.n_components_)),index=X.index.tolist(),columns=self.dim_index_)
-        #################################################################################
-        if all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist()):
-            # Make a copy on original Data
-            Z = X.copy()
-            for grp, cols in self.group_.items():
-                # Standardize the data using 
-                Z = (X[grp] - self.mean_[grp])/self.std_[grp]
-                ####### Apply transition relation 
-                # Set columns coordinates
-                col_coord = pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_)
-                # Partial coordinates
-                coord = mapply(Z.dot(col_coord.loc[Z.columns.tolist(),:]),lambda x : x/self.separate_analyses_[grp].eig_[0][0],axis=0,
-                               progressbar=False,n_workers=self.n_workers_)
-                #coord = mapply(coord, lambda x : x/np.sqrt(self.eig_[0]),axis=1,progressbar=False,n_workers=self.n_workers_)
-                # Add 
-                row_coord = row_coord + coord
-            
-            ################################# Divide by eigenvalues ###########################
-            row_coord = mapply(row_coord, lambda x : x/np.sqrt(self.eig_[0][:self.n_components_]),axis=1,progressbar=False,n_workers=self.n_workers_)
-        elif all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist()):
-            for grp, cols in self.group_.items():
-                # Extract categorical variables
-                X_cats = X[grp]
-                # Compute Dummies table : 0/1
-                dummies = pd.concat((pd.get_dummies(X_cats[col],prefix=col,prefix_sep='_') for col in X_cats.columns.tolist()),axis=1)
-                # Apply
-                coord = mapply(dummies.dot(self.mod_coord_.loc[dummies.columns.tolist(),:]),
-                               lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_[0][0]),axis=0,
-                               progressbar=False,n_workers=self.n_workers_)
-                row_coord = row_coord + coord
-            # Weighted by the eigenvalue
-            row_coord = mapply(row_coord ,lambda x : x/self.eig_[0][:self.n_components_],axis=1,progressbar=False,n_workers=self.n_workers_)
-        else:
-            # For each group in data
-            for grp, cols in self.group_.items():
-                Xg = X[grp]
-                # if all variables in group are numerics
-                if all(pd.api.types.is_numeric_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                    # Standardize the Data
-                    Z = (Xg - self.mean_[grp])/self.std_[grp]
-                    ##################### Columns coordinates ##################################
-                    col_coord = pd.DataFrame(self.col_coord_,index=self.col_labels_,columns=self.dim_index_)
-                    # Partiel coordinates
-                    coord_partial = mapply(Z.dot(col_coord.loc[Z.columns.tolist(),:]),lambda x : x/self.separate_analyses_[grp].eig_[0][0],
-                                                            axis=0,progressbar=False,n_workers=self.n_workers_)
-                    num_coord_partial = len(self.group_)*mapply(coord_partial,lambda x : x/np.sqrt(self.eig_[0][:self.n_components_]),axis=1,progressbar=False,n_workers=self.n_workers_)
-                # If all variables in group are categoricals
-                elif all(pd.api.types.is_string_dtype(Xg[c]) for c in Xg.columns.tolist()):
-                    # Compute Dummies table : 0/1
-                    dummies = pd.concat((pd.get_dummies(Xg[col],prefix=col,prefix_sep='_') for col in Xg.columns.tolist()),axis=1)
-                    # Partiel coordinates
-                    coord_partial = mapply(dummies.dot(self.mod_coord_.loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_[0][0]),
-                                           axis=0,progressbar=False,n_workers=self.n_workers_)
-                    cat_coord_partial = len(self.group_)*mapply(coord_partial,lambda x : x/self.eig_[0][:self.n_components_],axis=1,progressbar=False,n_workers=self.n_workers_)
-            
-            row_coord = row_coord + (1/len(self.group_))*(num_coord_partial + cat_coord_partial)
-
-        return row_coord.iloc[:,:].values
 
 #####################################################################################################################
 #   MULTIPLE FACTOR ANALYSIS (MFA)
 #####################################################################################################################
-    
+
+# https://husson.github.io/MOOC_AnaDo/AFM.html
+# https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r
+# https://eudml.org/subject/MSC/62H25
 class MFA(BaseEstimator,TransformerMixin):
     """
-    Mutiple Factor Analysis 
-    -----------------------
+    Mutiple Factor Analysis (MFA)
+    -----------------------------
+
+    Description
+    -----------
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
+    Performs Multiple Factor Analysis in the sense of Escofier-Pages with supplementary individuals 
+    and supplementary groups of variables. Active groups of variables must be quantitative. Supplementary groups 
+    can be quantitative or categorical
+
+    Parameters
+    ----------
+    n_components : number of dimensions kept in the results (by default 5)
+
+    group : a list or a tuple with the number of variables in each group
+
+    name_group : a list or a tuple containing the name of the groups (by default, None and the group are named Gr1, Gr2 and so on)
+
+    group_type : the type of variables in each group; three possibilities : 
+                    - "c" or "s" for quantitative variables (the difference is that for "s" variables are scaled to unit variance)
+                    - "n" for categorical variables
+                    - "m" for mixed variables (quantitative and qualitative variables)
     
+    num_group_sup : the indexes of the illustrative groups (by default, None and no group are illustrative)
+
+    ind_sup : an integer, a list or a tuple of the supplementary individuals
+
+    ind_weights : an optional individuals weights (by default, a list of 1/(number of individuals) for uniform weights), the weights 
+                    are given only for the active individuals
     
+    var_weights_mfa : an optional quantitatives variables weights (by default, a list of 1 for uniform weights), the weights
+                        are given only for active quantitatives variables
     
+    Parallelize : bool, default = False. Adding multi-core methods to PandasObject.
+
+    Return
+    ------
+    summary_quali_ : a summary of the results for the categorical variables
+
+    summary_quanti_ : a summary of the results for the quantitative variables
+
+    separate_analyses_ : the results for the separate analyses
+
+    svd_ : a dictionary of matrices containing all the results of the singular value decomposition
+
+    eig_ : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalues, the percentage of variance and the
+            cumulative percentge of variance
     
+    group_ : a dictionary of pandas dataframe containing all the results for the groups (Lg and RV coefficients, coordinates, square cosine,
+                contributions, distance to the origin, the correlations between each group and each factor)
+    
+    inertia_ratio_ : inertia ratio
+
+    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine,
+            contributions)
+    
+    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates,
+                square cosine)
+    
+    quanti_var_ : a dictionary of pandas dataframe containing all the results for the quantitatives variables (coordinates,
+                    correlation between variables and axes, contribution, cos2)
+    
+    quanti_var_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates,
+                        correlation between variables and axes, cos2)
+    
+    quali_var_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of 
+                        each categories of each variables, cos2 and vtest which is a criterion with a normal distribution)
+    
+    partial_axes_ : a dictionary of pandas dataframe containing all the results for the partial axes (coordinates, correlation between variables
+                        and axes, correlation between partial axes)
+    
+    global_pca_ : the results of the analysis when it is considered as a unique weighted PCA
+
+    model_ : string. The model fitted = 'mfa'
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    Escofier B, Pagès J (1998), Analyses Factorielles Simples et Multiples. Dunod
+    Escofier B, Pagès J (1984), l'Analyse factorielle multiple, Cahiers du Bureau universitaire de recherche opérationnelle. Série Recherche, tome 42 (1984), p. 3-68
+    Escofier B, Pagès J (1983), Méthode pour l'analyse de plusieurs groupes de variables. Application à la caractérisation de vins rouges du Val de Loire. Revue de statistique appliquée, tome 31, n°2 (1983), p. 43-59
     """
-
-
     def __init__(self,
                  n_components=5,
-                 group_sup = None,
+                 group = None,
+                 name_group = None,
+                 group_type = None,
+                 num_group_sup = None,
                  ind_sup = None,
                  ind_weights = None,
                  var_weights_mfa = None,
                  parallelize=False):
         self.n_components = n_components
-        self.group_sup = group_sup
+        self.group = group
+        self.name_group = name_group
+        self.group_type = group_type
+        self.num_group_sup = num_group_sup
         self.ind_sup = ind_sup
         self.ind_weights = ind_weights
         self.var_weights_mfa = var_weights_mfa
         self.parallelize = parallelize
 
-    
     def fit(self,X,y=None):
-        """Fit the model to X
+        """
+        Fit the model to X
+        ------------------
 
         Parameters
         ----------
-        X : pandas DataFrame of float, shape (n_rows, n_columns)
+        X : pandas/polars DataFrame of shape (n_rows, n_columns)
 
         y : None
             y is ignored
@@ -4385,15 +3306,16 @@ class MFA(BaseEstimator,TransformerMixin):
         self : object
                 Returns the instance itself
         """
-
-
-        # Check if X is an instance of pd.DataFrame class
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
+        # Check if X is an instance of pandas DataFrame
         if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
         # set parallelize
         if self.parallelize:
             n_workers = -1
@@ -4403,9 +3325,8 @@ class MFA(BaseEstimator,TransformerMixin):
         ###############################################################################################################"
         # Drop level if ndim greater than 1 and reset columns name
         ###############################################################################################################
-        ######## Check if columns is level 2
-        if X.columns.nlevels != 2:
-            raise ValueError("Error : X must have a MultiIndex columns with 2 levels.")
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
             
         ###### Checks if categoricals variables is in X
         is_quali = X.select_dtypes(include=["object","category"])
@@ -4413,15 +3334,36 @@ class MFA(BaseEstimator,TransformerMixin):
             for col in is_quali.columns.tolist():
                 X[col] = X[col].astype("object")
         
+        ###### Transform all quantitatives columns to float
+        is_quanti = X.select_dtypes(exclude=["object","category"])
+        for col in is_quanti.columns.tolist():
+            X[col] = X[col].astype("float")
+        
+        ########################################################################################################################
+        #   check if two categoricals variables have same categories
+        ######################################################################################################################
+        X = revaluate_cat_variable(X)
+
+        #########################################################################################################################
+        #   Check if group is None
+        #########################################################################################################################
+        if self.group is None:
+            raise ValueError("Error : 'group' must be assigned.")
+        elif not (isinstance(self.group, list) or isinstance(self.group,tuple)):
+            raise ValueError("Error : 'group' must be a list or a tuple with the number of variables in each group")
+        else:
+            nb_elt_group = [int(x) for x in self.group]
+
+        ##########################################################################################################################
         # Remove supplementary group
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             # Set default values to None
             self.quali_var_sup_ = None
             self.quanti_var_sup_ = None
-            if isinstance(self.group_sup,int):
-                group_sup = [int(self.group_sup)]
-            elif ((isinstance(self.group_sup,list) or isinstance(self.group_sup,tuple)) and len(self.group_sup)>=1):
-                group_sup = [int(x) for x in self.group_sup]
+            if isinstance(self.num_group_sup,int):
+                num_group_sup = [int(self.num_group_sup)]
+            elif ((isinstance(self.num_group_sup,list) or isinstance(self.num_group_sup,tuple)) and len(self.num_group_sup)>=1):
+                num_group_sup = [int(x) for x in self.num_group_sup]
 
         # Check if individuls supplementary
         if self.ind_sup is not None:
@@ -4429,56 +3371,90 @@ class MFA(BaseEstimator,TransformerMixin):
                 ind_sup = [int(self.ind_sup)]
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
+
+        #########################################################################################################################
+        #   Check if group type in not None
+        #########################################################################################################################
+        if self.group_type is None:
+            raise ValueError("Error : 'group_type' must be assigned.")
         
-        ####################################### Check NA
-        if X.isnull().any().any():
-            if self.group_sup is None:
-                X = mapply(X, lambda x : x.fillna(x.mean(),inplace=True),axis=0,progressbar=False,n_workers=n_workers)
-            #else:
-                #col_list = [x for x in list(range(X.shape[0])) if x not in quali_sup]
-                #X.iloc[:,col_list] = X.iloc[:,col_list].fillna(X[:,col_list].mean())
-            print("Missing values are imputed by the mean of the variable.")
+        #######################################################################################################################
+        if len(self.group) != len(self.group_type):
+            raise TypeError("Error : Not convenient group definition")
+        
+        ############################################################################################################################
+        #  Assigned group name
+        ###########################################################################################################################
+        if self.name_group is None:
+            group_name = ["Gr"+str(x+1) for x in range(len(nb_elt_group))]
+        elif not (isinstance(self.name_group,list) or isinstance(self.name_group,tuple)):
+            raise TypeError("Error : 'group_name' must be a list or a tuple of group name")
+        else:
+            group_name = [x for x in self.name_group]
+        
+        ##############################################################################################################################
+        # check if group name is an integer
+        #############################################################################################################################
+        for i in range(len(group_name)):
+            if isinstance(group_name[i],int) or isinstance(group_name[i],float):
+                group_name[i] = "Gr"+str(i+1)
+        
+        ##############################################################################################################################
+        #   Assigned group name to label
+        #############################################################################################################################
+        group_active_dict = {}
+        group_sup_dict = {}
+        debut = 0
+        for i in range(len(nb_elt_group)):
+            X_group = X.iloc[:,(debut):(debut+nb_elt_group[i])]
+            if self.num_group_sup is not None:
+                if i in num_group_sup:
+                    new_elt = {group_name[i]:X_group.columns.tolist()}
+                    group_sup_dict = {**group_sup_dict,**new_elt}
+                else:
+                    group_sup_dict = group_sup_dict
+                    group_active_dict[group_name[i]] = X_group.columns.tolist()
+            else:
+                group_active_dict[group_name[i]] = X_group.columns.tolist()
+            debut = debut + nb_elt_group[i]
 
         ####################################### Save the base in a new variables
         # Store data
-        Xtot = X
+        Xtot = X.copy()
 
-        group_name = X.columns.get_level_values(0).unique().tolist()
-        ######################################## Drop supplementary quantitatives columns #######################################
-        if self.group_sup is not None:
-            X = X.drop(columns=[name for name in Xtot.columns.tolist() if  X.columns.get_level_values(0).unique().tolist().index(name[0]) in group_sup])
+       ######################################## Drop supplementary groups columns #######################################
+        if self.num_group_sup is not None:
+            X = X.drop(columns=list(itertools.chain.from_iterable(group_sup_dict.values())))
         
-        ######################################## Drop supplementary individuls  ##############################################
+        ######################################## Drop supplementary individuals  ##############################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
             X_ind_sup = X.iloc[self.ind_sup,:]
+            # Drop supplementary individuals
             X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
         
-        ####################################### Multiple Factor Analysis (MFA) ##################################################
-
+        ############################# Check if an active group has only one columns
+        for grp, cols in group_active_dict.items():
+            if len(cols)==1:
+                raise ValueError(f"Error : {grp} group should have at least two columns")
+        
         # Check if all columns are numerics
         all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist())
         if not all_num:
             raise TypeError("Error : All actives columns must be numeric")
         
-        ################################################ Create group items
-        group = { g: [c for c in X.columns.get_level_values(1)[X.columns.get_level_values(0) == g]] for g in X.columns.get_level_values(0).unique().tolist()}
-
-        ############################# Check if a group has only one columns
-        for grp, col in group.items():
-            if len(col)==1:
-                raise ValueError(f"Error : {grp} group should have at least two columns")
+        ####################################### Multiple Factor Analysis (MFA) ##################################################
 
         ################## Summary quantitatives variables ####################
         summary_quanti = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
-            summary = X[grp][col].describe().T.reset_index().rename(columns={"index" : "variable"})
+        for grp, cols in group_active_dict.items():
+            summary = X[cols].describe().T.reset_index().rename(columns={"index" : "variable"})
             summary["count"] = summary["count"].astype("int")
             summary.insert(0,"group",group_name.index(grp))
             summary_quanti = pd.concat((summary_quanti,summary),axis=0,ignore_index=True)
         self.summary_quanti_ = summary_quanti
 
-        ########### Set row weight and columns weight
+        ########### Set individuals weight and variables weight
         # Set row weight
         if self.ind_weights is None:
             ind_weights = (np.ones(X.shape[0])/X.shape[0]).tolist()
@@ -4490,59 +3466,81 @@ class MFA(BaseEstimator,TransformerMixin):
             ind_weights = [x/np.sum(self.ind_weights) for x in self.ind_weights]
         
         ############################# Set columns weight MFA
+        var_weights_mfa = {}
         if self.var_weights_mfa is None:
-            var_weights_mfa = {}
-            for grp, cols in group.items():
+            for grp, cols in group_active_dict.items():
                 var_weights_mfa[grp] = np.ones(len(cols)).tolist()
+        elif not isinstance(self.var_weights_mfa,dict):
+            raise ValueError("Error : 'var_weights_mfa' must be a dictionary where keys are groups names and values are list of variables weights in group.")
         else:
-            pass
-            var_weights_mfa = {}
-            for grp, cols in self.group_.items():
-                var_weights_mfa[grp] = np.array(self.var_weights_mfa[grp])
+            for grp, cols in group_active_dict.items():
+                var_weights_mfa[grp] = np.array(self.var_weights_mfa[grp]).tolist()
         
         # Run a Factor Analysis in each group
         model = {}
-        for grp, cols in group.items():
-            # Principal Components Anlysis (PCA)
-            fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=var_weights_mfa[grp],ind_sup=None,parallelize=self.parallelize)
-            model[grp] = fa.fit(X[grp])
-            #####
+        for grp, cols in group_active_dict.items():
+            if self.group_type[group_name.index(grp)]=="c":
+                # Center Principal Components Anlysis (PCA)
+                fa = PCA(standardize=False,n_components=None,ind_weights=ind_weights,var_weights=var_weights_mfa[grp],ind_sup=None,parallelize=self.parallelize)
+            elif self.group_type[group_name.index(grp)]=="s":
+                # Scale Principal Components Anlysis (PCA)
+                fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=var_weights_mfa[grp],ind_sup=None,parallelize=self.parallelize)
+            else:
+                raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+            model[grp] = fa.fit(X[cols])
+
+            ##### Add supplementary individuals
             if self.ind_sup is not None:
                 # Select 
                 X_ind_sup = X_ind_sup.astype("float")
-                fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=var_weights_mfa[grp],ind_sup=ind_sup,parallelize=self.parallelize)
-                model[grp] = fa.fit(pd.concat((X[grp],X_ind_sup[grp]),axis=0))
+
+                if self.group_type[group_name.index(grp)]=="c":
+                    # Center Principal Components Anlysis (PCA)
+                    fa = PCA(standardize=False,n_components=None,ind_weights=ind_weights,var_weights=var_weights_mfa[grp],ind_sup=ind_sup,parallelize=self.parallelize)
+                elif self.group_type[group_name.index(grp)]=="s":
+                    # Scale Principal Components Anlysis (PCA)
+                    fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=var_weights_mfa[grp],ind_sup=ind_sup,parallelize=self.parallelize)
+                else:
+                    raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                model[grp] = fa.fit(pd.concat((X[cols],X_ind_sup[cols]),axis=0))
         
         ############################################### Separate  Factor Analysis for supplementary groups ######################################""
-        if self.group_sup is not None:
-            X_group_sup = Xtot[[name for name in Xtot.columns.tolist() if Xtot.columns.get_level_values(0).unique().tolist().index(name[0]) in group_sup]]
-            ####### Find columns for supplementary group
-            group_sup_dict = { g: [c for c in X_group_sup.columns.get_level_values(1)[X_group_sup.columns.get_level_values(0) == g]] for g in X_group_sup.columns.get_level_values(0).unique().tolist()}
+        if self.num_group_sup is not None:
+            X_group_sup = Xtot[list(itertools.chain.from_iterable(group_sup_dict.values()))]
             if self.ind_sup is not None:
                 X_group_sup = X_group_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in self.ind_sup])
             
-            ######## Drop level in columns
-            X_group_sup.columns = X_group_sup.columns.droplevel()
-            ############
+            ## Factor Analysis
             for grp, cols in group_sup_dict.items():
                 # Instnce the FA model
-                if all(pd.api.types.is_numeric_dtype(X_group_sup[c]) for c in cols):
-                    fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
-                elif all(pd.api.types.is_string_dtype(X_group_sup[c]) for c in cols):
-                    fa = MCA(n_components=None,parallelize=self.parallelize)
+                if all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols):
+                    if self.group_type[group_name.index(grp)]=="c":
+                        fa = PCA(standardize=False,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
+                    elif self.group_type[group_name.index(grp)]=="s":
+                        fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                elif all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols):
+                    if self.group_type[group_name.index(grp)]=="n":
+                        fa = MCA(n_components=None,parallelize=self.parallelize,benzecri=False,greenacre=False)
+                    else:
+                        raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
                 else:
-                    raise TypeError(f"Not all columns in '{grp}' group are of the same type.")
+                    if self.group_type[group_name.index(grp)]=="m":
+                        fa = FAMD(n_components=None,ind_weights=ind_weights,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for mixed group 'group_type' should be 'm'")
                 # Fit the model
                 model[grp] = fa.fit(X_group_sup[cols])
 
         ##################### Compute group disto
-        group_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group.keys())]
-        group_dist2 = pd.Series(group_dist2,index=list(group.keys()),name="dist")
+        group_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_active_dict.keys())]
+        group_dist2 = pd.Series(group_dist2,index=list(group_active_dict.keys()),name="dist2")
 
         ##### Compute group
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             group_sup_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_sup_dict.keys())]
-            group_sup_dist2 = pd.Series(group_sup_dist2,index=list(group_sup_dict.keys()),name="dist")
+            group_sup_dist2 = pd.Series(group_sup_dist2,index=list(group_sup_dict.keys()),name="dist2")
 
         ##### Store separate analysis
         self.separate_analyses_ = model
@@ -4552,7 +3550,7 @@ class MFA(BaseEstimator,TransformerMixin):
         std = {}
         base        = pd.DataFrame().astype("float")
         var_weights = pd.Series(name="weight").astype("float")
-        for grp,cols in group.items():
+        for grp,cols in group_active_dict.items():
             ############################### Compute Mean and Standard deviation #################################
             d1 = DescrStatsW(X[cols],weights=ind_weights,ddof=0)
             ########################### Standardize #################################################################################
@@ -4583,7 +3581,7 @@ class MFA(BaseEstimator,TransformerMixin):
                       "var_weights" : var_weights,
                       "means" : means,
                       "std" : std,
-                      "group" : group,
+                      "group" : group_active_dict,
                       "group_name" : group_name}
         
         ###########################################################################################################
@@ -4592,38 +3590,53 @@ class MFA(BaseEstimator,TransformerMixin):
         # Global PCA without supplementary element
         global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),parallelize = self.parallelize).fit(base)
 
+        ###############################################################################################
         #### Add supplementary individuals
+        ###############################################################################################
         if self.ind_sup is not None:
             X_ind_sup = X_ind_sup.astype("float")
+            # Concatenate
+            Z_ind_sup = pd.concat((base,X_ind_sup),axis=0)
+            # Apply PCA
+            global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),ind_sup=ind_sup,parallelize = self.parallelize).fit(Z_ind_sup)
+            self.ind_sup_ = global_pca.ind_sup_.copy()
         
-        
+        #######################################""
         ###### Add supplementary group
-        if self.group_sup is not None:
-            for grp,cols in group_sup_dict.items():
-                if all(pd.api.types.is_numeric_dtype(X_group_sup[grp][col]) for col in cols):
-                    ##################################################################################################"
-                    summary_quanti_sup = X_group_sup[cols].describe().T.reset_index().rename(columns={"index" : "variable"})
-                    summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
-                    summary_quanti_sup.insert(0,"group",group_name.index(grp))
-                    self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
-                    
-                    # Standardize
-                    d2 = DescrStatsW(X_group_sup[cols],weights=ind_weights,ddof=0)
-                    Z_quanti_sup = (X_group_sup[cols] - d2.mean.reshape(1,-1))/d2.std.reshape(1,-1)
-                    Z_quanti_sup = pd.concat((base,Z_quanti_sup),axis=1)
-                    # Find supplementary quantitatives columns index
-                    index = [Z_quanti_sup.columns.tolist().index(x) for x in cols]
-                    global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quanti_sup=index,parallelize = self.parallelize).fit(Z_quanti_sup)
-                    self.quanti_var_sup_ = global_pca.quanti_sup_.copy()
+        ################################################################################################################################""
+        if self.num_group_sup is not None:
+            X_sup_quanti = X_group_sup.select_dtypes(exclude=["object","category"])
+            X_sup_quali = X_group_sup.select_dtypes(include=["object","category"])
+            if X_sup_quanti.shape[1]>0:
+                ##################################################################################################"
+                summary_quanti_sup = X_sup_quanti.describe().T.reset_index().rename(columns={"index" : "variable"})
+                summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
+                summary_quanti_sup.insert(0,"group",group_name.index(grp))
+                self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
+
+                ####### Standardize the data
+                d2 = DescrStatsW(X_sup_quanti,weights=ind_weights,ddof=0)
+                Z_quanti_sup = (X_sup_quanti - d2.mean.reshape(1,-1))/d2.std.reshape(1,-1)
+                ### Concatenate
+                Z_quanti_sup = pd.concat((base,Z_quanti_sup),axis=1)
+                # Find supplementary quantitatives columns index
+                index = [Z_quanti_sup.columns.tolist().index(x) for x in X_sup_quanti.columns.tolist()]
+                global_pca = PCA(standardize = False,n_components=n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quanti_sup=index,parallelize = self.parallelize).fit(Z_quanti_sup)
+                self.quanti_var_sup_ = global_pca.quanti_sup_.copy()
+            
+            if X_sup_quali.shape[1]>1:
+                # Concatenate
+                Z_quali_sup = pd.concat((base,X_sup_quali),axis=1)
+                # Find supplementary quantitatives columns index
+                index = [Z_quali_sup.columns.tolist().index(x) for x in X_sup_quali.columns.tolist()]
+                global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quali_sup=index,parallelize = self.parallelize).fit(Z_quali_sup)
+                self.quali_var_sup_ = global_pca.quali_sup_.copy()
+                # Extract
+                summary_quali_var_sup = global_pca.summary_quali_.copy()
+                summary_quali_var_sup.insert(0,"group",group_name.index(grp))
                 
-                if all(pd.api.types.is_string_dtype(X_group_sup[grp][col]) for col in cols):
-                    Z_quali_sup = pd.concat((base,X_group_sup[cols]),axis=1)
-                    # Find supplementary quantitatives columns index
-                    index = [Z_quali_sup.columns.tolist().index(x) for x in cols]
-                    global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quali_sup=index,parallelize = self.parallelize).fit(Z_quali_sup)
-                    self.quali_var_sup_ = global_pca.quali_sup_.copy()
-                    self.summary_quali_ = global_pca.summary_quali_.copy()
-                    self.summary_quali_.insert(0,"group",group_name.index(grp))
+                # Append 
+                self.summary_quali_ = summary_quali_var_sup
 
         ##########################################
         self.global_pca_ = global_pca
@@ -4660,12 +3673,12 @@ class MFA(BaseEstimator,TransformerMixin):
         ###########################################################################################################
         ##### Add individuals partiels coordinaates
         ind_coord_partiel = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             # Standardisze data
             Z = (X[cols] - means[grp])/std[grp]
             # Partial coordinates
             coord_partial = mapply(Z.dot(quanti_var_coord.loc[cols,:]),lambda x : x/self.separate_analyses_[grp].eig_.iloc[0,0],axis=0,progressbar=False,n_workers=n_workers)
-            coord_partial = len(group)*mapply(coord_partial,lambda x : x/np.sqrt(self.eig_.iloc[:,0].values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
+            coord_partial = len(list(group_active_dict.keys()))*mapply(coord_partial,lambda x : x/np.sqrt(self.eig_.iloc[:,0].values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
             coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
             ind_coord_partiel = pd.concat([ind_coord_partiel,coord_partial],axis=1)
         
@@ -4674,23 +3687,34 @@ class MFA(BaseEstimator,TransformerMixin):
         ##########################################################################################################
         #   Partiel coordinates for supplementary qualitatives columns
         ###########################################################################################################
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             quali_var_sup_coord_partiel = pd.DataFrame().astype("float")
             for grp_sup, cols_sup in group_sup_dict.items():
-                if all(pd.api.types.is_string_dtype(X_group_sup[c]) for c in cols_sup):
-                    for grp, cols in group.items():
+                # If all columns in group are categoricals
+                if all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols_sup):
+                    for grp, cols in group_active_dict.items():
                         ############################################################################################################################
                         # Compute categories coordinates
                         quali_sup_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp],X_group_sup[col]),axis=1).groupby(col).mean()for col in cols_sup),axis=0)
                         quali_sup_coord_partiel.columns = pd.MultiIndex.from_tuples([(grp,col) for col in quali_sup_coord_partiel.columns.tolist()])
                         quali_var_sup_coord_partiel = pd.concat([quali_var_sup_coord_partiel,quali_sup_coord_partiel],axis=1)
+                # If at least one columns is categoricals
+                elif any(pd.api.types.is_string_dtype(X_group_sup[cols_sup][col]) for col in cols_sup):
+                    for grp, cols in group_active_dict.items():
+                        ############################################################################################################################
+                        X_group_sup_quali = X_group_sup[cols_sup].select_dtypes(include=['object'])
+                        # Compute categories coordinates
+                        quali_sup_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp],X_group_sup_quali[col]),axis=1).groupby(col).mean()for col in X_group_sup_quali.columns.tolist()),axis=0)
+                        quali_sup_coord_partiel.columns = pd.MultiIndex.from_tuples([(grp,col) for col in quali_sup_coord_partiel.columns.tolist()])
+                        quali_var_sup_coord_partiel = pd.concat([quali_var_sup_coord_partiel,quali_sup_coord_partiel],axis=1)
+            # Store
             self.quali_var_sup_["coord_partiel"] = quali_var_sup_coord_partiel
 
         ################################################################################################"
         #    Inertia Ratios
         ################################################################################################
         #### "Between" inertia on axis s
-        between_inertia = len(group)*mapply(ind["coord"],lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        between_inertia = len(list(group_active_dict.keys()))*mapply(ind["coord"],lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
         between_inertia.name = "between_inertia"
 
         ### Total inertial on axis s
@@ -4724,7 +3748,7 @@ class MFA(BaseEstimator,TransformerMixin):
 
         ######## Rorder inertia by group
         ind_within_partial_inertia = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             partial_inertia = data[grp]
             partial_inertia.columns = pd.MultiIndex.from_tuples([(grp,col) for col in partial_inertia.columns.tolist()])
             ind_within_partial_inertia = pd.concat([ind_within_partial_inertia,partial_inertia],axis=1)
@@ -4738,14 +3762,14 @@ class MFA(BaseEstimator,TransformerMixin):
         #################################################################################################
         ########################################### Partial axes coord
         partial_axes_coord = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             data = self.separate_analyses_[grp].ind_["coord"]
             correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=None)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
             coord = pd.DataFrame(correl,index=self.ind_["coord"].columns.tolist(),columns=data.columns.tolist())
             coord.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord.columns.tolist()])
             partial_axes_coord = pd.concat([partial_axes_coord,coord],axis=1)
         
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             for grp, cols in group_sup_dict.items():
                 data = self.separate_analyses_[grp].ind_["coord"]
                 correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=None)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
@@ -4760,13 +3784,13 @@ class MFA(BaseEstimator,TransformerMixin):
 
         #########" Partial correlation between
         all_coord = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             data = self.separate_analyses_[grp].ind_["coord"]
             data.columns = pd.MultiIndex.from_tuples([(grp,col) for col in data.columns.tolist()])
             all_coord = pd.concat([all_coord,data],axis=1)
         
         #### Add 
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             for grp, cols in group_sup_dict.items():
                 data = self.separate_analyses_[grp].ind_["coord"]
                 data.columns = pd.MultiIndex.from_tuples([(grp,col) for col in data.columns.tolist()])
@@ -4776,7 +3800,7 @@ class MFA(BaseEstimator,TransformerMixin):
         
         #################################### Partial axes contrib ################################################"
         axes_contrib = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             nbcol = min(n_components,self.separate_analyses_[grp].call_["n_components"])
             eig = self.separate_analyses_[grp].eig_.iloc[:nbcol,0].values/self.separate_analyses_[grp].eig_.iloc[0,0]
             contrib = mapply(partial_axes_coord[grp].iloc[:,:nbcol],lambda x : (x**2)*eig,axis=1,progressbar=False,n_workers=n_workers)
@@ -4784,13 +3808,14 @@ class MFA(BaseEstimator,TransformerMixin):
             axes_contrib  = pd.concat([axes_contrib,contrib],axis=1)
         
         partial_axes_contrib = mapply(axes_contrib,lambda x : 100*x/np.sum(x),axis=1,progressbar=False,n_workers=n_workers)
+
         #### Add a null dataframe
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             for grp, cols in group_sup_dict.items():
                 nbcol = min(n_components,self.separate_analyses_[grp].call_["n_components"])
-                contrib = pd.DataFrame(np.zeros(shape=(n_components,nbcol)),index=self.ind_["coord"].columns.tolist(),
-                                       columns=self.separate_analyses_[grp].ind_["coord"].columns.tolist())
-                partial_axes_contrib  = pd.concat([partial_axes_contrib,contrib],axis=1)
+                contrib = pd.DataFrame(np.zeros(shape=(n_components,nbcol)),index=["Dim."+str(x+1) for x in range(n_components)],columns=["Dim."+str(x+1) for x in range(nbcol)])
+                contrib.columns = pd.MultiIndex.from_tuples([(grp,col) for col in contrib.columns.tolist()])
+                partial_axes_contrib = pd.concat([partial_axes_contrib,contrib],axis=1)
             ## Reorder
             partial_axes_contrib = partial_axes_contrib.reindex(columns=partial_axes_contrib.columns.reindex(group_name, level=0)[0])
                 
@@ -4802,7 +3827,7 @@ class MFA(BaseEstimator,TransformerMixin):
         #################################################################################################################
         # group coordinates
         group_coord = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             data = self.separate_analyses_[grp].call_["Z"]
             coord =  (weightedcorrcoef(data,self.ind_["coord"],w=None)[:data.shape[1],data.shape[1]:]**2).sum(axis=0)/self.separate_analyses_[grp].eig_.iloc[0,0]
             coord  = pd.DataFrame(coord.reshape(1,-1),index=[grp],columns=self.ind_["coord"].columns.tolist())
@@ -4825,38 +3850,42 @@ class MFA(BaseEstimator,TransformerMixin):
         # Measuring how similar groups
         #################################################################################################################
         Lg = pd.DataFrame().astype("float")
-        for grp1,cols1 in group.items():
-            for grp2,cols2 in group.items():
+        for grp1,cols1 in group_active_dict.items():
+            for grp2,cols2 in group_active_dict.items():
                 # Sum of square coefficient of correlation
                 sum_corr2 = np.array([(weightedcorrcoef(x=X[col1],y=X[col2],w=None)[0,1])**2 for col1 in cols1 for col2 in cols2]).sum()
                 # Weighted the sum using the eigenvalues of each group
                 weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_corr2
                 Lg.loc[grp1,grp2] = weighted_corr2
         
-        if self.group_sup is not None:
+        # Reorder using active group name
+        Lg = Lg.loc[list(group_active_dict.keys()),list(group_active_dict.keys())]
+
+        # Add supplementary Lg elements
+        if self.num_group_sup is not None:
             Lg_sup = pd.DataFrame().astype("float")
             for grp1, cols1 in group_sup_dict.items():
                 for grp2, cols2 in group_sup_dict.items():
-                    if (all(pd.api.types.is_numeric_dtype(X_group_sup[c]) for c in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[c]) for c in cols2)):
+                    if (all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols2)):
                         # Sum of square coefficient of correlation
                         sum_corr2 = np.array([(weightedcorrcoef(x=X_group_sup[col1],y=X_group_sup[col2],w=None)[0,1])**2 for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using the eigenvalues of each group
                         weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_corr2
                         Lg_sup.loc[grp1,grp2] = weighted_corr2
-                    elif ((pd.api.types.is_string_dtype(X_group_sup[c]) for c in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[c]) for c in cols1)):
+                    elif ((pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols2)):
                         # Sum of chi-squared
                         sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X_group_sup[col1],X_group_sup[col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
                         weighted_chi2 = (1/(X.shape[0]*len(cols1)*len(cols2)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_chi2
                         Lg_sup.loc[grp1,grp2] = weighted_chi2
-                    elif (all(pd.api.types.is_string_dtype(X_group_sup[c]) for c in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[c]) for c in cols2)):
+                    elif (all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols2)):
                         # Sum of square correlation ratio
                         sum_eta2 = np.array([eta2(X_group_sup[col1],X_group_sup[col2],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using eigenvalues and number of categoricals variables
                         weighted_eta2 = (1/(len(cols1)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_eta2
                         Lg_sup.loc[grp1,grp2] = weighted_eta2
                         Lg_sup.loc[grp2,grp1] = weighted_eta2
-                    elif (all(pd.api.types.is_numeric_dtype(X_group_sup[c]) for c in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[c]) for c in cols2)):
+                    elif (all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols2)):
                         # Sum of square correlation ratio
                         sum_eta2 = np.array([eta2(X_group_sup[col2],X_group_sup[col1],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using eigenvalues and number of categoricals variables
@@ -4870,17 +3899,17 @@ class MFA(BaseEstimator,TransformerMixin):
             Lg = Lg.fillna(0.0)
 
             ####
-            for grp1,cols1 in group.items():
+            for grp1,cols1 in group_active_dict.items():
                 for grp2, cols2 in group_sup_dict.items():
                     X1, X2 = X[cols1], X_group_sup[cols2]
-                    if all(pd.api.types.is_numeric_dtype(X2[c]) for c in cols2):
+                    if all(pd.api.types.is_numeric_dtype(X2[col]) for col in cols2):
                         # Sum of square coefficient of correlation
                         sum_corr2 = np.array([(np.corrcoef(X1[col1],X2[col2],rowvar=False)[0,1])**2 for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using the eigenvalues of each group
                         weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_corr2
                         Lg.loc[grp1,grp2] = weighted_corr2
                         Lg.loc[grp2,grp1] = weighted_corr2
-                    elif all(pd.api.types.is_string_dtype(X2[c]) for c in cols2):
+                    elif all(pd.api.types.is_string_dtype(X2[col]) for col in cols2):
                         # Sum of square correlation ratio
                         sum_eta2 = np.array([eta2(X2[col2],X1[col1],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using eigenvalues and number of categoricals variables
@@ -4890,6 +3919,10 @@ class MFA(BaseEstimator,TransformerMixin):
             
             ##################
             Lg = Lg.loc[group_name,group_name]
+        
+        # Add MFA Lg
+        Lg.loc["MFA",:] = Lg.loc[:,"MFA"] = Lg.loc[list(group_active_dict.keys()),:].sum(axis=0)/self.eig_.iloc[0,0]
+        Lg.loc["MFA","MFA"] = Lg.loc[list(group_active_dict.keys()),"MFA"].sum()/self.eig_.iloc[0,0]
 
         ## RV Coefficient
         RV = pd.DataFrame().astype("float")
@@ -4897,30 +3930,23 @@ class MFA(BaseEstimator,TransformerMixin):
             for grp2 in Lg.columns:
                 RV.loc[grp1,grp2] = Lg.loc[grp1,grp2]/(np.sqrt(Lg.loc[grp1,grp1])*np.sqrt(Lg.loc[grp2,grp2]))
         
-        self.group_ = {"coord" : group_coord, "contrib" : group_contrib, "cos2" : group_cos2,"correlation" : group_correlation,"Lg" : Lg, "dist" : np.sqrt(group_dist2),"RV" : RV}
+        self.group_ = {"coord" : group_coord, "contrib" : group_contrib, "cos2" : group_cos2,"correlation" : group_correlation,"Lg" : Lg, "dist2" : group_dist2,"RV" : RV}
 
         ##### Add supplementary elements
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             group_sup_coord = pd.DataFrame().astype("float")
             for grp, cols in group_sup_dict.items():
                 Xg = X_group_sup[cols]
-                if all(pd.api.types.is_numeric_dtype(Xg[c]) for c in cols):
-                    ################# Principal Components Analysis (PCA) #######################################"
-                    fa = PCA(standardize=True,parallelize=self.parallelize)
-                    fa.fit(Xg)
+                if all(pd.api.types.is_numeric_dtype(Xg[col]) for col in cols):
                     # Calculate group sup coordinates
-                    correl = np.sum((weightedcorrcoef(fa.call_["Z"],self.ind_["coord"],w=None)[:Xg.shape[1],Xg.shape[1]:]**2),axis=0)/fa.eig_.iloc[0,0]
+                    correl = np.sum((weightedcorrcoef(self.separate_analyses_[grp].call_["Z"],self.ind_["coord"],w=None)[:Xg.shape[1],Xg.shape[1]:]**2),axis=0)/self.separate_analyses_[grp].eig_.iloc[0,0]
                     coord = pd.DataFrame(correl.reshape(1,-1),index=[grp],columns = ["Dim."+str(x+1) for x in range(len(correl))])
                     group_sup_coord = pd.concat((group_sup_coord,coord),axis=0)
 
-                elif all(pd.api.types.is_string_dtype(Xg[c]) for c in cols):
-                    #################### Multiple Correspondence Analysis (MCA) ######################################
-                    fa = MCA(n_components=None,parallelize=self.parallelize)
-                    fa.fit(Xg)
-
+                elif all(pd.api.types.is_string_dtype(Xg[col]) for col in cols):
                     # Calculate group sup coordinates
                     data = self.quali_var_sup_["eta2"].loc[cols,:]
-                    coord = (data.sum(axis=0)/(Xg.shape[1]*fa.eig_.iloc[0,0]))
+                    coord = (data.sum(axis=0)/(Xg.shape[1]*self.separate_analyses_[grp].eig_.iloc[0,0]))
                     group_sup_coord = pd.concat((group_sup_coord,coord.to_frame(grp).T),axis=0)
                 else:
                     raise TypeError("Error : All columns should have the same type.")
@@ -4929,18 +3955,30 @@ class MFA(BaseEstimator,TransformerMixin):
             group_sup_cos2 = pd.concat((((group_sup_coord.loc[grp,:]**2)/group_sup_dist2.loc[grp]).to_frame(grp).T for grp in group_sup_coord.index.tolist()),axis=0)
             
             # Append two dictionnaries
-            self.group_ = {**self.group_,**{"coord_sup" : group_sup_coord, "dist_sup" : np.sqrt(group_sup_dist2),"cos2_sup" : group_sup_cos2}}
+            self.group_ = {**self.group_,**{"coord_sup" : group_sup_coord, "dist2_sup" : group_sup_dist2,"cos2_sup" : group_sup_cos2}}
             
         self.model_ = "mfa"
         return self
     
     def fit_transform(self,X,y=None):
         """
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
+
+        Parameters:
+        ----------
+        X : pandas/polars DataFrame of shape (n_rows_,n_cols_)
+
+        y : None
+            y is ignored
         
+        Return
+        ------
+        X_new : pandas dataframe of shape (n_rows, n_components)
         """
         self.fit(X)
         return self.ind_["coord"]
-    
+
     def transform(self,X,y=None):
         """
         Apply the dimensionality reduction on X
@@ -4951,7 +3989,7 @@ class MFA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        X : pandas DataFrame of shape (n_rows_sup, n_cols_)
+        X : pandas/polars DataFrame of shape (n_rows_sup, n_cols_)
             New data, where n_rows_sup is the number of supplementary
             row points and n_cols_ is the number of columns.
             X rows correspond to supplementary row points that are projected
@@ -4966,14 +4004,19 @@ class MFA(BaseEstimator,TransformerMixin):
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
         
-        # Check if X is a DataFrame
+        # Check if X is an instance of pandas DataFrame
         if not isinstance(X,pd.DataFrame):
-            raise ValueError("X must be a dataframe.")
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-        ######## Check if columns is level 2
-        if X.columns.nlevels != 2:
-            raise ValueError("Error : X must have a MultiIndex columns with 2 levels.")
+        # Check new dataframe are aligned
+        if X.shape[1] != self.call_["X"].shape[1]:
+            raise ValueError("Error : DataFrame aren't aligned")
         
         # set parallelize
         if self.parallelize:
@@ -4982,20 +4025,14 @@ class MFA(BaseEstimator,TransformerMixin):
             n_workers = 1
         
         ######################################""
-        # Drop level
-        X.columns = X.columns.droplevel()
         row_coord = pd.DataFrame(np.zeros(shape=(X.shape[0],self.call_["n_components"])),index=X.index.tolist(),
                                  columns=["Dim."+str(x+1) for x in range(self.call_["n_components"])])
-        # Make a copy on original Data
-        Z = X.copy()
         for grp, cols in self.call_["group"].items():
             # Standardize the data using 
             Z = (X[cols] - self.call_["means"][grp])/self.call_["std"][grp]
             # Partial coordinates
             coord = mapply(Z.dot(self.quanti_var_["coord"].loc[Z.columns.tolist(),:]),lambda x : x/self.separate_analyses_[grp].eig_.iloc[0,0],axis=0,progressbar=False,n_workers=n_workers)
-            # Add 
             row_coord = row_coord + coord
-        
         ################################# Divide by eigenvalues ###########################
         row_coord = mapply(row_coord, lambda x : x/np.sqrt(self.eig_.iloc[:,0][:self.call_["n_components"]]),axis=1,progressbar=False,n_workers=n_workers)
         
@@ -5006,46 +4043,121 @@ class MFA(BaseEstimator,TransformerMixin):
 ####################################################################################################################
 class MFAQUAL(BaseEstimator,TransformerMixin):
     """
-    Multiple Factor Analysis for qualitatives variables
-    ---------------------------------------------------
+    Multiple Factor Analysis for Qualitatives Variables (MFAQUAL)
+    -------------------------------------------------------------
 
-    Performs Multiple Factor Analysis for qualitatives variables
+    Description
+    -----------
 
-    Parameters:
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
+    Performs Multiple Factor Analysis for Qualitatives Variables in the sense of Pagès J. (2002) with supplementary individuals
+    and supplementary groups of variables. Active groups of variables must be qualitatives. Supplementary groups of variables 
+    can be quantitative or categorical
+ 
+    Parameters
     ----------
-    n_components :
+    n_components : number of dimensions kept in the results (by default 5)
 
-    col_weight_mfa : dict
+    group : a list or a tuple with the number of variables in each group
 
-    parallelize : 
+    name_group : a list or a tuple containing the name of the groups (by default, None and the group are named Gr1, Gr2 and so on)
+
+    group_type : the type of variables in each group; three possibilities : 
+                    - "c" or "s" for quantitative variables (the difference is that for "s" variables are scaled to unit variance)
+                    - "n" for categorical variables
+                    - "m" for mixed variables (quantitative and qualitative variables)
+    
+    num_group_sup : the indexes of the illustrative groups (by default, None and no group re illustrative)
+
+    ind_sup : an integer, a list or a tuple of the supplementary individuals
+
+    ind_weights : an optional individuals weights (by default, a list of 1/(number of individuals) for uniform weights), the weights 
+                    are given only for the active individuals
+    
+    var_weights_mfa : an optional qualitatives variables weights (by defaut, a list of 1/(number of categoricals variables in the group)),
+                            the weights are given only for qualitatives variables
+    
+    Parallelize : bool, default = False. Adding multi-core methods to PandasObject.
 
     Return
     ------
+    summary_quali_ : a summary of the results for the categorical variables
+
+    summary_quanti_ : a summary of the results for the quantitative variables
+
+    separate_analyses_ : the results for the separate analyses
+
+    svd_ : a dictionary of matrices containing all the results of the singular value decomposition
+
+    eig_ : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalues, the percentage of variance and the
+            cumulative percentge of variance
+    
+    group_ : a dictionary of pandas dataframe containing all the results for the groups (Lg and RV coefficients, coordinates, square cosine,
+                contributions, distance to the origin, the correlations between each group and each factor)
+    
+    inertia_ratio_ : inertia ratio
+
+    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine,
+            contributions)
+    
+    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates,
+                square cosine)
+    
+    quali_var_ : a dictionary of pandas dataframe containing all the results for the categorical variables (coordinates of each categories
+                    of each variables, contribution and vtest which is a criterion with a normal distribution)
+    
+    quanti_var_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates,
+                        correlation between variables and axes, cos2)
+    
+    quali_var_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of 
+                        each categories of each variables, cos2 and vtest which is a criterion with a normal distribution)
+    
+    partial_axes_ : a dictionary of pandas dataframe containing all the results for the partial axes (coordinates, correlation between variables
+                        and axes, correlation between partial axes)
+    
+    global_pca_ : the results of the analysis when it is considered as a unique weighted PCA
+
+    model_ : string. The model fitted = 'mfaqual'
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    Escofier B, Pagès J (1998), Analyses Factorielles Simples et Multiples. Dunod
+    Pagès J (2002), Analyse factorielle multiple appliquée aux variables qualitatives et aux données mixtes, Revue de statistique appliquée, tome 50, n°4(2002), p. 5-37
     """
     def __init__(self,
                  n_components=5,
-                 group_sup = None,
+                 group = None,
+                 name_group = None,
+                 group_type = None,
+                 num_group_sup = None,
                  ind_sup = None,
                  ind_weights = None,
                  var_weights_mfa = None,
                  parallelize=False):
         self.n_components = n_components
-        self.group_sup = group_sup
+        self.group = group
+        self.name_group = name_group
+        self.group_type = group_type
+        self.num_group_sup = num_group_sup
         self.ind_sup = ind_sup
         self.ind_weights = ind_weights
         self.var_weights_mfa = var_weights_mfa
         self.parallelize = parallelize
 
     def fit(self,X,y=None):
-        """Fit the model to X
+        """
+        Fit the model to X
+        ------------------
 
         Parameters
         ----------
-        X : pandas DataFrame of float, shape (n_rows, n_columns)
+        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
 
         y : None
             y is ignored
@@ -5055,44 +4167,66 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         self : object
                 Returns the instance itself
         """
-
-
-        # Check if X is an instance of pd.DataFrame class
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
+        # Check if X is an instance of pandas DataFrame
         if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
         # set parallelize
         if self.parallelize:
             n_workers = -1
         else:
             n_workers = 1
-
+        
         ###############################################################################################################"
         # Drop level if ndim greater than 1 and reset columns name
         ###############################################################################################################
-        ######## Check if columns is level 2
-        if X.columns.nlevels != 2:
-            raise ValueError("Error : X must have a MultiIndex columns with 2 levels.")
-            
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+        
+        ###### Transform all categoricals variables to object
+        is_quali = X.select_dtypes(include=["object","category"])
+        for col in is_quali.columns.tolist():
+            X[col] = X[col].astype("object")
+
         ###### Checks if quantitatives variables are in X
         is_quanti = X.select_dtypes(exclude=["object","category"])
         if is_quanti.shape[1]>0:
             for col in is_quanti.columns.tolist():
                 X[col] = X[col].astype("float")
         
+        ########################################################################################################################
+        #   check if two categoricals variables have same categories
+        ######################################################################################################################
+        X = revaluate_cat_variable(X)
+
+        #########################################################################################################################
+        #   Check if group is None
+        #########################################################################################################################
+        if self.group is None:
+            raise ValueError("Error : 'group' must be assigned.")
+        elif not (isinstance(self.group, list) or isinstance(self.group,tuple)):
+            raise ValueError("Error : 'group' must be a list or a tuple with the number of variables in each group")
+        else:
+            nb_elt_group = [int(x) for x in self.group]
+        
+        #######################################################################################################################
         # Remove supplementary group
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             # Set default values to None
             self.quali_var_sup_ = None
             self.quanti_var_sup_ = None
-            if isinstance(self.group_sup,int):
-                group_sup = [int(self.group_sup)]
-            elif ((isinstance(self.group_sup,list) or isinstance(self.group_sup,tuple)) and len(self.group_sup)>=1):
-                group_sup = [int(x) for x in self.group_sup]
+            if isinstance(self.num_group_sup,int):
+                num_group_sup = [int(self.num_group_sup)]
+            elif ((isinstance(self.num_group_sup,list) or isinstance(self.num_group_sup,tuple)) and len(self.num_group_sup)>=1):
+                num_group_sup = [int(x) for x in self.num_group_sup]
 
+        ####################################################################
         # Check if individuls supplementary
         if self.ind_sup is not None:
             if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
@@ -5100,44 +4234,84 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
         
+        #########################################################################################################################
+        #   Check if group type in not None
+        #########################################################################################################################
+        if self.group_type is None:
+            raise ValueError("Error : 'group_type' must be assigned.")
+        
+        #######################################################################################################################
+        if len(self.group) != len(self.group_type):
+            raise TypeError("Error : Not convenient group definition")
+
+        ############################################################################################################################
+        #  Assigned group name
+        ###########################################################################################################################
+        if self.name_group is None:
+            group_name = ["Gr"+str(x+1) for x in range(len(nb_elt_group))]
+        elif not (isinstance(self.name_group,list) or isinstance(self.name_group,tuple)):
+            raise TypeError("Error : 'group_name' must be a list or a tuple of group name")
+        else:
+            group_name = [x for x in self.name_group]
+        
+        ##############################################################################################################################
+        # check if group name is an integer
+        #############################################################################################################################
+        for i in range(len(group_name)):
+            if isinstance(group_name[i],int) or isinstance(group_name[i],float):
+                group_name[i] = "Gr"+str(i+1)
+        
+        ##############################################################################################################################
+        #   Assigned group name to label
+        #############################################################################################################################
+        group_active_dict = {}
+        group_sup_dict = {}
+        debut = 0
+        for i in range(len(nb_elt_group)):
+            X_group = X.iloc[:,(debut):(debut+nb_elt_group[i])]
+            if self.num_group_sup is not None:
+                if i in num_group_sup:
+                    new_elt = {group_name[i]:X_group.columns.tolist()}
+                    group_sup_dict = {**group_sup_dict,**new_elt}
+                else:
+                    group_sup_dict = group_sup_dict
+                    group_active_dict[group_name[i]] = X_group.columns.tolist()
+            else:
+                group_active_dict[group_name[i]] = X_group.columns.tolist()
+            debut = debut + nb_elt_group[i]
+
         ####################################### Save the base in a new variables
         # Store data
         Xtot = X.copy()
 
-        # All group name
-        group_name = X.columns.get_level_values(0).unique().tolist()
+        ######################################## Drop supplementary groups columns #######################################
+        if self.num_group_sup is not None:
+            X = X.drop(columns=list(itertools.chain.from_iterable(group_sup_dict.values())))
 
-        ######################################## Drop supplementary quantitatives columns #######################################
-        if self.group_sup is not None:
-            X = X.drop(columns=[name for name in Xtot.columns.tolist() if  X.columns.get_level_values(0).unique().tolist().index(name[0]) in group_sup])
-        
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
             X_ind_sup = X.iloc[self.ind_sup,:]
             X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
         
-        ####################################### Multiple Factor Analysis for Qualitatives Variables (MFAQUAL) ##################################################
-
+         ############################# Check if an active group has only one columns
+        for grp, cols in group_active_dict.items():
+            if len(cols)==1:
+                raise ValueError(f"Error : {grp} group should have at least two columns")
+        
         # Check if all columns are categoricals
         all_cat = all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist())
         if not all_cat:
             raise TypeError("Error : All actives columns must be categoricals")
-    
-        ################################################ Create group items
-        group = { g: [c for c in X.columns.get_level_values(1)[X.columns.get_level_values(0) == g]] for g in X.columns.get_level_values(0).unique().tolist()}
 
-        ############################# Check if a group has only one columns
-        for grp, col in group.items():
-            if len(col)==1:
-                raise ValueError(f"Error : {grp} group should have at least two columns")
+        ####################################### Multiple Factor Analysis for Qualitatives Variables (MFAQUAL) ##################################################
 
         ########################################## Summary qualitatives variables ###############################################
         # Compute statisiques
         summary_quali = pd.DataFrame()
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             for col in cols:
-                eff = X[grp][col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
+                eff = X[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
                 eff.insert(0,"variable",col)
                 eff.insert(0,"group",group_name.index(grp))
                 summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
@@ -5155,47 +4329,79 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         else:
             ind_weights = [x/np.sum(self.ind_weights) for x in self.ind_weights]
         
+        ############################# Set variables weight MFA #######################################
+        var_weights_mfa = {}
+        if self.var_weights_mfa is None:
+            for grp, cols in group_active_dict.items():
+                var_weights = pd.Series(index=cols,name="weights").astype("float")
+                for col in cols:
+                    var_weights[col] = 1/len(cols)
+                var_weights_mfa[grp] = var_weights
+        elif not isinstance(self.var_weights_mfa,dict):
+            raise ValueError("Error : 'var_weights_mfa' must be a dictionary where keys are groups names and values are pandas series of variables weights in group.")
+        else:
+            for grp, cols in group_active_dict.items():
+                var_weights = pd.Series(index=cols,name="weights").astype("float")
+                for col in cols:
+                    var_weights[col] = self.var_weights_mfa[grp][col]/self.var_weights_mfa[grp].values.sum()
+                var_weights_mfa[grp] = var_weights
+            
         # Run a Factor Analysis in each group
         model = {}
-        for grp, cols in group.items():
-            # Principal Components Anlysis (PCA)
-            fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
-            model[grp] = fa.fit(X[grp])
-            #####
+        for grp, cols in group_active_dict.items():
+            if self.group_type[group_name.index(grp)]=="n":
+                # Multiple Correspondence Analysis (MCA)
+                fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=None,var_weights=var_weights_mfa[grp],benzecri=False,greenacre=False,parallelize=self.parallelize)
+            else:
+                raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+            model[grp] = fa.fit(X[cols])
+
+            ##### Add supplementary individuals
             if self.ind_sup is not None:
                 # Select 
+
                 X_ind_sup = X_ind_sup.astype("float")
-                # Drop level
-                fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=ind_sup,parallelize=self.parallelize)
-                model[grp] = fa.fit(pd.concat((X[grp],X_ind_sup[grp]),axis=0))
+                if self.group_type[group_name.index(grp)]=="c":
+                    fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=ind_sup,var_weights=var_weights_mfa[grp],benzecri=False,greenacre=False,parallelize=self.parallelize)
+                else:
+                    raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                model[grp] = fa.fit(pd.concat((X[cols],X_ind_sup[cols]),axis=0))
         
         ############################################### Separate  Factor Analysis for supplementary groups ######################################""
-        if self.group_sup is not None:
-            X_group_sup = Xtot[[name for name in Xtot.columns.tolist() if Xtot.columns.get_level_values(0).unique().tolist().index(name[0]) in group_sup]]
-            ####### Find columns for supplementary group
-            group_sup_dict = { g: [c for c in X_group_sup.columns.get_level_values(1)[X_group_sup.columns.get_level_values(0) == g]] for g in X_group_sup.columns.get_level_values(0).unique().tolist()}
+        if self.num_group_sup is not None:
+            X_group_sup = Xtot[list(itertools.chain.from_iterable(group_sup_dict.values()))]
             if self.ind_sup is not None:
                 X_group_sup = X_group_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in self.ind_sup])
             
             for grp, cols in group_sup_dict.items():
-                # Instnce the FA model
-                if all(pd.api.types.is_numeric_dtype(X_group_sup[grp][col]) for col in cols):
-                    fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
-                elif all(pd.api.types.is_string_dtype(X_group_sup[grp][col]) for col in cols):
-                    fa = MCA(n_components=None,parallelize=self.parallelize)
+                # Instance the FA model
+                if all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols):
+                    if self.group_type[group_name.index(grp)]=="c":
+                        fa = PCA(standardize=False,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
+                    elif self.group_type[group_name.index(grp)]=="s":
+                        fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                elif all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols):
+                    if self.group_type[group_name.index(grp)]=="n":
+                        fa = MCA(n_components=None,ind_weights=ind_weights,benzecri=False,greenacre=False,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
                 else:
-                    raise TypeError(f"Not all columns in '{grp}' group are of the same type.")
-                # Fit the model
-                model[grp] = fa.fit(X_group_sup[grp])
+                    if self.group_type[group_name.index(grp)]=="m":
+                        fa = FAMD(n_components=None,ind_weights=ind_weights,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+                model[grp] = fa.fit(X_group_sup[cols])
 
         ##################### Compute group disto
-        group_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group.keys())]
-        group_dist2 = pd.Series(group_dist2,index=list(group.keys()),name="dist")
+        group_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_active_dict.keys())]
+        group_dist2 = pd.Series(group_dist2,index=list(group_active_dict.keys()),name="dist2")
 
         ##### Compute group
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             group_sup_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_sup_dict.keys())]
-            group_sup_dist2 = pd.Series(group_sup_dist2,index=list(group_sup_dict.keys()),name="dist")
+            group_sup_dist2 = pd.Series(group_sup_dist2,index=list(group_sup_dict.keys()),name="dist2")
 
         ##### Store separate analysis
         self.separate_analyses_ = model
@@ -5203,22 +4409,24 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         ################################################# Standardize Data ##########################################################
         base        = pd.DataFrame().astype("float")
         var_weights = pd.Series(name="weight").astype("float")
-        for grp,cols in group.items():
+        for grp,cols in group_active_dict.items():
             # Compute dummies table : 0/1
-            dummies = pd.concat((pd.get_dummies(X[grp][col]) for col in cols),axis=1)
+            dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
             # Effectif par categories
             I_k = dummies.sum(axis=0)
             # Apply standardize
             Z = pd.concat((dummies.loc[:,[k]]*(X.shape[0]/I_k[k])-1 for k  in dummies.columns.tolist()),axis=1)
             # Concatenate
             base = pd.concat((base,Z),axis=1)
-            # Weights of categories
-            m_k = (1/(X.shape[0]*len(cols)*model[grp].eig_.iloc[0,0]))*I_k
-            weights = pd.Series(m_k,index=dummies.columns.tolist())
+            ###### Define weights of categories
+            weights = pd.Series(name="weight").astype("float")
+            for col in cols:
+                data = pd.get_dummies(X[col])
+                m_k = (data.mean(axis=0)*var_weights_mfa[grp][col])/model[grp].eig_.iloc[0,0]
+                weights = pd.concat((weights,m_k),axis=0)
             var_weights = pd.concat((var_weights,weights),axis=0)
         
         ####### Update number of components
-        # Number of components
         if self.n_components is None:
             n_components = base.shape[1] - X.shape[1]
         else:
@@ -5231,17 +4439,15 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                       "n_components" : n_components,
                       "ind_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
                       "var_weights" : var_weights,
-                      "group" : group,
+                      "group" : group_active_dict,
                       "group_name" : group_name}
-
+        
         ###########################################################################################################
         # Fit global PCA
         ###########################################################################################################
         # Add original data to full base and global PCA without supplementary element
-        D = base.copy()
-        for grp, cols in group.items():
-            D = pd.concat((D,X[grp]),axis=1)
-        index = [D.columns.tolist().index(x) for x in X.columns.get_level_values(1).tolist()]
+        D = pd.concat((base,X),axis=1)
+        index = [D.columns.tolist().index(x) for x in D.columns.tolist() if x not in base.columns.tolist()]
         global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quali_sup=index,parallelize = self.parallelize).fit(D)
         quali_var = global_pca.quali_sup_.copy()
         quali_var["contrib"] = global_pca.var_["contrib"]
@@ -5250,46 +4456,46 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         if self.ind_sup is not None:
             X_ind_sup = X_ind_sup.astype("float")
             # Create a copy
-            Z_ind_sup = base.copy()
-            for grp, cols in group.items():
-                Z_ind_sup = pd.concat((Z_ind_sup,X_ind_sup[grp]),axis=0)
+            Z_ind_sup = pd.concat((base,X_ind_sup),axis=0)
             # Apply PCA
             global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),ind_sup=ind_sup,parallelize = self.parallelize).fit(Z_ind_sup)
             self.ind_sup_ = global_pca.ind_sup_.copy()
 
+        #######################################""
         ###### Add supplementary group
-        if self.group_sup is not None:
-            for grp,cols in group_sup_dict.items():
-                if all(pd.api.types.is_numeric_dtype(X_group_sup[grp][col]) for col in cols):
-                    ##################################################################################################"
-                    summary_quanti_sup = X_group_sup[grp].describe().T.reset_index().rename(columns={"index" : "variable"})
-                    summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
-                    summary_quanti_sup.insert(0,"group",group_name.index(grp))
-                    self.summary_quanti_ = summary_quanti_sup
-
-                    ####### Standardize the data
-                    d2 = DescrStatsW(X_group_sup[grp],weights=ind_weights,ddof=0)
-                    Z_quanti_sup = (X_group_sup[grp] - d2.mean.reshape(1,-1))/d2.std.reshape(1,-1)
-                    ### Concatenate
-                    Z_quanti_sup = pd.concat((base,Z_quanti_sup),axis=1)
-                    # Find supplementary quantitatives columns index
-                    index = [Z_quanti_sup.columns.tolist().index(x) for x in cols]
-                    global_pca = PCA(standardize = False,n_components=n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quanti_sup=index,parallelize = self.parallelize).fit(Z_quanti_sup)
-                    self.quanti_var_sup_ = global_pca.quanti_sup_.copy()
+        ################################################################################################################################""
+        if self.num_group_sup is not None:
+            X_sup_quanti = X_group_sup.select_dtypes(exclude=["object","category"])
+            X_sup_quali = X_group_sup.select_dtypes(include=["object","category"])
+            if X_sup_quanti.shape[1]>0:
+                ##################################################################################################"
+                summary_quanti_sup = X_sup_quanti.describe().T.reset_index().rename(columns={"index" : "variable"})
+                summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
+                summary_quanti_sup.insert(0,"group",group_name.index(grp))
                 
-                if all(pd.api.types.is_string_dtype(X_group_sup[grp][col]) for col in cols):
-                    # Concatenate
-                    Z_quali_sup = pd.concat((base,X_group_sup[grp]),axis=1)
-                    # Find supplementary quantitatives columns index
-                    index = [Z_quali_sup.columns.tolist().index(x) for x in cols]
-                    global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quali_sup=index,parallelize = self.parallelize).fit(Z_quali_sup)
-                    self.quali_var_sup_ = global_pca.quali_sup_.copy()
-                    # Extract
-                    summary_quali_var_sup = global_pca.summary_quali_.copy()
-                    summary_quali_var_sup.insert(0,"group",group_name.index(grp))
-                    
-                    # Append 
-                    self.summary_quali_ = pd.concat((self.summary_quali_,summary_quali_var_sup),axis=0,ignore_index=True)
+                ####### Standardize the data
+                d2 = DescrStatsW(X_sup_quanti,weights=ind_weights,ddof=0)
+                Z_quanti_sup = (X_sup_quanti - d2.mean.reshape(1,-1))/d2.std.reshape(1,-1)
+                ### Concatenate
+                Z_quanti_sup = pd.concat((base,Z_quanti_sup),axis=1)
+                # Find supplementary quantitatives columns index
+                index = [Z_quanti_sup.columns.tolist().index(x) for x in X_sup_quanti.columns.tolist()]
+                global_pca = PCA(standardize = False,n_components=n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quanti_sup=index,parallelize = self.parallelize).fit(Z_quanti_sup)
+                self.quanti_var_sup_ = global_pca.quanti_sup_.copy()
+            
+            if X_sup_quali.shape[1]>1:
+                # Concatenate
+                Z_quali_sup = pd.concat((base,X_sup_quali),axis=1)
+                # Find supplementary quantitatives columns index
+                index = [Z_quali_sup.columns.tolist().index(x) for x in X_sup_quali.columns.tolist()]
+                global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quali_sup=index,parallelize = self.parallelize).fit(Z_quali_sup)
+                self.quali_var_sup_ = global_pca.quali_sup_.copy()
+                # Extract
+                summary_quali_var_sup = global_pca.summary_quali_.copy()
+                summary_quali_var_sup.insert(0,"group",group_name.index(grp))
+                
+                # Append 
+                self.summary_quanti_ = pd.concat((self.summary_quali_,summary_quali_var_sup),axis=0,ignore_index=True)
 
         ##########################################
         self.global_pca_ = global_pca
@@ -5315,12 +4521,12 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         ###########################################################################################################
         ##### Add individuals partiels coordinaates
         ind_coord_partiel = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             # Compute Dummies table : 0/1
-            dummies = pd.concat((pd.get_dummies(X[grp][col]) for col in cols),axis=1)
+            dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
             # Partial coordinates
             coord_partial = mapply(dummies.dot(quali_var["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),axis=0,progressbar=False,n_workers=n_workers)
-            coord_partial = len(group)*mapply(coord_partial,lambda x : x/self.eig_.iloc[:,0].values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+            coord_partial = len(list(group_active_dict.keys()))*mapply(coord_partial,lambda x : x/self.eig_.iloc[:,0].values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
             coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
             ind_coord_partiel = pd.concat([ind_coord_partiel,coord_partial],axis=1)
         # Assign
@@ -5330,7 +4536,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         #   Partiel coordinates for qualitatives columns
         ###########################################################################################################
         quali_var_coord_partiel = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             ############################################################################################################################
             # Compute categories coordinates
             quali_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp],X[col]),axis=1).groupby(col).mean()for col in X.columns.tolist()),axis=0)
@@ -5344,14 +4550,14 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         ##########################################################################################################
         #   Partiel coordinates for supplementary qualitatives columns
         ###########################################################################################################
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             quali_var_sup_coord_partiel = pd.DataFrame().astype("float")
             for grp_sup, cols_sup in group_sup_dict.items():
-                if all(pd.api.types.is_string_dtype(X_group_sup[grp_sup][col]) for col in cols_sup):
-                    for grp, cols in group.items():
+                if all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols_sup):
+                    for grp, cols in group_active_dict.items():
                         ############################################################################################################################
                         # Compute categories coordinates
-                        quali_sup_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp],X_group_sup[grp_sup][col]),axis=1).groupby(col).mean()for col in cols_sup),axis=0)
+                        quali_sup_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp],X_group_sup[col]),axis=1).groupby(col).mean()for col in cols_sup),axis=0)
                         quali_sup_coord_partiel.columns = pd.MultiIndex.from_tuples([(grp,col) for col in quali_sup_coord_partiel.columns.tolist()])
                         quali_var_sup_coord_partiel = pd.concat([quali_var_sup_coord_partiel,quali_sup_coord_partiel],axis=1)
             self.quali_var_sup_["coord_partiel"] = quali_var_sup_coord_partiel
@@ -5360,7 +4566,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         #    Inertia Ratios
         ################################################################################################
         #### "Between" inertia on axis s
-        between_inertia = len(group)*mapply(ind["coord"],lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        between_inertia = len(list(group_active_dict.keys()))*mapply(ind["coord"],lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
         between_inertia.name = "between_inertia"
 
         ### Total inertial on axis s
@@ -5394,7 +4600,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
 
         ######## Rorder inertia by group
         ind_within_partial_inertia = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             partial_inertia = data[grp]
             partial_inertia.columns = pd.MultiIndex.from_tuples([(grp,col) for col in partial_inertia.columns.tolist()])
             ind_within_partial_inertia = pd.concat([ind_within_partial_inertia,partial_inertia],axis=1)
@@ -5408,14 +4614,14 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         #################################################################################################
         ########################################### Partial axes coord
         partial_axes_coord = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             data = self.separate_analyses_[grp].ind_["coord"]
             correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=None)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
             coord = pd.DataFrame(correl,index=self.ind_["coord"].columns.tolist(),columns=data.columns.tolist())
             coord.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord.columns.tolist()])
             partial_axes_coord = pd.concat([partial_axes_coord,coord],axis=1)
         
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             for grp, cols in group_sup_dict.items():
                 data = self.separate_analyses_[grp].ind_["coord"]
                 correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=None)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
@@ -5430,13 +4636,13 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
 
         #########" Partial correlation between
         all_coord = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             data = self.separate_analyses_[grp].ind_["coord"]
             data.columns = pd.MultiIndex.from_tuples([(grp,col) for col in data.columns.tolist()])
             all_coord = pd.concat([all_coord,data],axis=1)
         
         #### Add 
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             for grp, cols in group_sup_dict.items():
                 data = self.separate_analyses_[grp].ind_["coord"]
                 data.columns = pd.MultiIndex.from_tuples([(grp,col) for col in data.columns.tolist()])
@@ -5446,7 +4652,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         
         #################################### Partial axes contrib ################################################"
         axes_contrib = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
+        for grp, cols in group_active_dict.items():
             nbcol = min(n_components,self.separate_analyses_[grp].call_["n_components"])
             eig = self.separate_analyses_[grp].eig_.iloc[:nbcol,0].values/self.separate_analyses_[grp].eig_.iloc[0,0]
             contrib = mapply(partial_axes_coord[grp].iloc[:,:nbcol],lambda x : (x**2)*eig,axis=1,progressbar=False,n_workers=n_workers)
@@ -5454,27 +4660,27 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
             axes_contrib  = pd.concat([axes_contrib,contrib],axis=1)
         
         partial_axes_contrib = mapply(axes_contrib,lambda x : 100*x/np.sum(x),axis=1,progressbar=False,n_workers=n_workers)
+
         #### Add a null dataframe
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             for grp, cols in group_sup_dict.items():
                 nbcol = min(n_components,self.separate_analyses_[grp].call_["n_components"])
-                contrib = pd.DataFrame(np.zeros(shape=(n_components,nbcol)),index=self.ind_["coord"].columns.tolist(),
-                                       columns=self.separate_analyses_[grp].ind_["coord"].columns.tolist())
-                partial_axes_contrib  = pd.concat([partial_axes_contrib,contrib],axis=1)
+                contrib = pd.DataFrame(np.zeros(shape=(n_components,nbcol)),index=["Dim."+str(x+1) for x in range(n_components)],columns=["Dim."+str(x+1) for x in range(nbcol)])
+                contrib.columns = pd.MultiIndex.from_tuples([(grp,col) for col in contrib.columns.tolist()])
+                partial_axes_contrib = pd.concat([partial_axes_contrib,contrib],axis=1)
             ## Reorder
             partial_axes_contrib = partial_axes_contrib.reindex(columns=partial_axes_contrib.columns.reindex(group_name, level=0)[0])
                 
         ###############
         self.partial_axes_ = {"coord" : partial_axes_coord,"cor" : partial_axes_coord,"contrib" : partial_axes_contrib,"cos2":partial_axes_cos2,"cor_between" : all_coord.corr()}
 
-
         #################################################################################################################
         # Group informations : coord
         #################################################################################################################
         # group coordinates
         group_coord = pd.DataFrame().astype("float")
-        for grp, cols in group.items():
-            data = pd.concat((function_eta2(X=X[grp],lab=col,x=self.ind_["coord"].values,weights=ind_weights,n_workers=n_workers) for col in cols),axis=0)
+        for grp, cols in group_active_dict.items():
+            data = pd.concat((function_eta2(X=X[cols],lab=col,x=self.ind_["coord"].values,weights=ind_weights,n_workers=n_workers) for col in cols),axis=0)
             coord = data.sum(axis=0)/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0])
             coord  = pd.DataFrame(coord.values.reshape(1,-1),index=[grp],columns=self.ind_["coord"].columns.tolist())
             group_coord = pd.concat((group_coord,coord),axis=0)
@@ -5496,40 +4702,43 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         # Measuring how similar groups
         #################################################################################################################
         Lg = pd.DataFrame().astype("float")
-        for grp1,cols1 in group.items():
-            for grp2,cols2 in group.items():
+        for grp1,cols1 in group_active_dict.items():
+            for grp2,cols2 in group_active_dict .items():
                 # Sum of chi-squared
-                sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X[grp1][col1],X[grp2][col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
+                sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X[col1],X[col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
                 # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
                 weighted_chi2 = (1/(X.shape[0]*len(cols1)*len(cols2)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_chi2
                 Lg.loc[grp1,grp2] = weighted_chi2
         
-        if self.group_sup is not None:
+        # Reorder using active group name
+        Lg = Lg.loc[list(group_active_dict.keys()),list(group_active_dict.keys())]
+
+        if self.num_group_sup is not None:
             Lg_sup = pd.DataFrame().astype("float")
             for grp1, cols1 in group_sup_dict.items():
                 for grp2, cols2 in group_sup_dict.items():
-                    if (all(pd.api.types.is_numeric_dtype(X_group_sup[grp1][col]) for col in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[grp2][col]) for col in cols2)):
+                    if (all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols2)):
                         # Sum of square coefficient of correlation
-                        sum_corr2 = np.array([(weightedcorrcoef(x=X_group_sup[grp1][col1],y=X_group_sup[grp2][col2],w=None)[0,1])**2 for col1 in cols1 for col2 in cols2]).sum()
+                        sum_corr2 = np.array([(weightedcorrcoef(x=X_group_sup[col1],y=X_group_sup[col2],w=None)[0,1])**2 for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using the eigenvalues of each group
                         weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_corr2
                         Lg_sup.loc[grp1,grp2] = weighted_corr2
-                    elif ((pd.api.types.is_string_dtype(X_group_sup[grp1][col]) for col in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[grp2][col]) for col in cols2)):
+                    elif ((pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols2)):
                         # Sum of chi-squared
-                        sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X_group_sup[grp1][col1],X_group_sup[grp2][col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
+                        sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X_group_sup[col1],X_group_sup[col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
                         weighted_chi2 = (1/(X.shape[0]*len(cols1)*len(cols2)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_chi2
                         Lg_sup.loc[grp1,grp2] = weighted_chi2
-                    elif (all(pd.api.types.is_string_dtype(X_group_sup[grp1][col]) for col in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[grp2][col]) for col in cols2)):
+                    elif (all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols2)):
                         # Sum of square correlation ratio
-                        sum_eta2 = np.array([eta2(X_group_sup[grp1][col1],X_group_sup[grp2][col2],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
+                        sum_eta2 = np.array([eta2(X_group_sup[col1],X_group_sup[col2],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using eigenvalues and number of categoricals variables
                         weighted_eta2 = (1/(len(cols1)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_eta2
                         Lg_sup.loc[grp1,grp2] = weighted_eta2
                         Lg_sup.loc[grp2,grp1] = weighted_eta2
-                    elif (all(pd.api.types.is_numeric_dtype(X_group_sup[grp1][col]) for col in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[grp2][col]) for col in cols2)):
+                    elif (all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols2)):
                         # Sum of square correlation ratio
-                        sum_eta2 = np.array([eta2(X_group_sup[grp2][col2],X_group_sup[grp1][col1],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
+                        sum_eta2 = np.array([eta2(X_group_sup[col2],X_group_sup[col1],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
                         # Weighted the sum using eigenvalues and number of categoricals variables
                         weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]*len(cols2)))*sum_eta2
                         Lg_sup.loc[grp1,grp2] = weighted_eta2
@@ -5541,9 +4750,9 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
             Lg = Lg.fillna(0.0)
 
             ####
-            for grp1,cols1 in group.items():
+            for grp1,cols1 in group_active_dict.items():
                 for grp2, cols2 in group_sup_dict.items():
-                    X1, X2 = X[grp1], X_group_sup[grp2]
+                    X1, X2 = X[cols1], X_group_sup[cols2]
                     if all(pd.api.types.is_string_dtype(X2[col]) for col in cols2):
                         # Sum of chi-squared
                         sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X1[col1],X2[col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
@@ -5561,6 +4770,10 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
             
             ##################
             Lg = Lg.loc[group_name,group_name]
+        
+        # Add MFA Lg
+        Lg.loc["MFA",:] = Lg.loc[:,"MFA"] = Lg.loc[list(group_active_dict.keys()),:].sum(axis=0)/self.eig_.iloc[0,0]
+        Lg.loc["MFA","MFA"] = Lg.loc[list(group_active_dict.keys()),"MFA"].sum()/self.eig_.iloc[0,0]
 
         ## RV Coefficient
         RV = pd.DataFrame().astype("float")
@@ -5571,27 +4784,19 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         self.group_ = {"coord" : group_coord, "contrib" : group_contrib, "cos2" : group_cos2,"correlation" : group_correlation,"Lg" : Lg, "dist2" : group_dist2,"RV" : RV}
 
         ##### Add supplementary elements
-        if self.group_sup is not None:
+        if self.num_group_sup is not None:
             group_sup_coord = pd.DataFrame().astype("float")
             for grp, cols in group_sup_dict.items():
-                Xg = X_group_sup[grp]
+                Xg = X_group_sup[cols]
                 if all(pd.api.types.is_numeric_dtype(Xg[col]) for col in cols):
-                    ################# Principal Components Analysis (PCA) #######################################"
-                    fa = PCA(standardize=True,parallelize=self.parallelize)
-                    fa.fit(Xg)
                     # Calculate group sup coordinates
-                    correl = np.sum((weightedcorrcoef(fa.call_["Z"],self.ind_["coord"],w=None)[:Xg.shape[1],Xg.shape[1]:]**2),axis=0)/fa.eig_.iloc[0,0]
+                    correl = np.sum((weightedcorrcoef(self.separate_analyses_[grp].call_["Z"],self.ind_["coord"],w=None)[:Xg.shape[1],Xg.shape[1]:]**2),axis=0)/self.separate_analyses_[grp].eig_.iloc[0,0]
                     coord = pd.DataFrame(correl.reshape(1,-1),index=[grp],columns = ["Dim."+str(x+1) for x in range(len(correl))])
                     group_sup_coord = pd.concat((group_sup_coord,coord),axis=0)
-
                 elif all(pd.api.types.is_string_dtype(Xg[col]) for col in cols):
-                    #################### Multiple Correspondence Analysis (MCA) ######################################
-                    fa = MCA(n_components=None,parallelize=self.parallelize)
-                    fa.fit(Xg)
-
                     # Calculate group sup coordinates
                     data = self.quali_var_sup_["eta2"].loc[cols,:]
-                    coord = (data.sum(axis=0)/(Xg.shape[1]*fa.eig_.iloc[0,0]))
+                    coord = (data.sum(axis=0)/(Xg.shape[1]*self.separate_analyses_[grp].eig_.iloc[0,0]))
                     group_sup_coord = pd.concat((group_sup_coord,coord.to_frame(grp).T),axis=0)
                 else:
                     raise TypeError("Error : All columns should have the same type.")
@@ -5609,6 +4814,1184 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
 
     def fit_transform(self,X,y=None):
         """
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
+
+        Parameters:
+        ----------
+        X : pandas/polars DataFrame of shape (n_rows_,n_cols_)
+
+        y : None
+            y is ignored
+        
+        Return
+        ------
+        X_new : pandas dataframe of shape (n_rows, n_components)
+        """
+        self.fit(X)
+        return self.ind_["coord"]
+
+    def transform(self,X,y=None):
+        """
+        Apply the dimensionality reduction on X
+        ----------------------------------------
+
+        X is projected on the first axes previous extracted from a
+        training set
+
+        Parameters
+        ----------
+        X : pandas/polars DataFrame of shape (n_rows_sup, n_cols_)
+            New data, where n_rows_sup is the number of supplementary
+            row points and n_cols_ is the number of columns.
+            X rows correspond to supplementary row points that are projected
+            on the axes.
+        
+        y : None
+            y is ignored
+        
+        Return
+        ------
+        X_new : array of float, shape (n_row_sup, n_components_)
+                X_new : coordinates of the projections of the supplementary
+                row points on the axes.
+        """
+        # Check if X is an instance of pd.DataFrame class
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
+        # Check if X is an instance of pandas DataFrame
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
+        # Check new dataframe are aligned
+        if X.shape[1] != self.call_["X"].shape[1]:
+            raise ValueError("Error : DataFrame aren't aligned")
+        
+        # set parallelize
+        if self.parallelize:
+            n_workers = -1
+        else:
+            n_workers = 1
+        
+        # Revaluate categoricals variables
+        X = revaluate_cat_variable(X=X)
+        
+        #### Apply transition relations
+        row_coord = pd.DataFrame(np.zeros(shape=(X.shape[0],self.quali_var_["coord"].shape[1])),index=X.index.tolist(),columns=self.quali_var_["coord"].columns.tolist())
+        for grp, cols in self.call_["group"].items():
+            # Compute Dummies table : 0/1
+            dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
+            # Apply
+            coord = mapply(dummies.dot(self.quali_var_["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),axis=0,progressbar=False,n_workers=n_workers)
+            row_coord = row_coord + coord
+        # Weighted by the eigenvalue
+        ind_coord = mapply(row_coord ,lambda x : x/self.eig_.iloc[:,0][:self.call_["n_components"]],axis=1,progressbar=False,n_workers=n_workers)
+        return ind_coord
+
+#####################################################################################################################
+#   MULTIPLE FACTOR ANALYSIS FOR MIXED DATA (MIXED GROUP)
+#####################################################################################################################
+class MFAMIX(BaseEstimator,TransformerMixin):
+    """
+    Multiple Factor Analysis for Mixed Data (MFAMIX)
+    ------------------------------------------------
+
+    Description
+    -----------
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
+    Performs Multiple Factor Analysis for Mixed Data in the sense of Pagès J. (2002) with supplementary individuals
+    and supplementary groups of variables. Groups of variables can be quantitative, categorical.
+
+    Parameters
+    ----------
+    n_components : number of dimensions kept in the results (by default 5)
+
+    group : a list or a tuple with the number of variables in each group
+
+    name_group : a list or a tuple containing the name of the groups (by default, None and the group are named Gr1, Gr2 and so on)
+
+    group_type : the type of variables in each group; three possibilities : 
+                    - "c" or "s" for quantitative variables (the difference is that for "s" variables are scaled to unit variance)
+                    - "n" for categorical variables
+                    - "m" for mixed variables (quantitative and qualitative variables)
+    
+    num_group_sup : the indexes of the illustrative groups (by default, None and no group re illustrative)
+
+    ind_sup : an integer, a list or a tuple of the supplementary individuals
+
+    ind_weights : an optional individuals weights (by default, a list of 1/(number of individuals) for uniform weights), the weights 
+                    are given only for the active individuals
+    
+    quanti_var_weights_mfa : an optional quantitatives variables weights (by default, a list of 1 for uniform weights), the weights
+                                are given only for active quantitatives variables
+    
+    quali_var_weights_mfa : an optional qualitatives variables weights (by defaut, a list of 1/(number of categoricals variables in the group)),
+                            the weights are given only for qualitatives variables
+    
+    Parallelize : bool, default = False. Adding multi-core methods to PandasObject.
+
+    Return
+    ------
+    summary_quali_ : a summary of the results for the categorical variables
+
+    summary_quanti_ : a summary of the results for the quantitative variables
+
+    separate_analyses_ : the results for the separate analyses
+
+    svd_ : a dictionary of matrices containing all the results of the singular value decomposition
+
+    eig_ : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalues, the percentage of variance and the
+            cumulative percentge of variance
+    
+    group_ : a dictionary of pandas dataframe containing all the results for the groups (Lg and RV coefficients, coordinates, square cosine,
+                contributions, distance to the origin, the correlations between each group and each factor)
+    
+    inertia_ratio_ : inertia ratio
+
+    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine,
+            contributions)
+    
+    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates,
+                square cosine)
+    
+    quanti_var_ : a dictionary of pandas dataframe containing all the results for the quantitatives variables (coordinates,
+                    correlation between variables and axes, contribution, cos2)
+    
+    quali_var_ : a dictionary of pandas dataframe containing all the results for the categorical variables (coordinates of each categories
+                    of each variables, contribution and vtest which is a criterion with a normal distribution)
+    
+    quanti_var_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates,
+                        correlation between variables and axes, cos2)
+    
+    quali_var_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of 
+                        each categories of each variables, cos2 and vtest which is a criterion with a normal distribution)
+    
+    partial_axes_ : a dictionary of pandas dataframe containing all the results for the partial axes (coordinates, correlation between variables
+                        and axes, correlation between partial axes)
+    
+    global_pca_ : the results of the analysis when it is considered as a unique weighted PCA
+
+    model_ : string. The model fitted = 'mfamix'
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    Escofier B, Pagès J (1998), Analyses Factorielles Simples et Multiples. Dunod
+    """
+    def __init__(self,
+                n_components=5,
+                group = None,
+                name_group = None,
+                group_type = None,
+                num_group_sup = None,
+                ind_sup = None,
+                ind_weights=None,
+                quanti_var_weights_mfa = None,
+                quali_var_weights_mfa = None,
+                parallelize = False):
+        self.n_components = n_components
+        self.group = group
+        self.name_group = name_group
+        self.group_type = group_type
+        self.num_group_sup = num_group_sup
+        self.ind_sup = ind_sup
+        self.ind_weights = ind_weights
+        self.quanti_var_weights_mfa = quanti_var_weights_mfa
+        self.quali_var_weights_mfa = quali_var_weights_mfa
+        self.parallelize = parallelize
+
+    def fit(self,X,y=None):
+        """
+        Fit the model to X
+        ------------------
+
+        Parameters
+        ----------
+        X : pandas DataFrame, shape (n_rows, n_columns)
+
+        y : None
+            y is ignored
+
+        Returns:
+        --------
+        self : object
+                Returns the instance itself
+        """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        # Check if X is an instance of pandas DataFrame
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
+        # set parallelize
+        if self.parallelize:
+            n_workers = -1
+        else:
+            n_workers = 1
+        
+        ###############################################################################################################"
+        # Drop level if ndim greater than 1 and reset columns name
+        ###############################################################################################################
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+        
+        # Drop mixed group
+        if "m" in self.group_type:
+            raise TypeError("Error: 'group_type' should be one of 'c', 's', 'n'")
+        
+        ###### Checks if quantitatives variables are in X
+        is_quanti = X.select_dtypes(exclude=["object","category"])
+        for col in is_quanti.columns.tolist():
+            X[col] = X[col].astype("float")
+
+        ###### Checks if categoricals variables is in X
+        is_quali = X.select_dtypes(include=["object","category"])
+        for col in is_quali.columns.tolist():
+            X[col] = X[col].astype("object")
+        
+        ########################################################################################################################
+        #   check if two categoricals variables have same categories
+        ######################################################################################################################
+        X = revaluate_cat_variable(X)
+        
+        #########################################################################################################################
+        #   Check if group is None
+        #########################################################################################################################
+        if self.group is None:
+            raise ValueError("Error : 'group' must be assigned.")
+        elif not (isinstance(self.group, list) or isinstance(self.group,tuple)):
+            raise ValueError("Error : 'group' must be a list or a tuple with the number of variables in each group")
+        else:
+            nb_elt_group = [int(x) for x in self.group]
+        
+        #######################################################################################################################
+        # Remove supplementary group
+        if self.num_group_sup is not None:
+            # Set default values to None
+            self.quali_var_sup_ = None
+            self.quanti_var_sup_ = None
+            if isinstance(self.num_group_sup,int):
+                num_group_sup = [int(self.num_group_sup)]
+            elif ((isinstance(self.num_group_sup,list) or isinstance(self.num_group_sup,tuple)) and len(self.num_group_sup)>=1):
+                num_group_sup = [int(x) for x in self.num_group_sup]
+
+        ##################################################################
+        # Check if supplementary individuals
+        if self.ind_sup is not None:
+            if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
+                ind_sup = [int(self.ind_sup)]
+            elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
+                ind_sup = [int(x) for x in self.ind_sup]
+        
+        #########################################################################################################################
+        #   Check if group type in not None
+        #########################################################################################################################
+        if self.group_type is None:
+            raise ValueError("Error : 'group_type' must be assigned.")
+        
+        #######################################################################################################################
+        if len(self.group) != len(self.group_type):
+            raise TypeError("Error : Not convenient group definition")
+
+        ############################################################################################################################
+        #  Assigned group name
+        ###########################################################################################################################
+        if self.name_group is None:
+            group_name = ["Gr"+str(x+1) for x in range(len(nb_elt_group))]
+        elif not (isinstance(self.name_group,list) or isinstance(self.name_group,tuple)):
+            raise TypeError("Error : 'group_name' must be a list or a tuple of group name")
+        else:
+            group_name = [x for x in self.name_group]
+        
+        ##############################################################################################################################
+        # check if group name is an integer
+        #############################################################################################################################
+        for i in range(len(group_name)):
+            if isinstance(group_name[i],int) or isinstance(group_name[i],float):
+                group_name[i] = "Gr"+str(i+1)
+        
+        ##############################################################################################################################
+        #   Assigned group name to label
+        #############################################################################################################################
+        group_active_dict = {}
+        group_sup_dict = {}
+        debut = 0
+        for i in range(len(nb_elt_group)):
+            X_group = X.iloc[:,(debut):(debut+nb_elt_group[i])]
+            if self.num_group_sup is not None:
+                if i in num_group_sup:
+                    new_elt = {group_name[i]:X_group.columns.tolist()}
+                    group_sup_dict = {**group_sup_dict,**new_elt}
+                else:
+                    group_sup_dict = group_sup_dict
+                    group_active_dict[group_name[i]] = X_group.columns.tolist()
+            else:
+                group_active_dict[group_name[i]] = X_group.columns.tolist()
+            debut = debut + nb_elt_group[i]
+
+        ####################################### Save the base in a new variables
+        # Store data
+        Xtot = X.copy()
+
+       ######################################## Drop supplementary groups columns #######################################
+        if self.num_group_sup is not None:
+            X = X.drop(columns=list(itertools.chain.from_iterable(group_sup_dict.values())))
+        
+        ######################################## Drop supplementary individuals  ##############################################
+        if self.ind_sup is not None:
+            # Extract supplementary individuals
+            X_ind_sup = X.iloc[self.ind_sup,:]
+            # Drop supplementary individuals
+            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+        
+        ############################# Check if an active group has only one columns
+        for grp, cols in group_active_dict.items():
+            if len(cols)==1:
+                raise ValueError(f"Error : {grp} group should have at least two columns")
+
+        # Extract qualitatives and quantitatives groups
+        all_nums = {}
+        all_cats = {}
+        for grp, cols in group_active_dict.items():
+            all_nums[grp] = all(pd.api.types.is_numeric_dtype(X[col]) for col in cols)
+            all_cats[grp]= all(pd.api.types.is_string_dtype(X[col]) for col in cols)
+        
+        ########################################## Summary qualitatives variables ###############################################
+        # Compute statisiques
+        summary_quanti = pd.DataFrame()
+        summary_quali = pd.DataFrame()
+        for grp, cols in group_active_dict.items():
+            if all_cats[grp]:
+                for col in cols:
+                    eff = X[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
+                    eff.insert(0,"variable",col)
+                    eff.insert(0,"group",group_name.index(grp))
+                    summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
+            elif all_nums[grp]:
+                summary = X[cols].describe().T.reset_index().rename(columns={"index" : "variable"})
+                summary.insert(0,"group",group_name.index(grp))
+                summary_quanti = pd.concat((summary_quanti,summary),axis=0,ignore_index=True)
+            else:
+                # Split X into two group
+                X_quali = X[cols].select_dtypes(include=["object"])
+                X_quanti = X[cols].select_dtypes(exclude=["object"])
+
+                ###### Summary for qualitatives variables
+                for col in X_quali.columns.tolist():
+                    eff = X_quali[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
+                    eff.insert(0,"variable",col)
+                    eff.insert(0,"group",group_name.index(grp))
+                    summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
+                
+                ####### Summary of quantitatives variables
+                summary = X_quanti.describe().T.reset_index().rename(columns={"index" : "variable"})
+                summary.insert(0,"group",group_name.index(grp))
+                summary_quanti = pd.concat((summary_quanti,summary),axis=0,ignore_index=True)
+                
+        # Convert effectif and count to int
+        summary_quali["effectif"] = summary_quali["effectif"].astype("int")
+        summary_quanti["count"] = summary_quanti["count"].astype("int")
+
+        ### Store summary
+        self.summary_quanti_ = summary_quanti
+        self.summary_quali_ = summary_quali
+        
+        ###############################################################################################################################
+        #   Set weights : Individuals weights, quantitatives variables weights, qualitatives variables weights
+        ###############################################################################################################################
+
+        ########### Set indiviuduals weights
+        if self.ind_weights is None:
+            ind_weights = (np.ones(X.shape[0])/X.shape[0]).tolist()
+        elif not isinstance(self.ind_weights,list):
+            raise ValueError("Error : 'ind_weights' must be a list of individuals weights")
+        elif len(self.ind_weights) != X.shape[0]:
+            raise ValueError(f"Error : 'ind_weights' must be a list with length {X.shape[0]}.")
+        else:
+            ind_weights = [x/np.sum(self.ind_weights) for x in self.ind_weights]
+        
+        ########## Set quantitatives variables weights
+        quanti_var_weights_mfa = {}
+        if self.quanti_var_weights_mfa is None:
+            for grp, cols in group_active_dict.items():
+                if all_nums[grp]:
+                    quanti_var_weights_mfa[grp] = np.ones(len(cols)).tolist()
+        elif not isinstance(self.quanti_var_weights_mfa,dict):
+            raise ValueError("Error : 'quanti_var_weights_mfa' must be a dictionary where keys are quantitatives groups names and values are list of quantitatives variables weights in group.")
+        else:
+            for grp, cols in group_active_dict.items():
+                if all_nums[grp]:
+                    quanti_var_weights_mfa[grp] = np.array(self.quanti_var_weights_mfa[grp]).tolist()
+
+        ########### Set qualitatives variables weights
+        quali_var_weights_mfa = {}
+        if self.quali_var_weights_mfa is None:
+            for grp, cols in group_active_dict.items():
+                if all_cats[grp]:
+                    var_weights = pd.Series(index=cols,name="weights").astype("float")
+                    for col in X[cols].columns.tolist():
+                        var_weights[col] = 1/X[cols].shape[1]
+                    quali_var_weights_mfa[grp] = var_weights
+        elif not isinstance(self.quali_var_weights_mfa,dict):
+            raise ValueError("Error : 'var_weights_mfa' must be a dictionary where keys are qualitatives groups names and values are pandas series of qualitatives variables weights in group.")
+        else:
+            for grp, cols in group_active_dict.items():
+                if all_cats[grp]:
+                    var_weights = pd.Series(index=cols,name="weights").astype("float")
+                    for col in X[cols].columns.tolist():
+                        var_weights[col] = self.quali_var_weights_mfa[grp][col]/self.quali_var_weights_mfa[grp].values.sum()
+                    quali_var_weights_mfa[grp] = var_weights
+        
+        ############################ Run a Factor Analysis in each group
+        model = {}
+        for grp, cols in group_active_dict.items():
+            if all_nums[grp]:
+                if self.group_type[group_name.index(grp)]=="c":
+                    # Center Principal Components Anlysis (PCA) 
+                    fa = PCA(standardize=False,n_components=None,ind_weights=ind_weights,var_weights=quanti_var_weights_mfa[grp],ind_sup=None,parallelize=self.parallelize)
+                elif self.group_type[group_name.index(grp)]=="s":
+                    # Scale Principal Components Anlysis (PCA)
+                    fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=quanti_var_weights_mfa[grp],ind_sup=None,parallelize=self.parallelize)
+                else:
+                    raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+            elif all_cats[grp]:
+                if self.group_type[group_name.index(grp)]=="n":
+                    # Multiple Correspondence Analysis (MCA)
+                    fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize,benzecri=False,greenacre=False)
+                else:
+                    raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+            else:
+                if self.group_type[group_name.index(grp)]=="m":
+                    # Factor Analysis of Mixed Data (FAMD)
+                    fa = FAMD(n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
+                else:
+                    raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+            model[grp] = fa.fit(X[cols])
+
+            ########################## Add supp
+            if self.ind_sup is not None:
+                # Select 
+                X_ind_sup = X_ind_sup.astype("float")
+                if all_nums[grp]:
+                    if self.group_type[group_name.index(grp)]=="c":
+                        # Center Principal Components Analysis (PCA)
+                        fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=quanti_var_weights_mfa[grp],ind_sup=ind_sup,parallelize=self.parallelize)
+                    elif self.group_type[group_name.index(grp)]=="s":
+                        # Scale Principal Components Analysis (PCA)
+                        fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=quanti_var_weights_mfa[grp],ind_sup=ind_sup,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                elif all_cats[grp]:
+                    if self.group_type[group_name.index(grp)]=="n":
+                        # Multiple Correspondence Analysis (MCA)
+                        fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=ind_sup,parallelize=self.parallelize,benzecri=False,greenacre=False)
+                    else:
+                        raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                else:
+                    if self.group_type[group_name.index(grp)]=="m":
+                        # Factor Analysis of Mixed Data (FAMD)
+                        fa = FAMD(n_components=None,ind_weights=ind_weights,ind_sup=ind_sup,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+                model[grp] = fa.fit(pd.concat((X[cols],X_ind_sup[cols]),axis=0))
+        
+        ############################################### Separate  Factor Analysis for supplementary groups ######################################""
+        if self.num_group_sup is not None:
+            X_group_sup = Xtot[list(itertools.chain.from_iterable(group_sup_dict.values()))]
+            ####### Find columns for supplementary group
+            if self.ind_sup is not None:
+                X_group_sup = X_group_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in self.ind_sup])
+            
+            # Factor Analysis
+            for grp, cols in group_sup_dict.items():
+                # Instance the FA model
+                if all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols):
+                    if self.group_type[group_name.index(grp)]=="c":
+                        fa = PCA(standardize=False,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
+                    elif self.group_type[group_name.index(grp)]=="s":
+                        fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                elif all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols):
+                    if self.group_type[group_name.index(grp)]=="n":
+                        fa = MCA(n_components=None,parallelize=self.parallelize,benzecri=False,greenacre=False)
+                    else:
+                        raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                else:
+                    if self.group_type[group_name.index(grp)]=="m":
+                        fa = FAMD(n_components=None,ind_weights=ind_weights,parallelize=self.parallelize)
+                    else:
+                        raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+                    
+                # Fit the model
+                model[grp] = fa.fit(X_group_sup[cols])
+        
+        ##################### Compute group disto
+        group_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_active_dict.keys())]
+        group_dist2 = pd.Series(group_dist2,index=list(group_active_dict.keys()),name="dist2")
+
+        ##### Compute group
+        if self.num_group_sup is not None:
+            group_sup_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_sup_dict.keys())]
+            group_sup_dist2 = pd.Series(group_sup_dist2,index=list(group_sup_dict.keys()),name="dist2")
+
+        ##### Store separate analysis
+        self.separate_analyses_ = model
+
+        ################################################# Standardize Data ##########################################################
+        means = {}
+        std = {}
+        base        = pd.DataFrame().astype("float")
+        var_weights = pd.Series(name="weight").astype("float")
+        for grp, cols in group_active_dict.items():
+            if all_nums[grp]:
+                ############################### Compute Mean and Standard deviation #################################
+                d1 = DescrStatsW(X[cols],weights=ind_weights,ddof=0)
+                ########################### Standardize #################################################################################
+                Z = (X[cols] - d1.mean.reshape(1,-1))/d1.std.reshape(1,-1)
+                ###################" Concatenate
+                base = pd.concat([base,Z],axis=1)
+                ##################################"
+                means[grp] = d1.mean.reshape(1,-1)
+                std[grp] = d1.std.reshape(1,-1)
+                ################################ variables weights
+                weights = pd.Series(np.repeat(a=1/model[grp].eig_.iloc[0,0],repeats=len(cols)),index=cols)
+                # Ajout de la pondération de la variable
+                weights = weights*np.array(quanti_var_weights_mfa[grp])
+                var_weights = pd.concat((var_weights,weights),axis=0)
+            elif all_cats[grp]:
+                # Compute dummies table : 0/1
+                dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
+                # Effectif par categories
+                I_k = dummies.sum(axis=0)
+                # Apply standardize
+                Z = pd.concat((dummies.loc[:,[k]]*(X.shape[0]/I_k[k])-1 for k  in dummies.columns.tolist()),axis=1)
+                # Concatenate
+                base = pd.concat([base,Z],axis=1)
+                ###### Define weights of categories
+                weights = pd.Series(name="weight").astype("float")
+                for col in X[cols].columns.tolist():
+                    data = pd.get_dummies(X[cols][col])   
+                    m_k = (data.mean(axis=0)*quali_var_weights_mfa[grp][col])/model[grp].eig_.iloc[0,0]
+                    weights = pd.concat([weights,m_k],axis=0)
+                var_weights = pd.concat([var_weights,weights],axis=0)
+            else:
+                ########################### Split X into two group
+                X_quali = X[cols].select_dtypes(include=["object"])
+                X_quanti = X[cols].select_dtypes(exclude=["object"])
+
+                ##############################################################################################################
+                #   Apply weighted for quantitatives variables
+                #############################################################################################################
+                # Compute Mean and Standard deviation
+                d1 = DescrStatsW(X_quanti,weights=ind_weights,ddof=0)
+                # Standardize
+                Z1 = (X_quanti - d1.mean.reshape(1,-1))/d1.std.reshape(1,-1)
+                # Assign means and stand
+                means[grp] = d1.mean.reshape(1,-1)
+                std[grp] = d1.std.reshape(1,-1)
+                ################################ variables weights
+                weights1 = pd.Series(np.repeat(a=1/model[grp].eig_.iloc[0,0],repeats=len(X_quanti.columns)),index=X_quanti.columns.tolist())
+               
+                ##################################################################################################################3
+                # Apply weighted for categoricals variables
+                ####################################################################################################################
+                # Compute dummies table : 0/1
+                dummies = pd.concat((pd.get_dummies(X_quali[col]) for col in X_quali.columns.tolist()),axis=1)
+                # Effectif par categories
+                I_k = dummies.sum(axis=0)
+                # Apply standardize
+                Z2 = pd.concat((dummies.loc[:,[k]]*(X.shape[0]/I_k[k])-1 for k  in dummies.columns.tolist()),axis=1)
+                # categories weights
+                weights2 = dummies.mean(axis=0)*(1/X_quali.shape[1])
+                ######################################################################################################################
+                # Concatenate base
+                Z = pd.concat((Z1,Z2),axis=1)
+                base = pd.concat([base,Z],axis=1)
+                # Concatenate variables weights
+                weights = pd.concat((weights1,weights2),axis=0)
+                var_weights = pd.concat((var_weights,weights),axis=0)
+
+        ###########################################################################################################
+        # Fit global PCA
+        ###########################################################################################################
+        # Add original data to full base and global PCA without supplementary element
+        D = base.copy()
+        for col in X.columns.tolist():
+            if X[col].dtype in ["object"]:
+                D = pd.concat((D,X[col]),axis=1)
+        index = [D.columns.tolist().index(x) for x in D.columns.tolist() if x not in base.columns.tolist()]
+        global_pca = PCA(standardize = False,n_components = None,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quali_sup=index,parallelize = self.parallelize).fit(D)
+
+        if self.ind_sup is not None:
+            ########
+            D = pd.concat((D,X_ind_sup),axsi=0)
+
+        ############################################# Removing duplicate value in cumulative percent #######################"
+        cumulative = sorted(list(set(global_pca.eig_.iloc[:,3])))
+
+        # Number of components
+        if self.n_components is None:
+            n_components = len(cumulative)
+        else:
+            n_components = min(self.n_components,len(cumulative))
+        
+         # Save
+        self.call_ = {"Xtot" : Xtot,
+                      "X" : X, 
+                      "Z" : base,
+                      "n_components" : n_components,
+                      "ind_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
+                      "var_weights" : var_weights,
+                      "means" : means,
+                      "std" : std,
+                      "group" : group_active_dict,
+                      "group_name" : group_name}
+
+        # Store global PCA
+
+        ## Extract actives qualitatives informations
+        quali_var = {"coord" : global_pca.quali_sup_["coord"].iloc[:,:n_components],"cos2" : global_pca.quali_sup_["cos2"].iloc[:,:n_components],"dist":global_pca.quali_sup_["dist"],
+                     "vtest" : global_pca.quali_sup_["vtest"].iloc[:,:n_components],"eta2" : global_pca.quali_sup_["eta2"].iloc[:,:n_components]}
+        
+
+        #### Add supplementary individuals
+        # if self.ind_sup is not None:
+        #     X_ind_sup = X_ind_sup.astype("float")
+        #     # Create a copy
+        #     Z_ind_sup = base.copy()
+        #     for grp, cols in group.items():
+        #         Z_ind_sup = pd.concat((Z_ind_sup,X_ind_sup[grp]),axis=0)
+        #     # Apply PCA
+        #     global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),ind_sup=ind_sup,parallelize = self.parallelize).fit(Z_ind_sup)
+        #     self.ind_sup_ = global_pca.ind_sup_.copy()
+
+        ###### Add supplementary group
+        if self.num_group_sup is not None:
+            X_sup_quanti = X_group_sup.select_dtypes(exclude=["object","category"])
+            X_sup_quali = X_group_sup.select_dtypes(include=["object","category"])
+            if X_sup_quanti.shape[1]>0:
+                ##################################################################################################"
+                summary_quanti_sup = X_sup_quanti.describe().T.reset_index().rename(columns={"index" : "variable"})
+                summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
+                summary_quanti_sup.insert(0,"group",group_name.index(grp))
+                self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
+
+                ####### Standardize the data
+                d2 = DescrStatsW(X_sup_quanti,weights=ind_weights,ddof=0)
+                Z_quanti_sup = (X_sup_quanti- d2.mean.reshape(1,-1))/d2.std.reshape(1,-1)
+                ### Concatenate
+                Z_quanti_sup = pd.concat((base,Z_quanti_sup),axis=1)
+                # Find supplementary quantitatives columns index
+                index = [Z_quanti_sup.columns.tolist().index(x) for x in X_sup_quanti.columns.tolist()]
+                global_pca = PCA(standardize = False,n_components=n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quanti_sup=index,parallelize = self.parallelize).fit(Z_quanti_sup)
+                self.quanti_var_sup_ = global_pca.quanti_sup_.copy()
+            
+            if X_sup_quali.shape[1]>1:
+                # Concatenate
+                Z_quali_sup = pd.concat((base,X_sup_quali),axis=1)
+                # Find supplementary quantitatives columns index
+                index = [Z_quali_sup.columns.tolist().index(x) for x in X_sup_quali.columns.tolist()]
+                global_pca = PCA(standardize = False,n_components = n_components,ind_weights = ind_weights,var_weights = var_weights.values.tolist(),quali_sup=index,parallelize = self.parallelize).fit(Z_quali_sup)
+                self.quali_var_sup_ = global_pca.quali_sup_.copy()
+                # Extract
+                summary_quali_var_sup = global_pca.summary_quali_.copy()
+                summary_quali_var_sup.insert(0,"group",group_name.index(grp))
+                
+                # Append 
+                self.summary_quali_ = pd.concat((self.summary_quali_,summary_quali_var_sup),axis=0,ignore_index=True)
+
+        ########################################## Store global PCA
+        self.global_pca_ = global_pca
+
+        ##################################################################################################################
+        #   Eigenvalues
+        ##################################################################################################################
+        self.eig_ = global_pca.eig_.iloc[:len(cumulative),:]
+
+        ####### Update SVD
+        self.svd_ = {"vs" : global_pca.svd_["vs"][:len(cumulative)],"U" : global_pca.svd_["U"][:,:n_components],"V" : global_pca.svd_["V"][:,:n_components]}
+
+        ####################################################################################################
+        #    Individuals/Rows informations : coord, cos2, contrib
+        ###################################################################################################
+        ind = {"coord" : global_pca.ind_["coord"].iloc[:,:n_components],"contrib" : global_pca.ind_["contrib"].iloc[:,:n_components],"cos2" : global_pca.ind_["cos2"].iloc[:,:n_components],"infos":global_pca.ind_["infos"]}
+
+        ####################################################################################################
+        #   Quantitatiaves variables informations : coordinates, cos2 and contrib
+        ####################################################################################################
+        # Correlation between variables en axis
+        quanti_var_coord = pd.DataFrame().astype("float")
+        quanti_var_contrib = pd.DataFrame().astype("float")
+        quanti_var_cos2 = pd.DataFrame().astype("float")
+        # qualitative contrib
+        quali_var_contrib =  pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            if all_nums[grp]:
+                ########## Correlation between variables en axis
+                quanti_coord = weightedcorrcoef(x=X[cols],y=ind["coord"],w=None)[:X[cols].shape[1],X[cols].shape[1]:]
+                quanti_coord = pd.DataFrame(quanti_coord,index=cols,columns=["Dim."+str(x+1) for x in range(quanti_coord.shape[1])])
+                quanti_var_coord = pd.concat([quanti_var_coord,quanti_coord],axis=0)
+
+                ########### Contributions
+                quanti_contrib = global_pca.var_["contrib"].loc[cols,:].copy()
+                quanti_var_contrib = pd.concat([quanti_var_contrib,quanti_contrib],axis=0)
+
+                ########### Cos2
+                quanti_cos2 = global_pca.var_["cos2"].loc[cols,:].copy()
+                quanti_var_cos2 = pd.concat([quanti_var_cos2,quanti_cos2],axis=0)
+            elif all_cats[grp]:
+                modalite = []
+                for col in cols:
+                    modalite = modalite + np.unique(X[cols][col]).tolist()
+                ########### contribution
+                quali_contrib = global_pca.var_["contrib"].loc[modalite,:].copy()
+                quali_var_contrib = pd.concat([quali_var_contrib,quali_contrib],axis=0)
+            else:
+                #########################################################################################################
+                X_quanti = X[cols].select_dtypes(exclude=["object"])
+
+                ########## Correlation between variables en axis
+                quanti_coord = weightedcorrcoef(x=X_quanti,y=ind["coord"],w=None)[:X_quanti.shape[1],X_quanti.shape[1]:]
+                quanti_coord = pd.DataFrame(quanti_coord,index=X_quanti.columns.tolist(),columns=["Dim."+str(x+1) for x in range(quanti_coord.shape[1])])
+                quanti_var_coord = pd.concat([quanti_var_coord,quanti_coord],axis=0)
+
+                ########### Contributions
+                quanti_contrib = global_pca.var_["contrib"].loc[X_quanti.columns.tolist(),:].copy()
+                quanti_var_contrib = pd.concat([quanti_var_contrib,quanti_contrib],axis=0)
+
+                ########### Cos2
+                quanti_cos2 = global_pca.var_["cos2"].loc[X_quanti.columns.tolist(),:].copy()
+                quanti_var_cos2 = pd.concat([quanti_var_cos2,quanti_cos2],axis=0)
+
+                #########################################################################################################
+                X_quali = X[cols].select_dtypes(include=["object"])
+
+                modalite = []
+                for col in X_quali.columns.tolist():
+                    modalite = modalite + np.unique(X_quali[col]).tolist()
+                ########### contribution
+                quali_contrib = global_pca.var_["contrib"].loc[modalite,:].copy()
+                quali_var_contrib = pd.concat([quali_var_contrib,quali_contrib],axis=0)
+
+        
+        ### Store all informations
+        self.quanti_var_ = {"coord" : quanti_var_coord,"cor" : quanti_var_coord,"contrib":quanti_var_contrib,"cos2":quanti_var_cos2}
+
+        ##### Set qualitatives contributions
+        quali_var["contrib"] = quali_var_contrib
+
+        ########################################################################################################### 
+        # Partiel coordinates for individuals
+        ###########################################################################################################
+        ##### Add individuals partiels coordinaates
+        ind_coord_partiel = pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            if all_nums[grp]:
+                # Standardisze data
+                Z = (X[cols] - means[grp])/std[grp]
+                # Partial coordinates
+                coord_partial = mapply(Z.dot(quanti_var_coord.loc[cols,:]),lambda x : x/self.separate_analyses_[grp].eig_.iloc[0,0],axis=0,progressbar=False,n_workers=n_workers)
+                coord_partial = len(nb_elt_group)*mapply(coord_partial,lambda x : x/np.sqrt(self.eig_.iloc[:,0].values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
+                coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
+                ind_coord_partiel = pd.concat([ind_coord_partiel,coord_partial],axis=1)
+            elif all_cats[grp]:
+                # Compute Dummies table : 0/1
+                dummies = pd.concat((pd.get_dummies(X[cols][col]) for col in cols),axis=1)
+                # Partial coordinates
+                coord_partial = mapply(dummies.dot(quali_var["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),axis=0,progressbar=False,n_workers=n_workers)
+                coord_partial = len(nb_elt_group)*mapply(coord_partial,lambda x : x/self.eig_.iloc[:,0].values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+                coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
+                ind_coord_partiel = pd.concat([ind_coord_partiel,coord_partial],axis=1)
+            else:
+                #########################################################################################################
+                # Apply weights for quantitatives variables
+                ##########################################################################################################
+                X_quanti = X[cols].select_dtypes(exclude=["object"])
+                # Standardisze data
+                Z = (X_quanti - means[grp])/std[grp]
+                # Partial coordinates
+                coord_partial1 = mapply(Z.dot(quanti_var_coord.loc[X_quanti.columns.tolist(),:]),lambda x : x/self.separate_analyses_[grp].eig_.iloc[0,0],
+                                        axis=0,progressbar=False,n_workers=n_workers)
+
+                #########################################################################################################
+                #   Apply weights for categoricals variables
+                #########################################################################################################
+                X_quali = X[cols].select_dtypes(include=["object"])
+                # Compute Dummies table : 0/1
+                dummies = pd.concat((pd.get_dummies(X_quali[col]) for col in X_quali.columns.tolist()),axis=1)
+                coord_partial2 = mapply(dummies.dot(quali_var["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(X_quali.shape[1]*self.separate_analyses_[grp].eig_.iloc[0,0]),
+                                       axis=0,progressbar=False,n_workers=n_workers)
+                # Add the two
+                coord_partial = coord_partial1 + coord_partial2
+                coord_partial = len(nb_elt_group)*mapply(coord_partial,lambda x : x/self.eig_.iloc[:,0].values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+                coord_partial.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord_partial.columns.tolist()])
+                ind_coord_partiel = pd.concat([ind_coord_partiel,coord_partial],axis=1)
+
+        # Assign
+        ind["coord_partiel"] = ind_coord_partiel
+
+        ###########################################################################################################
+        #   Partiel coordinates for qualitatives columns
+        ###########################################################################################################
+        quali_var_coord_partiel = pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            quali_grp_coord_partiel = pd.DataFrame()
+            if all_cats[grp]:
+                ############################################################################################################################
+                # Compute categories coordinates
+                for grp2, cols2 in group_active_dict.items():
+                    quali_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp2],X[col]),axis=1).groupby(col).mean()for col in cols),axis=0)
+                    quali_coord_partiel.columns = pd.MultiIndex.from_tuples([(grp2,col) for col in quali_coord_partiel.columns.tolist()])
+                    # cbind.dataframe
+                    quali_grp_coord_partiel = pd.concat([quali_grp_coord_partiel,quali_coord_partiel],axis=1)
+            elif any(pd.api.types.is_string_dtype(X[col]) for col in cols):
+                X_quali = X[cols].select_dtypes(include=["object"])
+                ###########################################################################################################################
+                # Compute categories coordinates
+                for grp2, cols2 in group_active_dict.items():
+                    quali_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp2],X_quali[col]),axis=1).groupby(col).mean()for col in X_quali.columns.tolist()),axis=0)
+                    quali_coord_partiel.columns = pd.MultiIndex.from_tuples([(grp2,col) for col in quali_coord_partiel.columns.tolist()])
+                    # cbind.dataframe
+                    quali_grp_coord_partiel = pd.concat([quali_grp_coord_partiel,quali_coord_partiel],axis=1)
+            # rbind.dataframe
+            quali_var_coord_partiel = pd.concat((quali_var_coord_partiel,quali_grp_coord_partiel),axis=0)
+                    
+        quali_var["coord_partiel"] = quali_var_coord_partiel
+        # Store informations
+        self.quali_var_  = quali_var
+
+        ##########################################################################################################
+        #   Partiel coordinates for supplementary qualitatives columns
+        ###########################################################################################################
+        if self.num_group_sup is not None:
+            quali_var_sup_coord_partiel = pd.DataFrame().astype("float")
+            for grp_sup, cols_sup in group_sup_dict.items():
+                if all(pd.api.types.is_string_dtype(X_group_sup[cols_sup][col]) for col in cols_sup):
+                    for grp, cols in group_active_dict.items():
+                        ############################################################################################################################
+                        # Compute categories coordinates
+                        quali_sup_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp],X_group_sup[col]),axis=1).groupby(col).mean()for col in cols_sup),axis=0)
+                        quali_sup_coord_partiel.columns = pd.MultiIndex.from_tuples([(grp,col) for col in quali_sup_coord_partiel.columns.tolist()])
+                        quali_var_sup_coord_partiel = pd.concat([quali_var_sup_coord_partiel,quali_sup_coord_partiel],axis=1)
+                elif any(pd.api.types.is_string_dtype(X_group_sup[cols_sup][col]) for col in cols_sup):
+                    for grp, cols in group_active_dict.items():
+                        ############################################################################################################################
+                        X_group_sup_quali = X_group_sup[cols_sup].select_dtypes(include=['object'])
+                        # Compute categories coordinates
+                        quali_sup_coord_partiel = pd.concat((pd.concat((ind_coord_partiel[grp],X_group_sup_quali[col]),axis=1).groupby(col).mean()for col in X_group_sup_quali.columns.tolist()),axis=0)
+                        quali_sup_coord_partiel.columns = pd.MultiIndex.from_tuples([(grp,col) for col in quali_sup_coord_partiel.columns.tolist()])
+                        quali_var_sup_coord_partiel = pd.concat([quali_var_sup_coord_partiel,quali_sup_coord_partiel],axis=1)
+            self.quali_var_sup_["coord_partiel"] = quali_var_sup_coord_partiel
+        
+        ################################################################################################"
+        #    Inertia Ratios
+        ################################################################################################
+        #### "Between" inertia on axis s
+        between_inertia = len(nb_elt_group)*mapply(ind["coord"],lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        between_inertia.name = "between_inertia"
+
+        ### Total inertial on axis s
+        total_inertia = pd.Series(name="total_inertia").astype("float")
+        for dim in ind["coord"].columns.tolist():
+            value = mapply(ind_coord_partiel.loc[:, (slice(None),dim)],lambda x : x**2,axis=0,progressbar=False,n_workers=n_workers).sum().sum()
+            inertia = pd.Series([value],index=[dim],name="total_inertia")
+            total_inertia = pd.concat((total_inertia,inertia),axis=0)
+
+        ### Inertia ratio
+        inertia_ratio = between_inertia/total_inertia
+        inertia_ratio.name = "inertia_ratio"
+        self.inertia_ratio_ = inertia_ratio
+
+        ##############################################################################################################
+        #   Individuals Within inertia
+        ##############################################################################################################
+        ############################### Within inertia ################################################################
+        ind_within_inertia = pd.DataFrame(index=X.index.tolist(),columns=ind["coord"].columns.tolist()).astype("float")
+        for dim in ind["coord"].columns.tolist():
+            data = mapply(ind_coord_partiel.loc[:, (slice(None),dim)],lambda x : (x - ind["coord"][dim].values)**2,axis=0,progressbar=False,n_workers=n_workers).sum(axis=1)
+            ind_within_inertia.loc[:,dim] = mapply(data.to_frame(dim),lambda x : 100*x/np.sum(x),axis=0,progressbar=False,n_workers=n_workers)
+        ind["within_inertia"] = ind_within_inertia
+
+        ######################################## Within partial inertia ################################################
+        data = pd.DataFrame().astype("float")
+        for dim in ind["coord"].columns.tolist():
+            data1 = mapply(ind_coord_partiel.loc[:, (slice(None),dim)],lambda x : (x - ind["coord"][dim].values)**2,axis=0,progressbar=False,n_workers=n_workers)
+            data1 = 100*data1/data1.sum().sum()
+            data = pd.concat([data,data1],axis=1)
+
+        ######## Rorder inertia by group
+        ind_within_partial_inertia = pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            partial_inertia = data[grp]
+            partial_inertia.columns = pd.MultiIndex.from_tuples([(grp,col) for col in partial_inertia.columns.tolist()])
+            ind_within_partial_inertia = pd.concat([ind_within_partial_inertia,partial_inertia],axis=1)
+        ind["within_partial_inertia"] = ind_within_partial_inertia
+
+        #################"" Store 
+        self.ind_ = ind
+
+        ##################################################################################################
+        #   Partial axes informations
+        #################################################################################################
+        ########################################### Partial axes coord
+        partial_axes_coord = pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            data = self.separate_analyses_[grp].ind_["coord"]
+            correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=None)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
+            coord = pd.DataFrame(correl,index=self.ind_["coord"].columns.tolist(),columns=data.columns.tolist())
+            coord.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord.columns.tolist()])
+            partial_axes_coord = pd.concat([partial_axes_coord,coord],axis=1)
+        
+        if self.num_group_sup is not None:
+            for grp, cols in group_sup_dict.items():
+                data = self.separate_analyses_[grp].ind_["coord"]
+                correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=None)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
+                coord = pd.DataFrame(correl,index=self.ind_["coord"].columns.tolist(),columns=data.columns.tolist())
+                coord.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord.columns.tolist()])
+                partial_axes_coord = pd.concat([partial_axes_coord,coord],axis=1)
+            ######### Reorder using group position
+            partial_axes_coord = partial_axes_coord.reindex(columns=partial_axes_coord.columns.reindex(group_name, level=0)[0])
+
+        ############################################## Partial axes cos2
+        partial_axes_cos2 = mapply(partial_axes_coord,lambda x : x**2, axis=0,progressbar=False,n_workers=n_workers)
+
+        #########" Partial individuals coordinates
+        all_coord = pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            data = self.separate_analyses_[grp].ind_["coord"]
+            data.columns = pd.MultiIndex.from_tuples([(grp,col) for col in data.columns.tolist()])
+            all_coord = pd.concat([all_coord,data],axis=1)
+        
+        
+        #### Add 
+        if self.num_group_sup is not None:
+            for grp, cols in group_sup_dict.items():
+                data = self.separate_analyses_[grp].ind_["coord"]
+                data.columns = pd.MultiIndex.from_tuples([(grp,col) for col in data.columns.tolist()])
+                all_coord = pd.concat([all_coord,data],axis=1)
+            # Reorder
+            all_coord = all_coord.reindex(columns=all_coord.columns.reindex(group_name, level=0)[0])
+        
+        #################################### Partial axes contrib ################################################"
+        axes_contrib = pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            nbcol = min(n_components,self.separate_analyses_[grp].call_["n_components"])
+            eig = self.separate_analyses_[grp].eig_.iloc[:nbcol,0].values/self.separate_analyses_[grp].eig_.iloc[0,0]
+            contrib = mapply(partial_axes_coord[grp].iloc[:,:nbcol],lambda x : (x**2)*eig,axis=1,progressbar=False,n_workers=n_workers)
+            contrib.columns = pd.MultiIndex.from_tuples([(grp,col) for col in contrib.columns.tolist()])
+            axes_contrib  = pd.concat([axes_contrib,contrib],axis=1)
+        
+        partial_axes_contrib = mapply(axes_contrib,lambda x : 100*x/np.sum(x),axis=1,progressbar=False,n_workers=n_workers)
+    
+        #### Add a null dataframe
+        if self.num_group_sup is not None:
+            for grp, cols in group_sup_dict.items():
+                nbcol = min(n_components,self.separate_analyses_[grp].call_["n_components"])
+                contrib = pd.DataFrame(np.zeros(shape=(n_components,nbcol)),index=["Dim."+str(x+1) for x in range(n_components)],columns=["Dim."+str(x+1) for x in range(nbcol)])
+                contrib.columns = pd.MultiIndex.from_tuples([(grp,col) for col in contrib.columns.tolist()])
+                partial_axes_contrib = pd.concat([partial_axes_contrib,contrib],axis=1)
+            ## Reorder
+            partial_axes_contrib = partial_axes_contrib.reindex(columns=partial_axes_contrib.columns.reindex(group_name, level=0)[0])
+                
+        ###############
+        self.partial_axes_ = {"coord" : partial_axes_coord,"cor" : partial_axes_coord,"contrib" : partial_axes_contrib,"cos2":partial_axes_cos2,"cor_between" : all_coord.corr()}
+
+        #################################################################################################################
+        # Group informations : coord
+        #################################################################################################################
+        # group coordinates
+        group_coord = pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            if all_cats[grp]:
+                data = pd.concat((function_eta2(X=X[cols],lab=col,x=self.ind_["coord"].values,weights=ind_weights,n_workers=n_workers) for col in cols),axis=0)
+                coord = data.sum(axis=0)/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0])
+                coord  = pd.DataFrame(coord.values.reshape(1,-1),index=[grp],columns=self.ind_["coord"].columns.tolist())
+                group_coord = pd.concat((group_coord,coord),axis=0)
+            elif all_nums[grp]:
+                data = self.separate_analyses_[grp].call_["Z"]
+                coord =  (weightedcorrcoef(data,self.ind_["coord"],w=None)[:data.shape[1],data.shape[1]:]**2).sum(axis=0)/self.separate_analyses_[grp].eig_.iloc[0,0]
+                coord  = pd.DataFrame(coord.reshape(1,-1),index=[grp],columns=self.ind_["coord"].columns.tolist())
+                group_coord = pd.concat((group_coord,coord),axis=0)
+        
+        ########################################### Group contributions ############################################
+        group_contrib = mapply(group_coord,lambda x : 100*x/np.sum(x),axis=0,progressbar=False,n_workers=n_workers)
+
+        ######################################## group cos2 ################################################################
+        group_cos2 = pd.concat((((group_coord.loc[grp,:]**2)/group_dist2.loc[grp]).to_frame(grp).T for grp in group_coord.index.tolist()),axis=0)
+
+        ########################################### Group correlations ###############################################
+        group_correlation = pd.DataFrame().astype("float")
+        for grp in group_coord.index:
+            correl = np.diag(weightedcorrcoef(x=ind_coord_partiel[grp],y=self.ind_["coord"],w=None)[:ind_coord_partiel[grp].shape[1],ind_coord_partiel[grp].shape[1]:])
+            correl  = pd.DataFrame(correl.reshape(1,-1),index=[grp],columns=self.ind_["coord"].columns.tolist())
+            group_correlation = pd.concat((group_correlation,correl),axis=0)
+        
+        #################################################################################################################
+        # Measuring how similar groups
+        #################################################################################################################
+        Lg = pd.DataFrame().astype("float")
+        for grp1,cols1 in group_active_dict.items():
+            for grp2,cols2 in group_active_dict.items():
+                X1, X2 = X[cols1], X[cols2]
+                if (all_nums[grp1] and all_nums[grp2]):
+                    # Sum of square coefficient of correlation
+                    sum_corr2 = np.array([(weightedcorrcoef(x=X1[col1],y=X2[col2],w=ind_weights)[0,1])**2 for col1 in cols1 for col2 in cols2]).sum()
+                    # Weighted the sum using the eigenvalues of each group
+                    weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_corr2
+                    Lg.loc[grp1,grp2] = weighted_corr2
+                elif (all_cats[grp1] and all_cats[grp2]):
+                    # Sum of chi-squared
+                    sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X1[col1],X2[col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
+                    # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
+                    weighted_chi2 = (1/(X.shape[0]*len(cols1)*len(cols2)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_chi2
+                    Lg.loc[grp1,grp2] = weighted_chi2
+                elif (all_nums[grp1] and all_cats[grp2]):
+                    # Sum of square correlation ratio
+                    sum_eta2 = np.array([eta2(X2[col2],X1[col1],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
+                    # Weighted the sum using eigenvalues and number of categoricals variables
+                    weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]*len(cols2)))*sum_eta2
+                    Lg.loc[grp1,grp2] = weighted_eta2
+                    Lg.loc[grp2,grp1] = weighted_eta2
+                elif (all_cats[grp1] and all_nums[grp2]):
+                    # Sum of square correlation ratio
+                    sum_eta2 = np.array([eta2(X1[col1],X2[col2],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
+                    # Weighted the sum using eigenvalues and number of categoricals variables
+                    weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*len(cols1)*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_eta2
+                    Lg.loc[grp1,grp2] = weighted_eta2
+                    Lg.loc[grp2,grp1] = weighted_eta2
+        
+        # Reorder using active group name
+        Lg = Lg.loc[list(group_active_dict.keys()),list(group_active_dict.keys())]
+
+        # Add supplementary Lg elements
+        if self.num_group_sup is not None:
+            Lg_sup = pd.DataFrame().astype("float")
+            for grp1, cols1 in group_sup_dict.items():
+                for grp2, cols2 in group_sup_dict.items():
+                    if (all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols2)):
+                        # Sum of square coefficient of correlation
+                        sum_corr2 = np.array([(weightedcorrcoef(x=X_group_sup[col1],y=X_group_sup[col2],w=ind_weights)[0,1])**2 for col1 in cols1 for col2 in cols2]).sum()
+                        # Weighted the sum using the eigenvalues of each group
+                        weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_corr2
+                        Lg_sup.loc[grp1,grp2] = weighted_corr2
+                    elif ((pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols2)):
+                        # Sum of chi-squared
+                        sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X_group_sup[col1],X_group_sup[col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
+                        # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
+                        weighted_chi2 = (1/(X.shape[0]*len(cols1)*len(cols2)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_chi2
+                        Lg_sup.loc[grp1,grp2] = weighted_chi2
+                    elif (all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols2)):
+                        # Sum of square correlation ratio
+                        sum_eta2 = np.array([eta2(X_group_sup[col1],X_group_sup[col2],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
+                        # Weighted the sum using eigenvalues and number of categoricals variables
+                        weighted_eta2 = (1/(len(cols1)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_eta2
+                        Lg_sup.loc[grp1,grp2] = weighted_eta2
+                        Lg_sup.loc[grp2,grp1] = weighted_eta2
+                    elif (all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols1) and all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols2)):
+                        # Sum of square correlation ratio
+                        sum_eta2 = np.array([eta2(X_group_sup[col2],X_group_sup[col1],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
+                        # Weighted the sum using eigenvalues and number of categoricals variables
+                        weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]*len(cols2)))*sum_eta2
+                        Lg_sup.loc[grp1,grp2] = weighted_eta2
+                        Lg_sup.loc[grp2,grp1] = weighted_eta2
+            
+            ####### Concatenate
+            Lg = pd.concat((Lg,Lg_sup),axis=0)
+            # Fill NA with 0.0
+            Lg = Lg.fillna(0.0)
+            
+            ####
+            for grp1,cols1 in group_active_dict.items():
+                for grp2, cols2 in group_sup_dict.items():
+                    X1, X2 = X[cols1], X_group_sup[cols2]
+                    if all_nums[grp1] and all(pd.api.types.is_numeric_dtype(X2[col]) for col in cols2):
+                        # Sum of square coefficient of correlation
+                        sum_corr2 = np.array([(weightedcorrcoef(x=X1[col1],y=X2[col2],w=ind_weights)[0,1])**2 for col1 in cols1 for col2 in cols2]).sum()
+                        # Weighted the sum using the eigenvalues of each group
+                        weighted_corr2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_corr2
+                        Lg.loc[grp1,grp2] = weighted_corr2
+                        Lg.loc[grp2,grp1] = weighted_corr2
+                    elif all_nums[grp1] and all(pd.api.types.is_string_dtype(X2[col]) for col in cols2):
+                        # Sum of square correlation ratio
+                        sum_eta2 = np.array([eta2(X2[col2],X1[col1],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
+                        # Weighted the sum using eigenvalues and number of categoricals variables
+                        weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0][0]*self.separate_analyses_[grp2].eig_.iloc[0,0]*len(cols2)))*sum_eta2
+                        Lg.loc[grp1,grp2] = weighted_eta2
+                        Lg.loc[grp2,grp1] = weighted_eta2
+                    elif all_cats[grp1] and all(pd.api.types.is_numeric_dtype(X2[col]) for col in cols2):
+                        # Sum of square correlation ratio
+                        sum_eta2 = np.array([eta2(X1[col1],X2[col2],digits=10)["correlation ratio"] for col1 in cols1 for col2 in cols2]).sum()
+                        # Weighted the sum using eigenvalues and number of categoricals variables
+                        weighted_eta2 = (1/(self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]*len(cols1)))*sum_eta2
+                        Lg.loc[grp1,grp2] = weighted_eta2
+                        Lg.loc[grp2,grp1] = weighted_eta2
+                    elif all_cats[grp1] and all(pd.api.types.is_string_dtype(X2[col]) for col in cols2):
+                        # Sum of chi-squared
+                        sum_chi2 = np.array([st.chi2_contingency(pd.crosstab(X1[col1],X2[col2]),correction=False).statistic for col1 in cols1 for col2 in cols2]).sum()
+                        # Weighted the sum using eigenvalues, number of categoricals variables and number of rows
+                        weighted_chi2 = (1/(X.shape[0]*len(cols1)*len(cols2)*self.separate_analyses_[grp1].eig_.iloc[0,0]*self.separate_analyses_[grp2].eig_.iloc[0,0]))*sum_chi2
+                        Lg.loc[grp1,grp2] = weighted_chi2
+                        Lg.loc[grp2,grp1] = weighted_chi2
+            
+            ##################
+            Lg = Lg.loc[group_name,group_name]
+
+        # Add MFA Lg
+        Lg.loc["MFA",:] = Lg.loc[:,"MFA"] = Lg.loc[list(group_active_dict.keys()),:].sum(axis=0)/self.eig_.iloc[0,0]
+        Lg.loc["MFA","MFA"] = Lg.loc[list(group_active_dict.keys()),"MFA"].sum()/self.eig_.iloc[0,0]
+
+        ## RV Coefficient
+        RV = pd.DataFrame().astype("float")
+        for grp1 in Lg.index:
+            for grp2 in Lg.columns:
+                RV.loc[grp1,grp2] = Lg.loc[grp1,grp2]/(np.sqrt(Lg.loc[grp1,grp1])*np.sqrt(Lg.loc[grp2,grp2]))
+        
+        self.group_ = {"coord" : group_coord, "contrib" : group_contrib, "cos2" : group_cos2,"correlation" : group_correlation,"Lg" : Lg, "dist2" : group_dist2,"RV" : RV}
+
+        ##### Add supplementary elements
+        if self.num_group_sup is not None:
+            group_sup_coord = pd.DataFrame().astype("float")
+            for grp, cols in group_sup_dict.items():
+                Xg = X_group_sup[cols]
+                if all(pd.api.types.is_numeric_dtype(Xg[col]) for col in cols):
+                    # Calculate group sup coordinates
+                    correl = np.sum((weightedcorrcoef(self.separate_analyses_[grp].call_["Z"],self.ind_["coord"],w=None)[:Xg.shape[1],Xg.shape[1]:]**2),axis=0)/self.separate_analyses_[grp].eig_.iloc[0,0]
+                    coord = pd.DataFrame(correl.reshape(1,-1),index=[grp],columns = ["Dim."+str(x+1) for x in range(len(correl))])
+                    group_sup_coord = pd.concat((group_sup_coord,coord),axis=0)
+                elif all(pd.api.types.is_string_dtype(Xg[col]) for col in cols):
+                    # Calculate group sup coordinates
+                    data = self.quali_var_sup_["eta2"].loc[cols,:]
+                    coord = (data.sum(axis=0)/(Xg.shape[1]*self.separate_analyses_[grp].eig_.iloc[0,0]))
+                    group_sup_coord = pd.concat((group_sup_coord,coord.to_frame(grp).T),axis=0)
+                else:
+                    raise TypeError("Error : All columns should have the same type.")
+            
+            #################################### group sup cos2 ###########################################################
+            group_sup_cos2 = pd.concat((((group_sup_coord.loc[grp,:]**2)/group_sup_dist2.loc[grp]).to_frame(grp).T for grp in group_sup_coord.index.tolist()),axis=0)
+            
+            # Append two dictionnaries
+            self.group_ = {**self.group_,**{"coord_sup" : group_sup_coord, "dist2_sup" : group_sup_dist2,"cos2_sup" : group_sup_cos2}}
+
+        # Name of model
+        self.model_ = "mfamix"
+
+        return self
+    
+    def fit_transform(self,X,y=None):
+        """
         Fit to data, then transform it.
 
         Parameters:
@@ -5621,7 +6004,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.ind_["coord"]
-
+    
     def transform(self,X,y=None):
         """
         Apply the dimensionality reduction on X
@@ -5647,61 +6030,50 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """
-
-        # Check if X is a DataFrame
+        # Check if X is an instance of pd.DataFrame class
         if not isinstance(X,pd.DataFrame):
-            raise ValueError("X must be a dataframe.")
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-        ######## Check if columns is level 2
-        if X.columns.nlevels != 2:
-            raise ValueError("Error : X must have a MultiIndex columns with 2 levels.")
-        
         # set parallelize
         if self.parallelize:
             n_workers = -1
         else:
             n_workers = 1
         
-        #### Apply transition relations
-        row_coord = pd.DataFrame(np.zeros(shape=(X.shape[0],self.quali_var_["coord"].shape[1])),index=X.index.tolist(),columns=self.quali_var_["coord"].columns.tolist())
-        for grp, cols in self.call_["group"].items():
-            # Compute Dummies table : 0/1
-            dummies = pd.concat((pd.get_dummies(X[grp][col]) for col in cols),axis=1)
-            # Apply
-            coord = mapply(dummies.dot(self.quali_var_["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),axis=0,progressbar=False,n_workers=n_workers)
-            row_coord = row_coord + coord
-        # Weighted by the eigenvalue
-        ind_coord = mapply(row_coord ,lambda x : x/self.eig_.iloc[:,0][:self.call_["n_components"]],axis=1,progressbar=False,n_workers=n_workers)
-        return ind_coord
-
-
-#####################################################################################################################
-#   MULTIPLE FACTOR ANALYSIS FOR MIXED DATA (MIXED GROUP)
-#####################################################################################################################
-class MFAMIX(BaseEstimator,TransformerMixin):
-    """
-    Multiple Factor Analysis for Mixed Data (MFAMIX)
-    ------------------------------------------------
-
-
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-
-
-
-    def __ini__(self,
-                n_components=5,
-                ind_weights=None):
+        ############### Apply revaluate function
+        X = revaluate_cat_variable(X=X)
         
-        self.n_components = n_components
-        self.ind_weights = ind_weights
-
-
-    def fit(self,X,y=None):
-        pass
+        # Check New Data has same group
+        row_coord = pd.DataFrame(np.zeros(shape=(X.shape[0],self.call_["n_components"])),index=X.index.tolist(),
+                                 columns=["Dim."+str(x+1) for x in range(self.call_["n_components"])])
+        for grp, cols in self.call_["group"].items():
+            num_row_partial = pd.DataFrame(np.zeros(shape=(X.shape[0],self.call_["n_components"])),index=X.index.tolist(),
+                                           columns=["Dim."+str(x+1) for x in range(self.call_["n_components"])])
+            cat_row_partial = pd.DataFrame(np.zeros(shape=(X.shape[0],self.call_["n_components"])),index=X.index.tolist(),
+                                           columns=["Dim."+str(x+1) for x in range(self.call_["n_components"])])
+            if all(pd.api.types.is_numeric_dtype(X[col]) for col in cols):
+                # Standardize the Data
+                Z = (X[cols] - self.call_["means"][grp])/self.call_["std"][grp]
+                # Partiel coordinates
+                coord = mapply(Z.dot(self.quanti_var_["coord"].loc[Z.columns.tolist(),:]),lambda x : x/self.separate_analyses_[grp].eig_.iloc[0,0],
+                                       axis=0,progressbar=False,n_workers=n_workers)
+                num_coord = len(self.call_["group"].keys())*mapply(coord,lambda x : x/np.sqrt(self.eig_.iloc[:,0][:self.call_["n_components"]]),
+                                                                   axis=1,progressbar=False,n_workers=n_workers)
+                num_row_partial = num_row_partial + num_coord
+            # If all variables in group are categoricals
+            elif all(pd.api.types.is_string_dtype(X[col]) for col in cols):
+                # Compute Dummies table : 0/1
+                dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
+                # Partiel coordinates
+                coord = mapply(dummies.dot(self.quali_var_["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),
+                               axis=0,progressbar=False,n_workers=n_workers)
+                cat_coord = len(self.call_["group"].keys())*mapply(coord,lambda x : x/self.eig_.iloc[:,0][:self.call_["n_components"]],
+                                                                   axis=1,progressbar=False,n_workers=n_workers)
+                cat_row_partial = cat_row_partial + cat_coord
+            row_coord = row_coord + (1/len(self.call_["group"].keys()))*(num_row_partial + cat_row_partial)
+        return row_coord
 
 ######################################################################################################################
 #   MULTIPLE FACTOR ANALYSIS FOR CONTINGENCY TABLES (MFACT)
@@ -5715,307 +6087,371 @@ class MFACT(BaseEstimator,TransformerMixin):
     Description
     -----------
 
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
-    Parameters:
-    -----------
+    Performs Multiple Factor Analysis for Contingency Tables in the sense of Pagès J. (2002) with supplementary individuals
+    and supplementary groups of variables. Groups of variables can be quantitative, categorical.
 
+    Parameters
+    ----------
+    n_components : number of dimensions kept in the results (by default 5)
 
+    group : a list or a tuple with the number of variables in each group
+
+    name_group : a list or a tuple containing the name of the groups (by default, None and the group are named Gr1, Gr2 and so on)
     
+    num_group_sup : the indexes of the illustrative groups (by default, None and no group re illustrative)
+
+    row_sup : an integer, a list or a tuple of the supplementary rows
+    
+    Parallelize : bool, default = False. Adding multi-core methods to PandasObject.
+
+    Return
+    ------
+    separate_analyses_ : the results for the separate analyses
+
+    svd_ : a dictionary of matrices containing all the results of the singular value decomposition
+
+    eig_ : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalues, the percentage of variance and the
+            cumulative percentge of variance
+
+    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine,
+            contributions)
+    
+    freq_ : a dictionary of pandas dataframe containing all the results for the frequencies variables (coordinates, contribution, cos2)
+    
+    global_pca_ : the results of the analysis when it is considered as a unique weighted PCA
+
+    model_ : string. The model fitted = 'mfact'
+
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    References
+    ----------
+    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    Escofier B, Pagès J (1998), Analyses Factorielles Simples et Multiples. Dunod
     """
 
     def __init__(self,
-                 n_components = None,
-                 row_labels = None,
-                 row_weight = None,
-                 col_weight = None,
-                 row_sup_labels = None,
-                 table_type = "number",
+                 n_components = 5,
                  group = None,
-                 group_sup = None,
+                 name_group = None,
+                 num_group_sup = None,
+                 row_sup = None,
                  parallelize= False):
-        
         self.n_components = n_components
-        self.row_labels = row_labels
-        self.row_weight = row_weight
-        self.col_weight = col_weight
-        self.row_sup_labels = row_sup_labels
-        self.table_type = table_type
         self.group = group
-        self.group_sup = group_sup
+        self.name_group = name_group
+        self.num_group_sup = num_group_sup
+        self.row_sup = row_sup
         self.parallelize = parallelize
     
     def fit(self, X, y=None):
         """
-        
-        
+        Fit the model to X
+        ------------------
+
+        Parameters
+        ----------
+        X : pandas DataFrame, shape (n_rows, n_columns)
+
+        y : None
+            y is ignored
+
+        Returns:
+        --------
+        self : object
+                Returns the instance itself
         """
-
-        # Check if X is a DataFrame
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
+        # Check if X is an instance of pandas DataFrame
         if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        ######## Check if columns is level 2
-        if X.columns.nlevels != 2:
-            raise ValueError("Error : X must have a MultiIndex columns with 2 levels.")
-
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    
          # set parallelize
         if self.parallelize:
-            self.n_workers_ = -1
+            n_workers = -1
         else:
-            self.n_workers_ = 1
+            n_workers = 1
+        
+        ###############################################################################################################"
+        # Drop level if ndim greater than 1 and reset columns name
+        ###############################################################################################################
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
 
-        # Check if groups is None
+        ###### Checks if quantitatives variables are in X
+        is_quanti = X.select_dtypes(exclude=["object","category"])
+        for col in is_quanti.columns.tolist():
+            X[col] = X[col].astype("float")
+        
+        ########################################################################################################################
+        #   check if two categoricals variables have same categories
+        ######################################################################################################################
+        X = revaluate_cat_variable(X)
+
+        #########################################################################################################################
+        #   Check if group is None
+        #########################################################################################################################
         if self.group is None:
             raise ValueError("Error : 'group' must be assigned.")
+        elif not (isinstance(self.group, list) or isinstance(self.group,tuple)):
+            raise ValueError("Error : 'group' must be a list or a tuple with the number of variables in each group")
+        else:
+            nb_elt_group = [int(x) for x in self.group]
         
-        self._compute_stats(X)
+        #######################################################################################################################
+        # Remove supplementary group
+        if self.num_group_sup is not None:
+            # Set default values to None
+            self.freq_sup_ = None
+            if isinstance(self.num_group_sup,int):
+                num_group_sup = [int(self.num_group_sup)]
+            elif ((isinstance(self.num_group_sup,list) or isinstance(self.num_group_sup,tuple)) and len(self.num_group_sup)>=1):
+                num_group_sup = [int(x) for x in self.num_group_sup]
 
-        return self
-    
-    def _compute_stats(self,X):
-        """
+        ##################################################################
+        # Check if supplementary rows
+        if self.row_sup is not None:
+            if (isinstance(self.row_sup,int) or isinstance(self.row_sup,float)):
+                row_sup = [int(self.row_sup)]
+            elif ((isinstance(self.row_sup,list) or isinstance(self.row_sup,tuple)) and len(self.row_sup)>=1):
+                row_sup = [int(x) for x in self.row_sup]
+
+        ############################################################################################################################
+        #  Assigned group name
+        ###########################################################################################################################
+        if self.name_group is None:
+            group_name = ["Gr"+str(x+1) for x in range(len(nb_elt_group))]
+        elif not (isinstance(self.name_group,list) or isinstance(self.name_group,tuple)):
+            raise TypeError("Error : 'group_name' must be a list or a tuple of group name")
+        else:
+            group_name = [x for x in self.name_group]
         
+        ##############################################################################################################################
+        # check if group name is an integer
+        #############################################################################################################################
+        for i in range(len(group_name)):
+            if isinstance(group_name[i],int) or isinstance(group_name[i],float):
+                group_name[i] = "Gr"+str(i+1)
         
-        """
+        ##############################################################################################################################
+        #   Assigned group name to label
+        #############################################################################################################################
+        group_active_dict = {}
+        group_sup_dict = {}
+        debut = 0
+        for i in range(len(nb_elt_group)):
+            X_group = X.iloc[:,(debut):(debut+nb_elt_group[i])]
+            if self.num_group_sup is not None:
+                if i in num_group_sup:
+                    new_elt = {group_name[i]:X_group.columns.tolist()}
+                    group_sup_dict = {**group_sup_dict,**new_elt}
+                else:
+                    group_sup_dict = group_sup_dict
+                    group_active_dict[group_name[i]] = X_group.columns.tolist()
+            else:
+                group_active_dict[group_name[i]] = X_group.columns.tolist()
+            debut = debut + nb_elt_group[i]
 
-        # Set number of rows/columns
-        self.n_rows_,self.n_cols_ = X.shape
+        ####################################### Save the base in a new variables
+        # Store data
+        Xtot = X.copy()
 
-        # Set row labels
-        self.row_labels_ = self.row_labels
-        if ((self.row_labels_ is None) or (len(self.row_labels_) != self.n_rows_)):
-            self.row_labels_ = ["row_" + str(i+1) for i in np.arange(0,self.n_rows_)]
-
-        # Checks groups are provided
-        self.group_ = self._determine_groups(X=X,groups=self.group)
-
+       ######################################## Drop supplementary groups columns #######################################
+        if self.num_group_sup is not None:
+            X = X.drop(columns=list(itertools.chain.from_iterable(group_sup_dict.values())))
+        
+        ######################################## Drop supplementary individuals  ##############################################
+        if self.row_sup is not None:
+            # Extract supplementary individuals
+            X_row_sup = X.iloc[self.row_sup,:]
+            # Drop supplementary individuals
+            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in row_sup])
+        
+        ############################# Check if an active group has only one columns
+        for grp, cols in group_active_dict.items():
+            if len(cols)==1:
+                raise ValueError(f"Error : {grp} group should have at least two columns")
+        
         ######################################## Compute Frequency in all table #######################################
         F = X/X.sum().sum()
 
+        ########################################################################################################################"
+        ##  Row margins and columns margins
+        #######################################################################################################################
+        F_jt = {}
+        Fi_t = {}
+        for grp, cols in group_active_dict.items():
+            F_jt[grp] = F[cols].sum(axis=0)
+            Fi_t[grp] = F[cols].sum(axis=1)
+        
         #### Set row margin and columns margin
         row_margin = F.sum(axis=1)
         col_margin = F.sum(axis=0)
-        col_margin.index = col_margin.index.droplevel()
 
         ####################################### Sum of frequency by group #############################################
         sum_term_grp = pd.Series().astype("float")
-        for grp, cols in self.group_.items():
-            sum_term_grp.loc[grp] = F[grp].sum().sum()
+        for grp, cols in group_active_dict.items():
+            sum_term_grp.loc[grp] = F[cols].sum().sum()
         
         ########################################### Construction of table Z #############################################"
-        X1 = mapply(F,lambda x : x/col_margin.values,axis=1,progressbar=False,n_workers=self.n_workers_)
-        X2 = pd.DataFrame(columns=self.group,index=self.row_labels_).astype("float")
-        for grp,cols in self.group_.items():
-            X2[grp] = F[grp].sum(axis=1)/sum_term_grp[grp]
+        X1 = mapply(F,lambda x : x/col_margin.values,axis=1,progressbar=False,n_workers=n_workers)
+        X2 = pd.DataFrame(columns=list(group_active_dict.keys()),index=X.index.tolist()).astype("float")
+        for grp, cols in group_active_dict.items():
+            X2[grp] = F[cols].sum(axis=1)/sum_term_grp[grp]
+
+        ##########
+        base = pd.DataFrame().astype("float")
+        for grp, cols in group_active_dict.items():
+            Zb = mapply(X1[cols],lambda x : x - X2[grp].values,axis=0,progressbar=False,n_workers=n_workers)
+            Zb = mapply(Zb,lambda x : x/row_margin.values,axis=0,progressbar=False,n_workers=n_workers)
+            base = pd.concat((base,Zb),axis=1)
         
-        Z = pd.DataFrame().astype("float")
-        for grp, cols in self.group_.items():
-            Zb = mapply(X1[grp],lambda x : x - X2[grp].values,axis=0,progressbar=False,n_workers=self.n_workers_)
-            Zb = mapply(Zb,lambda x : x/row_margin.values,axis=0,progressbar=False,n_workers=self.n_workers_)
-            Zb.columns = pd.MultiIndex.from_tuples([(grp,col) for col in Zb.columns.tolist()])
-            Z = pd.concat((Z,Zb),axis=1)
+        # Run a Principal Component Analysis (PCA) in each group
+        model = {}
+        for grp, cols in group_active_dict.items():
+            fa = PCA(standardize=False,ind_sup=None,ind_weights=row_margin.values.tolist(),var_weights=F_jt[grp].values.tolist())
+            model[grp] = fa.fit(base[cols])
         
-        # Set row weight
-        ########### Set row weight and columns weight
-        # Set row weight
-        if self.row_weight is None:
-            self.row_weight_ = np.ones(self.n_rows_)/self.n_rows_
-        elif not isinstance(self.row_weight,list):
-            raise ValueError("Error : 'row_weight' must be a list of row weight.")
-        elif len(self.row_weight) != self.n_rows_:
-            raise ValueError(f"Error : 'row_weight' must be a list with length {self.n_rows_}.")
+        ##################### Compute group disto
+        group_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_active_dict.keys())]
+        group_dist2 = pd.Series(group_dist2,index=list(group_active_dict.keys()),name="dist2")
+
+        ##### Compute group
+        if self.num_group_sup is not None:
+            group_sup_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_sup_dict.keys())]
+            group_sup_dist2 = pd.Series(group_sup_dist2,index=list(group_sup_dict.keys()),name="dist2")
+
+        ##### Store separate analysis
+        self.separate_analyses_ = model
+
+        #################################################
+        ####### columns weights
+        var_weights = pd.Series(name="weight").astype("float")
+        for grp, cols in group_active_dict.items():
+            weights = F_jt[grp]/model[grp].eig_.iloc[0,0]
+            var_weights = pd.concat((var_weights,weights),axis=0)
+        
+        ######################################################## Global
+        global_pca = PCA(standardize=False,n_components=None,ind_weights=row_margin.values.tolist(),var_weights=var_weights.values.tolist(),parallelize=self.parallelize)
+        global_pca.fit(base)
+
+        ############################################# Removing duplicate value in cumulative percent #######################"
+        cumulative = sorted(list(set(global_pca.eig_.iloc[:,3])))
+
+        # Number of components
+        if self.n_components is None:
+            n_components = len(cumulative)
         else:
-            self.row_weight_ = np.array([x/np.sum(self.row_weight) for x in self.row_weight])
-
-        # Set columns weight
-        if self.col_weight is None:
-            self.col_weight_ = np.ones(self.n_cols_).reshape(1,-1)
-        elif not isinstance(self.col_weight,list):
-            raise ValueError("Error : 'col_weight' must be a list of columns weight.")
-        elif len(self.col_weight) != self.n_cols_:
-            raise ValueError(f"Error : 'col_weight' must be a list with length {self.n_cols_}.")
-        else:
-            self.col_weight_ = np.array(self.col_weight).reshape(1,-1)
-
-        ########## Compute SVD
-        U,lamb, V = np.linalg.svd(Z)
+            n_components = min(self.n_components,len(cumulative))
         
+         # Save
+        self.call_ = {"Xtot" : Xtot,
+                      "X" : X, 
+                      "Z" : base,
+                      "n_components" : n_components,
+                      "ind_weights" : row_margin,
+                      "var_weights" : var_weights,
+                      "group" : group_active_dict,
+                      "group_name" : group_name}
 
-            
-        
-        
+        ########################################## Store global PCA
+        self.global_pca_ = global_pca
 
-        ######################
+        ##################################################################################################################
+        #   Eigenvalues
+        ##################################################################################################################
+        self.eig_ = global_pca.eig_.iloc[:len(cumulative),:]
 
+        ####### Update SVD
+        self.svd_ = {"vs" : global_pca.svd_["vs"][:len(cumulative)],"U" : global_pca.svd_["U"][:,:n_components],"V" : global_pca.svd_["V"][:,:n_components]}
 
+        ####################################################################################################
+        #    Individuals/Rows informations : coord, cos2, contrib
+        ###################################################################################################
+        ind = {"coord" : global_pca.ind_["coord"].iloc[:,:n_components],"contrib" : global_pca.ind_["contrib"].iloc[:,:n_components],"cos2" : global_pca.ind_["cos2"].iloc[:,:n_components],"infos":global_pca.ind_["infos"]}
+        self.ind_ = ind
 
-    
-    def _determine_groups(self,X,groups):
-        """
-
-
-        """
-        if isinstance(groups,list):
-            if not isinstance(X.columns,pd.MultiIndex):
-                raise ValueError("Error : Groups have to be provided as a dict when X is not a MultiIndex")
-            groups = { g: [(g, c) for c in X.columns.get_level_values(1)[X.columns.get_level_values(0) == g]] for g in groups}
-        else:
-            groups = groups
-
-        return groups
-
-
-
-########################################################################################################
-#       Hierarchical Multiple Factor Analysis (HMFA)
-#######################################################################################################
-
-class HMFA(BaseEstimator,TransformerMixin):
-    """
-    Hierarchical Multiple Factor Analysis (HMFA)
-    --------------------------------------------
-
-    Description
-    -----------
+        ######################################################################################################
+        #    Columns informations
+        #######################################################################################################
+        freq = {"coord" : global_pca.var_["coord"].iloc[:,:n_components],"contrib" : global_pca.var_["contrib"].iloc[:,:n_components],"cos2" : global_pca.var_["cos2"].iloc[:,:n_components]} 
+        self.freq_ = freq
 
 
-    Parameters
-    ----------
+        ############################### group result
+        self.group_ = {"dist2" : group_dist2}
 
+        # Name of model
+        self.model_ = "mfact"
 
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    def __init__(self,
-                 n_components=None,
-                 row_labels=None,
-                 row_sup_labels = None,
-                 group = None,
-                 group_sup = None,
-                 parallelize=False):
-        self.n_components = n_components
-        self.row_labels = row_labels
-        self.row_sup_labels = None,
-        self.group = group
-        self.group_sup = group_sup
-        self.parallelize = parallelize
-
-
-    def fit(self,X,y=None):
-        """
-        Fit the Hierarchical Multiple Factor Analysis (HMFA)
-        ----------------------------------------------------
-        
-        
-        
-        """
-
-        if not isinstance(X,pd.DataFrame):
-            raise ValueError("Erro : X must be a dataframe.")
-
-        ######## Check if columns is level 2
-        if X.columns.nlevels > 2:
-            raise ValueError("Error : X must have a MultiIndex columns greater than 2 levels.")
-        
-
-        self.active_data_ = X
-    
-        # Compute statistics for active data
-        self._compute_stats(X=X)
-
-        
-
-    def _compute_stats(self,X):
-        """
-        
-        
-        """
-
-        # Set number of rows : self.n_rows_
-        self.n_rows_ = X.shape[0]
-
-        # Check if all columns are numerics
-        all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist())
-        # Check if all columns are categoricals
-        all_cat = all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist())
-
-        # Shape of X
-        self.n_rows_ = X.shape[0]
-
-        # # Set self.row_labels_
-        self.row_labels_ = self.row_labels
-        if ((self.row_labels_ is None) or (len(self.row_labels_) != self.n_rows_)):
-            self.row_labels_ = ["row_" + str(i+1) for i in np.arange(0,self.n_rows_)]
-
-
-#################################################################################################
-#   HMFA FOR QUALITATIVES VARIABLES
-###############################################################################################
-
-class HMFAQUAL(BaseEstimator,TransformerMixin):
-    """
-    Hierarchical Multiple Factor Analysis for Qualitatives Variables (HMFAQUAL)
-    ---------------------------------------------------------------------------
-
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-
-
-    def __init__(self,
-                 n_components=5):
-        
-        self.n_components = n_components
-    
-    def fit(self,X,y=None):
-        pass
+        return self
 
     def fit_transform(self,X,y=None):
-        pass
+        """
+        Fit to data, then transform it.
 
+        Parameters:
+        ----------
+        X : pandas DataFrame of shape (n_rows_,n_cols_)
+
+        y : None
+            y is ignored
+
+        """
+        self.fit(X)
+        return self.ind_["coord"]
+    
     def transform(self,X,y=None):
-        pass
+        """
+        Apply the dimensionality reduction on X
+        ----------------------------------------
 
+        X is projected on the first axes previous extracted from a
+        training set
 
-#################################################################################
-#   
-##############################################################################################     
+        Parameters
+        ----------
+        X : pandas/polars DataFrame of shape (n_rows_sup, n_cols_)
+            New data, where n_rows_sup is the number of supplementary
+            row points and n_cols_ is the number of columns.
+            X rows correspond to supplementary row points that are projected
+            on the axes.
+        
+        y : None
+            y is ignored
+        
+        Return
+        ------
+        X_new : array of float, shape (n_row_sup, n_components_)
+                X_new : coordinates of the projections of the supplementary
+                row points on the axes.
+        """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        # Check if X is an instance of pandas DataFrame
+        if not isinstance(X,pd.DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-class PMFA(BaseEstimator,TransformerMixin):
-    """
-    Procrustean Multiple Factor Analysis (PMFA)
-    -------------------------------------------
-    
-    
-    
-    """
-
-
-    def __init__(self):
-        pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        # Check new dataframe are aligned
+        if X.shape[1] != self.call_["X"].shape[1]:
+            raise ValueError("Error : DataFrame aren't aligned")
+        
+        # set parallelize
+        if self.parallelize:
+            n_workers = -1
+        else:
+            n_workers = 1
+        
+        raise NotImplementedError("Error : This method is not yet implemented")

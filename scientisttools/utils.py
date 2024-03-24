@@ -738,7 +738,7 @@ def weightedcorrcoef(x,y=None,w=None):
     if w is None:
         corrcoef = np.corrcoef(x=x,y=y,rowvar=False,ddof=0)
     else:
-        w = np.asarray(w)
+        w = np.array(w)
         if y is None:
             if x.ndim !=1 :
                 x = np.asarray(x)
@@ -749,12 +749,48 @@ def weightedcorrcoef(x,y=None,w=None):
             else:
                 raise ValueError("Error : x is a 1-D array, y must not be None.")
         else:
-            x = np.append(np.asarray(x),np.asarray(y),axis=1)
+            x = np.array(x)
+            y = np.array(y)
+            # Resize
+            if x.ndim == 1:
+                x= x.reshape(-1,1)
+            if y.ndim == 1:
+                y = y.reshape(-1,1)
+            # Append
+            x = np.append(x,y,axis=1)
             corrcoef = np.zeros(shape=(x.shape[1],x.shape[1]))
             for i in range(x.shape[1]):
                 for j in range(x.shape[1]):
                     corrcoef[i,j] = wcorr(x[:,i],x[:,j],w=w)
     return corrcoef
+
+# Revaulute categorical variable
+def revaluate_cat_variable(X):
+    """
+    Revaluate Categorical variable
+    ------------------------------
+
+    Parameters
+    ----------
+    X : pandas DataFrame of shape (n_rows, n_columns)
+
+    Return
+    ------
+    X : 
+    """
+    # check if shape greater than 1:
+    if X.shape[1]>1:
+        for i in range(X.shape[1]-1):
+            for j in range(i+1,X.shape[1]):
+                if X.iloc[:,i].dtype in ["object","category"] and X.iloc[:,j].dtype in ["object","category"]:
+                    intersect = list(set(np.unique(X.iloc[:,i]).tolist()) & set(np.unique(X.iloc[:,j]).tolist()))
+                    if len(intersect)>1:
+                        valuei = {x : X.columns.tolist()[i]+"_"+str(x) for x in np.unique(X.iloc[:,i]).tolist()}
+                        valuej = {x : X.columns.tolist()[j]+"_"+str(x) for x in np.unique(X.iloc[:,j]).tolist()}
+                        X.iloc[:,i],X.iloc[:,j] = X.iloc[:,i].map(valuei), X.iloc[:,j].map(valuej)
+    return X
+
+
 
 
 

@@ -107,6 +107,8 @@ res2.mfa$summary.quali
 res2.mfa$summary.quanti
 
 
+quanti_var_sup <- get_mfa_var(res2.mfa,"quanti.var")
+
 fct.eta2 <- function(vec,x,weights) {  
   VB <- function(xx) {
     return(sum((colSums((tt*xx)*weights)^2)/ni))

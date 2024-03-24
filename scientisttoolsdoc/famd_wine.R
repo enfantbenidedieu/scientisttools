@@ -3,7 +3,7 @@ library(FactoMineR)
 library(factoextra)
 
 data(wine)
-res.famd <- FAMD(wine,graph = FALSE)
+res.famd <- FAMD(wine,ncp = NULL,graph = FALSE)
 
 res.famd$ind$dist
 

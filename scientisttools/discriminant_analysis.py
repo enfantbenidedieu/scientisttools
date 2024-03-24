@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
+
 import scipy.stats as st
 import numpy as np
 import pandas as pd
-from plydata import *
 from functools import reduce, partial
 from scientisttools.utils import eta2,paste,from_dummies
 from scientisttools.decomposition import MCA, FAMD, CA
@@ -15,15 +15,20 @@ import statsmodels.formula.api as smf
 from sklearn.base import BaseEstimator, TransformerMixin
 from mapply.mapply import mapply
 from sklearn.metrics import accuracy_score
-from functools import partial
-
 
 ##########################################################################################
 #                       CANONICAL DISCRIMINANT ANALYSIS (CANDISC)
 ##########################################################################################
 
 class CANDISC(BaseEstimator,TransformerMixin):
-    """Canonical Discriminant Analysis
+    """
+    Canonical Discriminant Analysis (CANDISC)
+    -----------------------------------------
+
+    Description
+    -----------
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Performs a canonical discriminant analysis, computes squared 
     Mahalanobis distances between class means, and performs both 
@@ -35,31 +40,13 @@ class CANDISC(BaseEstimator,TransformerMixin):
 
     target : 
 
-    row_labels : array of strings or None, default = None
-        - If row_labels is an array of strings : this array provides the
-          row labels.
-              If the shape of the array doesn't match with the number of
-              rows : labels are automatically computed for each row.
-        - If row_labels is None : labels are automatically computed for
-          each row.
-     
-    features_labels : array of strings or None, default = None
-        - If features_labels is an array of strings : this array provides the
-          column labels.
-              If the shape of the array doesn't match with the number of 
-              columns : labels are automatically computed for each
-              column.
-        - If features_labels is None : labels are automatically computed for
-          each column.
-
-
     Return
     ------
     
     """
     def __init__(self,
                  n_components=None,
-                 target=list[str],
+                 target=None,
                  row_labels=None,
                  features_labels=None,
                  priors = None,
@@ -72,7 +59,9 @@ class CANDISC(BaseEstimator,TransformerMixin):
         self.parallelize = parallelize
 
     def fit(self,X,y=None):
-        """Fit the Canonical Discriminant Analysis model
+        """
+        Fit the model to X
+        ------------------
 
         Parameters
         ----------
@@ -83,7 +72,6 @@ class CANDISC(BaseEstimator,TransformerMixin):
         --------
         self : object
             Fitted estimator
-        
         """
 
         if not isinstance(X,pd.DataFrame):
@@ -2619,206 +2607,3 @@ class STEPDISC(BaseEstimator,TransformerMixin):
         
         self.overall_remove_ = overall_remove
         self.features_remove_ = features_remove
-    
-######################################################################################
-#           QUADRATIC DISCRIMINANT ANALYSIS (QDA)
-#####################################################################################
-
-# https://towardsdatascience.com/quadratic-discriminant-analysis-ae55d8a8148a
-# https://github.com/alinarw/LDA_QDA/blob/master/script.py
-class QDA(BaseEstimator,TransformerMixin):
-    """Quadratic Discriminant Analysis
-    
-    """
-    def __init__(self,
-                 features_columns,
-                 target_columns,
-                 priors=None,
-                 parallelize=False):
-        self.features_columns = features_columns
-        self.target_columns = target_columns
-        self.priors_ = priors
-        self.parallelize = parallelize
-    
-    def fit(self,X,y=None):
-        # Set parallelize
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
-        raise NotImplementedError("Error : This method is not implemented yet.")
-
-
-#######################################################################################################
-#           Mixture Discriminant Analysis (DA)
-#######################################################################################################
-
-# 
-
-class MDA(BaseEstimator, TransformerMixin):
-    """Mixture Discriminant Analysis (MDA)
-
-    Performs mixture discriminant analysis
-
-
-
-
-    Note
-    ----
-    The Linear Discriminant Analysis classifier assumes that each class comes from a single normal (or Gaussian)
-    distribuition. This is too restrictive. 
-    For Mixture Discriminant Analysis, there are classes, and each class is assumed to be a Gaussian mixture of 
-    subclasses, where each data point has a probability of belonging to each class. Equality of covariance matrix,
-    among classes, is still assumed.
-    
-    
-    """
-    def __init__(self,
-                 features_columns = list[str],
-                 target_columns = list[str],
-                 parallelize=False):
-        self.features_columns = features_columns
-        self.target_columns = target_columns
-        self.parallelize = parallelize
-
-    def fit(self,X):
-        # Set parallelize
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
-        raise NotImplementedError("Error : This method is not yet implemented.")
-    
-
-#####################################################################################
-#           LOCAL FISHER DISCRIMINANT ANALYSIS (LFDA)
-######################################################################################
- 
- # Démarche géométrique
- # https://plainenglish.io/blog/fischers-linear-discriminant-analysis-in-python-from-scratch-bbe480497504
- # https://stackoverflow.com/questions/62610782/fishers-linear-discriminant-in-python
- # https://goelhardik.github.io/2016/10/04/fishers-lda/
- # https://www.freecodecamp.org/news/an-illustrative-introduction-to-fishers-linear-discriminant-9484efee15ac/
- #https://github.com/prathmachowksey/Fisher-Linear-Discriminant-Analysis
-class LOCALFISHERDISC(BaseEstimator,TransformerMixin):
-    """Local Fisher Discriminant Analysis
-    
-    """
-    def __init__(self,
-                 feature_columns=list[str],
-                 target_columns=list[str],
-                 parallelize=False):
-        self.feature_columns = feature_columns
-        self.target_columns = target_columns
-        self.parallelize = parallelize
-
-    def fit(self,X,y=None):
-        # Set parallelize
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
-        raise NotImplementedError("Error : This method is not implemented yet.")
-    
-
-
-###############################################################################################################
-#               Flexible Discriminant Analysis (FDA)
-###############################################################################################################
-
-
-class FDA(BaseEstimator,TransformerMixin):
-    """Flexible Discriminant Analysis (FDA)
-
-
-
-    Note:
-    ----
-    Flexible Discriminant Analyis is a flexible extension of Lienar Discriminant Analysis that uses non - linear
-    combinations of predictors as splines. Flexible Discriminant Analysis is useful to model multivariate non - 
-    normality or non - linear relationships among variables within each group, allowing for a more accurate classi-
-    fication.
-    
-    """
-    def __init__(self,
-                 feature_columns=list[str],
-                 target_columns=list[str],
-                 parallelize=False):
-        self.feature_columns = feature_columns
-        self.target_columns = target_columns
-        self.parallelize = parallelize
-
-    def fit(self,X,y=None):
-        # Set parallelize
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
-        raise NotImplementedError("Error : This method is not implemented yet.")
-
-
-###############################################################################################################
-#               Regularized Discriminant Analysis (RDA)
-###############################################################################################################
-
-# http://www.leg.ufpr.br/~eferreira/CE064/Regularized%20Discriminant%20Analysis.pdf
-# https://analyticsindiamag.com/a-guide-to-regularized-discriminant-analysis-in-python/
-# https://colab.research.google.com/drive/17LW2Or96ajCsy0fwQJ6mc6kXK9Sell0R?usp=sharing
-
-class RDA(BaseEstimator,TransformerMixin):
-    """Regularized Discriminant Analysis (RDA)
-
-
-
-    Note:
-    ----
-    RDA builds a classification rule by regularizing the group covariance matrices (Friedman 1989) allowing a 
-    more robust model against multicollinearity in the data. This might be very useful for a large multivariate 
-    data set containing highly correlated predictors.
-    
-    Regularized discriminant analysis is a kind of a trade-off between LDA and QDA. Recall that, in LDA we assume 
-    equality of covariance matrix for all of the classes. QDA assumes different covariance matrices for all the 
-    classes. Regularized discriminant analysis is an intermediate between LDA and QDA.
-
-    RDA shrinks the separate covariances of QDA toward a common covariance as in LDA. This improves the estimate of 
-    the covariance matrices in situations where the number of predictors is larger than the number of samples in 
-    the training data, potentially leading to an improvement of the model accuracy.
-
-    link : https://www.tandfonline.com/doi/abs/10.1080/01621459.1989.10478752
-    
-    
-    """
-    def __init__(self,
-                 feature_columns=list[str],
-                 target_columns=list[str],
-                 parallelize=False):
-        self.feature_columns = feature_columns
-        self.target_columns = target_columns
-        self.parallelize=parallelize
-
-    def fit(self,X,y=None):
-        # Set parallelize
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
-        raise NotImplementedError("Error : This method is not implemented yet.")
-    
-
-
-#################################################################################################################
-#       Penalized Linear Discriminant Analysis (PLDA)
-#################################################################################################################
-
-# https://github.com/RyanCarey/penalized_lda_python
-
-
-
-    
-    
-
