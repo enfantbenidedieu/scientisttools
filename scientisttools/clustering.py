@@ -1,16 +1,18 @@
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import scipy.stats as st
-from scientisttools.utils import eta2
 from mapply.mapply import mapply
 from scientistmetrics import scientistmetrics
 from scipy.cluster import hierarchy
-from scipy.spatial.distance import squareform
+from scipy.spatial.distance import squareform, pdist
 from sklearn.cluster import KMeans
 from yellowbrick.cluster import KElbowVisualizer
 from sklearn.base import BaseEstimator, TransformerMixin
-from scientisttools.utils import from_dummies
+from scientisttools.utils import from_dummies, eta2,revaluate_cat_variable
+from scientisttools.extractfactor import dimdesc
+import fastcluster
 
 ##################################################################################################################3
 #           Hierachical Clustering Analysis on Principal Components (HCPC)
@@ -21,511 +23,642 @@ class HCPC(BaseEstimator,TransformerMixin):
     Hierarchical Clustering on Principal Components (HCPC)
     ------------------------------------------------------
 
-    Compute hierarchical clustering on principal components
-    
-    
+    Description
+    -----------
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
+    Performs an agglomerative hierarchical clustering on results from a factor analysis.
+    Results include paragons, description of the clusters.
+
+    Parameters
+    ----------
+    model : an object of class PCA, MCA, FAMD
+
+    n_clusters : an integer
+
+
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-
-
-
     def __init__(self,
-                 n_clusters=None,
+                 model,
+                 n_clusters=3,
+                 min_cluster = 3,
+                 max_cluster = None,
                  metric="euclidean",
                  method="ward",
-                 min_clusters = 2,
-                 max_clusters = 8,
-                 max_iter = 300,
-                 init="k-means++",
-                 random_state = None,
+                 proba = 0.05,
+                 n_paragons = 5,
+                 order = True,
                  parallelize = False):
-        self.n_clusters = n_clusters
-        self.metric = metric
-        self.method = method
-        self.min_clusters = min_clusters
-        self.max_clusters = max_clusters
-        self.max_iter = max_iter
-        self.init = init
-        self.random_state = random_state
-        self.parallelize = parallelize
-
-    def fit(self,res):
-        """
         
-        
-        """
-
-        if res.model_ not in ["pca","mca"]:
-            raise ValueError("Error : 'res' must be an objet of class 'PCA','MCA'.")
+        # Check if model 
+        if model.model_ not in ["pca","mca","famd"]:
+            raise ValueError("'model' must be an objet of class 'PCA','MCA','FAMD'")
         
         # Set parallelize 
-        if self.parallelize:
-            self.n_workers_ = -1
+        if parallelize:
+            n_workers = -1
         else:
-            self.n_workers_ = 1
+            n_workers = 1
 
-        self._compute_global_stats(res=res)
+        # Automatic cut tree
+        def auto_cut_tree(model,min_clust,max_clust,metric,method,order,weights=None):
+            """
+            
+            """
+            if order:
+                data = pd.concat((model.ind_["coord"],model.call_["X"],model.call_["ind_weights"]),axis=1)
+                if weights is not None:
+                    weights = weights[::-1]
+                data = data.sort_values(by=data.columns.tolist()[0],ascending=True)
+                model.ind_["coord"] = data.iloc[:,:model.ind_["coord"].shape[1]]
+                model.call_["X"] = data.iloc[:,(model.ind_["coord"].shape[1]+1):(data.shape[1]-1)]
+                model.call_["ind_weights"] = data.iloc[:,-1]
+            
+            # Extract
+            X = model.ind_["coord"]
+            # Dissimilarity matrix
+            do = pdist(X,metric=metric)**2
+            # Set weights
+            if weights is None:
+                weights = np.ones(X.shape[0])
+            # Effec
+            eff = np.zeros(shape=(len(weights),len(weights)))
+            for i in range(len(weights)):
+                for j in range(len(weights)):
+                    eff[i,j] = (weights[i]*weights[j])/(sum(weights))/(weights[i]+weights[j])
+            dissi = do*eff[np.triu_indices(eff.shape[0], k = 1)]
+            # Agglometrive clustering
+            link_matrix = fastcluster.linkage(dissi,metric=metric,method=method)
+            inertia_gain = link_matrix[:,2][::-1]
+            intra = np.cumsum(inertia_gain[::-1])[::-1]
+            quot = intra[(min_clust-1):max_clust]/intra[(min_clust-2):(max_clust-1)]
+            nb_clust = (np.argmin(quot)+1) + min_clust - 1
+            return nb_clust
         
-        if res.model_ == "pca":
-            self._compute_stats_pca(res=res)
-        elif res.model_ == "mca":
-            self._compute_stats_mca(res=res)
+        ###### Correlation ratio
+        def quanti_eta2(data,categories,proba):
+            """
+            Global correlatio ratio
+            -----------------------
+
+            Parameters
+            ----------
+            
+            
+            """
+            res = (pd.concat((pd.DataFrame(eta2(categories,data[col],digits=10),index=[col]) for col in data.columns.tolist()),axis=0)
+                            .rename(columns={"correlation ratio" : "Eta2"})
+                            .sort_values(by="Eta2",ascending=False)[["Eta2","pvalue"]]
+                            .query("pvalue < @proba"))
+            return res
         
-        return self
+        # Chi-square test of independence of variables in a contingency table.
+        def chi2_test(data,categories,proba):
+            """
+            Chi2 test of independence of variables in a contingency table
+            --------------------------------------------------------------
+
+            Parameters
+            ---------
+            data : pandas dataframe of shape (n_rows, n_cols) containing categoricals variables
+
+            categories :  pandas series
+
+            Return
+            ------
+
+            """
+            chi2_test = pd.DataFrame(columns=["statistic","dof","pvalue"]).astype("float")
+            for col in data.columns.tolist():
+                tab = pd.crosstab(data[col],categories)
+                chi = st.chi2_contingency(tab,correction=False)
+                row_chi2 = pd.DataFrame({"statistic" : chi.statistic,"dof" : chi.dof,"pvalue" : chi.pvalue},index=[col])
+                chi2_test = pd.concat((chi2_test,row_chi2),axis=0)
+            
+            # Filter using proba
+            chi2_test = chi2_test.query("pvalue < @proba")
+            return chi2_test
+
+
+        ################# Quantitatives
+        def quanti_var_desc(X,cluster,n_workers,proba):
+            """
+            Quantitative variable description
+            ---------------------------------
+
+            Parameters
+            ----------
+            X : pandas dataframe of shape (n_row, n_colsw)
+
+            cluster : pandas series of shape (n_rows,)
+
+            Return
+            -------
+            """
+            # Dimension du tableau
+            n_rows  = X.shape[0]
+            # Moyenne et écart - type globale
+            overall_means = X.mean(axis=0)
+            overall_std = X.std(axis=0,ddof=0)
+            # Concatenate with original data
+            data = pd.concat([X,cluster],axis=1)
+            # Moyenne conditionnelle par groupe
+            gmean = data.groupby('clust').mean().T
+            # Ecart - type conditionnelle conditionnelles
+            gstd = data.groupby("clust").std(ddof=0).T
+            # Effectifs par cluster
+            effectif = data.groupby('clust').size()
+            # valeur-test
+            v_test = mapply(gmean,lambda x :np.sqrt(n_rows-1)*(x-overall_means.values)/overall_std.values, axis=0,progressbar=False,n_workers=n_workers)
+            v_test = pd.concat(((v_test.loc[:,i]/np.sqrt((n_rows-effectif.loc[i])/effectif.loc[i])).to_frame(i) for i in effectif.index.tolist()),axis=1)
+            # Calcul des probabilités associées aux valeurs test
+            vtest_prob = mapply(v_test,lambda x : 2*(1-st.norm(0,1).cdf(np.abs(x))),axis=0,progressbar=False,n_workers=n_workers)
     
+            # Arrange all result
+            quanti = {}
+            for i  in effectif.index.tolist():
+                df = pd.concat([v_test.loc[:,i],vtest_prob.loc[:,i],gmean.loc[:,i],overall_means,gstd.loc[:,i],overall_std],axis=1)
+                df.columns = ["vtest","pvalue","mean in category","overall mean","sd in categorie","overall sd"]
+                quanti[str(i)] = df.sort_values(by=['vtest'],ascending=False).query("pvalue < @proba")
 
-    def _compute_global_stats(self,res):
-        """
+            return quanti
         
+        def quali_var_desc(X,cluster):
+            """
+            Categorical variables description
+            ---------------------------------
+
+            Parameters
+            ----------
+            X : pandas datafrme of shape (n_rows, n_columns)
+            
+            
+            """
+            ###### Revaluate category
+            X = revaluate_cat_variable(X)
+
+            ######## Tableau Disjonctif complex
+            dummies = pd.concat((pd.get_dummies(X[col],prefix=col,prefix_sep='=') for col in X.columns),axis=1)            
+            dummies_stats = dummies.agg(func=[np.sum,np.mean]).T
+            dummies_stats.columns = ["n(s)","p(s)"]
+
+            # Listing MOD/CLASS
+            dummies_classe = pd.concat([dummies,cluster],axis=1)
+            mod_class = dummies_classe.groupby("clust").mean().T.mul(100)
+
+            # class/Mod
+            class_mod = dummies_classe.groupby("clust").sum().T
+            class_mod = class_mod.div(dummies_stats["n(s)"].values,axis="index").mul(100)
+
+            var_category = {}
+            for i in np.unique(cluster):
+                df = pd.concat([class_mod.loc[:,i],mod_class.loc[:,i],dummies_stats["p(s)"].mul(100)],axis=1)
+                df.columns = ["Class/Mod","Mod/Class","Global"]
+                var_category[str(i)] = df
+            
+            return var_category
+
+        ####################################################################################################################
+        #   
+        ####################################################################################################################
         
-        """
-
-         # Linkage matrix
-        self.method_ = self.method
-        if self.method_ is None:
-            self.method_ = "ward"
+        # Set linkage method
+        if method is None:
+            method = "ward"
         
-        self.metric_ = self.metric
-        if self.metric_ is None:
-            self.metric_ = "euclidean"
-
-        self.n_clusters_ = self.n_clusters
-        if self.n_clusters_ is None:
-           kmeans = KMeans(init=self.init,max_iter=self.max_iter,random_state=self.random_state)
-           visualizer = KElbowVisualizer(kmeans, k=(self.min_clusters,self.max_clusters),metric='distortion',
-                                         timings=False,locate_elbow=True,show=False).fit(res.row_coord_)
-           self.n_clusters_ = visualizer.elbow_value_
-
-        # Linkage matrix
-        link_mat = hierarchy.linkage(res.row_coord_,method=self.method_,metric = self.metric_,optimal_ordering=False)
-
-        # Order
-        order = hierarchy.leaves_list(link_mat)
-
-        if res.model_ == "mca":
-            active_data = res.original_data_
+        # Set linkage metric
+        if metric is None:
+            metric = "euclidean"
+        
+        # Set max cluster
+        if max_cluster is None:
+            max_cluster = min(10,round(model.ind_["coord"].shape[0]/2))
         else:
-            active_data = res.active_data_
+            max_cluster = min(max_cluster,model.ind_["coord"].shape[0]-1)
         
-        # Save labels
-        labels = res.row_labels_
-        
-        # Coupure de l'arbre
-        cutree = (hierarchy.cut_tree(link_mat,n_clusters=self.n_clusters_)+1).reshape(-1, )
-        #cutree = pd.read_excel("d:/Bureau/PythonProject/packages/scientisttools/data/mca_hcpc.xlsx")["clust"].values
-        cutree = list(["cluster_"+str(x) for x in cutree])
+        # Set number of clusters
+        if n_clusters is None:
+            n_clusters = auto_cut_tree(model=model,min_clust=min_cluster,max_clust=max_cluster,method=method,metric=metric,order=order,
+                                       weights=np.ones(model.ind_["coord"].shape[0]))
+        elif not isinstance(n_clusters,int):
+            raise TypeError("'n_clusters' must be an integer")
 
-        # Class information
-        cluster = pd.DataFrame(cutree, index = labels,columns = ["cluster"])
+        # Agglomerative clustering
+        link_matrix = fastcluster.linkage(model.ind_["coord"],method=method,metric=metric)
+        # cut the hierarchical tree
+        cutree = (hierarchy.cut_tree(link_matrix,n_clusters=n_clusters)+1).reshape(-1, )
+        cluster = pd.Series([str(x) for x in cutree],index =  model.ind_["coord"].index.tolist(),name = "clust")
 
+        ##### Store data clust
+        data_clust = model.call_["Xtot"]
+        # Drop the supplementary individuals
+        if model.ind_sup is not None:
+            if isinstance(model.ind_sup,int):
+                ind_sup = [ind_sup]
+            elif isinstance(model.ind_sup,list) or isinstance(model.ind_sup,tuple):
+                ind_sup = [x for x in model.ind_sup]
+            data_clust = data_clust.drop(index=[name for i, name in enumerate(model.call_["Xtot"].index.tolist()) if i in ind_sup])
+        data_clust = pd.concat((data_clust,cluster),axis=1)
+        self.data_clust_ = data_clust
+
+        # Tree elements
+        tree = {"order":order,
+                "height":link_matrix[:,2],
+                "method":method,
+                "merge":link_matrix[:,:2],
+                "n_obs":link_matrix[:,3],
+                "data": model.ind_["coord"],
+                "n_clusters" : n_clusters}
+
+        self.call_ = {"model" : model,"X" : data_clust,"tree" : tree}
+
+        ############################################################################################################
         ## Description des cluster
-        row_coord = pd.DataFrame(res.row_coord_,index=labels,columns=res.dim_index_)
-        coord_classe = pd.concat([row_coord, cluster], axis=1)
-        cluster_infos = coord_classe.groupby("cluster").size().to_frame("n(k)")
-        cluster_infos["p(k)"] = cluster_infos["n(k)"]/np.sum(cluster_infos["n(k)"])
+        ################################################################################################################
+        # Concatenate individuals coordinates with classe
+        coord_classe = pd.concat([model.ind_["coord"], cluster], axis=1)
+        # Count by cluster
+        cluster_count = coord_classe.groupby("clust").size()
+        cluster_count.name = "effectif"
 
-        # Mean by cluster
-        cluster_centers = coord_classe.groupby("cluster").mean()
+        # Coordinates by cluster
+        cluster_coord = coord_classe.groupby("clust").mean()
 
-        # Store First informations
-        self.cluster_ = cluster
-        self.cluster_infos_ = cluster_infos
-        self.cluster_labels_ = list(["cluster_"+str(x+1) for x in np.arange(self.n_clusters_)])
-        self.cluster_centers_ = cluster_centers
-
-        # Paarongons
-        parangons = pd.DataFrame(columns=["parangons","distance"])
-        disto_far = dict()
-        disto_near = dict()
-        for k in np.unique(cluster):
-            group = coord_classe[coord_classe["cluster"] == k].drop(columns=["cluster"])
-            disto = mapply(group.sub(cluster_centers.loc[k,:],axis="columns"),lambda x : np.sum(x**2),axis=1,progressbar=False,n_workers=self.n_workers_).to_frame("distance").reset_index(drop=False)
-            # Identification du parangon
-            id = np.argmin(disto.iloc[:,1])
-            parangon = pd.DataFrame({"parangons" : disto.iloc[id,0],"distance" : disto.iloc[id,1]},index=[k])
-            parangons = pd.concat([parangons,parangon],axis=0)
-            # Extraction des distances
-            disto_near[k] = disto.sort_values(by="distance").reset_index(drop=True)
-            disto_far[k] = disto.sort_values(by="distance",ascending=False).reset_index(drop=True)
+        # Value - test by cluster
+        axes_mean =  model.ind_["coord"].mean(axis=0)
+        axes_std = model.ind_["coord"].std(axis=0,ddof=0)
+        cluster_vtest = mapply(cluster_coord,lambda x :np.sqrt(cluster.shape[0]-1)*(x-axes_mean.values)/axes_std.values,axis=1,progressbar=False,n_workers=n_workers)
+        cluster_vtest = pd.concat(((cluster_vtest.loc[i,:]/np.sqrt((cluster.shape[0]-cluster_count.loc[i])/cluster_count.loc[i])).to_frame(i).T for i in cluster_count.index.tolist()),axis=0)
         
-        #Rapport de corrélation entre les axes et les cluster
-        desc_axes = self._compute_quantitative(X=row_coord)
+        # Store cluster informations
+        self.cluster_ = {"cluster" : cluster,"coord" : cluster_coord , "vtest" : cluster_vtest, "effectif" : cluster_count}
 
-        # Informations globales
-        self.linkage_matrix_ = link_mat
-        self.order_ = order
-        self.labels_ = labels
-        self.parangons_ = parangons
-        # Individuals closest to their cluster's center
-        self.disto_near_ = pd.concat(disto_near,axis=0)
-        # Individuals the farest from other clusters' center
-        self.disto_far_ = pd.concat(disto_far,axis=0)
-        self.desc_axes_gmean_ = desc_axes[0]
-        self.desc_axes_correlation_ratio_ = desc_axes[1]
-        self.desc_axes_infos_ = pd.concat(desc_axes[2],axis=0)
-        self.data_cluster_ = pd.concat([active_data,cluster],axis=1)
+        #################################################################################################
+        ## Axis description
+        ####################################################################################################
+        axes_quanti_var =  quanti_eta2(data=model.ind_["coord"],categories=cluster,proba=proba)
+        axes_quanti = quanti_var_desc(X=model.ind_["coord"],cluster=cluster,n_workers=n_workers,proba=proba)
+        dim_clust = pd.concat((model.ind_["coord"],cluster),axis=1)
+        axes_call = {"X" : dim_clust,"proba" : proba,"num_var" : dim_clust.shape[1]}
+        self.desc_axes_ = {"quanti_var" : axes_quanti_var,"quanti" : axes_quanti, "call" : axes_call}
+        
+        ############################################################################################################"
+        #   Individuals description
+        ############################################################################################################
+        paragons = {}
+        disto_far = {}
+        for k in np.unique(cluster):
+            group = coord_classe.query("clust == @k").drop(columns=["clust"])
+            disto = mapply(group.sub(cluster_coord.loc[k,:],axis="columns"),lambda x : x**2,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+            disto.name = "distance"
+            paragons[f"Cluster : {k}"] = disto.sort_values(ascending=True).iloc[:n_paragons]
+            disto_far[f"Cluster : {k}"] = disto.sort_values(ascending=False).iloc[:n_paragons]
+        
+        self.desc_ind_ = {"para" : paragons, "dist" : disto_far}
 
-        ### Agglomerative result
-        self.distances_ = link_mat[:,2]
-        self.children_ = link_mat[:,:2].astype(int)
+        ###############################################################################################################
+        #  Principal Component Analysis (PCA)
+        ###############################################################################################################
+        ##########################################
+        data_call = {"X" : data_clust, "proba" : proba, "num_var" : data_clust.shape[1]}
 
-        # Save the input model
-        self.factor_model_ = res
+        data = model.call_["X"]
+        # Principal Component Analysis (PCA)
+        if model.model_ == "pca":
+            ####### Distance to origin
+            cluster_var = pd.concat((model.call_["Z"],cluster),axis=1).groupby("clust").mean()
+            cluster_dist2 = mapply(cluster_var,lambda x : x**2,axis=0,progressbar=False,n_workers=n_workers).sum(axis=1)
+            cluster_dist2.name = "dist"
+            self.cluster_["dist"] =  np.sqrt(cluster_dist2)
+            # Add supplementary quantitatives variables
+            if model.quanti_sup is not None:
+                if (isinstance(model.quanti_sup,int) or isinstance(model.quanti_sup,float)):
+                    quanti_sup = [int(model.quanti_sup)]
+                elif ((isinstance(model.quanti_sup,list) or isinstance(model.quanti_sup,tuple))  and len(model.quanti_sup)>=1):
+                    quanti_sup = [int(x) for x in model.quanti_sup]
+                
+                X_quanti_sup = model.call_["Xtot"].iloc[:,quanti_sup]
+                if model.ind_sup is not None:
+                    X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(model.call_["Xtot"].index.tolist()) if i in model.ind_sup])
+                
+                ###### Transform to float
+                X_quanti_sup = X_quanti_sup.astype("float")
+                data = pd.concat((data,X_quanti_sup),axis=1)
+            
+            ######### Correlation ratio between original data and cluster
+            quanti_var = quanti_eta2(data=data,categories=cluster,proba=proba)
+            quanti = quanti_var_desc(X=data,cluster=cluster,n_workers=n_workers,proba=proba)
+
+            # Store result
+            self.desc_var_ = {"quanti_var" : quanti_var,"quanti" : quanti}
+
+            if model.quali_sup is not None:
+                if (isinstance(model.quali_sup,int) or isinstance(model.quali_sup,float)):
+                    quali_sup = [int(model.quali_sup)]
+                elif ((isinstance(model.quali_sup,list) or isinstance(model.quali_sup,tuple))  and len(model.quali_sup)>=1):
+                    quali_sup = [int(x) for x in model.quali_sup]
+                
+                X_quali_sup = model.call_["Xtot"].iloc[:,quali_sup]
+                if model.ind_sup is not None:
+                    X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(model.call_["Xtot"].index.tolist()) if i in model.ind_sup])
+                
+                ###### Transform to object
+                X_quali_sup = X_quali_sup.astype("object")
+                # chi2 test between categorical variables and cluster
+                test_chi2 = chi2_test(data=X_quali_sup,categories=cluster,proba=proba)
+                if test_chi2.shape[0]>0:
+                    self.desc_var_["test_chi2"] = test_chi2
+                category = quali_var_desc(X=X_quali_sup,cluster=cluster)
+                self.desc_var_["category"] = category
+            # Add data call
+            self.desc_var_["call"] = data_call
+        # Multiple Correspondence Analysis (MCA)
+        elif model.model_ == "mca":
+            # Add supplementary categoricals variables
+            if model.quali_sup is not None:
+                if (isinstance(model.quali_sup,int) or isinstance(model.quali_sup,float)):
+                    quali_sup = [int(model.quali_sup)]
+                elif ((isinstance(model.quali_sup,list) or isinstance(model.quali_sup,tuple))  and len(model.quali_sup)>=1):
+                    quali_sup = [int(x) for x in model.quali_sup]
+                
+                X_quali_sup = model.call_["Xtot"].iloc[:,quali_sup]
+                if model.ind_sup is not None:
+                    X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(model.call_["Xtot"].index.tolist()) if i in model.ind_sup])
+                
+                # Transform to object
+                X_quali_sup = X_quali_sup.astype("object")
+                data = pd.concat((data,X_quali_sup),axis=1)
+                
+            # chi2  test between categorical variable and 
+            test_chi2 = chi2_test(data=data,categories=cluster,proba=proba)
+            category = quali_var_desc(X=data,cluster=cluster)
+
+            # Store result
+            self.desc_var_ = {"test_chi2" : test_chi2,"category" : category}
+
+            ################ Add supplementary quantitatives variables
+            # Add supplementary quantitatives variables
+            if model.quanti_sup is not None:
+                if (isinstance(model.quanti_sup,int) or isinstance(model.quanti_sup,float)):
+                    quanti_sup = [int(model.quanti_sup)]
+                elif ((isinstance(model.quanti_sup,list) or isinstance(model.quanti_sup,tuple))  and len(model.quanti_sup)>=1):
+                    quanti_sup = [int(x) for x in model.quanti_sup]
+                
+                X_quanti_sup = model.call_["Xtot"].iloc[:,quanti_sup]
+                if model.ind_sup is not None:
+                    X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(model.call_["Xtot"].index.tolist()) if i in model.ind_sup])
+                
+                ###### Transform to float
+                X_quanti_sup = X_quanti_sup.astype("float")
+                # Correlation ratio 2
+                quanti_var = quanti_eta2(data=X_quanti_sup,categories=cluster,proba=proba)
+                if quanti_var.shape[0]>0:
+                    self.desc_var_["quanti_var"] = quanti_var
+                quanti = quanti_var_desc(X=X_quanti_sup,cluster=cluster,n_workers=n_workers,proba=proba)
+                self.desc_var_["quanti"] = quanti
+            # Add data call
+            self.desc_var_["call"] = data_call
+        # Factor Analysis of Mixed Data (FAMD)
+        elif model.model_ == "famd":
+            ##### Split data in to 
+            ########################################################################################
+            # Select quantitatives variables
+            X_quanti = data.select_dtypes(exclude=["object","category"])
+            # Add supplementary quantitatives variables
+            if model.quanti_sup is not None:
+                if (isinstance(model.quanti_sup,int) or isinstance(model.quanti_sup,float)):
+                    quanti_sup = [int(model.quanti_sup)]
+                elif ((isinstance(model.quanti_sup,list) or isinstance(model.quanti_sup,tuple))  and len(model.quanti_sup)>=1):
+                    quanti_sup = [int(x) for x in model.quanti_sup]
+                
+                X_quanti_sup = model.call_["Xtot"].iloc[:,quanti_sup]
+                if model.ind_sup is not None:
+                    X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(model.call_["Xtot"].index.tolist()) if i in model.ind_sup])
+                
+                ###### Transform to float
+                X_quanti_sup = X_quanti_sup.astype("float")
+                X_quanti = pd.concat((X_quanti,X_quanti_sup),axis=1)
+            
+            ######### Correlation ratio between original data and cluster
+            quanti_var = quanti_eta2(data=X_quanti,categories=cluster,proba=proba)
+            quanti = quanti_var_desc(X=X_quanti,cluster=cluster,n_workers=n_workers,proba=proba)
+
+            ########################################################################################
+            # Select categoricals variables
+            X_quali = data.select_dtypes(include=["object","category"])
+            # Add supplementary qualitatiave data
+            if model.quali_sup is not None:
+                if (isinstance(model.quali_sup,int) or isinstance(model.quali_sup,float)):
+                    quali_sup = [int(model.quali_sup)]
+                elif ((isinstance(model.quali_sup,list) or isinstance(model.quali_sup,tuple))  and len(model.quali_sup)>=1):
+                    quali_sup = [int(x) for x in model.quali_sup]
+                
+                X_quali_sup = model.call_["Xtot"].iloc[:,quali_sup]
+                if model.ind_sup is not None:
+                    X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(model.call_["Xtot"].index.tolist()) if i in model.ind_sup])
+                
+                # Transform to object
+                X_quali_sup = X_quali_sup.astype("object")
+                data = pd.concat((data,X_quali_sup),axis=1)
+                
+            # chi2  test between categorical variable and 
+            test_chi2 = chi2_test(data=data,categories=cluster,proba=proba)
+            category = quali_var_desc(X=data,cluster=cluster)
+
+            # Store result
+            self.desc_var_ = {"quanti_var" : quanti_var,"quanti" : quanti, "call" : data_call}
 
         # Modèle
         self.model_ = "hcpc"
 
-    def _compute_stats_pca(self,res):
-        """Compute statistique for Principal Components Analysis 
 
-        Parameters
-        ----------
-        res : An instance of class PCA
-
-        Returns
-        -------
-        """
-
-        # Reconstitution des données
-        data = res.data_
-
-        # Remove supplementrary row
-        if res.row_sup_labels_ is not None:
-            data = data.drop(index=res.row_sup_labels_)
-
-        # Extraction des données actives
-        active_data = res.active_data_
-
-        # Compute statistic for active data
-        res1 = self._compute_quantitative(X=active_data)
-        
-        self.gmean_ = res1[0]
-        self.correlation_ratio_ = res1[1]
-        self.desc_var_quanti_ = pd.concat(res1[2],axis=0)
-
-        if res.quanti_sup_labels_ is not None:
-            quanti_sup_data = data[res.quanti_sup_labels_]
-            quanti_sup_res = self._compute_quantitative(X=quanti_sup_data)
-            self.gmean_quanti_sup_ = quanti_sup_res[0]
-            self.correlation_ratio_quanti_sup_ = quanti_sup_res[1]
-            self.desc_var_quanti_sup_ = pd.concat(quanti_sup_res[2],axis=0)
-        
-        if res.quali_sup_labels_ is not None:
-            quali_sup_data = data[res.quali_sup_labels_]
-            quali_sup_res = self._compute_qualitative(X=quali_sup_data)
-            #self.gmean_quanti_sup_ = quali_sup_res[0]
-            #self.correlation_ratio_quanti_sup_ = quanti_sup_res[1]
-            self.desc_var_quali_sup_ = quali_sup_res
-            #self.desc_var_quali_ = self._compute_qualitative(X=data[res.quali_sup_labels_])
-        
-    def _compute_quantitative(self,X):
-        """
-
-        """
-        # Dimension du tableau
-        n_rows, n_cols = X.shape
-
-        # Moyenne et écart - type globale
-        means = X.mean(axis=0)
-        std = X.std(axis=0,ddof=0)
-
-        # Données quantitatives - concatenation
-        df = pd.concat([X,self.cluster_],axis=1)
-
-        # Moyenne conditionnelle par groupe
-        gmean = df.groupby('cluster').mean().T
-
-        # Correlation ratio
-        correlation_ratio = dict()
-        for name in X.columns:
-            correlation_ratio[name] = eta2(self.cluster_["cluster"],X[name])
-        correlation_ratio = pd.DataFrame(correlation_ratio).T.sort_values(by=['correlation ratio'],ascending=False)
-
-        # Ecart - type conditionnelle conditionnelles
-        gstd = df.groupby("cluster").std(ddof=0).T
-
-        # Effectifs par cluster
-        n_k = df.groupby("cluster").size()
-
-        # valeur-test
-        v_test = mapply(gmean,lambda x :np.sqrt(n_rows-1)*(x-means.values)/std.values, axis=0,progressbar=False,n_workers=self.n_workers_)
-        v_test = pd.concat(((v_test.loc[:,i]/np.sqrt((n_rows-n_k.loc[i,])/n_k.loc[i,])).to_frame(i) for i in list(n_k.index)),axis=1)
-
-        # Calcul des probabilités associées aux valeurs test
-        vtest_prob = mapply(v_test,lambda x : 2*(1-st.norm(0,1).cdf(np.abs(x))),axis=0,progressbar=False,n_workers=self.n_workers_)
-
-        # Arrange all result
-        quanti = dict()
-        for i,name in enumerate(self.cluster_labels_):
-            df =pd.concat([v_test.iloc[:,i],vtest_prob.iloc[:,i],gmean.iloc[:,i],means,gstd.iloc[:,i],std],axis=1)
-            df.columns = ["vtest","pvalue","mean in category","overall mean","sd in categorie","overall sd"]
-            df = df.sort_values(by=['vtest'],ascending=False)
-            df["significant"] =np.where(df["pvalue"]<0.001,"***",np.where(df["pvalue"]<0.05,"**",np.where(df["pvalue"]<0.1,"*"," ")))
-            quanti[f"cluster_{i+1}"] = df
-        
-        # Add columns
-        gmean.columns = self.cluster_labels_
-
-        return gmean,correlation_ratio,quanti
-    
-    def _compute_qualitative(self,X):
-        """Perform qualitative
-        
-        """
-
-        # concatenate
-        df = pd.concat([X,self.cluster_],axis=1)
-
-        # Convert all str columns to category columns
-        df = mapply(df,lambda x: x.astype("category") if x.dtype == "O" else x,axis=0,progressbar=False,n_workers=self.n_clusters_)
-
-        # Chi2 squared test - Tschuprow's T
-        chi2_test = loglikelihood_test = pd.DataFrame(columns=["statistic","df","pvalue"],index=X.columns).astype("float")
-        cramers_v = tschuprow_t = pearson= pd.DataFrame(columns=["value"],index=X.columns).astype("float")
-        for cols in X.columns:
-            # Crosstab
-            tab = pd.crosstab(df[cols],df["cluster"])
-            # Chi2 - test
-            chi2 = st.chi2_contingency(tab,correction=False)
-            chi2_test.loc[cols,:] = np.array([chi2.statistic,chi2.dof,chi2.pvalue])
-
-            # log-likelihood test
-            loglikelihood = st.chi2_contingency(tab,lambda_="log-likelihood")
-            loglikelihood_test.loc[cols,:] = np.array([loglikelihood.statistic,loglikelihood.dof,loglikelihood.pvalue])
-
-            # Cramer's V
-            cramers_v.loc[cols,:] = st.contingency.association(tab,method="cramer")
-
-            # Tschuprow T statistic
-            tschuprow_t.loc[cols,:] = st.contingency.association(tab,method="tschuprow")
-
-            # Pearson
-            pearson.loc[cols,:] = st.contingency.association(tab,method="pearson")
-        
-        quali_test = dict({"chi2" : chi2_test,"gtest":loglikelihood_test,"cramer":cramers_v,"tschuprow":tschuprow_t,"pearson":pearson})
-        
-        return quali_test
-    
-    def _compute_stats_mca(self,res):
-        """
-        
-        """
-
-
-         # Reconstitution des données
-        data = res.data_
-
-        # Remove supplementrary row
-        if res.row_sup_labels_ is not None:
-            data = data.drop(index=res.row_sup_labels_)
-
-        # Extraction des données actives
-        active_data = res.original_data_
-
-        # Compute statistic for active data
-        res1 = self._compute_qualitative(X=active_data)
-
-        if res.quanti_sup_labels_ is not None:
-            quanti_sup_data = data[res.quanti_sup_labels_]
-            quanti_sup_res = self._compute_quantitative(X=quanti_sup_data)
-            self.gmean_quanti_sup_ = quanti_sup_res[0]
-            self.correlation_ratio_quanti_sup_ = quanti_sup_res[1]
-            self.desc_var_quanti_sup_ = pd.concat(quanti_sup_res[2],axis=0)
-        
-        if res.quali_sup_labels_ is not None:
-            quali_sup_data = data[res.quali_sup_labels_]
-            quali_sup_res = self._compute_qualitative(X=quali_sup_data)
-            #self.gmean_quanti_sup_ = quali_sup_res[0]
-            #self.correlation_ratio_quanti_sup_ = quanti_sup_res[1]
-            self.desc_var_quali_sup_ = quali_sup_res
-        
-        dummies = pd.concat((pd.get_dummies(active_data[cols],prefix=cols,prefix_sep='=') for cols in active_data.columns),axis=1)
-        dummies_stats = dummies.agg(func=[np.sum,np.mean]).T
-        dummies_stats.columns = ["n(s)","p(s)"]
-
-        # Listing MOD/CLASS
-        dummies_classe = pd.concat([dummies,self.cluster_],axis=1)
-        mod_class = dummies_classe.groupby("cluster").mean().T.mul(100)
-
-        class_mod = dummies_classe.groupby("cluster").sum().T
-        class_mod = class_mod.div(dummies_stats["n(s)"].values,axis="index").mul(100)
-
-        var_category = dict()
-        for i,name in enumerate(self.cluster_labels_):
-            df =pd.concat([class_mod.iloc[:,i],mod_class.iloc[:,i],dummies_stats["p(s)"].mul(100)],axis=1)
-            df.columns = ["Class/Mod","Mod/Class","Global"]
-            var_category[f"cluster_{i+1}"] = df
-
-        self.desc_var_quali_ = res1
-        self.var_quali_infos_ = dummies_stats
-        self.desc_var_category_ = pd.concat(var_category,axis=0)
-    
 ##################################################################################################################################
 #           Hierarchical Clustering Analysis of Continuous Variables (VARHCA)
 ##################################################################################################################################
 
 class VARHCA(BaseEstimator,TransformerMixin):
-    """Hierarchical Clustering Analysis of Continuous Variables
+    """
+    Hierarchical Clustering Analysis of Continuous Variables (VARHCA)
+    -----------------------------------------------------------------
+
+    Description
+    -----------
+
+
 
     Parameters
     ----------
-    n_clusters :
-    var_labels :
-    var_sup_labels :
-    min_clusters :
-    max_clusters :
-    matrix_type : {"completed","correlation"}
-    metric :
-    method :
-    max_iter :
-    init :
-    random_state :
+    n_clusters : nmber of clusters, default = 3
+    
     """
 
     def __init__(self,
-                 n_clusters=None,
-                 var_labels = None,
-                 var_sup_labels = None,
+                 n_clusters=3,
+                 var_sup = None,
                  min_clusters = 2,
                  max_clusters = 5,
                  matrix_type = "completed",
-                 metric="euclidean",
-                 method="ward",
+                 metric = "euclidean",
+                 method = "ward",
                  max_iter = 300,
-                 init="k-means++",
                  random_state = None,
                  parallelize=False):
         self.n_clusters = n_clusters
-        self.var_labels = var_labels
-        self.var_sup_labels = var_sup_labels
+        self.var_sup = var_sup
         self.min_clusters = min_clusters
         self.max_clusters = max_clusters
         self.matrix_type = matrix_type
         self.metric = metric
         self.method = method
         self.max_iter =max_iter
-        self.init = init
         self.random_state = random_state
         self.parallelize = parallelize
 
     def fit(self,X,y=None):
-        """ Fit
-        
         """
+        Fit the model to X
+        ------------------
+
+        Parameters
+        ----------
+        X : pandas/polars DataFrame of float, shape (n_rows, n_columns) or (n_columns, n_columns)
+
+        y : None
+            y is ignored
+
+        Returns:
+        --------
+        self : object
+                Returns the instance itself
+        """
+
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
 
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        # Extract supplementary columns
-        self.var_sup_labels_ = self.var_sup_labels
-        if self.var_sup_labels_ is not None:
-            if self.matrix_type == "completed":
-                Xsup = X[self.var_sup_labels_]
-                active_data = X.drop(columns=self.var_sup_labels_)
-            elif self.matrix_type == "correlation":
-                Xsup = X[self.var_sup_labels_].drop(index=self.var_sup_labels_)
-                active_data = X.drop(columns=self.var_sup_labels_).drop(index=self.var_sup_labels_)
+
+        # Check of matrix type is one of 'completed' or 'correlation'
+        if self.matrix_type not in ["completed","correlation"]:
+            raise TypeError("'matrix_type' should be one of 'completed', 'correlation'")
+
+        # Check if all columns are numerics
+        all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist())
+        if not all_num:
+            raise TypeError("All columns must be numeric")
+
+        # set parallelize
+        if self.parallelize:
+            n_workers = -1
         else:
-            active_data = X
-
-        self.data_ = X
-        self.active_data_ = active_data
+            n_workers = 1
         
-        # Compute global stat
-        self._compute_stats(active_data)
-        # 
-        if self.var_sup_labels_ is not None:
-            self.data_sup_ = Xsup
-            self.corr_mean_square_ = self.transform(Xsup)
+        #  Check if supplementary variables
+        if self.var_sup is not None:
+            if (isinstance(self.var_sup,int) or isinstance(self.var_sup,float)):
+                var_sup = [int(self.var_sup)]
+            elif ((isinstance(self.var_sup,list) or isinstance(self.var_sup,tuple))  and len(self.var_sup)>=1):
+                var_sup = [int(x) for x in self.var_sup]
+            
+        ####################################### Save the base in a new variables
+        # Store data
+        Xtot = X
 
-        # Compute supplementary statistique
+        ####################################### Drop supplementary variables columns ########################################
+        if self.var_sup is not None:
+            if self.matrix_type == "completed":
+                X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in var_sup])
+            elif self.matrix_type == "correlation":
+                X = (X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in var_sup])
+                      .drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in var_sup]))
+
+        ##################################### Compute Pearson correlation matrix ##############################################
+        if self.matrix_type == "completed":
+            corr_matrix = X.corr(method="pearson")
+        elif self.matrix_type == "correlation":
+            corr_matrix = X
+
+        # Linkage matrix
+        if self.method is None:
+            method = "ward"
+        else:
+            method = self.method
+        
+        ########################## metrics
+        if self.metric is None:
+            metric = "euclidean"
+        else:
+            metric = self.metric
+        
+        ################## Check numbers of clusters
+        if self.n_clusters is None:
+            n_clusters = 3
+        elif not isinstance(self.n_clusters,int):
+            raise TypeError("'n_clusters' must be an integer")
+        else:
+            n_clusters = self.n_clusters
+        
+        # Compute dissimilary matrix : sqrt(1 - x**2)
+        D = mapply(corr_matrix,lambda x : np.sqrt(1 - x**2),axis=0,progressbar=False,n_workers=n_workers)
+
+        # Linkage Matrix with vectorize dissimilarity matrix
+        link_matrix = fastcluster.linkage(squareform(D),method=method,metric = metric)
+
+         # Coupure de l'arbre
+        cutree = (hierarchy.cut_tree(link_matrix,n_clusters=n_clusters)+1).reshape(-1, )
+        cutree = [str(x) for x in cutree]
+
+        # Class information
+        cluster = pd.Series(cutree, index = corr_matrix.index.tolist(),name = "clust")
+
+        # Tree elements
+        tree = {"height":link_matrix[:,2],
+                "method":method,
+                "metric" : metric,
+                "merge":link_matrix[:,:2],
+                "n_obs":link_matrix[:,3],
+                "data": corr_matrix,
+                "n_clusters" : n_clusters}
+        
+        self.call_ = {"Xtot" : Xtot,
+                      "X" : X,
+                      "tree" : tree}
+
+        ################################### Informations abouts clusters
+        data_clust = pd.concat((corr_matrix,cluster),axis=1)
+        # Count by cluster
+        cluster_count = data_clust.groupby("clust").size()
+        cluster_count.name = "effectif"
+
+        # Store cluster informations
+        self.cluster_ = {"cluster" : cluster,"data_clust" : data_clust ,"effectif" : cluster_count}
+
+        # Model name
+        self.model_ = "varhca"
 
         return self
         
         # From covariance to correlation
         # https://gist.github.com/wiso/ce2a9919ded228838703c1c7c7dad13b
     
-    def _compute_stats(self,X):
-        """Compute global statistiques
-        
-        """
-        # Set parallelize option
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
-
-         # Compute correlation matrix
-        if self.matrix_type == "completed":
-            corr = X.corr(method="pearson")
-        elif self.matrix_type == "correlation":
-            corr = X
-
-        # Variable labels
-        self.var_labels_ = self.var_labels
-        if self.var_labels_ is None:
-            self.var_labels_ = corr.index
-        
-        # Number of variables
-        self.n_vars_ = len(self.var_labels_)
-
-         # Linkage matrix
-        self.method_ = self.method
-        if self.method_ is None:
-            self.method_ = "ward"
-        
-        self.metric_ = self.metric
-        if self.metric_ is None:
-            self.metric_ = "euclidean"
-
-        # Compute dissimilary matrix : sqrt(1 - x**2)
-        D = mapply(corr,lambda x : np.sqrt(1 - x**2),axis=0,progressbar=False,n_workers=self.n_workers_)
-
-        # Vectorize
-        VD = squareform(D)
-
-        # Compute number of clusters
-        self.n_clusters_ = self.n_clusters
-        if self.n_clusters_ is None:
-           kmeans = KMeans(init=self.init,max_iter=self.max_iter,random_state=self.random_state)
-           visualizer = KElbowVisualizer(kmeans, k=(self.min_clusters,self.max_clusters),metric='distortion',
-                                         timings=False,locate_elbow=True,show=False).fit(D)
-           self.n_clusters_ = visualizer.elbow_value_
-
-        # Linkage Matrix
-        link_mat = hierarchy.linkage(VD,method=self.method_,metric = self.metric_,optimal_ordering=False)
-
-        # Order
-        order = hierarchy.leaves_list(link_mat)
-
-         # Coupure de l'arbre
-        cutree = (hierarchy.cut_tree(link_mat,n_clusters=self.n_clusters_)+1).reshape(-1, )
-        cutree = list(["cluster_"+str(x) for x in cutree])
-
-        # Class information
-        cluster = pd.DataFrame(cutree, index = self.var_labels_,columns = ["cluster"])
-
-        # Store First informations
-        self.cluster_ = cluster
-        self.cluster_labels_ = list(["cluster_"+str(x+1) for x in np.arange(self.n_clusters_)])
-        self.covariance_matrix_ = corr
-        self.linkage_matrix_ = link_mat
-
-        ### Agglomerative result
-        self.distances_ = link_mat[:,2]
-        self.children_ = link_mat[:,:2].astype(int)
-        self.order_ = order
-
-        # Model name
-        self.model_ = "varhca"
-    
     def transform(self,X,y=None):
         """
         
         
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
         # Test if X is a DataFrame
         if isinstance(X,pd.Series):
             X = X.to_frame()
@@ -534,32 +667,45 @@ class VARHCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Check if all columns are numerics
+        all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns.tolist())
+        if not all_num:
+            raise TypeError("All columns must be numeric")
+
+        # set parallelize
+        if self.parallelize:
+            n_workers = -1
+        else:
+            n_workers = 1
 
         if self.matrix_type == "completed":
-            corr_with = pd.DataFrame(np.corrcoef(self.active_data_,X,rowvar=False)[:self.n_vars_,self.n_vars_:],index = self.var_labels_,columns=X.columns)
+            corr_with = pd.DataFrame(np.corrcoef(self.call_["X"],X,rowvar=False)[:self.call_["X"].shape[1],self.call_["X"].shape[1]:],
+                                     index = self.call_["X"].columns.tolist(),columns=X.columns.tolist())
         elif self.matrix_type == "correlation":
             corr_with = X
         
         # Concatenation
-        corr_class = pd.concat([corr_with,self.cluster_],axis=1)
+        data_clust = pd.concat([corr_with,self.cluster_["cluster"]],axis=1)
         #moyenne des carrés des corrélations avec les groupes
-        corr_mean_square = mapply(corr_class.groupby("cluster"),lambda x : np.mean(x**2,axis=0),progressbar=False,n_workers=self.n_workers_)
+        corr_mean_square = mapply(data_clust.groupby("clust"),lambda x : np.mean(x**2,axis=0),progressbar=False,n_workers=n_workers)
         return corr_mean_square
-
     
     def fit_transform(self,X,y=None):
         """
         
         """
         self.fit(X)
-        return self.linkage_matrix_
+        return self.cluster_["cluster"]
 
 ###################################################################################################################################
 #       Hierarchical Clustering Analysis of Categorical Variables (CATVARHCA)
 ###################################################################################################################################
 
 class CATVARHCA(BaseEstimator,TransformerMixin):
-    """Hierarchical Clustering Analysis of categorical variables
+    """
+    Hierarchical Clustering Analysis of Categorical Variables (VATVARHCA)
+    ---------------------------------------------------------------------
 
     Parameters
     ----------

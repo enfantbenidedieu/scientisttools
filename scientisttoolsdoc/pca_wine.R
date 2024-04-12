@@ -53,9 +53,10 @@ head(quali_sup$dist)
 head(quali_sup$eta2)
 
 
+###############################################
+# HCPC with wine
+####################################################"
+res.hc <- HCPC(res.pca,graph = F)
 
-
-
-
-
-
+res.hc$desc.var$test.chi2
+res.hc$desc.var$category

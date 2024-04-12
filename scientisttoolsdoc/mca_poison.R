@@ -37,3 +37,42 @@ x = get_mca_var(res.mca,element = "mca.cor")
 
 
 fviz_mca_var(res.mca,choice = "quanti.sup")
+
+###############################################
+# HCPC with poison
+####################################################"
+res.hc <- HCPC(res.mca,graph = F)
+
+desc_var <- res.hc$desc.var
+desc_var$test.chi2
+desc_var$category
+desc_var$quanti.var
+desc_var$quanti
+
+
+X <- res.mca$ind$coord
+clust <- res.hc$data.clust$clust
+
+centers <- by(X, clust, colMeans)
+centers <- matrix(unlist(centers), ncol = ncol(X), byrow = TRUE)
+
+df <- cbind.data.frame(X,clust)
+
+df %>% group_by(clust) %>% 
+  summarise(across(
+    .cols = is.numeric, 
+    .fns = mean, na.rm = TRUE
+  ))
+
+library(ggplot2)
+library(ggdendro)
+model <- hclust(dist(USArrests), "ave")
+dhc <- as.dendrogram(model)
+# Rectangular lines
+ddata <- dendro_data(dhc, type = "rectangle")
+
+p <- ggplot(segment(ddata)) + 
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  coord_flip() + 
+  scale_y_reverse(expand = c(0.2, 0))
+p

@@ -23,14 +23,11 @@ head(res$ind$coord.partiel)
 res$ind$within.inertia
 res$ind$within.partial.inertia
 
-res$eig
+#############################################################
+freq <- res$freq
+head(freq$coord)
+head(freq$contrib)
+head(freq$cos2)
 
-res1 <- res$separate.analyses[["1979"]]
-View(res1$call$X)
-head(res1$call$row.w)
-res1$call$col.w
-res1$call$scale.unit
 
-View(res$global.pca$call$X)
-head(res$global.pca$call$row.w)
-res$global.pca$call$col.w
+res$s
