@@ -11,6 +11,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 from scientisttools.revaluate_cat_variable import revaluate_cat_variable
 from scientisttools.function_eta2 import function_eta2
+from scientisttools.svd_triplet import svd_triplet
 
 class MCA(BaseEstimator,TransformerMixin):
     """
@@ -664,4 +665,4 @@ class MCA(BaseEstimator,TransformerMixin):
         X_new : array-like, shape (n_samples, n_components)
         """
         self.fit(X)
-        return self.ind_["coord"]
+        return self.ind_["coord"]   

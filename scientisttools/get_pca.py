@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 import numpy as np
 import pandas as pd
 
@@ -204,6 +204,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(eig)
     
     # Add individuals informations
+
     print(f"\nIndividuals (the {nb_element} first)\n")
     ind = self.ind_
     ind_infos = ind["infos"]
@@ -238,7 +239,10 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(ind_sup_infos)
 
     # Add variables informations
-    print(f"\nContinues variables\n")
+    if self.var_["coord"].shape[0]>nb_element:
+        print(f"\nContinuous variables (the {nb_element} first)\n")
+    else:
+         print("\nContinuous variables\n")
     var = self.var_
     var_infos = var["infos"]
     for i in np.arange(0,ncp,1):
@@ -248,7 +252,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         var_ctr = var["contrib"].iloc[:,i]
         var_ctr.name = "ctr"
         var_infos = pd.concat([var_infos,var_coord,var_ctr,var_cos2],axis=1)
-    var_infos = var_infos.round(decimals=digits)
+    var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
