@@ -106,48 +106,11 @@ head(quanti_var_sup$cor)
 res2.mfa$summary.quali
 res2.mfa$summary.quanti
 
-
-quanti_var_sup <- get_mfa_var(res2.mfa,"quanti.var")
-
-fct.eta2 <- function(vec,x,weights) {  
-  VB <- function(xx) {
-    return(sum((colSums((tt*xx)*weights)^2)/ni))
-  }
-  tt <- tab.disjonctif(vec)
-  ni <- colSums(tt*weights)
-  unlist(lapply(as.data.frame(x),VB))/colSums(x*x*weights)
-}
-
-X.quali.sup <- wine[,c("Label","Soil")]
-
-row.w <- res.mfa$global.pca$call$row.w
-t(sapply(X.quali.sup,fct.eta2,res.mfa$ind$coord,weights=row.w))
-
-tt <- tab.disjonctif(X.quali.sup[,c("Label")])
-ni <- colSums(tt*row.w)
-sum((colSums((tt*res.mfa$ind$coord[,1])*row.w)^2)/ni)
-
-(tt*res.mfa$ind$coord[,1]) *row.w
-
-VB <- function(xx) {
-  
-  return(sum((colSums((tt*xx)*row.w)^2)/ni))
-}
-
-lapply(as.data.frame(res.mfa$ind$coord),VB)
-unlist(lapply(as.data.frame(res.mfa$ind$coord),VB))
-
-sum((colSums((tt*res.mfa$ind$coord[,1])*row.w)^2)/ni)
-
-colSums(res.mfa$ind$coord[,1]*res.mfa$ind$coord[,1]*row.w)
-
-sum(res.mfa$ind$coord[,1]*res.mfa$ind$coord[,1]*row.w)
-
-VB(as.data.frame(res.mfa$ind$coord[,1]))
+fviz_mfa_ind(res2.mfa)
+fviz_mfa_var(res2.mfa,choice = "quali.var")
+fviz_mfa_group(res2.mfa)
 
 
-res2.mfa$global.pca$var$coord
-res2.mfa$global.pca$quali.sup$coord
 
-res2.mfa$global.pca$quali.sup$cos2
-res2.mfa$global.pca$var$cos2
+quanti_var <- get_mfa_var(res2.mfa,"quanti.var")
+

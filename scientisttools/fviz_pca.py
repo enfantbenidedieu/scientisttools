@@ -56,14 +56,14 @@ def fviz_pca_ind(self,
     """
     
     if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an object of class PCA.")
+        raise TypeError("'self' must be an object of class PCA")
     
 
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
         (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
-        raise ValueError("Error : You must pass a valid 'axis'.")
+        raise ValueError("You must pass a valid 'axis'.")
 
     #### Extract individuals coordinates
     coord = self.ind_["coord"]
@@ -93,7 +93,7 @@ def fviz_pca_ind(self,
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
-            raise ValueError("Error : 'lim_cos2' must be a float or an integer.")
+            raise TypeError("'lim_cos2' must be a float or an integer")
     
     # Using lim contrib
     if lim_contrib is not None:
@@ -103,7 +103,7 @@ def fviz_pca_ind(self,
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
-            raise ValueError("Error : 'lim_contrib' must be a float or an integer.")
+            raise TypeError("'lim_contrib' must be a float or an integer")
 
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))

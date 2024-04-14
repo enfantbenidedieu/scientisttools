@@ -115,10 +115,16 @@ head(quali_var_sup$within.inertia) # A implémnter
 head(quali_var_sup$within.partial.inertia) # A implémenter
 
 #################################################################
-#
-res.mfa$summary.quanti
-res.mfa$summary.quali
 
-res.mfa$inertia.ratio
 
-res.mfa$partial.axes$coord
+fviz_mfa_ind(res.mfa)
+plot.MFA(res.mfa)
+
+fviz_mfa_var(res.mfa,col.var = "black")
+
+fviz_mfa_group(res.mfa)
+fviz_mfa_axes(res.mfa)
+
+quanti_var <- get_mfa_var(res.mfa,"quanti.var")
+quali_var <- get_mfa_var(res.mfa,"quali.var")
+groups <- get_mfa_var(res.mfa,"group")

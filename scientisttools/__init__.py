@@ -24,7 +24,22 @@ from .fviz_famd import fviz_famd_ind, fviz_famd_col, fviz_famd_mod, fviz_famd_va
 # Partial PCA
 from .partialpca import PartialPCA
 from .get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
+from .fviz_partialpca import fviz_partialpca_ind, fviz_partialpca_var, fviz_partialpca
 
+# Exploratory Factor Analysis (EFA)
+from .efa import EFA
+from .get_efa import get_efa_ind, get_efa_var, get_efa, summaryEFA
+from .fviz_eta import fviz_efa_ind, fviz_efa_var, fviz_efa
+
+# Multiple Factor Analysis (MFA)
+from .mfa import MFA
+from .get_mfa import get_mfa_ind, get_mfa_var, get_mfa_partial_axes, get_mfa, summaryMFA
+from .fviz_mfa import fviz_mfa_ind, fviz_mfa_var, fviz_mfa_axes,fviz_mfa_group
+
+# Multiple Factor Analysis for qualitative/categorical variables (MFAQUAL)
+from .mfaqual import MFAQUAL
+from .get_mfa import summaryMFAQUAL
+from .fviz_mfa import fviz_mfaqual_var
 
 from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
 from .dimdesc import dimdesc
