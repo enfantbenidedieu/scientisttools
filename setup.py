@@ -9,7 +9,7 @@ setuptools.setup(
     version="0.1.4",
     author="Duverier DJIFACK ZEBAZE",
     author_email="duverierdjifack@gmail.com",
-    description="Python library for multidimensional analysis, classification - clustering analysis and discriminant analysis.",
+    description="Python library for multidimensional analysis, classification - clustering analysis",
     long_description_content_type="text/markdown",
     long_description=long_description,
     packages=setuptools.find_packages(),

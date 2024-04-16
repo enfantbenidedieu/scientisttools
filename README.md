@@ -8,9 +8,7 @@
 
 * It performs **classical principal component methods** : 
     * Principal Components Analysis (PCA)
-    * Principal Components Analysis with partial correlation matrix (PPCA)
-    * Weighted Principal Components Analysis (WPCA)
-    * Expectation-Maximization Principal Components Analysis (EMPCA)
+    * Principal Components Analysis with partial correlation matrix (PartialPCA)
     * Exploratory Factor Analysis (EFA)
     * Classical Multidimensional Scaling (CMDSCALE)
     * Metric and Non - Metric Multidimensional Scaling (MDS)
@@ -18,6 +16,10 @@
     * Multiple Correspondence Analysis (MCA)
     * Factor Analysis of Mixed Data (FAMD)
     * Multiple Factor Analysis (MFA)
+    * Multiple Factor Analysis for qualitatives/categoricals variables (MFAQUAL)
+    * Multiple Factor Analysis of Mixed Data (MFAMIX)
+    * Multiple Factor Analysis of Contingence Tables (MFACT)
+
 * In some methods, it allowed to **add supplementary informations** such as supplementary individuals and/or variables.
 * It provides a geometrical point of view, a lot of graphical outputs.
 * It provides efficient implementations, using a scikit-learn API.
@@ -26,20 +28,14 @@ Those statistical methods can be used in two ways :
 * as descriptive methods ("datamining approach")
 * as reduction methods in scikit-learn pipelines ("machine learning approach")
 
-`scientisttools` also performs some algorithms such as `clustering analysis` and `discriminant analysis`.
+`scientisttools` also performs `clustering analysis`
 
 * **Clustering analysis**:
     * Hierarchical Clustering on Principal Components (HCPC)
     * Variables Hierarchical Clustering Analysis (VARHCA)
     * Variables Hierarchical Clustering Analysis on Principal Components (VARHCPC)
     * Categorical Variables Hierarchical Clustering Analysis (CATVARHCA)
-* **Discriminant Analysis**
-    * Canonical Discriminant Analysis (CANDISC)
-    * Linear Discriminant Analysis (LDA)
-    * Discriminant with qualitatives variables (DISQUAL)
-    * Discriminant Correspondence Analysis (DISCA)
-    * Discriminant with mixed data (DISMIX)
-    * Stepwise Discriminant Analysis (STEPDISC) (only `backward` elimination is available).
+
 
 Notebooks are availabled.
 
@@ -71,18 +67,6 @@ pip install scientisttools
 ```
 
 Tutorial are available
-
-````
-https://github.com/enfantbenidedieu/scientisttools/blob/master/ca_example2.ipynb
-https://github.com/enfantbenidedieu/scientisttools/blob/master/classic_mds.ipynb
-https://github.com/enfantbenidedieu/scientisttools/blob/master/efa_example.ipynb
-https://github.com/enfantbenidedieu/scientisttools/blob/master/famd_example.ipynb
-https://github.com/enfantbenidedieu/scientisttools/blob/master/ggcorrplot.ipynb
-https://github.com/enfantbenidedieu/scientisttools/blob/master/mca_example.ipynb
-https://github.com/enfantbenidedieu/scientisttools/blob/master/mds_example.ipynb
-https://github.com/enfantbenidedieu/scientisttools/blob/master/partial_pca.ipynb
-https://github.com/enfantbenidedieu/scientisttools/blob/master/pca_example.ipynb
-````
 
 ## Author
 
