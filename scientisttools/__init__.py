@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-
 # Principal Components Analysis
 from .pca import PCA
 from .get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
@@ -51,7 +50,7 @@ from .mfact import MFACT
 from .fviz_mfa import fviz_mfa_freq
 from .get_mfa import summaryMFACT
 
-# 
+# Multidimensional Scaling
 from .smacof import SMACOF
 from .mds import MDS
 from .get_mds import get_mds
@@ -75,15 +74,12 @@ from .fviz_corrcircle import fviz_corrcircle
 from .hcpc import HCPC
 from .fviz_hcpc import plot_dendrogram, fviz_hcpc_cluster
 
-
 # VARHCA
 from .varhca import VARHCA
 from .catvarhca import CATVARHCA
 from .varhcpc import VARHCPC
 from .fviz_hcpc import fviz_varhcpc_cluster
 
-
-__all__ = ["CA", "FAMD", "MCA", "MFA", "PCA", "GPA", "datasets"]
 
 from .version import __version__
 

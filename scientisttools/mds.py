@@ -109,7 +109,7 @@ class MDS(BaseEstimator,TransformerMixin):
                 eps=1e-3,
                 n_jobs=None,
                 random_state=None,
-                var_sup = None,
+                ind_sup = None,
                 normalized_stress=True):
         self.n_components = n_components
         self.proximity = proximity
@@ -120,7 +120,7 @@ class MDS(BaseEstimator,TransformerMixin):
         self.eps = eps
         self.n_jobs = n_jobs
         self.random_state = random_state
-        self.var_sup = var_sup
+        self.ind_sup = ind_sup
         self.normalized_stress =normalized_stress
     
     def fit(self,X,y=None, init=None):
@@ -158,21 +158,22 @@ class MDS(BaseEstimator,TransformerMixin):
         
         ############################
         # Check is supplementary columns
-        if self.var_sup is not None:
-            if (isinstance(self.var_sup,int) or isinstance(self.var_sup,float)):
-                var_sup = [int(self.var_sup)]
-            elif ((isinstance(self.var_sup,list) or isinstance(self.var_sup,tuple))  and len(self.var_sup)>=1):
-                var_sup = [int(x) for x in self.var_sup]
+        if self.ind_sup is not None:
+            if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
+                ind_sup = [int(self.ind_sup)]
+            elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple))  and len(self.ind_sup)>=1):
+                ind_sup = [int(x) for x in self.ind_sup]
         
-        ####################################### Save the base in a new variables
+        ####################################### Save the base in a new variable
         # Store data
         Xtot = X
 
-        ####################################### Drop supplementary qualitative columns ########################################
-        if self.var_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in var_sup])
+        ####################################### Drop supplementary individuals ########################################
+        if self.ind_sup is not None:
+            # Extract supplementary individuals
+            X_ind_sup = X.iloc[self.ind_sup,:]
+            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
         
-
         #######################################################################################################################
         if self.proximity == "euclidean":
             dist = squareform(pdist(X,metric="euclidean"))

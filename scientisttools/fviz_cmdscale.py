@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import plotnine as pn
 from .text_label import text_label
 

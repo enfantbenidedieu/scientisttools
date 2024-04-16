@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -12,7 +11,6 @@ from mapply.mapply import mapply
 from scipy.spatial.distance import euclidean
 
 from .sim_dist import sim_dist
-
 
 class CMDSCALE(BaseEstimator,TransformerMixin):
     """
@@ -189,7 +187,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         # Store data
         Xtot = X
 
-        ####################################### Drop supplementary qualitative columns ########################################
+        ####################################### Drop supplementary individuals ########################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
             X_ind_sup = X.iloc[self.ind_sup,:]

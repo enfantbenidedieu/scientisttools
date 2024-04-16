@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import plotnine as pn
 import pandas as pd
-from ggcorrplot import ggcorrplot, get_melt
+from ggcorrplot import ggcorrplot
+
+from .get_melt import get_melt
 
 def fviz_corrplot(X,
                   method = "square",
