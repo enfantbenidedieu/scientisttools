@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+
 import pandas as pd
 import pyreadr 
 import pathlib
@@ -7,7 +8,7 @@ import pathlib
 # https://husson.github.io/data.html
 # https://r-stat-sc-donnees.github.io/liste_don.html
 
-DATASETS_DIR = pathlib.Path(__file__).parent / "data"
+DATASETS_DIR = pathlib.Path(__file__).parent / "datasets"
 
 ### Principal Components Analysis ############################
 
@@ -30,20 +31,6 @@ def load_decathlon():
     Source
     ------
     The Decathlon dataset from FactoMineR. See https://rdrr.io/cran/FactoMineR/man/decathlon.html
-
-    Example
-    -------
-    from scientisttools import PCA
-    from scientisttools.datasets import load_decathlon
-    decathlon = load_decathlon()
-    acp = PCA(normalize=True,
-            n_components = None,
-            row_labels=decathlon.index,
-            col_labels=decathlon.columns[:10],
-            row_sup_labels=None,
-            quanti_sup_labels=["Rank","Points"],
-            quali_sup_labels=["Competition"],
-            parallelize=True).fit(decathlon)
     """
     data = pd.read_excel(DATASETS_DIR/"decathlon.xlsx",header=0,index_col=0)
     data.name = "decathlon"
@@ -79,20 +66,6 @@ def load_decathlon2():
     Source
     ------
     The Decathlon dataset from Factoextra. See https://rpkgs.datanovia.com/factoextra/reference/decathlon2.html
-
-    Example:
-    -------
-    from scientisttools.decomposition import PCA
-    from scientisttools.datasets import load_decathlon2
-    decathlon = load_decathlon2()
-    acp = PCA(normalize=True,
-            n_components = None,
-            row_labels=decathlon.index.tolist()[:23],
-            col_labels=decathlon.columns.tolist()[:10],
-            row_sup_labels=decathlon.index.tolist()[23:],
-            quanti_sup_labels=["Rank","Points"],
-            quali_sup_labels=["Competition"],
-            parallelize=True).fit(decathlon)
     """
     data = pd.read_excel(DATASETS_DIR/"decathlon2.xlsx",header=0,index_col=0)
     data.name = "decathlon2"
@@ -170,7 +143,6 @@ def load_races_canines3():
     return data
 
 def load_tea():
-    """"""
     data = pd.read_excel(DATASETS_DIR/"tea.xlsx",header=0,index_col=0)
     data.name = "tea"
     return data
@@ -221,101 +193,16 @@ def load_burgundy_wines():
     return wines
 
 def load_wine():
-    """
-    
-    
-    """
     # Load Data
     url = "http://factominer.free.fr/factomethods/datasets/wine.txt"
     wine = pd.read_table(url,sep="\t")
-
-    # Transform
-    wine2 = pd.DataFrame(data=wine.values,
-                         columns = pd.MultiIndex.from_tuples(
-                        [
-                            ("others","Label"),
-                            ("others","Soil"),
-                            ("before shaking","Odor.Intensity"),
-                            ("before shaking","Aroma.quality"),
-                            ("before shaking","Fruity"),
-                            ("before shaking","Flower"),
-                            ("before shaking","Spice"),
-                            ("vision","Visual.intensity"),
-                            ("vision","Nuance"),
-                            ("vision","Surface.feeling"),
-                            ("after shaking","Odor.intensity"),
-                            ("after shaking","Quality.of.odour"),
-                            ("after shaking","Fruity"),
-                            ("after shaking","Flower"),
-                            ("after shaking","Spice"),
-                            ("after shaking","Plante"),
-                            ("after shaking","Phenolic"),
-                            ("after shaking","Aroma.intensity"),
-                            ("after shaking","Aroma.persistency"),
-                            ("after shaking","Aroma.quality"),
-                            ("gustation","Attack.intensity"),
-                            ("gustation","Acidity"),
-                            ("gustation","Astringency"),
-                            ("gustation","Alcohol"),
-                            ("gustation","Balance"),
-                            ("gustation","Smooth"),
-                            ("gustation","Bitterness"),
-                            ("gustation","Intensity"),
-                            ("gustation","Harmony"),
-                            ("overall judgement","Overall.quality"),
-                            ("overall judgement","Typical")
-                        ]
-        ))
-    wine2.index= wine.index
-    groups = wine2.columns.levels[0].drop(["others","overall judgement"]).tolist()
-    for g in groups:
-        wine2[g] = wine2[g].astype("float")
-    
-    return wine2
+    return wine
 
 def load_qtevie():
-    """
-    
-    """
-    qtevie = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
-    qtevie.info()
-
-    data = pd.DataFrame(qtevie.values,
-                    columns=pd.MultiIndex.from_tuples(
-                        [
-                            ("weel_being","Logements sans sanitaires"),
-                            ("weel_being","Coût logement"),
-                            ("weel_being","Nb pièces par personne"),
-                            ("weel_being","Revenu ménages"),
-                            ("weel_being","Patrimoine financier"),
-                            ("employment","Taux emploi"),
-                            ("employment","Sécurité emploi"),
-                            ("employment","Chômage longue durée"),
-                            ("employment","Revenus moyens activité"),
-                            ("employment","Horaires travail lourds"),
-                            ("pleasure","Qualité réseau social"),
-                            ("pleasure","Satisfaction sur la vie"),
-                            ("pleasure","Temps aux loisirs et à soi"),
-                            ("health_and_security","Pollution atmosphérique"),
-                            ("health_and_security","Qualité eau"),
-                            ("health_and_security","Espérance de vie"),
-                            ("health_and_security","Auto-évaluation état de santé"),
-                            ("health_and_security","Taux agression"),
-                            ("health_and_security","Taux homocides"),
-                            ("education","Niveau instruction"),
-                            ("education","Compétences élèves"),
-                            ("education","Années scolarité"),
-                            ("region","Région")
-                        ]
-                    ))
-    data.index = qtevie.index
-    groups = data.columns.levels[0].drop(["region"]).tolist()
-    for g in groups:
-        data[g] = data[g].astype("float")
+    data = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
     return data
 
 ########################################## Autres datasets
-
 def load_poison():
     data = pyreadr.read_r(DATASETS_DIR/"poison.rda")["poison"]
     data.name = "poison"
