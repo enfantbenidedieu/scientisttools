@@ -10,7 +10,7 @@ def fviz_corrcircle(self,
                     x_label=None,
                     y_label=None,
                     title=None,
-                    geom_type = ["arrow","text"],
+                    geom = ["arrow","text"],
                     color = "black",
                     color_sup = "blue",
                     text_type = "text",
@@ -46,35 +46,46 @@ def fviz_corrcircle(self,
         (axis[0] > axis[1])) :
         raise ValueError("Error : You must pass a valid 'axis'.")
     
-    if self.model_ not in ["pca","ca","mca","famd","mfa"]:
+    if self.model_ not in ["pca","ca","mca","famd","mfa","mfaqual","mfamix","partialpca","efa"]:
         raise ValueError("Factor method not allowed.")
     
-    if self.model_ == "pca":
+    if self.model_ in ["pca","partialpca","efa"]:
         coord = self.var_["coord"]
-    elif self.model_ == "famd":
+    elif self.model_ in ["famd","mfa","mfamix"]:
         coord = self.quanti_var_["coord"]
     else:
-        if self.quanti_sup is not None:
+        if hasattr(self, "quanti_sup_"):
             coord = self.quanti_sup_["coord"]
+        if hasattr(self, "quanti_var_sup_"):
+            coord = self.quanti_var_sup_["coord"]
 
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
-    if "arrow" in geom_type:
+    if "arrow" in geom:
         p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
                                 arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color)
-    if "text" in geom_type:
+    if "text" in geom:
             p = p + text_label(text_type,color=color,size=text_size,va="center",ha="center")
         
-    if self.model_ in ["pca","famd"]:
-        if self.quanti_sup is not None:
+    if self.model_ in ["pca","famd","mfa","mfamix"]:
+        if hasattr(self, "quanti_sup_"):
             sup_coord = self.quanti_sup_["coord"]
-            if "arrow" in geom_type:
+            if "arrow" in geom:
                 p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
                                      arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
-            if "text" in geom_type:
+            if "text" in geom:
                 p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                     color=color_sup,size=text_size,va="center",ha="center")
+        elif hasattr(self, "quanti_var_sup_"):
+            sup_coord = self.quanti_var_sup_["coord"]
+            if "arrow" in geom:
+                p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
+                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
+            if "text" in geom:
+                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
+                                    color=color_sup,size=text_size,va="center",ha="center")
+    
     # Create circle
     if add_circle:
         p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=color_circle, fill=None)

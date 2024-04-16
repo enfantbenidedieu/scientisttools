@@ -7,7 +7,6 @@ from .text_label import text_label
 from .fviz_corrcircle import fviz_corrcircle
 
 def fviz_mca_ind(self,
-                 choice = "var",
                  axis=[0,1],
                  x_lim=None,
                  y_lim=None,
@@ -15,7 +14,7 @@ def fviz_mca_ind(self,
                  x_label = None,
                  y_label = None,
                  color ="black",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -129,13 +128,13 @@ def fviz_mca_ind(self,
         # Using cosine and contributions
         if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns.tolist()]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
-            if "point" in geom_type:
+            if "point" in geom:
                 p = (p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)+
                          pn.scale_color_gradient2(low = gradient_cols[0],
                                                   high = gradient_cols[2],
                                                   mid = gradient_cols[1],
                                                   name = legend_title))
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                        adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
@@ -145,19 +144,19 @@ def fviz_mca_ind(self,
             c = [str(x+1) for x in color.labels_]
             if legend_title is None:
                 legend_title = "Cluster"
-            if "point" in geom_type:
+            if "point" in geom:
                 p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
                          pn.guides(color=pn.guide_legend(title=legend_title)))
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                        adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         else:
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': color,'lw':1.0}})
@@ -166,9 +165,9 @@ def fviz_mca_ind(self,
     else:
         if habillage not in coord.columns:
             raise ValueError(f"Error : {habillage} not in DataFrame.")
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size,shape=marker)
-        if "text" in geom_type:
+        if "text" in geom:
             if repel:
                 p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -182,18 +181,20 @@ def fviz_mca_ind(self,
     if ind_sup:
         if hasattr(self, "ind_sup_"):
             sup_coord = self.ind_sup_["coord"]
-            p = p + pn.geom_point(data=sup_coord,
-                                  mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
-                                  color = color_sup,shape = marker_sup,size=point_size)
-            if repel:
-                p = p + text_label(text_type,data=sup_coord,
-                                   mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
-                                   color=color_sup,size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,'lw':1.0}})
-            else:
-                p = p + text_label(text_type,data=sup_coord,
-                                   mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
-                                     color = color_sup,size=text_size,va=va,ha=ha)
+            if "point" in geom:
+                p = p + pn.geom_point(data=sup_coord,
+                                    mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                    color = color_sup,shape = marker_sup,size=point_size)
+            if "text" in geom:
+                if repel:
+                    p = p + text_label(text_type,data=sup_coord,
+                                    mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                    color=color_sup,size=text_size,va=va,ha=ha,
+                                    adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,'lw':1.0}})
+                else:
+                    p = p + text_label(text_type,data=sup_coord,
+                                    mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                        color = color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
     proportion = self.eig_.iloc[:,2].values
@@ -231,7 +232,7 @@ def fviz_mca_mod(self,
                  y_label = None,
                  title =None,
                  color ="black",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -334,10 +335,10 @@ def fviz_mca_mod(self,
     # Using cosine and contributions
     if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
-        if "point" in geom_type:
+        if "point" in geom:
             p = (p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)+ 
                     pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1], name = legend_title))
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
@@ -347,19 +348,19 @@ def fviz_mca_mod(self,
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
-        if "point" in geom_type:
+        if "point" in geom:
             p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
                     pn.guides(color=pn.guide_legend(title=legend_title)))
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -370,10 +371,10 @@ def fviz_mca_mod(self,
     if quali_sup:
         if hasattr(self, "quali_sup_"):
             var_sup_coord = self.quali_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(var_sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_sup_coord.index.tolist()),
                                       color=color_sup,size=point_size,shape=marker_sup)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=var_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_sup_coord.index.tolist()),
                                        color=color_sup,size=text_size,va=va,ha=ha,
@@ -421,7 +422,7 @@ def fviz_mca_var(self,
                  color="black",
                  color_sup = "blue",
                  color_quanti_sup = "red",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -475,19 +476,19 @@ def fviz_mca_var(self,
     # Using cosine and contributions
     if isinstance(color,np.ndarray):
         # Add gradients colors
-        if "point" in geom_type:
+        if "point" in geom:
             p = (p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)+ 
                     pn.scale_color_gradient2(low=gradient_cols[0],high=gradient_cols[2],mid=gradient_cols[1],name=legend_title))
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -495,12 +496,12 @@ def fviz_mca_var(self,
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     
     if add_quanti_sup:
-        if self.quanti_sup is not None:
+        if hasattr(self, "quanti_sup_"):
             quant_sup_cos2 = self.quanti_sup_["cos2"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(quant_sup_cos2,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quant_sup_cos2.index),
                                       color = color_quanti_sup,shape = marker_quanti_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=quant_sup_cos2,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quant_sup_cos2.index),
                                        color=color_quanti_sup,size=text_size,va=va,ha=ha,
@@ -510,12 +511,12 @@ def fviz_mca_var(self,
                                        color = color_quanti_sup,size=text_size,va=va,ha=ha)
     
     if add_quali_sup:
-        if self.quali_sup is not None:
+        if hasattr(self, "quali_sup_"):
             quali_sup_eta2 = self.quali_sup_["eta2"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(quali_sup_eta2,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_eta2.index),
                                       color = color_sup,shape = marker_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=quali_sup_eta2,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_eta2.index),
                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -580,7 +581,7 @@ def fviz_mca(self,choice="ind",**kwargs)->pn:
     """
 
     if self.model_ != "mca":
-        raise ValueError("'self' must be an object of class MCA.")
+        raise TypeError("'self' must be an object of class MCA")
     
     if choice not in ["ind","mod","var","quanti_sup"]:
         raise ValueError("'choice' values allowed are : 'ind', 'mod', 'var' and 'quanti_sup'.")
@@ -592,7 +593,7 @@ def fviz_mca(self,choice="ind",**kwargs)->pn:
     elif choice == "var":
         return fviz_mca_var(self,**kwargs)
     elif choice == "quanti_sup":
-        if self.quanti_sup_labels_ is not None:
+        if hasattr(self, "quanti_sup_"):
             return fviz_corrcircle(self,**kwargs)
         else:
-            raise ValueError("No supplementary continuous variables available.")
+            raise ValueError("No supplementary continuous variables available")

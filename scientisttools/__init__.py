@@ -51,13 +51,19 @@ from .mfact import MFACT
 from .fviz_mfa import fviz_mfa_freq
 from .get_mfa import summaryMFACT
 
+# 
+from .smacof import SMACOF
+from .mds import MDS
+from .get_mds import get_mds
+from .fviz_mds import fviz_mds, fviz_shepard
+
 ########
 from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
 from .dimdesc import dimdesc
 from .reconst import reconst
 
-
 from .fviz_contrib import fviz_contrib
+from .fviz_cos2 import fviz_cos2
 from .fviz_corrplot import fviz_corrplot
 from .fviz_corrcircle import fviz_corrcircle
 

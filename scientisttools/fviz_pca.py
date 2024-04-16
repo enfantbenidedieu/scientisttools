@@ -15,7 +15,7 @@ def fviz_pca_ind(self,
                  y_label = None,
                  title =None,
                  color ="black",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -131,10 +131,10 @@ def fviz_pca_ind(self,
     if habillage is None :  
         if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
-            if "point" in geom_type:
+            if "point" in geom:
                 p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                          pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                         adjust_text={'arrowprops': {'arrowstyle': '-','color': "black",'lw':1.0}})
@@ -144,19 +144,19 @@ def fviz_pca_ind(self,
             c = [str(x+1) for x in color.labels_]
             if legend_title is None:
                 legend_title = "Cluster"
-                if "point" in geom_type:
+                if "point" in geom:
                     p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
                             pn.guides(color=pn.guide_legend(title=legend_title)))
-                if "text" in geom_type:
+                if "text" in geom:
                     if repel :
                         p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                             adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                     else:
                         p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         else:
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
                                     adjust_text={'arrowprops': {'arrowstyle': '-','color': color,'lw':1.0}})
@@ -165,9 +165,9 @@ def fviz_pca_ind(self,
     else:
         if habillage not in coord.columns:
             raise ValueError(f"Error : {habillage} not in DataFrame.")
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size,shape=marker)
-        if "text" in geom_type:
+        if "text" in geom:
             if repel:
                 p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,
                                     adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -179,12 +179,12 @@ def fviz_pca_ind(self,
     
     ##### Add supplementary individuals coordinates
     if ind_sup:
-        if self.ind_sup is not None:
+        if hasattr(self, "ind_sup_"):
             sup_coord = self.ind_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                     color = color_sup,shape = marker_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                         color=color_sup,size=text_size,va=va,ha=ha,
@@ -194,13 +194,13 @@ def fviz_pca_ind(self,
                                         color = color_sup,size=text_size,va=va,ha=ha)
     ############## Add supplementary qualitatives coordinates
     if quali_sup:
-        if self.quali_sup is not None:
+        if hasattr(self, "quali_sup_"):
             if habillage is None:
                 mod_sup_coord = self.quali_sup_["coord"]
-                if "point" in geom_type:
+                if "point" in geom:
                     p = p + pn.geom_point(mod_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
                                         color=color_quali_sup,size=point_size)
-                if "text" in geom_type:
+                if "text" in geom:
                     if repel:
                         p = p + text_label(text_type,data=mod_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_sup_coord.index),
                                            color=color_quali_sup,size=text_size,va=va,ha=ha,
@@ -247,7 +247,7 @@ def fviz_pca_var(self,
                  y_label = None,
                  title =None,
                  color ="black",
-                 geom_type = ["arrow","text"],
+                 geom = ["arrow","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  text_type = "text",
                  text_size = 8,
@@ -331,35 +331,35 @@ def fviz_pca_var(self,
 
     if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
         # Add gradients colors
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+
                      pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     elif hasattr(color, "labels_"):
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
                      pn.guides(color=pn.guide_legend(title=legend_title)))
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
 
     else:
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color)
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     
     # Add supplmentary continuous variables
     if quanti_sup:
-        if self.quanti_sup is not None:
+        if hasattr(self, "quanti_sup_"):
             sup_coord = self.quanti_sup_["coord"]
-            if "arrow" in geom_type:
+            if "arrow" in geom:
                 p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype=linestyle_sup)
-            if "text" in geom_type:
+            if "text" in geom:
                 p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=color_sup,size=text_size,va=va,ha=ha)
     # Create circle
     if add_circle:
@@ -448,10 +448,10 @@ def fviz_pca(self,choice="ind",**kwargs)->pn:
     """
 
     if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an instance of class PCA.")
+        raise TypeError("'self' must be an instance of class PCA")
     
     if choice not in ["ind","var"]:
-        raise ValueError("Error : Allowed 'choice' values are 'ind' or 'var'.")
+        raise ValueError("'choice' should be one of 'ind', 'var'")
 
     if choice == "ind":
         return fviz_pca_ind(self,**kwargs)

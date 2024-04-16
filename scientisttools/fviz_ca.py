@@ -13,7 +13,7 @@ def fviz_ca_row(self,
                  y_label = None,
                  title =None,
                  color ="black",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -152,10 +152,10 @@ def fviz_ca_row(self,
         # Using cosine and contributions
         if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
                 p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
@@ -165,18 +165,18 @@ def fviz_ca_row(self,
                 if legend_title is None:
                     legend_title = "Cluster"
                 #####################################
-                if "point" in geom_type:
+                if "point" in geom:
                     p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
                             pn.guides(color=pn.guide_legend(title=legend_title)))
-                if "text" in geom_type:
+                if "text" in geom:
                     if repel :
                         p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                     else:
                         p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         else:
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color,"lw":1.0}})
                 else:
@@ -185,9 +185,9 @@ def fviz_ca_row(self,
         if self.quali_sup is not None:
             if habillage not in coord.columns.tolist():
                 raise ValueError(f"Error : {habillage} not in DataFrame")
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size,shape=marker)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
@@ -196,11 +196,11 @@ def fviz_ca_row(self,
                 p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
         
     if row_sup:
-        if self.row_sup is not None:
+        if hasattr(self, "row_sup_"):
             row_sup_coord = self.row_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(row_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=row_sup_coord.index),color = color_sup,shape = marker_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=row_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=row_sup_coord.index),
                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
@@ -209,12 +209,12 @@ def fviz_ca_row(self,
                                        color = color_sup,size=text_size,va=va,ha=ha)
     
     if quali_sup:
-        if self.quali_sup is not None:
+        if hasattr(self, "quali_sup_"):
             quali_sup_coord = self.quali_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
                                       color = color_quali_sup,shape = marker_quali_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
                                        color=color_quali_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_quali_sup,"lw":1.0}})
@@ -257,7 +257,7 @@ def fviz_ca_col(self,
                  y_label = None,
                  title =None,
                  color ="black",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  text_type = "text",
                  marker = "o",
@@ -355,10 +355,10 @@ def fviz_ca_col(self,
     
     if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
         # Add gradients colors
-        if "point" in geom_type:
+        if "point" in geom:
             p = (p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)+ 
                      pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
-        if "text" in geom_type:
+        if "text" in geom:
             if repel:
                 p = p + text_label(text_type,mapping=pn.aes(colour=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
@@ -367,18 +367,18 @@ def fviz_ca_col(self,
             c = [str(x+1) for x in color.labels_]
             if legend_title is None:
                 legend_title = "Cluster"
-            if "point" in geom_type:
+            if "point" in geom:
                 p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),color=color,shape=marker,size=point_size)
-        if "text" in geom_type:
+        if "text" in geom:
             if repel:
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color,"lw":1.0}})
             else:
@@ -386,12 +386,12 @@ def fviz_ca_col(self,
     
     ###################### Add supplementary columns coordinates
     if col_sup:
-        if self.col_sup is not None:
+        if hasattr(self, "col_sup_"):
             sup_coord = self.col_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p  = p + pn.geom_point(sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                        color=color_sup,shape=marker_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,"lw":1.0}})
@@ -434,8 +434,8 @@ def fviz_ca_biplot(self,
                    x_label = None,
                    y_label = None,
                    title = None,
-                   row_geom_type = ["point","text"],
-                   col_geom_type = ["point","text"],
+                   row_geom = ["point","text"],
+                   col_geom = ["point","text"],
                    row_color = "black",
                    col_color = "blue",
                    row_point_size = 1.5,
@@ -501,10 +501,10 @@ def fviz_ca_biplot(self,
     ###############" Initialize
     p = pn.ggplot()
     ########### Add rows coordinates
-    if "point" in row_geom_type:
+    if "point" in row_geom:
         p = p + pn.geom_point(data=row_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label = row_coord.index),
                               color=row_color,shape=row_marker,size=row_point_size)
-    if "text" in row_geom_type:
+    if "text" in row_geom:
         if row_repel:
             p = p + text_label(row_text_type,data=row_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=row_coord.index),
                                color=row_color,size=row_text_size,va=row_va,ha=row_ha,
@@ -514,10 +514,10 @@ def fviz_ca_biplot(self,
                                color=row_color,size=row_text_size,va=row_va,ha=row_ha)
     
     ############ Add columns coordinates
-    if "point" in col_geom_type:
+    if "point" in col_geom:
         p = p + pn.geom_point(data=col_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label = col_coord.index),
                               color=col_color,shape=col_marker,size=col_point_size)
-    if "text" in col_geom_type:
+    if "text" in col_geom:
         if col_repel:
             p = p + text_label(col_text_type,data=col_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=col_coord.index),
                                color=col_color,size=col_text_size,va=col_va,ha=col_ha,
@@ -528,12 +528,12 @@ def fviz_ca_biplot(self,
     
     ################################ Add supplementary elements
     if row_sup:
-        if self.row_sup is not None:
+        if hasattr(self, "row_sup_"):
             row_sup_coord = self.row_sup_["coord"]
-            if "point" in row_geom_type:
+            if "point" in row_geom:
                 p = p + pn.geom_point(row_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=row_sup_coord.index),
                                       color = row_color_sup,shape = row_marker_sup,size=row_point_size)
-            if "text" in row_geom_type:
+            if "text" in row_geom:
                 if row_repel:
                     p = p + text_label(row_text_type,data=row_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=row_sup_coord.index),
                                        color=row_color_sup,size=row_text_size,va=row_va,ha=row_ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': row_color_sup,"lw":1.0}})
@@ -542,12 +542,12 @@ def fviz_ca_biplot(self,
                                        color = row_color_sup,size=row_text_size,va=row_va,ha=row_ha)
     
     if col_sup:
-        if self.col_sup is not None:
+        if hasattr(self, "col_sup_"):
             col_sup_coord = self.col_sup_["coord"]
-            if "point" in col_geom_type:
+            if "point" in col_geom:
                 p  = p + pn.geom_point(col_sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=col_sup_coord.index),
                                        color=col_color_sup,shape=col_marker_sup,size=col_point_size)
-            if "text" in col_geom_type:
+            if "text" in col_geom:
                 if col_repel:
                     p = p + text_label(col_text_type,data=col_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=col_sup_coord.index),
                                        color=col_color_sup,size=col_text_size,va=col_va,ha=col_ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': col_color_sup,"lw":1.0}})
@@ -555,7 +555,6 @@ def fviz_ca_biplot(self,
                     p  = p + text_label(col_text_type,data=col_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=col_sup_coord.index),
                                         color=col_color_sup,size=col_text_size,va=col_va,ha=col_ha)
     
-
     # Add additionnal        
     proportion = self.eig_.iloc[:,2]
     if x_label is None:
@@ -614,10 +613,10 @@ def fviz_ca(self,choice,**kwargs)->pn:
     """
 
     if self.model_ != "ca":
-        raise ValueError("'self' must be an object of class CA.")
+        raise TypeError("'self' must be an object of class CA")
     
     if choice not in ["row","col","biplot"]:
-        raise ValueError("Allowed values for choice are :'row', 'col' or 'biplot'.")
+        raise ValueError("choice should be one of 'row', 'col', 'biplot'")
 
     if choice == "row":
         return fviz_ca_row(self,**kwargs)

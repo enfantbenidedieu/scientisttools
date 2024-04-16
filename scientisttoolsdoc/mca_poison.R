@@ -4,6 +4,9 @@ library(factoextra)
 data (poison)
 res.mca <- MCA(poison,ind.sup = c(51:55),quanti.sup = c(1:2),quali.sup = c(3:4),graph = FALSE)
 
+
+fviz_cos2(res.mca,choice = "quanti.sup")
+
 res.mca$call$marge.col
 res.mca$call$marge.row
 res.mca$svd$vs

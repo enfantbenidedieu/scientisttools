@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import pandas as pd
 import plotnine as pn
 
 def fviz_contrib(self,
@@ -10,7 +11,6 @@ def fviz_contrib(self,
                  add_grid=True,
                  fill_color = "steelblue",
                  color = "steelblue",
-                 palette = "Set2",
                  sort_contrib = "desc",
                  xtickslab_rotation = 45,
                  ggtheme=pn.theme_minimal()) -> pn:
@@ -22,53 +22,68 @@ def fviz_contrib(self,
     Description
     -----------
     This function can be used to visualize the contribution of rows/columns from the results of Principal Component Analysis (PCA), 
-    Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), and Multiple Factor Analysis (MFA) functions.
-    
-
-    For the selected axis, the graph represents the row or column
-    cosines sorted in descending order.            
+    Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), and Multiple Factor Analysis (MFA) functions.     
         
     Parameters
     ----------
-    choice : {'ind','var','mod'}.
-            'ind' :   individuals
-            'var' :   continues/categorical variables
-            'mod' :   categories
+    choice : allowed values are :
+            - 'row' for CA
+            - 'col' for CA
+            - 'var' for PCA or MCA
+            - 'ind' for PCA
+            - 'quanti_var' for FAMD, MFA, MFAMIX
+            - 'quali_var' for FAMD, MFAQUAL
+            - 'freq' for MFACT
+            - 'group' for MFA, MFAQUAL, MFAMIX, MFACT
+            - 'partial_axes' for MFA, MFAQUAL, MFAMIX, MFACT
         
     axis : None or int.
         Select the axis for which the row/col contributions are plotted. If None, axis = 0.
         
-    xlabel : None or str (default).
+    y_label : None or str (default).
         The label text.
         
-    top_contrib : None or int.
-        Set the maximum number of values to plot.
-        If top_contrib is None : all the values are plotted.
+    top_contrib : an integer value specifying the number of top elements to be shown.
             
     bar_width : None, float or array-like.
         The width(s) of the bars.
 
     add_grid : bool or None, default = True.
         Whether to show the grid lines.
-
+    
+    fill_color : a fill color for the bar plot, default = "steelblue"
+    
     color : color or list of color, default = "steelblue".
         The colors of the bar faces.
+    
+    sort_contrib : a string specifying whether the value should be sorted. Allowed values are :
+                    - "none" for no sorting
+                    - 'asc' for ascending
+                    - 'desc' for descending
 
-    short_labels : bool, default = False
+    xtickslab_rotation : x text ange
+
+    ggtheme : function, plotnine theme name. Default value is theme_pubr(). 
+               Allowed values include plotnine official themes: 
+               theme_gray(), theme_bw(), theme_minimal(), theme_classic(), theme_void(),
         
     Returns
     -------
-    None
+    a plotnine figure
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """    
         
-    if choice not in ["row","col","var","ind","quanti_var","quali_var","group","partial_axes"]:
-        raise ValueError("'choice' should be one of 'row', 'col', 'var', 'ind', 'quanti_var', 'quali_var', 'group' or 'partial_axes'.")
+    if choice not in ["row","col","var","ind","quanti_var","quali_var","freq","group","partial_axes"]:
+        raise ValueError("'choice' should be one of 'row', 'col', 'var', 'ind', 'quanti_var', 'quali_var',  'freq','group' 'partial_axes'.")
 
     ncp = self.call_["n_components"]
     if axis is None:
         axis = 0
     elif not isinstance(axis,int):
-        raise TypeError("Error : 'axis' must be an integer.")
+        raise TypeError("'axis' must be an integer.")
     elif axis not in list(range(0,ncp)):
         raise TypeError(f"'axis' must be an integer between 0 and {ncp-1}.")
             
@@ -77,13 +92,28 @@ def fviz_contrib(self,
 
     ################## set
     if self.model_ in ["pca","mca","partialpca"] and choice not in ["ind","var"]:
-        raise ValueError("'choice' should be one of 'var', 'ind'.")
+        raise ValueError("'choice' should be one of 'var', 'ind'")
+    
+    if self.model_ == "efa" and choice != "var":
+        raise ValueError("'choice' should be 'var'")
     
     if self.model_ == "ca" and choice not in ["row","col"]:
-        raise ValueError("Error : 'choice' should be one of 'row', 'col'.")
+        raise ValueError("'choice' should be one of 'row', 'col'.")
     
-    if self.model_ == "famd" and choice not in ["ind","var","quali_var"]:
-        raise ValueError("'choice' should be one of 'var', 'ind', 'quali_var'")
+    if self.model_ == "famd" and choice not in ["ind","quanti_var","quali_var"]:
+        raise ValueError("'choice' should be one of 'ind', 'quanti_var','quali_var'")
+    
+    if self.model_ == "mfa" and choice not in ["ind","quanti_var","group","partial_axes"]:
+        raise ValueError("'choice' should be one of 'ind', 'quanti_var', 'group', 'partial_axes'")
+    
+    if self.model_ == "mfaqual" and choice not in ["ind","quali_var","group","partial_axes"]:
+        raise ValueError("'choice' should be one of 'ind', 'quali_var', 'group', 'partial_axes'")
+    
+    if self.model_ == "mfamix" and choice not in ["ind","quanti_var","quali_var","group","partial_axes"]:
+        raise ValueError("'choice' should be one of 'ind', 'quanti_var', 'quali_var','group', 'partial_axes'")
+    
+    if self.model_ == "mfact" and choice not in ["ind","freq","group","partial_axes"]:
+        raise ValueError("'choice' should be one of 'ind', 'freq', 'group', 'partial_axes'")
 
     if sort_contrib not in ["desc","asc","none"]:
         raise ValueError("'sort_contrib' should be one of 'desc', 'asc' or 'none'.")
@@ -95,6 +125,14 @@ def fviz_contrib(self,
         name = "variables"
     elif choice == "quali_var":
         name = "qualitative variables"
+    elif choice == "quanti_var":
+        name = "quantitative variables"
+    elif choice == "freq":
+        name = "frequencies"
+    elif choice == "group":
+        name = "groups"
+    elif choice == "partial_axes":
+        name = "partial axes"
     elif choice == "row":
         name = "rows"
     elif choice == "col":
@@ -107,6 +145,18 @@ def fviz_contrib(self,
         contrib = self.var_["contrib"]
     elif choice == "quali_var":
         contrib = self.quali_var_["contrib"]
+    elif choice == "quanti_var":
+        contrib = self.quanti_var_["contrib"]
+    elif choice == "freq":
+        contrib = self.freq_["contrib"]
+    elif choice == "group":
+        contrib = self.group_["contrib"]
+    elif choice == "partial_axes":
+        contrib = pd.DataFrame().astype("float")
+        for grp in self.partial_axes_["contrib"].columns.get_level_values(0).unique().tolist():
+            data = self.partial_axes_["contrib"][grp].T
+            data.index = [x+"."+str(grp) for x in data.index]
+            contrib = pd.concat([contrib,data],axis=0)
     elif choice == "row":
         contrib = self.row_["contrib"]
     elif choice == "col":
@@ -124,8 +174,48 @@ def fviz_contrib(self,
             contrib = contrib.sort_values(by="contrib",ascending=False).head(top_contrib)
     
     p = pn.ggplot()
-    if choice == "quanti_var" and self.model_ == "mfa":
-        pass
+    if choice == "quanti_var":
+        if self.model_ in ["mfa","mfamix"]:
+            contrib = contrib.rename(columns={"name" : "variable"})
+            contrib = pd.merge(contrib,self.group_label_,on=["variable"]).rename(columns={"variable" : "name"})
+            
+            if sort_contrib == "desc":
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group",fill="group"),
+                                    width=bar_width,stat="identity")
+            elif sort_contrib == "asc":
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group",fill="group"),
+                                    width=bar_width,stat="identity")
+            else:
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group",fill="group"),
+                                    width=bar_width,stat="identity")
+        else:
+            if sort_contrib == "desc":
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),
+                                    fill=fill_color,color=color,width=bar_width,stat="identity")
+            elif sort_contrib == "asc":
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1),
+                                    fill=fill_color,color=color,width=bar_width,stat="identity")
+            else:
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1),
+                                    fill=fill_color,color=color,width=bar_width,stat="identity")
+    elif choice == "freq":
+        if self.model_ != "mfact":
+             raise TypeError("'self' must be an object of class MFACT")
+        
+        contrib = contrib.rename(columns={"name" : "variable"})
+        contrib = pd.merge(contrib,self.group_label_,on=["variable"]).rename(columns={"variable" : "name"})
+        
+        if sort_contrib == "desc":
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group",fill="group"),
+                                width=bar_width,stat="identity")
+        elif sort_contrib == "asc":
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group",fill="group"),
+                                width=bar_width,stat="identity")
+        else:
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group",fill="group"),
+                                width=bar_width,stat="identity")
+           
+
     else:
         if sort_contrib == "desc":
             p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),
@@ -134,7 +224,7 @@ def fviz_contrib(self,
             p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1),
                                 fill=fill_color,color=color,width=bar_width,stat="identity")
         else:
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="contrib",y="contrib",group = 1),
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1),
                                 fill=fill_color,color=color,width=bar_width,stat="identity")
     
     if y_label is None:

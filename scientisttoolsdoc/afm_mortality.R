@@ -7,6 +7,8 @@ data(mortality)
 res<-MFA(mortality,group=c(9,9),type=c("f","f"),
          name.group=c("1979","2006"),graph = F)
 
+fviz_contrib(res,choice = "partial.axes")
+
 ###################################### row informations
 #######################################################
 # Individuals informations

@@ -14,7 +14,7 @@ def fviz_famd_ind(self,
                  y_label=None,
                  title =None,
                  color ="black",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -63,7 +63,7 @@ def fviz_famd_ind(self,
     """
     
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an object of class FAMD.")
+        raise TypeError("'self' must be an object of class FAMD")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -137,10 +137,10 @@ def fviz_famd_ind(self,
     if habillage is None :        
         if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns.tolist()]) or isinstance(color,np.ndarray):
             # Add gradients colors
-            if "point" in geom_type:
+            if "point" in geom:
                 p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                         pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
@@ -149,19 +149,19 @@ def fviz_famd_ind(self,
             c = [str(x+1) for x in color.labels_]
             if legend_title is None:
                 legend_title = "Cluster"
-            if "point" in geom_type:
+            if "point" in geom:
                 p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                         adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         else:
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle':"-","lw":1.0}})
                 else:
@@ -170,7 +170,7 @@ def fviz_famd_ind(self,
     else:
         if habillage not in coord.columns:
             raise ValueError(f"'{habillage}' not in DataFrame.")
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size,shape=marker)
         if "text":
             if repel:
@@ -185,10 +185,10 @@ def fviz_famd_ind(self,
     
     ############################## Add qualitatives variables
     quali_coord = self.quali_var_["coord"]
-    if "point" in geom_type:
+    if "point" in geom:
         p = p + pn.geom_point(quali_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
                               color = color_quali_var,shape = marker_quali_var,size=point_size)
-    if "text" in geom_type:
+    if "text" in geom:
         if repel:
             p = p + text_label(text_type,data=quali_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
                                 color=color_quali_var,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -198,12 +198,12 @@ def fviz_famd_ind(self,
 
     ############################## Add supplementary individuals informations
     if ind_sup:
-        if self.ind_sup is not None:
+        if hasattr(self, "ind_sup_"):
             sup_coord = self.ind_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                       color = color_sup,shape = marker_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                         color=color_sup,size=text_size,va=va,ha=ha,
@@ -214,12 +214,12 @@ def fviz_famd_ind(self,
     
     ############## Add supplementary qualitatives
     if quali_sup:
-        if self.quali_sup is not None:
+        if hasattr(self, "quali_sup_"):
             quali_sup_coord = self.quali_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index.tolist()),
                                       color = color_quali_sup,shape = marker_quali_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index.tolist()),
                                         color=color_quali_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -263,7 +263,7 @@ def fviz_famd_col(self,
                  color ="black",
                  x_label= None,
                  y_label = None,
-                 geom_type = ["arrow", "text"],
+                 geom = ["arrow", "text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  text_type = "text",
                  text_size = 8,
@@ -347,36 +347,36 @@ def fviz_famd_col(self,
     
     if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
                                      arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+ 
                     pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     elif hasattr(color, "labels_"):
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
                     pn.guides(color=pn.guide_legend(title=legend_title)))
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
                                     arrow = pn.arrow(angle=arrow_angle,length=arrow_length),color=color)
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     
     if quanti_sup:
-        if self.quanti_sup is not None:
+        if hasattr(self, "quanti_sup_"):
             sup_coord = self.quanti_sup_["coord"]
-            if "arrow" in geom_type:
+            if "arrow" in geom:
                 p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
                                      arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype=linestyle_sup)
-            if "text" in geom_type:
+            if "text" in geom:
                 p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                     color=color_sup,size=text_size,va=va,ha=ha)
     
@@ -416,7 +416,7 @@ def fviz_famd_mod(self,
                  y_label = None,
                  title =None,
                  color ="black",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -450,7 +450,7 @@ def fviz_famd_mod(self,
     """
     
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an object of class FAMD.")
+        raise TypeError("'self' must be an object of class FAMD")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -501,10 +501,10 @@ def fviz_famd_mod(self,
     # Using cosine and contributions
     if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
-        if "point" in geom_type:
+        if "point" in geom:
             p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
                     pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -514,19 +514,19 @@ def fviz_famd_mod(self,
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
-        if "point" in geom_type:
+        if "point" in geom:
             p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                         adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
                                    adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -535,12 +535,12 @@ def fviz_famd_mod(self,
         
     # Add supplementary categories
     if quali_sup:
-        if self.quali_sup is not None:
+        if hasattr(self, "quali_sup_"):
             quali_sup_coord = self.quali_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(data=quali_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
                                       color=color_sup,size=point_size,shape=marker_sup)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -585,7 +585,7 @@ def fviz_famd_var(self,
                  title=None,
                  x_label = None,
                  y_label = None,
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  color_quanti ="black",
                  color_quali = "blue",
                  color_quali_sup = "green",
@@ -625,7 +625,7 @@ def fviz_famd_var(self,
     """
     
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an object of class FAMD.")
+        raise TypeError("'self' must be an object of class FAMD")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -639,10 +639,10 @@ def fviz_famd_var(self,
     
     # Initialize
     p = pn.ggplot(data=quanti_var_cos2,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_var_cos2.index))
-    if "point" in geom_type:
+    if "point" in geom:
         p = p + pn.geom_point(color=color_quanti,shape=marker_quanti,size=point_size,show_legend=False)
     
-    if "text" in geom_type:
+    if "text" in geom:
         if repel :
             p = p + text_label(text_type,color=color_quanti,size=text_size,va=va,ha=ha,
                                 adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
@@ -650,10 +650,10 @@ def fviz_famd_var(self,
             p = p + text_label(text_type,color=color_quanti,size=text_size,va=va,ha=ha)
     
     # Add Qualitatives variables
-    if "point" in geom_type:
+    if "point" in geom:
         p = p + pn.geom_point(data=quali_var_eta2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_eta2.index.tolist()),
                               color=color_quali,size=point_size,shape=marker_quali)
-    if "text" in geom_type:
+    if "text" in geom:
         if repel:
             p = p + text_label(text_type,data=quali_var_eta2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_eta2.index.tolist()),
                                 color=color_quali,size=text_size,va=va,ha=ha,
@@ -665,12 +665,12 @@ def fviz_famd_var(self,
     
     # Add supplementary continuous variables
     if add_quanti_sup:
-        if self.quanti_sup is not None:
+        if hasattr(self, "quanti_sup_"):
             quanti_sup_cos2 = self.quanti_sup_["cos2"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(data=quanti_sup_cos2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_sup_cos2.index),
                                     color=color_quanti_sup,size=point_size,shape=marker_quanti_sup)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=quanti_sup_cos2,
                                        mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_sup_cos2.index),
@@ -683,12 +683,12 @@ def fviz_famd_var(self,
     
     # Add supplementary categoricals variables
     if add_quali_sup:
-        if self.quali_sup is not None:
+        if hasattr(self, "quali_sup_"):
             quali_sup_eta2 = self.quali_sup_["eta2"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(data=quali_sup_eta2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_eta2.index),
                                     color=color_quali_sup,size=point_size,shape=marker_quali_sup)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=quali_sup_eta2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_eta2.index),
                                        color=color_quali_sup,size=text_size,va=va,ha=ha,
@@ -754,10 +754,10 @@ def fviz_famd(self,choice="ind",**kwargs) -> pn:
     """
 
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an object of class FAMD.")
+        raise TypeError("'self' must be an object of class FAMD")
     
     if choice not in ["ind","quanti_var","quali_var","var"]:
-        raise ValueError("Error : 'choice' should be one of 'ind','quanti_var','quali_var' and 'var'.")
+        raise ValueError("'choice' should be one of 'ind','quanti_var','quali_var' and 'var'.")
     
     if choice == "ind":
         return fviz_famd_ind(self,**kwargs)

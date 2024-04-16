@@ -15,7 +15,7 @@ def fviz_partialpca_ind(self,
                  y_label = None,
                  title =None,
                  color ="black",
-                 geom_type = ["point","text"],
+                 geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  point_size = 1.5,
                  text_size = 8,
@@ -121,11 +121,11 @@ def fviz_partialpca_ind(self,
     # Using cosine and contributions
     if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns.tolist()]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
             p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],
                                                 name = legend_title)
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                         adjust_text={'arrowprops': {'arrowstyle': '->',"lw":1.0}})
@@ -135,19 +135,19 @@ def fviz_partialpca_ind(self,
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
-        if "point" in geom_type:
+        if "point" in geom:
             p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
                                     adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
-        if "point" in geom_type:
+        if "point" in geom:
             p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-        if "text" in geom_type:
+        if "text" in geom:
             if repel :
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
@@ -155,12 +155,12 @@ def fviz_partialpca_ind(self,
     
     ############################## Add supplementary individuals informations
     if ind_sup:
-        if self.ind_sup is not None:
+        if hasattr(self, "ind_sup_"):
             sup_coord = self.ind_sup_["coord"]
-            if "point" in geom_type:
+            if "point" in geom:
                 p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                       color = color_sup,shape = marker_sup,size=point_size)
-            if "text" in geom_type:
+            if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                         color=color_sup,size=text_size,va=va,ha=ha,
@@ -205,7 +205,7 @@ def fviz_partialpca_var(self,
                  y_label = None,
                  title =None,
                  color ="black",
-                 geom_type = ["arrow","text"],
+                 geom = ["arrow","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  text_type = "text",
                  text_size = 8,
@@ -282,24 +282,24 @@ def fviz_partialpca_var(self,
 
     if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
         # Add gradients colors
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+
                      pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     elif hasattr(color, "labels_"):
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
                      pn.guides(color=pn.guide_legend(title=legend_title)))
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
-        if "arrow" in geom_type:
+        if "arrow" in geom:
             p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color)
-        if "text" in geom_type:
+        if "text" in geom:
             p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     
     # Create circle

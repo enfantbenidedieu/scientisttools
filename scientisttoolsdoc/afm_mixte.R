@@ -14,9 +14,10 @@ colnames(Biometrie2)
 
 res=MFA(Biometrie2,group=c(3,3,3,3),
         type=c("n","s","n","s"),
-        num.group.sup = c(3,4),
+        #num.group.sup = c(3,4),
         graph = FALSE)
 
+fviz_contrib(res,choice = "quanti.var")
 
 fviz_mfa_ind(res)
 fviz_mfa_var(res)

@@ -207,8 +207,6 @@ def fviz_mfa_ind(self,
                 else:
                     p = p + text_label(text_type,data=quali_var_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_sup_coord.index.tolist()),
                                        color = color_quali_sup,size=text_size,va=va,ha=ha)
-        else:
-            raise ValueError("Set habillage to None")
 
     # Add additionnal        
     proportion = self.eig_.iloc[:,2].values

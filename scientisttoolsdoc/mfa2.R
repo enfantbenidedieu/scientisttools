@@ -10,6 +10,8 @@ res2.mfa <- MFA(poison, group=c(2,2,5,6), type=c("s","n","n","n"),
                 name.group=c("desc","desc2","symptom","eat"),
                 num.group.sup=1:2,graph = FALSE)
 
+fviz_contrib(res2.mfa,choice = "partial.axes")
+
 ################################################################
 # Eigenvalues
 ###############################################################

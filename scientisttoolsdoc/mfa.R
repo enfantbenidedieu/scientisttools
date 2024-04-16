@@ -25,6 +25,8 @@ res.mfa$global.pca$svd$vs
 res.mfa$global.pca$svd$U[c(1:5),]
 res.mfa$global.pca$svd$V[c(1:5),]
 
+fviz_contrib(res.mfa,choice ="partial.axes")
+
 ###############################################################
 # Eigenvalues
 #############################################################
