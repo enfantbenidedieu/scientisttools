@@ -2,19 +2,27 @@
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from scipy.spatial.distance import pdist,squareform
+import polars as pl
 import warnings
+
+from scipy.spatial.distance import pdist,squareform
 from sklearn.utils import check_symmetric
 from sklearn.base import BaseEstimator, TransformerMixin
 from mapply.mapply import mapply
 from scipy.spatial.distance import euclidean
+
+from .sim_dist import sim_dist
 
 
 class CMDSCALE(BaseEstimator,TransformerMixin):
     """
     Classic Muldimensional Scaling (CMDSCALE)
     -----------------------------------------
+
+    Description
+    -----------
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     This is a classical multidimensional scaling also 
     known as Principal Coordinates Analysis (PCoA).
@@ -26,9 +34,6 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
     ----------
     n_components : int, default=None
         Number of dimensions in which to immerse the dissimilarities.
-    
-    labels : list of string,   default : None
-        Labels for the rows.
     
     sup_labels : list of string, default = None
         Labels of supplementary rows.
@@ -95,21 +100,21 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
     
     """
     def __init__(self,
-                n_components=None,
-                labels = None,
-                sup_labels = None,
-                proximity="euclidean",
-                normalized_stress=True,
-                parallelize=False):
+                 n_components=None,
+                 ind_sup = None,
+                 proximity="euclidean",
+                 normalized_stress=True,
+                 parallelize=False):
         self.n_components = n_components
-        self.labels = labels
-        self.sup_labels = sup_labels
+        self.ind_sup = ind_sup
         self.proximity = proximity
         self.normalized_stress = normalized_stress
-        self.parallelize =parallelize
+        self.parallelize = parallelize
     
     def fit(self,X,y=None):
-        """Fit the model to X
+        """
+        Fit the model to X
+        ------------------
         
         Parameters
         ----------
@@ -124,76 +129,74 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
                 Returns the instance itself
         """
 
+        # If proximinity == "euclidean"
+        def is_euclidean(centering_matrix,X):
+            """
+            Compute eigenvalue and eigenvalue for euclidean matrix
+            -------------------------------------------------------
+            
+            """
+            B = np.dot(np.dot(centering_matrix,X),np.dot(centering_matrix,X).T)
+            value, vector = np.linalg.eig(B)
+            return np.real(value), np.real(vector)
+        
+        # If proximity == "precomputed" or "similarity"
+        def is_others(centering_matrix,X,choice = "precomputed"):
+            """
+            Compute eigenvalue and eigenvector for precomputed matrix
+            ---------------------------------------------------------
+            
+            """
+            if choice == "precomputed":
+                dist = check_symmetric(X.values, raise_exception=True)
+            elif choice == "similarity":
+                D = sim_dist(X)
+                dist = check_symmetric(D, raise_exception=True)
+            
+            A = -0.5*np.multiply(dist,dist)
+            B = np.dot(centering_matrix,np.dot(A,centering_matrix))
+            value, vector = np.linalg.eig(B)
+            return np.real(value), np.real(vector)
+
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-          # Set parallelize
-        if self.parallelize:
-            self.n_workers_ = -1
-        else:
-            self.n_workers_ = 1
+        if self.proximity not in ["euclidean","precomputed","similarity"]:
+            raise ValueError("'proximity' should be one of 'euclidean', 'precomputed', 'similarity'")
         
-        # Extract supplementary data
-        self.sup_labels_ = self.sup_labels
-        if self.sup_labels_ is not None:
-            _X = X.drop(index = self.sup_labels_)
-            row_sup = X.loc[self.sup_labels_,:]
-        else:
-            _X = X
+        ###############################################################################################################"
+        # Drop level if ndim greater than 1 and reset columns name
+        ###############################################################################################################
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+        
+        ############################
+        # Check is supplementary rows
+        if self.ind_sup is not None:
+            if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
+                ind_sup = [int(self.ind_sup)]
+            elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple))  and len(self.ind_sup)>=1):
+                ind_sup = [int(x) for x in self.ind_sup]
+        
+        ####################################### Save the base in a new variables
+        # Store data
+        Xtot = X
 
-        self.data_ = X
-        self.active_data_ = _X
+        ####################################### Drop supplementary qualitative columns ########################################
+        if self.ind_sup is not None:
+            # Extract supplementary individuals
+            X_ind_sup = X.iloc[self.ind_sup,:]
+            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
         
-        # Initialize
-        self.sup_coord_ = None
-        
-        self.nobs_ = _X.shape[0]
-        self.centering_matrix_ = np.identity(self.nobs_) - (1/self.nobs_)*np.ones(shape=(self.nobs_,self.nobs_))
-        
-        self._compute_stats(_X)
-        
-        if self.sup_labels_ is not None:
-            self.sup_coord_ = self.transform(row_sup)
-        
-        return self
-    
-    def _is_euclidean(self,X):
-        """Compute eigenvalue and eigenvalue for euclidean matrix
-        
-        """
-        self.dist_ = squareform(pdist(X,metric="euclidean"))
-        B = np.dot(np.dot(self.centering_matrix_,X),np.dot(self.centering_matrix_,X).T)
-        value, vector = np.linalg.eig(B)
-        return np.real(value), np.real(vector)
-    
-    def _is_precomputed(self,X):
-        """Return eigenvalue and eigenvector for precomputed matrix
-        
-        """
-        self.dist_ = check_symmetric(X.values, raise_exception=True)
-        A = -0.5*np.multiply(self.dist_,self.dist_)
-        B = np.dot(self.centering_matrix_,np.dot(A,self.centering_matrix_))
-        value, vector = np.linalg.eig(B)
-        return np.real(value), np.real(vector)
-    
-    def _is_similarity(self,X):
-        """Return eigenvalue
-        
-        """
-        D = sim_dist(X)
-        self.dist_ = check_symmetric(D, raise_exception=True)
-        A = -0.5*np.multiply(self.dist_,self.dist_)
-        B = np.dot(self.centering_matrix_,np.dot(A,self.centering_matrix_))
-        value, vector = np.linalg.eig(B)
-        return np.real(value), np.real(vector)
-    
-    def _compute_stats(self,X):
-        """Compute statistic
-        
-        """
+        ##############################################################################################
+        # check matrix
         if X.shape[0] == X.shape[1] and self.proximity != "precomputed":
             raise warnings.warn(
                 "The ClassicMDS API has changed. ``fit`` now constructs an"
@@ -201,62 +204,90 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
                 "dissimilarity matrix, set "
                 "``proximity='precomputed'``."
             )
+        
+        ################################################### Compute distance matrix
+        if self.proximity == "euclidean":
+            dist = squareform(pdist(X,metric="euclidean"))
+        elif self.proximity == "precomputed":
+            dist = check_symmetric(X.values, raise_exception=True)
+        elif self.proximity == "similarity":
+            dist = sim_dist(X)
+        
+        # Effectifs
+        n_obs = dist.shape[0]
+        # 
+        centering_matrix = np.identity(n_obs) - (1/n_obs)*np.ones(shape=(n_obs,n_obs))
 
         # Compute euclidean
         if self.proximity == "euclidean":
-            eigen_value, eigen_vector = self._is_euclidean(X)
-        elif self.proximity == "precomputed":
-            eigen_value, eigen_vector = self._is_precomputed(X)
-        elif self.proximity == "similarity" :
-            eigen_value, eigen_vector = self._is_similarity(X)
+            eigen_value, eigen_vector = is_euclidean(centering_matrix=centering_matrix,X=X)
         else:
-            raise ValueError("Error : You must pass a valid 'proximity'.")
+            eigen_value, eigen_vector = is_others(centering_matrix=centering_matrix,X=X,choice=self.proximity)
         
+        # 
         proportion = 100*eigen_value/np.sum(eigen_value)
         difference = np.insert(-np.diff(eigen_value),len(eigen_value)-1,np.nan)
         cumulative = np.cumsum(proportion)
         
         # Set n_components
-        self.n_components_ = self.n_components
-        if self.n_components_ is None:
-            self.n_components_ = (eigen_value > 1e-16).sum()
-        elif not self.n_components_:
-            self.n_components_ = self.n_components_
-        elif self.n_components_ > self.nobs_:
-            raise ValueError("Error : You must pass a valid 'n_components'.")
+        if self.n_components is None:
+            n_components = (eigen_value > 1e-16).sum()
+        else:
+            n_components = min(self.n_components, n_obs)
         
-        self.eig_ = np.array([eigen_value[:self.n_components_],
-                              difference[:self.n_components_],
-                              proportion[:self.n_components_],
-                              cumulative[:self.n_components_]])
+        self.call_ = {"n_components" : n_components,
+                      "proximity" : self.proximity,
+                      "normalized_stress" : self.normalized_stress,
+                      "X" : X,
+                      "Xtot" : Xtot,
+                      "n_obs" : n_obs}
         
-        self.eigen_vector_ = eigen_vector[:,:self.n_components_]
+        # Store eigenvalue
+        eig = np.c_[eigen_value[:n_components],
+                    difference[:n_components],
+                    proportion[:n_components],
+                    cumulative[:n_components]]
+        self.eig_ = pd.DataFrame(eig,columns=["eigenvalue","difference","proportion","cumulative"],index = ["Dim."+str(x+1) for x in range(eig.shape[0])])
 
-        self.coord_ = self.eigen_vector_*np.sqrt(eigen_value[:self.n_components_])
+        # Store Spectral Decomposition of Matrix
+        self.svd_ = {"eigenvalues" : eigen_value[:n_components],
+                     "eigenvectors" : eigen_vector[:,:n_components]}
 
-        self.res_dist_ = squareform(pdist(self.coord_,metric="euclidean"))
+        ############################################### Coordinates ##########################################""""
+        coord = eigen_vector[:,:n_components]*np.sqrt(eigen_value[:n_components])
+        coord = pd.DataFrame(coord,index=X.index.tolist(),columns=["Dim."+str(x+1) for x in range(n_components)])
+
+        # Distance restituées
+        res_dist = squareform(pdist(coord,metric="euclidean"))
 
         #calcul du stress 
         if self.normalized_stress:
-            self.stress_ = np.sqrt(np.sum((self.res_dist_-self.dist_)**2)/np.sum(self.dist_**2))
+            stress = np.sqrt(np.sum((res_dist-dist)**2)/np.sum(dist**2))
         else:
-            self.stress_ = np.sum((self.res_dist_-self.dist_)**2)
+            stress = np.sum((res_dist-dist)**2)
+        
+        # Customize to pandas
+        dist = pd.DataFrame(dist,index=X.index,columns=X.index)
+        res_dist = pd.DataFrame(res_dist,index=X.index,columns=X.index)
 
         # Inertie 
-        inertia = np.sum(self.dist_**2)/(2*self.nobs_**2)
+        inertia = np.sum(dist**2)/(2*(n_obs**2))
 
-        self.inertia_ = inertia
-        self.dim_index_ = ["Dim."+str(x+1) for x in np.arange(0,self.n_components_)]
+        # Store informations
+        self.result_ = {"coord" : coord, "dist" : dist, "res_dist" : res_dist,"stress" : stress,"inertia" : inertia}
 
-        # Set labels
-        self.labels_ = self.labels
-        if self.labels_ is None:
-            self.labels_ = [f"label_" + str(i+1) for i in np.arange(0,self.nobs_)]
+        ##################### Supplementary individuals
+        if self.ind_sup is not None:
+            self.sup_coord_ = self.transform(X_ind_sup)
         
         self.model_ = "cmdscale"
-
+        
+        return self
+    
     def transform(self,X,y=None):
-        """Apply the Multidimensional Scaling reduction on X
+        """
+        Apply the Multidimensional Scaling reduction on X
+        --------------------------------------------------
 
         X is projected on the first axes previous extracted from a training set.
 
@@ -278,28 +309,40 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+
         if not isinstance(X,pd.DataFrame):
             raise TypeError(
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        d2 = np.sum(self.dist_**2,axis=1)/self.nobs_
-        d3 = np.sum(self.dist_**2)/(self.nobs_**2)
+        if self.parallelize:
+            n_workers = -1
+        else:
+            n_workers = 1
         
+        d2 = np.sum(self.result_["dist"].values**2,axis=1)/self.call_["n_obs"]
+        d3 = np.sum(self.result_["dist"].values**2)/(self.call_["n_obs"]**2)
+
         if self.proximity == "precomputed":
-            sup_coord = mapply(X,lambda x : -(1/2)*(x**2 - np.sum(x**2)-d2+d3),axis=1,progressbar=False,n_workers=self.n_workers_).dot(self.coord_)/self.eig_[0]
+            sup_dist = X
         elif self.proximity == "euclidean":
             n_supp_obs = X.shape[0]
-            sup_dist = np.zeros((n_supp_obs,self.nobs_))
+            sup_dist = pd.DataFrame(np.zeros((n_supp_obs,self.call_["n_obs"])),index=X.index,columns=self.call_["X"].index)
             for i in np.arange(0,n_supp_obs):
-                for j in np.arange(0,self.nobs_):
-                    sup_dist[i,j] = euclidean(X.iloc[i,:],self.active_data_.iloc[j,:]) 
-            sup_coord = np.apply_along_axis(arr=sup_dist,axis=1,func1d=lambda x : -(1/2)*(x**2 - np.sum(x**2)-d2+d3)).dot(self.coord_)/self.eig_[0]
+                for j in np.arange(0,self.call_["n_obs"]):
+                    sup_dist.iloc[i,j] = euclidean(X.iloc[i,:],self.call_["X"].iloc[j,:])
         elif self.proximity == "similarity":
-            raise NotImplementedError("Error : This method is not implemented yet.")
+            raise NotImplementedError("This method is not implemented yet.")
+
+        sup_coord = mapply(sup_dist,lambda x : -(1/2)*(x**2 - np.sum(x**2)-d2+d3),axis=1,
+                           progressbar=False,n_workers=n_workers).dot(self.result_["coord"])/self.eig_.iloc[:,0]
+        sup_coord.columns = ["Dim."+str(x+1) for x in range(sup_coord.shape[1])]
         
-        return np.array(sup_coord)
+        return sup_coord
         
     def fit_transform(self,X,y=None):
         """Fit the model with X and apply the dimensionality reduction on X.
@@ -316,5 +359,4 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         """
         
         self.fit(X)
-        return self.coord_
-
+        return self.result_["coord"]

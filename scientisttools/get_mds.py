@@ -14,7 +14,6 @@ def get_mds(self) -> dict:
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ not in ["mds","cmds"]:
+    if self.model_ not in ["mds","cmdscale"]:
         raise ValueError("'self' must be an object of class MDS, CMDSCALE")
-
     return self.result_

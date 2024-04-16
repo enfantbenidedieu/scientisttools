@@ -55,7 +55,11 @@ from .get_mfa import summaryMFACT
 from .smacof import SMACOF
 from .mds import MDS
 from .get_mds import get_mds
-from .fviz_mds import fviz_mds, fviz_shepard
+from .fviz_mds import fviz_mds
+from .fviz_shepard import fviz_shepard
+
+from .cmdscale import CMDSCALE
+from .fviz_cmdscale import fviz_cmdscale
 
 ########
 from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot

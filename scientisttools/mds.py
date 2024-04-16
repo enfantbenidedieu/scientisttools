@@ -10,7 +10,6 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from .smacof import SMACOF
 from .sim_dist import sim_dist
 
-
 class MDS(BaseEstimator,TransformerMixin):
     """
     Metric and Non - Metric Multidimensional Scaling (MDS)
@@ -182,9 +181,6 @@ class MDS(BaseEstimator,TransformerMixin):
         elif self.proximity == "similarity":
             dist = sim_dist(X)
         
-        # Customize to pandas
-        dist = pd.DataFrame(dist,index=X.columns,columns=X.columns)
-        
         #set n_compoents
         if self.n_components is None:
             n_components = 2
@@ -213,11 +209,10 @@ class MDS(BaseEstimator,TransformerMixin):
             title = "Non-metric multidimensional scaling (NMDS)"
 
         res_dist = squareform(pdist(coord,metric="euclidean"))
-        res_dist = pd.DataFrame(res_dist,index=X.columns,columns=X.columns)
-
+        
         #calcul du stress 
         if self.normalized_stress:
-            stress = np.sqrt(stress/np.sum(dist.values**2))
+            stress = np.sqrt(stress/np.sum(dist**2))
         
         # 
         self.call_ = {"n_components" : n_components,
@@ -228,10 +223,15 @@ class MDS(BaseEstimator,TransformerMixin):
                       "Xtot" : Xtot,
                       "title" : title}
         
-        coord = pd.DataFrame(coord,index=X.columns.tolist(),columns=["Dim."+str(x+1) for x in range(n_components)])
+        coord = pd.DataFrame(coord,index=X.index,columns=["Dim."+str(x+1) for x in range(n_components)])
+        dist = pd.DataFrame(dist,index=X.index,columns=X.index)
+        res_dist = pd.DataFrame(res_dist,index=X.index,columns=X.index)
+
+        # Inertie 
+        inertia = np.sum(dist**2)/(2*(dist.shape[0]**2))
 
         # Store informations
-        self.result_ = {"coord" : coord, "dist" : dist, "res_dist" : res_dist,"stress" : stress}
+        self.result_ = {"coord" : coord, "dist" : dist, "res_dist" : res_dist,"stress" : stress,"inertia" : inertia}
 
         self.model_ = "mds"
 
