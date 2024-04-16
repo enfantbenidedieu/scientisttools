@@ -8,7 +8,7 @@ from .fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca
 
 # Correspondence Analysis (CA)
 from .ca import CA
-from .get_ca import get_ca_row, get_ca_col, get_ca
+from .get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
 from .fviz_ca import fviz_ca_row, fviz_ca_col, fviz_ca_biplot, fviz_ca
 
 # Multiple Correspondence Analysis (MCA)

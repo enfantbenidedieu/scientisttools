@@ -2,7 +2,9 @@
 import pandas as pd
 
 def get_melt(X,level=- 1, dropna=True):
-    """Stack the prescribed level(s) from columns to index.
+    """
+    Stack the prescribed level(s) from columns to index
+    --------------------------------------------------
 
     Return a reshaped DataFrame or Series having a multi-level index with one or more 
     new inner-most levels compared to the current DataFrame. The new inner-most levels 

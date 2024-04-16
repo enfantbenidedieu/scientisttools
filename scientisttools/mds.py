@@ -188,6 +188,8 @@ class MDS(BaseEstimator,TransformerMixin):
         else:
             n_components = self.n_components
         
+        dist = pd.DataFrame(dist,index=X.index,columns=X.index)
+        
         coord , stress = SMACOF(
             X=dist,
             metric=self.metric,
@@ -225,7 +227,7 @@ class MDS(BaseEstimator,TransformerMixin):
                       "title" : title}
         
         coord = pd.DataFrame(coord,index=X.index,columns=["Dim."+str(x+1) for x in range(n_components)])
-        dist = pd.DataFrame(dist,index=X.index,columns=X.index)
+       
         res_dist = pd.DataFrame(res_dist,index=X.index,columns=X.index)
 
         # Inertie 
