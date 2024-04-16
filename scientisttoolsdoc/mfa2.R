@@ -109,8 +109,11 @@ res2.mfa$summary.quanti
 fviz_mfa_ind(res2.mfa)
 fviz_mfa_var(res2.mfa,choice = "quali.var")
 fviz_mfa_group(res2.mfa)
+grp <- as.factor(poison[, "Vomiting"])
+fviz_mfa_quali_biplot(res2.mfa, repel = FALSE, col.var = "#E7B800",
+                      habillage = grp, addEllipses = TRUE, ellipse.level = 0.95)
 
-
+fviz_mfa_axes(res2.mfa)
 
 quanti_var <- get_mfa_var(res2.mfa,"quanti.var")
 

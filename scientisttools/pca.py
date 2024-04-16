@@ -8,11 +8,11 @@ from mapply.mapply import mapply
 from statsmodels.stats.weightstats import DescrStatsW
 from scipy.sparse import issparse
 from sklearn.base import BaseEstimator, TransformerMixin
-from scientisttools.function_eta2 import function_eta2
-from scientisttools.weightedcorrcoef import weightedcorrcoef
-from scientisttools.revaluate_cat_variable import revaluate_cat_variable
-from scientisttools.svd_triplet import svd_triplet
 
+from .function_eta2 import function_eta2
+from .weightedcorrcoef import weightedcorrcoef
+from .revaluate_cat_variable import revaluate_cat_variable
+from .svd_triplet import svd_triplet
 
 class PCA(BaseEstimator,TransformerMixin):
     """
@@ -47,11 +47,11 @@ class PCA(BaseEstimator,TransformerMixin):
     var_weights : an optional variables weights (by default, a list/tuple of 1 for uniform variables weights), the weights are given only for
                     the active variables
     
-    ind_sup : a list/tuple indicating the indexes of the supplementary individuals
+    ind_sup : an ineteger or a list/tuple indicating the indexes of the supplementary individuals
 
-    quanti_sup : a list/tuple indicating the indexes of the quantitative supplementary variables
+    quanti_sup : an integer or a list/tuple indicating the indexes of the quantitative supplementary variables
 
-    quali_sup : a list/tuple indicating the indexes of the categorical supplementary variables
+    quali_sup : an integer or a list/tuple indicating the indexes of the categorical supplementary variables
 
     parallelize : boolean, default = False
         If model should be parallelize

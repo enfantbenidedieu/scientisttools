@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 
 
 # Principal Components Analysis
@@ -39,8 +40,18 @@ from .fviz_mfa import fviz_mfa_ind, fviz_mfa_var, fviz_mfa_axes,fviz_mfa_group
 # Multiple Factor Analysis for qualitative/categorical variables (MFAQUAL)
 from .mfaqual import MFAQUAL
 from .get_mfa import summaryMFAQUAL
-from .fviz_mfa import fviz_mfaqual_var
+from .fviz_mfa import fviz_mfa_mod
 
+# Multiple Factor Analysis of Mixed Data (MFAMIX)
+from .mfamix import MFAMIX
+from .get_mfa import summaryMFAMIX
+
+# Multiple Factor Analysis of contingence table
+from .mfact import MFACT
+from .fviz_mfa import fviz_mfa_freq
+from .get_mfa import summaryMFACT
+
+########
 from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
 from .dimdesc import dimdesc
 from .reconst import reconst
@@ -50,7 +61,19 @@ from .fviz_contrib import fviz_contrib
 from .fviz_corrplot import fviz_corrplot
 from .fviz_corrcircle import fviz_corrcircle
 
+# HCPC
+from .hcpc import HCPC
+from .fviz_hcpc import plot_dendrogram, fviz_hcpc_cluster
 
+
+# VARHCA
+from .varhca import VARHCA
+from .catvarhca import CATVARHCA
+from .varhcpc import VARHCPC
+from .fviz_hcpc import fviz_varhcpc_cluster
+
+
+__all__ = ["CA", "FAMD", "MCA", "MFA", "PCA", "GPA", "datasets"]
 
 from .version import __version__
 

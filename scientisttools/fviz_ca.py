@@ -3,7 +3,7 @@ import plotnine as pn
 import pandas as pd
 import numpy as np
 
-from scientisttools.text_label import text_label
+from .text_label import text_label
 
 def fviz_ca_row(self,
                  axis=[0,1],

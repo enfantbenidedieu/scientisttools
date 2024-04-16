@@ -3,8 +3,8 @@ import plotnine as pn
 import pandas as pd
 import numpy as np
 
-from scientisttools.text_label import text_label
-from scientisttools.fviz_corrcircle import fviz_corrcircle
+from .text_label import text_label
+from .fviz_corrcircle import fviz_corrcircle
 
 def fviz_mca_ind(self,
                  choice = "var",
@@ -180,7 +180,7 @@ def fviz_mca_ind(self,
             p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
     
     if ind_sup:
-        if self.ind_sup is not None:
+        if hasattr(self, "ind_sup_"):
             sup_coord = self.ind_sup_["coord"]
             p = p + pn.geom_point(data=sup_coord,
                                   mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
@@ -368,7 +368,7 @@ def fviz_mca_mod(self,
         
     # Add supplementary categories
     if quali_sup:
-        if self.quali_sup is not None:
+        if hasattr(self, "quali_sup_"):
             var_sup_coord = self.quali_sup_["coord"]
             if "point" in geom_type:
                 p = p + pn.geom_point(var_sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_sup_coord.index.tolist()),

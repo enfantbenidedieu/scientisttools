@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import scipy as sp
-from scientisttools.eta2 import eta2
+from .eta2 import eta2
 
 
 def dimdesc(self,axis=None,proba=0.05):
@@ -152,12 +152,12 @@ def dimdesc(self,axis=None,proba=0.05):
                 corDim = (corDim.query('pvalue < @proba').sort_values(by="statistic",ascending=False))
 
             # Correlation ratio (eta2)
-            corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','correlation ratio','F-stats','pvalue']).astype("float")
+            corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','Eta2','F-stats','pvalue']).astype("float")
             for col in data.columns.tolist():
                 row_RD = pd.DataFrame(eta2(data[col],ind_coord[idx],digits=8),index=[col])
                 corqDim = pd.concat([corqDim,row_RD])
             # Filter by pvalue
-            corqDim = (corqDim.query('pvalue < @proba').sort_values(by="correlation ratio",ascending=False).rename(columns={"correlation ratio" : "R2"}))
+            corqDim = (corqDim.query('pvalue < @proba').sort_values(by="Eta2",ascending=False).rename(columns={"Eta2" : "R2"}))
         
             if self.quanti_sup is None:
                 res = corqDim
@@ -208,12 +208,12 @@ def dimdesc(self,axis=None,proba=0.05):
             corDim = (corDim.query('pvalue < @proba').sort_values(by="correlation",ascending=False))
 
             # For categorical variable    
-            corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','correlation ratio','F-stats','pvalue'])
+            corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','Eta2','F-stats','pvalue'])
             for col in quali_data.columns.tolist():
                 row_RD = pd.DataFrame(eta2(quali_data[col],ind_coord[idx],digits=8),index=[col])
                 corqDim = pd.concat([corqDim,row_RD],axis=0)
             # Filter by pvalue
-            corqDim = (corqDim.query('pvalue < @proba').sort_values(by="correlation ratio",ascending=False).rename(columns={"correlation ratio" : "R2"}))
+            corqDim = (corqDim.query('pvalue < @proba').sort_values(by="Eta2",ascending=False).rename(columns={"Eta2" : "R2"}))
 
             if corDim.shape[0] == 0 and corqDim.shape[0] != 0:
                 res = corqDim

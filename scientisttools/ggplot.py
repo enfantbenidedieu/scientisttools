@@ -17,129 +17,12 @@ import matplotlib.pyplot as plt
 #                   Hierarchical Clustering on Principal Components (HCPC)
 #################################################################################################################
 
-def fviz_hcpc_cluster(self,
-                      axis=(0,1),
-                      x_lim=None,
-                      y_lim=None,
-                      x_label=None,
-                      y_label=None,
-                      title=None,
-                      legend_title = None,
-                      geom_type = ["point","text"],
-                      show_clust_cent = False, 
-                      cluster = None,
-                      center_marker_size=5,
-                      marker = None,
-                      repel=True,
-                      ha = "center",
-                      va = "center",
-                      point_size = 1.5,
-                      text_size = 8,
-                      text_type = "text",
-                      add_grid=True,
-                      add_hline=True,
-                      add_vline=True,
-                      hline_color="black",
-                      vline_color="black",
-                      hline_style = "dashed",
-                      vline_style = "dashed",
-                      add_ellipse=True,
-                      ellipse_type = "t",
-                      confint_level = 0.95,
-                      geom_ellipse = "polygon",
-                      ggtheme = pn.theme_minimal()):
-    """
-    
-    
-    
-    """
-
-    if self.model_ != "hcpc":
-        raise ValueError("Error : 'self' must be an object of class HCPC.")
-    
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.call_["model"].call_["n_components"]-1)  or
-        (axis[0] > axis[1])) :
-        raise ValueError("You must pass a valid 'axis'.")
-    
-    if legend_title is None:
-        legend_title = "Cluster"
-
-    #### Extract data
-    coord = self.call_["tree"]["data"]
-
-    if cluster is None:
-        coord = pd.concat([coord,self.cluster_["cluster"]],axis=1)
-    else:
-        coord = pd.concat([coord,cluster],axis=1)
-        
-    # Rename last columns
-    coord.columns = [*coord.columns[:-1], legend_title]
-     # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index.tolist()))
-    # if "point" in geom_type:
-    #     p = p + pn.geom_point(pn.aes(color = "cluster"),size=point_size,shape=marker)
-    # if "text" in geom_type:
-    #     if repel:
-    #         p = p + text_label(text_type,mapping=pn.aes(color="cluster"),size=text_size,va=va,ha=ha,
-    #                            adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
-    #     else:
-    #         p = p + text_label(text_type,mapping=pn.aes(color="cluster"),size=text_size,va=va,ha=ha)
-    
-    if "point" in geom_type:
-        p = (p + pn.geom_point(pn.aes(color="Cluster"),shape=marker,size=point_size,show_legend=False)+
-                 pn.guides(color=pn.guide_legend(title=legend_title)))
-    if "text" in geom_type:
-        if repel :
-            p = p + text_label(text_type,mapping=pn.aes(color=legend_title),size=text_size,va=va,ha=ha,
-                                adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
-        else:
-            p = p + text_label(text_type,mapping=pn.aes(color=legend_title),size=text_size,va=va,ha=ha)
-    if add_ellipse:
-        p = (p + pn.geom_point(pn.aes(color = legend_title))+ 
-                 pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=legend_title),type = ellipse_type,alpha = 0.25,level=confint_level))
-    
-    if show_clust_cent:
-        cluster_center = self.cluster_["coord"]
-        if "point" in geom_type:
-            p = p + pn.geom_point(cluster_center,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=cluster_center.index,color=cluster_center.index),size=center_marker_size)
-    
-    # Add additionnal        
-    proportion = self.call_["model"].eig_.iloc[:,2].values
-    # Set x label
-    if x_label is None:
-        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    # Set y label
-    if y_label is None:
-        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-    # Set title
-    if title is None:
-        title = "Individuals factor map - HCPC"
-    p = p + pn.labs(title=title,x=x_label,y = y_label)
-    
-    if x_lim is not None:
-        p = p + pn.xlim(x_lim)
-    if y_lim is not None:
-        p = p + pn.ylim(y_lim)
-   
-    if add_hline:
-        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
-    if add_vline:
-        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
-    
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
-    
-    p = p + ggtheme
-
-    return p
 
 ######################################################################################################################
 #                   Classical Multidimensional Scaling (CMDSCALE)
 ######################################################################################################################
 
-def fviz_cmds(self,
+def fviz_cmdscale(self,
             axis=[0,1],
             text_type = "text",
             point_size = 1.5,
@@ -176,8 +59,8 @@ def fviz_cmds(self,
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
-    if self.model_ != "cmds":
-        raise ValueError("Error : 'self' must be an object of class CMDSCALE.")
+    if self.model_ != "cmdscale":
+        raise ValueError("'self' must be an object of class CMDSCALE.")
      
     if ((len(axis) !=2) or 
             (axis[0] < 0) or 

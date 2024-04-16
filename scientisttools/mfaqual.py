@@ -10,13 +10,13 @@ from statsmodels.stats.weightstats import DescrStatsW
 import scipy.stats as st
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from scientisttools.mca import MCA
-from scientisttools.pca import PCA
-from scientisttools.famd import FAMD
-from scientisttools.revaluate_cat_variable import revaluate_cat_variable
-from scientisttools.eta2 import eta2
-from scientisttools.weightedcorrcoef import weightedcorrcoef
-from scientisttools.function_eta2 import function_eta2
+from .mca import MCA
+from .pca import PCA
+from .famd import FAMD
+from .revaluate_cat_variable import revaluate_cat_variable
+from .eta2 import eta2
+from .weightedcorrcoef import weightedcorrcoef
+from .function_eta2 import function_eta2
 
 
 class MFAQUAL(BaseEstimator,TransformerMixin):
@@ -275,12 +275,12 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
          ############################# Check if an active group has only one columns
         for grp, cols in group_active_dict.items():
             if len(cols)==1:
-                raise ValueError(f"Error : {grp} group should have at least two columns")
+                raise ValueError(f"{grp} group should have at least two columns")
         
         # Check if all columns are categoricals
         all_cat = all(pd.api.types.is_string_dtype(X[c]) for c in X.columns.tolist())
         if not all_cat:
-            raise TypeError("Error : All actives columns must be categoricals")
+            raise TypeError("All actives columns must be categoricals")
 
         ####################################### Multiple Factor Analysis for Qualitatives Variables (MFAQUAL) ##################################################
 

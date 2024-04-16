@@ -10,9 +10,10 @@ from mapply.mapply import mapply
 from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import mean_squared_error
-from scientisttools.pca import PCA
-from scientisttools.weightedcorrcoef import weightedcorrcoef
-from scientisttools.kmo import global_kmo_index, per_item_kmo_index
+
+from .pca import PCA
+from .weightedcorrcoef import weightedcorrcoef
+from .kmo import global_kmo_index, per_item_kmo_index
 
 
 class PartialPCA(BaseEstimator,TransformerMixin):

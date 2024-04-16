@@ -15,7 +15,7 @@ def get_eig(self) -> pd.DataFrame:
 
     Parameters:
     -----------
-    self : an object of class PCA, PartialPCA, CA, MCA, FAMD, MFA, MFAQUAL, CMDS, MFA, HMFA
+    self : an object of class PCA, PartialPCA, CA, MCA, FAMD, MFA, MFAQUAL, MFAMIX, MFACT, CMDS
 
     Returns
     -------
@@ -25,8 +25,8 @@ def get_eig(self) -> pd.DataFrame:
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ not in ["pca","partialpca","ca","mca","famd","efa","mfa","mfaqual","mfamix","mfact","cmds","candisc","hmfa"]:
-        raise ValueError("'self' must be an object of class PCA, PartialPCA, CA, MCA, FAMD, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDS, HMFA")
+    if self.model_ not in ["pca","partialpca","ca","mca","famd","efa","mfa","mfaqual","mfamix","mfact","cmds","candisc"]:
+        raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, FAMD, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDS")
     
     return self.eig_
         
@@ -77,7 +77,7 @@ def fviz_screeplot(self,
 
     Parameters
     ----------
-    self : an object of class PCA, CA, MCA, FAMD, MFA, CMDS, DISQUAL, MIXDISC
+    self : an object of class PCA, CA, MCA, FAMD, MFA, MFAQUAL, MFAMIX, MFACT, CMDS, DISQUAL, MIXDISC
 
     choice : a text specifying the data to be plotted. Allowed values are "proportion" or "eigenvalue".
 
@@ -122,8 +122,8 @@ def fviz_screeplot(self,
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
         
-    if self.model_ not in ["pca","ca","mca","famd","partialpca","efa","mfa","mfaqual","mfamix","hmfa"]:
-        raise ValueError("'self' must be an object of class PCA, CA, MCA, FAMD, PartialPCA, EFA, MFA, MFAQUAL, MFAMIX, HMFA")
+    if self.model_ not in ["pca","ca","mca","famd","partialpca","efa","mfa","mfaqual","mfamix","mfact"]:
+        raise ValueError("'self' must be an object of class PCA, CA, MCA, FAMD, PartialPCA, EFA, MFA, MFAQUAL, MFAMIX, MFACT")
 
     eig = get_eigenvalue(self)
     eig = eig.iloc[:min(ncp,self.call_["n_components"]),:]

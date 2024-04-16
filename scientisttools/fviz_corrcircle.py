@@ -2,8 +2,8 @@
 import plotnine as pn
 import numpy as np
 
-from scientisttools.text_label import text_label
-from scientisttools.gg_circle import gg_circle
+from .text_label import text_label
+from .gg_circle import gg_circle
 
 def fviz_corrcircle(self,
                     axis=[0,1],

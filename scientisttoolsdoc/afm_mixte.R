@@ -7,12 +7,20 @@ rm(list = ls())
 library(FactoMineR)
 
 Biometrie2=read.table("donnee/Biometrie2.csv",header=TRUE,sep=";",dec=".",row.names=1)
+
 colnames(Biometrie2)
 
 # L'AFM est réalisée sur les seules six premières colonnes avec toutes les options par défaut
 
-res=MFA(Biometrie2,group=c(6,3,3),
-        type=c("m","n","s"),graph = FALSE)
+res=MFA(Biometrie2,group=c(3,3,3,3),
+        type=c("n","s","n","s"),
+        num.group.sup = c(3,4),
+        graph = FALSE)
+
+
+fviz_mfa_ind(res)
+fviz_mfa_var(res)
+fviz_mfa_axes(res)
 
 ####################################################
 # Eigenvalues informations

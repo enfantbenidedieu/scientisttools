@@ -10,12 +10,12 @@ from statsmodels.stats.weightstats import DescrStatsW
 import scipy.stats as st
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from scientisttools.pca import PCA
-from scientisttools.mca import MCA
-from scientisttools.famd import FAMD
-from scientisttools.eta2 import eta2
-from scientisttools.revaluate_cat_variable import revaluate_cat_variable
-from scientisttools.weightedcorrcoef import weightedcorrcoef
+from .pca import PCA
+from .mca import MCA
+from .famd import FAMD
+from .eta2 import eta2
+from .revaluate_cat_variable import revaluate_cat_variable
+from .weightedcorrcoef import weightedcorrcoef
 
 # https://husson.github.io/MOOC_AnaDo/AFM.html
 # https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r
@@ -622,7 +622,7 @@ class MFA(BaseEstimator,TransformerMixin):
         partial_axes_coord = pd.DataFrame().astype("float")
         for grp, cols in group_active_dict.items():
             data = self.separate_analyses_[grp].ind_["coord"]
-            correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=None)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
+            correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=ind_weights)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
             coord = pd.DataFrame(correl,index=self.ind_["coord"].columns.tolist(),columns=data.columns.tolist())
             coord.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord.columns.tolist()])
             partial_axes_coord = pd.concat([partial_axes_coord,coord],axis=1)
@@ -630,7 +630,7 @@ class MFA(BaseEstimator,TransformerMixin):
         if self.num_group_sup is not None:
             for grp, cols in group_sup_dict.items():
                 data = self.separate_analyses_[grp].ind_["coord"]
-                correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=None)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
+                correl = weightedcorrcoef(x=self.ind_["coord"],y=data,w=ind_weights)[:self.ind_["coord"].shape[1],self.ind_["coord"].shape[1]:]
                 coord = pd.DataFrame(correl,index=self.ind_["coord"].columns.tolist(),columns=data.columns.tolist())
                 coord.columns = pd.MultiIndex.from_tuples([(grp,col) for col in coord.columns.tolist()])
                 partial_axes_coord = pd.concat([partial_axes_coord,coord],axis=1)
@@ -678,7 +678,8 @@ class MFA(BaseEstimator,TransformerMixin):
             partial_axes_contrib = partial_axes_contrib.reindex(columns=partial_axes_contrib.columns.reindex(group_name, level=0)[0])
                 
         ###############
-        self.partial_axes_ = {"coord" : partial_axes_coord,"cor" : partial_axes_coord,"contrib" : partial_axes_contrib,"cos2":partial_axes_cos2,"cor_between" : all_coord.corr()}
+        cor_beteween = pd.DataFrame(weightedcorrcoef(x=all_coord,w=ind_weights),index=all_coord.columns,columns=all_coord.columns)
+        self.partial_axes_ = {"coord" : partial_axes_coord,"cor" : partial_axes_coord,"contrib" : partial_axes_contrib,"cos2":partial_axes_cos2,"cor_between" : cor_beteween}
         
         #################################################################################################################
         # Group informations : coord

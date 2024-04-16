@@ -8,9 +8,9 @@ from mapply.mapply import mapply
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from scientisttools.svd_triplet import svd_triplet
-from scientisttools.weightedcorrcoef import weightedcorrcoef
-from scientisttools.function_eta2 import function_eta2
+from .svd_triplet import svd_triplet
+from .weightedcorrcoef import weightedcorrcoef
+from .function_eta2 import function_eta2
 
 class CA(BaseEstimator,TransformerMixin):
     """

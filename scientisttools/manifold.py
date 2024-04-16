@@ -406,7 +406,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         if self.labels_ is None:
             self.labels_ = [f"label_" + str(i+1) for i in np.arange(0,self.nobs_)]
         
-        self.model_ = "cmds"
+        self.model_ = "cmdscale"
 
     def transform(self,X,y=None):
         """Apply the Multidimensional Scaling reduction on X

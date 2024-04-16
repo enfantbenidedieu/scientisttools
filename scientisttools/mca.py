@@ -9,9 +9,9 @@ from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
-from scientisttools.revaluate_cat_variable import revaluate_cat_variable
-from scientisttools.function_eta2 import function_eta2
-from scientisttools.svd_triplet import svd_triplet
+from .revaluate_cat_variable import revaluate_cat_variable
+from .function_eta2 import function_eta2
+from .svd_triplet import svd_triplet
 
 class MCA(BaseEstimator,TransformerMixin):
     """
@@ -173,14 +173,14 @@ class MCA(BaseEstimator,TransformerMixin):
         #  Check if quanti sup
         if self.quanti_sup is not None:
             if (isinstance(self.quanti_sup,int) or isinstance(self.quanti_sup,float)):
-                quanti_sup = list(int(self.quanti_sup))
+                quanti_sup = [int(self.quanti_sup)]
             elif ((isinstance(self.quanti_sup,list) or isinstance(self.quanti_sup,tuple))  and len(self.quanti_sup)>=1):
                 quanti_sup = [int(x) for x in self.quanti_sup]
         
         # Check if individuls supplementary
         if self.ind_sup is not None:
             if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
-                ind_sup = list(int(self.ind_sup))
+                ind_sup = [int(self.ind_sup)]
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
 
@@ -454,7 +454,7 @@ class MCA(BaseEstimator,TransformerMixin):
             ##### 
             self.ind_sup_ = {"coord" : ind_sup_coord, "cos2" : ind_sup_cos2, "dist" : ind_sup_dist2}
         
-        if self.quali_sup:
+        if self.quali_sup is not None:
             X_quali_sup = Xtot.iloc[:,quali_sup]
             if self.ind_sup is not None:
                 X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
@@ -545,7 +545,7 @@ class MCA(BaseEstimator,TransformerMixin):
                 chi2_test3.insert(0,"group","sup")
                 self.chi2_test_ = pd.concat((self.chi2_test_,chi2_test3),axis=0,ignore_index=True)
 
-        if self.quanti_sup:
+        if self.quanti_sup is not None:
             X_quanti_sup = Xtot.iloc[:,quanti_sup]
             if self.ind_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
