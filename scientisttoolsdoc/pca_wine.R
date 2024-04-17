@@ -11,6 +11,8 @@ data(wine)
 
 res.pca <- PCA(wine,quanti.sup = 30:31,quali.sup = 1:2,graph = F)
 
+fviz_cos2(res.pca,choice = "var")
+
 ############ Eigenvalues
 head(res.pca$eig)
 

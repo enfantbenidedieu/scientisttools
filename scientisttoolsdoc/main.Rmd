@@ -1,0 +1,176 @@
+---
+title: "**Analyse exploratoire multidimensionnelle des données**"
+subtitle: "Application sous Python avec scientisttools 0.1.4"
+author: "Duvérier DJIFACK ZEBAZE"
+geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm, twoside=true"
+documentclass: report
+fontsize: 11pt
+line-height: 1.5
+urlcolor: blue
+linkcolor: blue
+link-citations : yes
+nocite:
+- '@hurlin2019machine'
+- "@provenzano2020machine"
+- "@tasche2009estimating"
+- "@engelmann2003testing"
+- "@hand1997construction"
+- "@van2019calibration"
+- "@brunel2019fermi"
+- "@wright1999numerical"
+- "@gill2019practical"
+- "@bonnans2006numerical"
+- "@bonnans1999numerical"
+- "@gill1972quasi"
+- "@battiti1992first"
+- "@bottou2010large"
+- "@bottou2012stochastic"
+- "@kingma2014adam"
+- "@anderson2007credit"
+- "@james2013introduction"
+- "@kassambara2018machine"
+- "@dumitrescu2021machine"
+- "@shofiyah2018split"
+- "@dastile2020statistical"
+- "@li2019issues"
+- "@friedman2009elements"
+output: 
+  pdf_document:
+    highlight: kate
+    number_sections : yes
+    toc_depth : 0
+    df_print: kable
+    latex_engine: xelatex
+mainfont: Bookman Old Style
+papersize: a4
+#bibliography: references.bib
+biblio-style: apalike
+header-includes:
+- \usepackage{pbox}
+- \usepackage{caption}
+- \usepackage{natbib}
+- \usepackage[utf8]{inputenc}
+- \usepackage[french]{babel}
+- \usepackage{amsmath, amsfonts, amssymb}
+- \usepackage{amsfonts}
+- \usepackage{minitoc}
+- \mtcsetdepth{minitoc}{1}
+- \mtcsettitle{minitoc}{Sommaire}
+- \usepackage{diagbox}
+- \usepackage{lettrine}
+- \usepackage[labelfont=bf]{caption}
+- \captionsetup{font=scriptsize}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+- \usepackage{minitoc}
+- \usepackage[Bjornstrup]{fncychap}
+- \usepackage[dvipsnames]{xcolor}
+- \usepackage{fourier-orns}
+- \usepackage{fancyhdr}
+- \usepackage{geometry}
+- \geometry{a4paper,total={160mm,240mm},left=25mm,right=25mm,top=25mm,bottom=25mm}
+- \usepackage{amsthm,thmtools,xcolor}
+- \usepackage{tcolorbox}
+---
+
+
+\newtheorem{exemple}{Exemple}[chapter]
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{propriete}{Propriété}[chapter]
+\newtheorem{definition}{Définition}[chapter]
+\newtheorem{remarque}{Remarque}[chapter]
+\newtheorem{exercice}{Exercice}[chapter]
+\newtheorem{solution}{Solution}[section]
+\newtheorem{quiz}{Quiz}[section]
+
+
+
+\mtcsetdepth{minitoc}{1} 
+\mtcsettitle{minitoc}{Sommaire}
+\newcommand{\Chapter}[1]{\chapter{#1}\minitoc}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{1.15ex}
+
+\newpage
+\dominitoc
+\renewcommand{\thepage}{\roman{page}}
+\setcounter{page}{1}
+\pagenumbering{roman}
+
+\setcounter{tocdepth}{1}
+\tableofcontents
+
+
+\newpage
+\renewcommand{\thepage}{\arabic{page}}
+\setcounter{page}{1}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\nouppercase{\thepage\hfill\leftmark}}
+\fancyhead[RO]{\nouppercase{\rightmark\hfill\thepage}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+library(reticulate)
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning=FALSE,fig.pos = "h",
+                      out.extra = "",fig.align = "center", collapse =  FALSE, 
+                      highlight = TRUE,out.width = "100%")
+```
+
+
+```{python, echo = FALSE}
+import warnings
+import matplotlib.pyplot as plt
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.filterwarnings("ignore")
+plt.style.use('ggplot')
+```
+
+
+```{r child = "chapter1.Rmd"}
+
+```
+
+
+```{r child = "chapter2.Rmd"}
+
+```
+
+```{r child = "chapter3.Rmd"}
+
+```
+
+```{r child = "chapter4.Rmd"}
+
+```
+
+```{r child = "chapter5.Rmd"}
+
+```
+
+```{r child = "chapter6.Rmd"}
+
+```
+
+
+
+
+
+

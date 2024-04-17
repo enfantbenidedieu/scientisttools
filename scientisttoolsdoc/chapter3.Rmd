@@ -1,0 +1,372 @@
+\Chapter{\bf Analyse (Factorielle) des Correspondances Multiples}
+
+Ce chapitre a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une Analyse des Correspondances Multiples. 
+
+<!-- https://www.normalesup.org/~carpenti/Notes/ACM-avec-R/Resultats-ACM-Factominer.pdf -->
+<!-- https://marie-chavent.perso.math.cnrs.fr/wp-content/uploads/2013/10/TP5_ACM.pdf -->
+
+## Présentation des données
+
+
+Nous illustrons l'analyse des correspondances multiples à l'aide d'un exemple sur les données \og Races Canines \fg{} extraites de l'ouvrage de Tenenhaus.
+
+```{python}
+# Chargement des données
+import pandas as pd
+# Données actives
+A = pd.read_excel("./donnee/races_canines_acm.xls",header=0,sheet_name=0,index_col=0)
+# Individus supplémentaires
+B = pd.read_excel("./donnee/races_canines_acm.xls",header=0,sheet_name=1,index_col=0)
+# Variables qualitative supplémentaires
+C = pd.read_excel("./donnee/races_canines_acm.xls",header=0,sheet_name=2,index_col=0)
+# Variables quantitatives supplémentaires
+D = pd.read_excel("./donnee/races_canines_acm.xls",header=0,sheet_name=3,index_col=0)
+C.index = D.index = A.index
+# Concaténation
+Data = pd.concat([pd.concat([A,B],axis=0),C,D],axis=1)
+Data.info()
+```
+
+Ces données décrivent les caractéristiques de $27$ races de chiens au moyen de variables qualitatives.
+
+La première colonne du tableau \ref{tab:races-canines-data} correspond à l'identifiant des observations. Les $6$ premières variables sont considérés comme actives : Taille, Poids, Vélocité, Intelligence, Affection, Agressivité. La $7^{\text{ème}}$ variable \og Fonction \fg{} est considérée comme variable illustrative qualitative tandis que la $8^{\text{ème}}$ comme variable illustrative quantitative. Les modalités des différentes variables sont les suivantes :
+
+\begin{itemize}
+\item Taille, Poids, vélocité, intelligence : faible (-), moyenn (+), fort (++)
+\item Affection, agressivité : faible (-), fort(+)
+\item fonction : compagnie, chasse, utilité.
+\end{itemize}
+
+La variable cote est une variable que nous avons pris soins de créer afin d'illustrer le concept de variable illustrative quantitative en ACM.
+
+```{r races-canines-data,engine='R',echo=FALSE}
+knitr::kable(py$Data, 
+             caption = "Données Races Canines",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::row_spec(27,hline_after = TRUE) %>% 
+  kableExtra::column_spec(c(8,9),border_left = TRUE) %>% 
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+Les principales questions auxquelles nous nous posons sont les suivantes :
+
+\begin{itemize}
+\item Quels sont les chiens qui se ressemblent? Quels sont les chiens qui sont dissemblables? (proximité entre les individus)
+\item Sur quels caractères sont fondées ces ressemblances/dissemblances?
+\item Quelles sont les associations entre les modalités? Par exemple, un animal de grande taille est - il plus agressif ou moins agressif?
+\item Quelles sont les relations entre les variables? Par exemple y a-t-il une relation entre la taille et l'agressivité ou bien sont - ce des caractères orthogonaux.
+\end{itemize}
+
+A partir du tableau \ref{tab:races-canines-data}, on remarque que les paires de chiens (Bull - Dog, Teckel), (Chihuahua, Pékinois) et (Dalmatien, Labrador) sont des valeurs identiques pour les $7$ variables, il y aura donc des observations confondues.
+
+A l'aide d'un diagramme à barres, nous visualisons nos différentes variables :
+
+
+```{python}
+# Diagramme à barres
+import matplotlib.pyplot as plt
+fig = plt.figure(figsize=(16,8))
+for i, name in enumerate(A.columns):
+  ax = fig.add_subplot(2,3,i+1)
+  A[name].value_counts().plot.bar(ax=ax)
+  ax.set(title=name)
+  ax.grid(visible=True)
+  plt.tight_layout()
+```
+
+## ACM
+
+### Objectifs 
+
+L'objectif est de trouver un système de représentation  (répère factoriel) qui préserve au mieux les distances entre les individus, qui permet de discerner le mieux possible les individus entre eux, qui maximise les (le carré des) écarts à l'origine.
+
+### Chargement de scientisttools
+
+```{python}
+from scientisttools import MCA
+```
+
+### Individus et variables actifs
+
+On crée une instance de la classe MCA, en lui passant ici des étiquettes pour les lignes et les variables. Ces paramètres sont facultatifs ; en leur absence, le programme détermine automatiquement des étiquettes.
+
+```{python}
+# Instanciation
+my_mca = MCA()
+```
+
+On estime le modèle en appliquant la méthode \texttt{fit} de la classe MCA sur le jeu de données.
+
+```{python}
+# Estimation du modèle
+my_mca.fit(A)
+```
+
+
+#### Les valeurs propres
+
+L'exécution de la méthode \texttt{my\_mca.fit(A)} provoque le calcul des attributs parmi lesquels \texttt{my\_mca.eig\_} pour les valeurs propres.
+
+```{python}
+# Valeurs propres
+print(my_mca.eig_)
+```
+
+L'attribut \texttt{my\_mca.eig\_} contient :
+
+\begin{itemize}
+\item en 1ère ligne : les valeurs propres en valeur absolue
+\item en 2ème ligne : les différences des valeurs propres
+\item en 3ème ligne : les valeurs propres en pourcentage de la variance totale (proportions)
+\item en 4ème ligne : les valeurs propres en pourcentage cumulé de la variance totale.
+\end{itemize}
+
+La fonction \texttt{get\_eig} retourne les valeurs propres sous forme de tableau de données.
+
+```{python}
+# Valeurs propres
+from scientisttools import get_eig
+print(get_eig(my_mca))
+```
+
+Le nombre de modalités actives est $16 (3\times 4 + 2\times 2)$, ce qui conduit à $10$ facteurs et à une inertie totale de $\dfrac{16}{6}-1=\dfrac{5}{3}=1.667$.
+
+Les valeurs propres peuvent être représentées graphiquement
+
+```{python, out.width="90%"}
+from scientisttools import fviz_eig
+print(fviz_eig(my_mca,choice="eigenvalue"))
+```
+
+```{python, out.width="90%"}
+print(fviz_eig(my_mca,choice="proportion"))
+```
+
+Le critère de Kaiser conduit à ne retenir que trois axes, le diagramme des valeurs propres montre cependant une chute après $\lambda_{2}$. On interprètera donc uniquement les deux premiers axes.
+
+
+#### Correction de Benzécri
+
+La correction de Benzécri s'appuie sur l'idée qu'une partie de l'information est rédondante dans les données présentées à l'algorithme de l'ACM.
+
+```{python}
+# Correction de Benzécri
+my_mca.benzecri_correction_
+```
+
+#### Correction de Greenacre
+
+La correction de Greenacre s'appuie sur la correction de Benzécri mais reconsidère la proportion d'inertie portée par les facteurs.  Une partie de l'information est triviale dans le tableau de Burt, il s'agit du croisement endogène de chaque variable.
+
+```{python}
+# Correction de Greenacre
+my_mca.greenacre_correction_
+```
+
+
+On peut obtenir un résumé des principaux résultats en utilisant la fonction \texttt{summaryMCA}.
+
+```{python}
+from scientisttools import summaryMCA
+summaryMCA(my_mca)
+```
+
+#### Représentation graphique
+
+```{python,out.width="90%"}
+# Carte des individus
+from scientisttools import fviz_mca_ind
+print(fviz_mca_ind(my_mca,repel=True))
+```
+
+
+```{python, out.width="90%"}
+# Carte des modalités
+from scientisttools import fviz_mca_mod
+print(fviz_mca_mod(my_mca,repel=True))
+```
+
+```{python, out.width="90%"}
+# Carte des variables
+from scientisttools import fviz_mca_var
+print(fviz_mca_var(my_mca,repel=True))
+```
+
+
+### ACM avec les éléments supplémentaires
+
+Les individus illustratifs et les variables illustratives n'influencent pas la construction des composantes principales de l'analyse. Ils/Elles aident à l'interprétation des dimensions de variabilité.
+
+On peut ajouter deux types de variables : continues et qualitatives.
+
+On ajoute la variable \og Cote \fg{} comme variable continue illustrative quantitative et \og Fonction \fg{} comme variable qualitative. Tapez la ligne de code suivante :
+
+```{python}
+# ACM avec les éléments supplémentaires
+my_mca2 = MCA(ind_sup=list(range(27,33)),quali_sup=6,quanti_sup=7)
+# Estimation
+my_mca2.fit(Data)
+```
+
+
+```{python,out.width="90%"}
+# Carte des individus
+print(fviz_mca_ind(my_mca2,repel=True))
+```
+
+```{python,out.width="90%"}
+# Carte des modalités
+print(fviz_mca_mod(my_mca2,repel=True))
+```
+
+## Interprétation des axes
+
+Des graphiques qui permettent d'interpréter rapidement les axes : on choisit un axe factoriel (le 1er axe dans notre exemple) et on observe quels sont les points lignes et colonnes qui présentent les plus fortes contributions et cos2 pour cet axe.
+
+```{python, out.width="90%"}
+# Classement des points lignes en fonction de leur contribution au 1er axe
+from scientisttools import fviz_contrib, fviz_cos2
+p = fviz_contrib(my_mca2,choice="ind")
+print(p)
+```
+
+
+```{python,out.width="90%"}
+# Classement des modalités en fonction de leur contribution au 1er axe
+p = fviz_contrib(my_mca2,choice="var")
+print(p)
+```
+
+```{python,out.width="85%"}
+# Classement des individus en fonction de leur cos2 sur le 1er axe
+p = fviz_cos2(my_mca2)
+print(p)
+```
+
+
+```{python,out.width="85%"}
+# Classement des modalités en fonction de leur cos2 sur le 1er axe
+p = fviz_cos2(my_mca2,choice = "var")
+print(p)
+```
+
+
+## Description des axes
+
+On peut décrire les dimensions données par les variables en calculant le ratio de corrélation entre une variable et une dimension et en réalisant un test de significativité.
+
+```{python}
+from scientisttools import dimdesc
+dim_desc = dimdesc(my_mca2)
+dim_desc.keys()
+```
+
+```{python}
+dim_desc["Dim.1"]
+```
+
+```{python}
+dim_desc["Dim.2"]["quali"]
+```
+
+```{python}
+dim_desc["Dim.2"]["quanti"]
+```
+
+## Approche Machine Learning
+
+Ici, l'objectif est d'utiliser l'Analyse des Correspondances Multiples en tant que méthode de prétraitement.
+
+La classe MCA implémente les méthodes \texttt{fit}, \texttt{transform} et \texttt{fit\_transform} bien connues des utilisateurs de scikit-learn.
+
+```{python}
+my_mca.transform(A).iloc[:5,:]
+```
+
+
+```{python}
+my_mca.fit_transform(A).iloc[:5,:]
+```
+
+
+### Intégration dans une Pipeline de scikit-learn
+
+La class MCA peut être intégrée dans une Pipeline de scikit-learn.
+Dans le cadre de notre exemple, nous cherchons à prédire la 7ème variable (variable "Fonction") à partir des $6$ premières variables du jeu de données. 
+
+"Fonction" est une variable catégorielle comprenant 3 catégories : "chasse", "compagnie" et "utilité". Pour la prédire, nous allons utiliser un modèle de régression logistique qui prendra en input des axes issus d'une Analyse des Correspondances Multiples pratiquée sur les données brutes.
+
+Dans un premier temps, et de façon tout à fait arbitraire, nous fixons le nombre de composantes extraites à 4.
+
+```{python}
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
+import numpy as np
+
+# X = features
+X = A
+# y = labels
+y = C
+
+# Construction de la Pipeline
+# On enchaine une Analyse des Correspondances Multiples (4 axes retenus) 
+# puis une régression logistique
+pipe = Pipeline([("mca", MCA(n_components=4)), 
+                 ("logistic_regression", 
+                   LogisticRegression(multi_class="multinomial",
+                                      solver="lbfgs",penalty=None))])
+# Estimation du modèle
+pipe.fit(X, y)
+```
+
+On prédit
+
+```{python}
+# Prédiction sur l'échantillon de test
+print(pipe.predict(B))
+```
+
+
+Le paramètre \texttt{n\_components} peut faire l'objet d'une optimisation via GridSearchCV de scikit-learn.
+
+Nous reconstruisons donc une Pipeline, sans spécifier de valeur a priori pour n_components.
+
+```{python}
+# Reconstruction d'une Pipeline, sans spécifier de valeur 
+# a priori pour n_components
+pipe2 = Pipeline([("mca", MCA()), 
+                  ("logistic_regression", LogisticRegression(penalty=None))])
+                  
+# Paramétrage de la grille de paramètres
+# Attention à l'étendue des valeurs possibles pour pca__n_components !!!
+param = [{"mca__n_components": [x + 1 for x in range(10)]}]
+
+# Construction de l'obet GridSearchCV
+grid_search = GridSearchCV(pipe2, 
+                           param_grid=param, 
+                           scoring="accuracy",
+                           cv=5,
+                           verbose=0)
+# Estimation du modèle
+grid_search.fit(X, y)
+```
+
+
+```{python}
+# Affichage du score optimal
+grid_search.best_score_
+```
+
+
+```{python}
+# Affichage du paramètre optimal
+grid_search.best_params_
+```
+
+```{python}
+# Prédiction sur l'échantillon de test
+grid_search.predict(B)
+```
+

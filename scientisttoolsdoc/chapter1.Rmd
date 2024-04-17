@@ -1,0 +1,421 @@
+\Chapter{\bf Analyse en Composantes Principales}
+
+Ce chapitre a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une Analyse en Composantes Principales. 
+
+## Présentation des données
+
+On utilise ici l'exemple du tableau de données décathlon qui contient les performances réalisées par des athlètes lors de deux compétitions.
+
+Vous pouvez charger le jeu de données \href{http://factominer.free.fr/factomethods/datasets/decathlon.txt}{http://factominer.free.fr/factomethods/datasets/decathlon.txt}.
+
+```{python}
+# Importation des données
+import pandas as pd
+url = "http://factominer.free.fr/factomethods/datasets/decathlon.txt"
+decathlon = pd.read_table(url,header=0)
+decathlon.info()
+```
+
+```{r decathlon-data,engine='R',echo=FALSE}
+knitr::kable(py$decathlon, 
+             caption = "Données Decathlon",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(position="center",
+                            latex_options = c("striped", "hold_position","repeat_header","scale_down"))
+```
+
+Le tableau de données contient $41$ lignes et $13$ colonnes (\emph{cf.} Table \ref{tab:decathlon-data}). Les colonnes de $1$ à $12$ sont des variables continues : les dix premières colonnes correspondent aux performances des athlètes pour les dix épreuves du décathlon et les colonnes 11 et 12 correspondent respectivement au rang et au nombre de points obtenus. La dernière colonne est une variable qualitative correspondant au nom de la compétition (Jeux Olympiques de 2004 ou Décastar 2004).
+
+Pour une meilleure manipulation des colonnes dans Python, nous remplaçons les points sur les colonnes par les tirets de $8$.
+
+```{python}
+# Renommer les colonnes
+decathlon.columns = [x.replace(".","_") for x in decathlon.columns]
+decathlon.info()
+```
+
+
+Il est important de s’assurer que l’importation a bien été effectuée, et notamment que les variables quantitatives sont bien considérées comme quantitatives et les variables qualitatives bien considérées comme qualitatives.
+
+```{python}
+# Variable continues
+import numpy as np
+stat1 = decathlon.describe(include=np.number).T
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(round(py$stat1,3), 
+             caption = "Statistiques descriptives sur les variables continues",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+```{python}
+stat2 = (decathlon.describe(include=["O"])
+                  .reset_index()
+                  .rename(columns={"index":"infos"}))
+```
+
+```{r,engine='R',echo=FALSE}
+knitr::kable(py$stat2, 
+             caption = "Statistiques descriptives sur la variable catégorielle",
+             booktabs = TRUE,linesep = "") %>% 
+  kableExtra::kable_styling(font_size=8,position="center",
+                            latex_options = c("striped", "hold_position","repeat_header"))
+```
+
+
+## Objectifs
+
+L'ACP permet de décrire un jeu de données, de le résumer, d'en réduire la dimensionnalité.
+L'ACP réalisée sur les individus du tableau de données répond à différentes questions :
+
+\begin{enumerate}
+\item Etude des individus (i.e. des athlètes) : deux athlètes sont proches s'ils ont des résultats similaires. On s'intéresse à la variabilité entre individus. Y a-t-il des similarités entre les individus pour toutes les variables ? Peut-on établir des profils d'athlètes ? Peut-on opposer un groupe d'individus à un autre ?
+\item Etude des variables (i.e. des performances) : on étudie les liaisons linéaires entre les variables. Les objectifs sont de résumer la matrice des corrélations et de chercher des variables synthétiques: peut-on résumer les performances des athlètes par un petit nombre de variables ?
+\item Lien entre les deux études : peut-on caractériser des groups d'individus par des variables ?
+\end{enumerate}
+
+## ACP
+
+On étudie les profils d'ahtlètes uniquement en fonction de leur performance. Les variables actives ne seront donc que celles qui concernent les dix épreuves du décathlon.
+Les autres variables ("\emph{Rank}", "\emph{Points}" et "\emph{Competition}") n'appartiennent pas aux profils d'athlètes et utilisent une information déjà donnée par les autres variables (dans le cas de "\emph{Rank}"et "\emph{Points}") mais il est intéressant de les confronter aux composantes principales. Nous les utiliserons comme variables illustratives.
+
+Dans ce tableau de données, les variables ne sont pas mesurées dans les mêmes unités. On doit les réduire de façon à donner la même influence à chacune.
+
+On charge scientisttools
+
+```{python}
+from scientisttools import PCA
+```
+
+### Individus et variables actifs
+
+On crée une instance de la classe PCA, en lui passant ici des étiquettes pour les lignes et les variables. Ces paramètres sont facultatifs ; en leur absence, le programme détermine automatiquement des étiquettes.
+
+Le constructeur de la classe PCA possède un paramètre \texttt{normalize} qui indique si l'ACP est réalisée :
+
+\begin{itemize}
+\item à partir de données centrées et réduites -> PCA(normalize=True)
+\item à partir de données centrées mais non réduites -> PCA(normalize=False)
+\end{itemize}
+
+Par défaut, la valeur du paramètre \texttt{normalize} est fixée à \texttt{True}, car c'est le cas le plus courant.
+
+Réalisez l'ACP sur tous les individus et seulement les variables actives (i.e. les dix premières) en tapant la ligne de code suivante :
+
+
+```{python}
+# Données actives
+actif = decathlon[decathlon.columns[:10]]
+# ACP sur les données actives uniquement - Instanciation du modèle
+res_pca = PCA()
+```
+
+On estime le modèle en appliquant la méthode \texttt{.fit} de la classe PCA sur le jeu de données.
+
+```{python}
+# Entraînement du modèle
+res_pca.fit(actif)
+```
+
+L'exécution de la méthode \texttt{res\_pca.fit(actif)} provoque le calcul de plusieurs attributs parmi lesquels \texttt{res\_pca.eig\_}.
+
+```{python}
+print(res_pca.eig_)
+```
+
+
+L'attribut \texttt{res\_pca.eig\_} contient :
+
+\begin{itemize}
+\item en 1ère ligne : les valeurs propres en valeur absolue
+\item en 2ème ligne : les différences des valeurs propres
+\item en 3ème ligne : les valeurs propres en pourcentage de la variance totale (proportions)
+\item en 4ème ligne : les valeurs propres en pourcentage cumulé de la variance totale.
+\end{itemize}
+
+La fonction \texttt{get\_eig} retourne les valeurs propres sous forme de tableau de données.
+
+```{python}
+# Valeurs propres
+from scientisttools import get_eig
+print(get_eig(res_pca))
+```
+
+
+Les deux premières dimensions contiennent $50\%$ de l'inertie totale (l'inertie est la variance totale du tableau de données, i.e. la trace de la matrice des corrélations).
+
+Les valeurs propres peuvent être représentées graphiquement :
+
+```{python}
+from scientisttools import fviz_screeplot
+print(fviz_screeplot(res_pca,choice="eigenvalue"))
+```
+
+```{python}
+print(fviz_screeplot(res_pca,choice="proportion"))
+```
+
+On peut obtenir un résumé des principaux résultats en utilisant la fonction \texttt{summaryPCA}.
+
+```{python}
+from scientisttools import summaryPCA
+summaryPCA(res_pca)
+```
+
+#### Représentation graphique
+
+```{python,out.width="90%"}
+# Carte des individus
+from scientisttools import fviz_pca_ind
+print(fviz_pca_ind(res_pca,repel=True))
+```
+
+```{python, out.width="90%"}
+# Cercle des corrélations
+from scientisttools import fviz_pca_var
+print(fviz_pca_var(res_pca))
+```
+
+La variable "X100m" est négativement corrélée à la variable "long\_jump". Quand un ahtlète réalise un temps faible au 100m, il peut sauter loin. Il faut faire attention ici qu'une petite valeur pour les variables "X100m", "X400m", "X110m\_hurdle" et "X1500m" correspond à un score élevé : plus un athlète court rapidement, plus il gagne de points.
+
+Le premier axe oppose les athlètes qui sont "bons partout" comme Karpov pendant les Jeux Olympiques à ceux qui sont "mauvais partout" comme Bourguignon pendant le Décastar. Cette dimension est particulièrement liée aux variables de vitesse et de saut en longueur qui constituent un groupe homogène.
+
+Le deuxième axe oppose les athlètes qui sont forts (variables "Discus" et "Shot\_put") à ceux qui ne le sont pas.
+Les variables "Discus", "Shot\_put" et "High\_jump" ne sont pas très corrélées aux variables "X100m", "X400m", "X110m\_hurdle" et "Long\_jump". Cela signifie que force et vitesse ne sont pas très corrélées.
+
+A l'issue de cette première approche, on peut diviser le premier plan factoriel en quatre parties : les athlètes rapides et puissants (comme Sebrle), les athlètes lents (comme Casarsa), les athlètes rapides mais faibles (comme Warners) et les ahtlètes ni forts ni rapides, relativement parlant (comme Lorenzo).
+
+### ACP avec les variables illustratives
+
+Les variables illustratives n'influencent pas la construction des composantes principales de l'analyse. Elles aident à l'interprétation des dimensions de variabilité.
+
+On peut ajouter deux types de variables : continues et qualitatives.
+
+On ajoute les variables "Rank" and "Points" comme variables continues illustratives quantiatives et "Competition" comme variable qualitative illustrative. Tapez la ligne de code suivante :
+
+```{python}
+res_pca = PCA(quanti_sup=[10,11],quali_sup=12)
+res_pca.fit(decathlon)
+```
+
+
+```{python}
+print(fviz_pca_var(res_pca))
+```
+
+Les gagnants du décathlon sont ceux qui marquent le plus de points (ou ceux dont le rang est faible).
+Les variables les plus liées au nombre de points sont les variables qui réfèrent à la vitesse ("X100m", "X110m\_hurdle", "X400m") et au saut en longueur. Au contraire, "Pole-vault" et "X1500m" n'ont pas une grande influence sur le nombre de points. Les athlètes qui sont bons à ces deux épreuves ne sont pas favorisés.
+
+On ajoute la variable "Competition" comme variable qualitative illustrative.
+
+```{python}
+print(fviz_pca_ind(res_pca,repel=True))
+```
+
+Les centres de gravité des modalités de cette variable supplémentaire apparaissent sur le graphe des individus. Ils sont localisés au barycentre des individus qui les possèdent et représentent un individu moyen.
+
+On peut également colorier les individus selon la couleur des centres de gravité des modalités :
+
+```{python}
+print(fviz_pca_ind(res_pca,habillage="Competition",repel=True))
+```
+
+En regardant les points qui représentent "Decastar" et "Olympic Games", on voit que "Olympic Games" a une coordonnée plus élevée sur le premier axe que "Decastar". Ceci montre une évolution des performances des athlètes. Tous les athlètes qui ont participé aux deux compétitions ont obtenu des résultats légèrement meilleurs aux jeux Olympiques.
+
+Cependant, il n'y a aucune différence entre les points "Decastar" et "Olympic Games" sur le deuxième axe. Cela signifie que les athlètes ont amélioré leurs performances mais n'ont pas changé de profil (à l'exception de Zsivoczky qui est passé de lent et fort pendant le Décastar à rapide et faible pendant les Jeux Olympiques).
+
+Les points qui représentent un même individu vont dans le même direction. Par exemple, Sebrle a obtenu de bons résultats aux deux compétitions mais le point qui représente sa performance aux J.O. est plus extrême. Sebrle a obtenu plus de points pendant les J.O. que pendant le Décastar..
+
+On peut envisager deux interprétations :
+\begin{enumerate}
+\item Les athlètes qui participent aux J.O. sont meilleurs que ceux qui participent au Décastar
+\item Les athlètes font de leur mieux aux J.O. (plus motivés, plus entraînés)
+\end{enumerate}
+
+```{python}
+summaryPCA(res_pca)
+```
+
+### Graphes sur les dimensions 3 et 4
+
+```{python}
+print(fviz_pca_ind(res_pca,axis=(2,3),repel=True))
+```
+
+
+## Description des dimensions
+
+On peut décrire les dimensions données par les variables en calculant le coefficient de corrélation entre une variable et une dimension et en réalisant un test de significativité.
+
+```{python}
+from scientisttools import dimdesc
+dim_desc = dimdesc(res_pca)
+dim_desc.keys()
+```
+
+```{python}
+dim_desc["Dim.1"]
+```
+
+```{python}
+dim_desc["Dim.2"]
+```
+
+
+Ces tableaux donnent le coefficient de corrélation et la probabilité critique des variables qui sont significativement corrélées aux dimensions principales. Les variables actives et illustratives dont le probabilité critique est inférieure à $0.05$ apparaissent.
+
+Les tableaux de la description des deux axes principaux montrent que les variables "Points" et "Long\_jump" sont les plus corrélées à la première dimension et que "Discus" est la variable la plus corrélée à la deuxième dimension. Ceci confirme la premièer interprétation.
+
+Si on ne veut pas qu'un (ou plusieurs) individu participe à l'analyse, il est possible de l'ajouter en tant qu'individu illustratif. Ainsi, il ne sera pas actif dans l'analyse mais apportera de l'information supplémentaire.
+
+Pour ajouter des individus illustratifs, utilisez l'argument suivant de la fonction PCA :
+
+```{python,eval=FALSE}
+ind_sup
+```
+
+Tous les résultats détaillés peuvent être vus dans l'objet \texttt{res\_pca}. On peut récupérer les valeurs propres, les résultats des individus actifs et illustratifs, les résultats des variables actives et les résultats des variables continues et qualitatives illustratives en tapant :
+
+```{python}
+from scientisttools import get_pca_ind,get_pca_var,get_eig
+eig = get_eig(res_pca)
+```
+
+```{python}
+row = get_pca_ind(res_pca)
+print(row.keys())
+```
+
+```{python}
+var = get_pca_var(res_pca)
+print(var.keys())
+```
+
+## Interprétation des axes
+
+Des graphiques qui permettent d'interpréter rapidement les axes : on choisit un axe factoriel (le 1er axe dans notre exemple) et on observe quels sont les points lignes et colonnes qui présentent les plus fortes contributions et cos2 pour cet axe.
+
+```{python, out.width="90%"}
+# Classement des points lignes en fonction de leur contribution au 1er axe
+from scientisttools import fviz_contrib, fviz_cos2
+print(fviz_contrib(res_pca,choice="ind",axis=0,top_contrib=10))
+```
+
+```{python,out.width="90%"}
+# Classement des points colonnes en fonction de leur contribution au 1er axe
+print(fviz_contrib(res_pca,choice="var",axis=0))
+```
+
+```{python,out.width="85%"}
+# Classement des points lignes en fonction de leur cos2 sur le 1er axe
+print(fviz_cos2(res_pca,choice="ind",axis=0,top_cos2=10))
+```
+
+```{python,out.width="85%"}
+# Classement des points colonnes en fonction de leur cos2 sur le 1er axe
+print(fviz_cos2(res_pca,choice="var",axis=0))
+```
+
+## Approche Machine Learning
+
+Ici, l'objectif est d'utiliser l'Analyse en Composantes Principales en tant que méthode de prétraitement.
+
+La classe PCA implémente les méthodes \texttt{fit}, \texttt{transform} et \texttt{fit\_transform} bien connues des utilisateurs de scikit-learn.
+
+```{python}
+res_pca.transform(actif).iloc[:5,:]
+```
+
+
+```{python}
+res_pca.fit_transform(decathlon).iloc[:5,:]
+```
+
+
+### Intégration dans une Pipeline de scikit-learn
+
+La class PCA peut être intégrée dans une Pipeline de scikit-learn.
+Dans le cadre de notre exemple, nous cherchons à prédire la 13ème variable (variable "Competition") à partir des 12 premières variables du jeu de données. 
+
+"Competition" est une variable catégorielle binaire. Pour la prédire, nous allons utiliser un modèle de régression logistique qui prendra en input des axes issus d'une Analyse en Composantes Principales pratiquée sur les données brutes.
+
+Dans un premier temps, et de façon tout à fait arbitraire, nous fixons le nombre de composantes extraites à 4.
+
+```{python}
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
+import numpy as np
+
+# X = features
+X = decathlon.drop(columns=["Competition"])
+# y = labels
+y = decathlon[["Competition"]]
+
+# Construction de la Pipeline
+# On enchaine une Analyse en Composantes Prnicipales (4 axes retenus) 
+# puis une régression logistique
+pipe = Pipeline([("pca", PCA(n_components=4)), 
+                 ("logistic_regression", LogisticRegression(penalty=None))])
+# Estimation du modèle
+pipe.fit(X, y)
+```
+
+On prédit
+
+```{python}
+# Prédiction sur l'échantillon de test
+print(pipe.predict(X))
+```
+
+
+Le paramètre \texttt{n\_components} peut faire l'objet d'une optimisation via GridSearchCV de scikit-learn.
+
+Nous reconstruisons donc une Pipeline, sans spécifier de valeur a priori pour n_components.
+
+```{python}
+# Reconstruction d'une Pipeline, sans spécifier de valeur 
+# a priori pour n_components
+pipe2 = Pipeline([("pca", PCA()), 
+                  ("logistic_regression", LogisticRegression(penalty=None))])
+                  
+# Paramétrage de la grille de paramètres
+# Attention à l'étendue des valeurs possibles pour pca__n_components !!!
+param = [{"pca__n_components": [x + 1 for x in range(12)]}]
+
+# Construction de l'obet GridSearchCV
+grid_search = GridSearchCV(pipe2, 
+                           param_grid=param, 
+                           scoring="accuracy",
+                           cv=5,
+                           verbose=0)
+# Estimation du modèle
+grid_search.fit(X, y)
+```
+
+
+```{python}
+# Affichage du score optimal
+grid_search.best_score_
+```
+
+
+```{python}
+# Affichage du paramètre optimal
+grid_search.best_params_
+```
+
+```{python}
+# Prédiction sur l'échantillon de test
+grid_search.predict(X)
+```
+
+
+
+Pour plus d'informations sur l'ACP sous scientisttools, consulter le notebook 
+
+\href{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/pca_example.ipynb}{https://github.com/enfantbenidedieu/scientisttools/blob/master/notebooks/pca\_example.ipynb}.

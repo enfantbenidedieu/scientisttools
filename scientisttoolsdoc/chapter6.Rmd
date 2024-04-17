@@ -1,0 +1,108 @@
+\Chapter{\bf Analyse Factorielle Multiple}
+
+Ce chapitre a pour objectif de présenter rapidement les principales fonctionnalités offertes par le package \og scientisttools \fg{} pour réaliser une Analyse Factorielle Multiple.
+
+## AFM Sur variables quantitatives
+
+### Importation des données
+
+
+```{python}
+#importation des données
+import pandas as pd
+url = "http://factominer.free.fr/factomethods/datasets/wine.txt"
+wine = pd.read_table(url,sep="\t")
+```
+
+
+```{python}
+group_name = ["origin","odor","visual","odor.after.shaking","taste","overall"]
+group = [2,5,3,10,9,2]
+num_group_sup = [0,5]
+```
+
+```{python}
+from scientisttools import MFA
+
+res_mfa = MFA(n_components=5,group=group,group_type=["n"]+["s"]*5,var_weights_mfa=None,
+              name_group = group_name,num_group_sup=[0,5],parallelize=True)
+res_mfa.fit(wine)
+```
+
+
+### Valeurs propres
+
+```{python}
+# Valeurs propres
+res_mfa.eig_
+```
+
+### Information sur les individus
+
+```{python}
+ind = res_mfa.ind_
+```
+
+#### Coordonnées factorielles
+
+```{python}
+ind["coord"].head(6)
+```
+
+```{python,out.width="80%"}
+from scientisttools import fviz_mfa_ind
+print(fviz_mfa_ind(res_mfa,ind_sup=False,repel=True))
+```
+
+#### Contributions
+
+```{python}
+ind["contrib"].head(6)
+```
+
+```{python,out.width="80%"}
+from scientisttools import fviz_contrib
+print(fviz_contrib(res_mfa,choice="ind"))
+```
+
+
+#### Cos2
+
+```{python}
+ind["cos2"].head(6)
+```
+
+```{python,out.width="80%"}
+from scientisttools import fviz_cos2
+print(fviz_cos2(res_mfa,choice="ind"))
+```
+
+
+```{python,out.width="80%"}
+from scientisttools import fviz_mfa_axes
+p = fviz_mfa_axes(res_mfa)
+print(p)
+```
+
+
+```{python,out.width="80%"}
+from scientisttools import fviz_mfa_var
+p = fviz_mfa_var(res_mfa)
+print(p)
+```
+
+
+
+```{python,out.width="80%"}
+from scientisttools import fviz_mfa_group
+p = fviz_mfa_group(res_mfa,repel=True)
+print(p)
+```
+
+
+
+```{python}
+from scientisttools import summaryMFA
+summaryMFA(res_mfa)
+```
+

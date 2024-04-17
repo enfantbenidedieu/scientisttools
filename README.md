@@ -2,7 +2,7 @@
 
 ## About scientisttools
 
-**scientisttools** is a `Python` package dedicated to multivariate Exploratory Data Analysis, clustering analysis and discriminant analysis.
+**scientisttools** is a `Python` package dedicated to multivariate Exploratory Data Analysis and clustering analysis.
 
 ## Why use scientisttools?
 
