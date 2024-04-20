@@ -47,7 +47,7 @@ class PCA(BaseEstimator,TransformerMixin):
     var_weights : an optional variables weights (by default, a list/tuple of 1 for uniform variables weights), the weights are given only for
                     the active variables
     
-    ind_sup : an ineteger or a list/tuple indicating the indexes of the supplementary individuals
+    ind_sup : an integer or a list/tuple indicating the indexes of the supplementary individuals
 
     quanti_sup : an integer or a list/tuple indicating the indexes of the quantitative supplementary variables
 
@@ -223,7 +223,7 @@ class PCA(BaseEstimator,TransformerMixin):
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
-            X_ind_sup = X.iloc[self.ind_sup,:]
+            X_ind_sup = X.iloc[ind_sup,:]
             X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
         
         ####################################### Principal Components Analysis (PCA) ##################################################
