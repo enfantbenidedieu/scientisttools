@@ -46,10 +46,10 @@ Notebooks are availabled.
 scientisttools requires 
 
 ```
-numpy>=1.26.2
+numpy>=1.26.4
 matplotlib>=3.5.3
 scikit-learn>=1.2.2
-pandas>=1.5.3
+pandas>=2.2.2
 mapply>=0.1.21
 plotnine>=0.10.1
 plydata>=0.4.3
