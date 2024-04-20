@@ -145,7 +145,7 @@ def fviz_pca_ind(self,
             if legend_title is None:
                 legend_title = "Cluster"
                 if "point" in geom:
-                    p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+
+                    p = (p + pn.geom_point(pn.aes(color=c,linetype = c),size=point_size,show_legend=False)+
                             pn.guides(color=pn.guide_legend(title=legend_title)))
                 if "text" in geom:
                     if repel :
@@ -166,7 +166,7 @@ def fviz_pca_ind(self,
         if habillage not in coord.columns:
             raise ValueError(f"Error : {habillage} not in DataFrame.")
         if "point" in geom:
-            p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size,shape=marker)
+            p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size)
         if "text" in geom:
             if repel:
                 p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,
