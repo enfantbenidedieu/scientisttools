@@ -29,7 +29,7 @@ from .fviz_partialpca import fviz_partialpca_ind, fviz_partialpca_var, fviz_part
 # Exploratory Factor Analysis (EFA)
 from .efa import EFA
 from .get_efa import get_efa_ind, get_efa_var, get_efa, summaryEFA
-from .fviz_eta import fviz_efa_ind, fviz_efa_var, fviz_efa
+from .fviz_efa import fviz_efa_ind, fviz_efa_var, fviz_efa
 
 # Multiple Factor Analysis (MFA)
 from .mfa import MFA
@@ -79,7 +79,6 @@ from .varhca import VARHCA
 from .catvarhca import CATVARHCA
 from .varhcpc import VARHCPC
 from .fviz_hcpc import fviz_varhcpc_cluster
-
 
 from .version import __version__
 
