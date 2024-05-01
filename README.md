@@ -2,7 +2,7 @@
 
 ## About scientisttools
 
-**scientisttools** is a `Python` package dedicated to multivariate Exploratory Data Analysis and clustering analysis.
+scientisttools is a Python package dedicated to multivariate Exploratory Data Analysis and clustering analysis.
 
 ## Why use scientisttools?
 
@@ -28,7 +28,7 @@ Those statistical methods can be used in two ways :
 * as descriptive methods ("datamining approach")
 * as reduction methods in scikit-learn pipelines ("machine learning approach")
 
-`scientisttools` also performs `clustering analysis`
+scientisttools also performs clustering analysis
 
 * **Clustering analysis**:
     * Hierarchical Clustering on Principal Components (HCPC)
@@ -46,16 +46,16 @@ Notebooks are availabled.
 scientisttools requires 
 
 ```
-numpy>=1.26.4
-matplotlib>=3.5.3
-scikit-learn>=1.2.2
-pandas>=2.2.2
-mapply>=0.1.21
-plotnine>=0.10.1
-plydata>=0.4.3
-pingouin>=0.5.3
-scientistmetrics>=0.0.3
-ggcorrplot>=0.0.2
+Python >=3.10
+numpy >=1.26.4
+matplotlib >=3.8.4
+scikit-learn >=1.2.2
+pandas >=2.2.2
+polars >=0.19.2
+mapply >=0.1.21
+plotnine >=0.10.1
+pingouin >=0.5.4
+scientistmetrics >=0.0.4
 ```
 
 ### User installation
