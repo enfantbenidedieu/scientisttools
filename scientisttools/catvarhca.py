@@ -3,16 +3,14 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import scipy as sp
-import fastcluster
 
 from mapply.mapply import mapply
-from scientistmetrics import scientistmetrics
+from scientistmetrics import association
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import squareform 
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from .revaluate_cat_variable import revaluate_cat_variable
-
 
 
 def funSqDice(col1,col2):
@@ -99,7 +97,7 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         
         # Compute Dissimilarity Matrix
         if self.diss_metric == "cramer":
-            D = mapply(scientistmetrics(X=X,method="cramer"),lambda x : 1 - x, axis=0,progressbar=False,n_workers=n_workers)
+            D = mapply(association(X=X,method="cramer"),lambda x : 1 - x, axis=0,progressbar=False,n_workers=n_workers)
         elif self.diss_metric in ["dice","bothpos"]:
             D = self._diss_modality(X)
         
@@ -124,7 +122,7 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
             n_clusters = self.n_clusters
 
         # Linkage matrix
-        link_matrix = fastcluster.linkage(squareform(D),method=method,metric = metric)
+        link_matrix = hierarchy.linkage(squareform(D),method=method,metric = metric)
 
         # Coupure de l'arbre
         cutree = (hierarchy.cut_tree(link_matrix,n_clusters=n_clusters)+1).reshape(-1, )
@@ -164,7 +162,7 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         """
         X = revaluate_cat_variable(X)
         # Disjonctif matrix
-        M =  pd.concat((pd.get_dummies(X[cols]) for cols in X.columns.tolist()),axis=1)
+        M =  pd.concat((pd.get_dummies(X[cols],dtype=int) for cols in X.columns.tolist()),axis=1)
 
         # Compute Dissimilarity Matrix
         D = pd.DataFrame(index=M.columns,columns=M.columns).astype("float")
@@ -208,14 +206,14 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         elif self.diss_metric in ["dice","bothpos"]:
             # Active data
             active_data  = revaluate_cat_variable(self.call_["X"])
-            dummies = pd.concat((pd.get_dummies(active_data[cols]) for cols in active_data.columns),axis=1)
+            dummies = pd.concat((pd.get_dummies(active_data[cols],dtype=int) for cols in active_data.columns),axis=1)
 
             # Projected 
             if X.shape[1] == 1:
-                dummies2 = pd.concat((pd.get_dummies(X[cols],prefix=cols,prefix_sep=" = ") for cols in X.columns),axis=1)
+                dummies2 = pd.concat((pd.get_dummies(X[cols],prefix=cols,prefix_sep=" = ",dtype=int) for cols in X.columns),axis=1)
             else:
                 X = revaluate_cat_variable(X)
-                dummies2 = pd.concat((pd.get_dummies(X[cols]) for cols in X.columns),axis=1)
+                dummies2 = pd.concat((pd.get_dummies(X[cols],dtype=int) for cols in X.columns),axis=1)
 
             # Compute Dissimilarity Matrix
             D = pd.DataFrame(index=dummies.columns,columns=dummies2.columns).astype("float")

@@ -15,7 +15,6 @@ from .pca import PCA
 from .weightedcorrcoef import weightedcorrcoef
 from .kmo import global_kmo_index, per_item_kmo_index
 
-
 class PartialPCA(BaseEstimator,TransformerMixin):
     """
     Partial Principal Component Analysis (PartialPCA)

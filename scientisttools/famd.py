@@ -5,15 +5,12 @@ import pandas as pd
 import polars as pl
 import scipy as sp
 from mapply.mapply import mapply
-
 from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from .pca import PCA
 from .weightedcorrcoef import weightedcorrcoef
 from .function_eta2 import function_eta2
-
-
 class FAMD(BaseEstimator,TransformerMixin):
     """
     Factor Analysis of Mixed Data (FAMD)

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 import pandas as pd
-import fastcluster
 from mapply.mapply import mapply
 from scipy.cluster import hierarchy
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -74,7 +72,7 @@ class VARHCPC(BaseEstimator,TransformerMixin):
             raise TypeError("'n_clusters' must be an integer")
         
         # Linkage matrix
-        link_matrix = fastcluster.linkage(X,method=method,metric = metric)
+        link_matrix = hierarchy.linkage(X,method=method,metric = metric)
 
         # cut the hierarchical tree
         cutree = (hierarchy.cut_tree(link_matrix,n_clusters=n_clusters)+1).reshape(-1, )

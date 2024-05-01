@@ -5,7 +5,6 @@ import pandas as pd
 import polars as pl
 from mapply.mapply import mapply
 import pingouin as pg
-import statsmodels.formula.api as smf
 from statsmodels.stats.weightstats import DescrStatsW
 import scipy.stats as st
 from sklearn.base import BaseEstimator, TransformerMixin

@@ -80,8 +80,7 @@ from .catvarhca import CATVARHCA
 from .varhcpc import VARHCPC
 from .fviz_hcpc import fviz_varhcpc_cluster
 
-from .version import __version__
-
+__version__ = '0.1.4'
 __name__ = "scientisttools"
 __author__ = 'Duverier DJIFACK ZEBAZE'
 __email__ = 'duverierdjifack@gmail.com'

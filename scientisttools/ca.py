@@ -5,7 +5,6 @@ import pandas as pd
 import polars as pl
 import scipy as sp
 from mapply.mapply import mapply
-
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from .svd_triplet import svd_triplet

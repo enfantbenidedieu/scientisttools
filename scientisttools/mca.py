@@ -8,7 +8,6 @@ from mapply.mapply import mapply
 from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
 
-
 from .revaluate_cat_variable import revaluate_cat_variable
 from .function_eta2 import function_eta2
 from .svd_triplet import svd_triplet

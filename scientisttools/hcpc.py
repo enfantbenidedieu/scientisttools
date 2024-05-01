@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 import scipy as sp
-import fastcluster
 
 from mapply.mapply import mapply
 from scipy.cluster import hierarchy
@@ -126,7 +125,7 @@ class HCPC(BaseEstimator,TransformerMixin):
                     eff[i,j] = (weights[i]*weights[j])/(sum(weights))/(weights[i]+weights[j])
             dissi = do*eff[np.triu_indices(eff.shape[0], k = 1)]
             # Agglometrive clustering
-            link_matrix = fastcluster.linkage(dissi,metric=metric,method=method)
+            link_matrix = hierarchy.linkage(dissi,metric=metric,method=method)
             inertia_gain = link_matrix[:,2][::-1]
             intra = np.cumsum(inertia_gain[::-1])[::-1]
             quot = intra[(min_clust-1):max_clust]/intra[(min_clust-2):(max_clust-1)]
@@ -241,7 +240,7 @@ class HCPC(BaseEstimator,TransformerMixin):
             raise TypeError("'n_clusters' must be an integer")
 
         # Agglomerative clustering
-        link_matrix = fastcluster.linkage(model.ind_["coord"],method=method,metric=metric)
+        link_matrix = hierarchy.linkage(model.ind_["coord"],method=method,metric=metric)
         # cut the hierarchical tree
         cutree = (hierarchy.cut_tree(link_matrix,n_clusters=n_clusters)+1).reshape(-1, )
         cluster = pd.Series([str(x) for x in cutree],index =  model.ind_["coord"].index.tolist(),name = "clust")

@@ -7,7 +7,6 @@ from mapply.mapply import mapply
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import squareform 
 from sklearn.base import BaseEstimator, TransformerMixin
-import fastcluster
 
 from .covariance_to_correlation import covariance_to_correlation
 
@@ -172,7 +171,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
         D = mapply(corr_matrix,lambda x : np.sqrt(1 - x**2),axis=0,progressbar=False,n_workers=n_workers)
 
         # Linkage Matrix with vectorize dissimilarity matrix
-        link_matrix = fastcluster.linkage(squareform(D),method=method,metric = metric)
+        link_matrix = hierarchy.linkage(squareform(D),method=method,metric = metric)
 
          # Coupure de l'arbre
         cutree = (hierarchy.cut_tree(link_matrix,n_clusters=n_clusters)+1).reshape(-1, )
