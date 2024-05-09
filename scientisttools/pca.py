@@ -210,7 +210,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         ####################################### Save the base in a new variables
         # Store data
-        Xtot = X
+        Xtot = X.copy()
 
         ####################################### Drop supplementary qualitative columns ########################################
         if self.quali_sup is not None:

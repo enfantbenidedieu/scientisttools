@@ -39,19 +39,19 @@ def fviz_corrcircle(self,
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
+
+    if self.model_ not in ["pca","ca","mca","spemca","famd","pcamix","mfa","mfaqual","mfamix","partialpca","efa"]:
+        raise TypeError("'self' must be an object of class PCA, CA, MCA, speMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, PartialPCA, EFA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
         (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
-        raise ValueError("Error : You must pass a valid 'axis'.")
-    
-    if self.model_ not in ["pca","ca","mca","famd","mfa","mfaqual","mfamix","partialpca","efa"]:
-        raise ValueError("Factor method not allowed.")
+        raise ValueError("You must pass a valid 'axis'.")
     
     if self.model_ in ["pca","partialpca","efa"]:
         coord = self.var_["coord"]
-    elif self.model_ in ["famd","mfa","mfamix"]:
+    elif self.model_ in ["famd","pcamix","mfa","mfamix"]:
         coord = self.quanti_var_["coord"]
     else:
         if hasattr(self, "quanti_sup_"):
@@ -68,7 +68,7 @@ def fviz_corrcircle(self,
     if "text" in geom:
             p = p + text_label(text_type,color=color,size=text_size,va="center",ha="center")
         
-    if self.model_ in ["pca","famd","mfa","mfamix"]:
+    if self.model_ in ["pca","famd","pcamix","mfa","mfamix"]:
         if hasattr(self, "quanti_sup_"):
             sup_coord = self.quanti_sup_["coord"]
             if "arrow" in geom:

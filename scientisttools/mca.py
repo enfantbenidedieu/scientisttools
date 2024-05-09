@@ -185,7 +185,7 @@ class MCA(BaseEstimator,TransformerMixin):
 
         ####################################### Save the base in a new variables
         # Store data
-        Xtot = X
+        Xtot = X.copy()
 
         ####################################### Drop supplementary qualitative columns ########################################
         if self.quali_sup is not None:
@@ -239,9 +239,9 @@ class MCA(BaseEstimator,TransformerMixin):
         if self.n_components is None:
             n_components =  dummies.shape[1] - X.shape[1]
         elif not isinstance(self.n_components,int):
-            raise ValueError("Error : 'n_components' must be an integer.")
+            raise ValueError("'n_components' must be an integer.")
         elif self.n_components <= 0:
-            raise ValueError("Error : 'n_components' must be equal or greater than 1.")
+            raise ValueError("'n_components' must be equal or greater than 1.")
         else:
             n_components = min(self.n_components,dummies.shape[1] - X.shape[1])
         
@@ -250,9 +250,9 @@ class MCA(BaseEstimator,TransformerMixin):
         if self.ind_weights is None:
             ind_weights = np.ones(X.shape[0])/X.shape[0]
         elif not isinstance(self.ind_weights,list):
-            raise ValueError("Error : 'ind_weights' must be a list of individuals weights.")
+            raise ValueError("'ind_weights' must be a list of individuals weights.")
         elif len(self.ind_weights) != X.shape[0]:
-            raise ValueError(f"Error : 'ind_weights' must be a list with length {X.shape[0]}.")
+            raise ValueError(f"'ind_weights' must be a list with length {X.shape[0]}.")
         else:
             ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
 
@@ -262,7 +262,7 @@ class MCA(BaseEstimator,TransformerMixin):
             for col in X.columns.tolist():
                 var_weights[col] = 1/X.shape[1]
         elif not isinstance(self.var_weights,pd.Series):
-            raise ValueError("Error : 'var_weights' must be a pandas series where index are variables names and values are variables weights.")
+            raise ValueError("'var_weights' must be a pandas series where index are variables names and values are variables weights.")
         else:
             for col in X.columns.tolist():
                 var_weights[col] = self.var_weights[col]/self.var_weights.values.sum()

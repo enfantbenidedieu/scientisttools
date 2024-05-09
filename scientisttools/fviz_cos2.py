@@ -22,14 +22,23 @@ def fviz_cos2(self,
     Description
     -----------
     This function can be used to visualize the quality of representation of rows/columns from the results of Principal Component Analysis (PCA), 
-    Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), and Multiple Factor Analysis (MFA) functions.       
+    Correspondence Analysis (CA), (specific) Multiple Correspondence Analysis (MCA/SpecificMCA), Factor Analysis of Mixed Data (FAMD), PCA of Mixed Data (PCAMIX)
+    and Multiple Factor Analysis (MFA) functions.       
         
     Parameters
     ----------
-    choice : {'ind','var','mod'}.
-            'ind' :   individuals
-            'var' :   continues/categorical variables
-            'mod' :   categories
+    self : an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA
+
+    choice : allowed values are :
+            - 'row' for CA
+            - 'col' for CA
+            - 'var' for PCA, MCA or SpecificMCA
+            - 'ind' for PCA, MCA, SpecificMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT
+            - 'quanti_var' for FAMD, PCAMIX, MFA, MFAMIX
+            - 'quali_var' for FAMD, PCAMIX, MFAQUAL
+            - 'freq' for MFACT
+            - 'group' for MFA, MFAQUAL, MFAMIX, MFACT
+            - 'partial_axes' for MFA, MFAQUAL, MFAMIX, MFACT
         
     axis : None or int.
         Select the axis for which the row/col contributions are plotted. If None, axis = 0.
@@ -54,8 +63,8 @@ def fviz_cos2(self,
     -------
     None
     """
-    if self.model_ not in ["pca","ca","mca","famd","mfa","mfaqual","mfamix","mfact","partialpca"]:
-        raise TypeError("'self' must be an object of class PCA, CA, MCA, FAMD, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA")
+    if self.model_ not in ["pca","ca","mca","specificmca","famd","pcamix","mfa","mfaqual","mfamix","mfact","partialpca"]:
+        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA")
         
     if choice not in ["row","col","var","ind","quanti_var","quali_var","freq","group","partial_axes"]:
         raise ValueError("'choice' should be one of 'row', 'col', 'var', 'ind', 'quanti_var', 'quali_var',  'freq','group' 'partial_axes'.")
@@ -72,13 +81,13 @@ def fviz_cos2(self,
         bar_width = 0.8
 
     ################## set
-    if self.model_ in ["pca","mca","partialpca"] and choice not in ["ind","var"]:
+    if self.model_ in ["pca","mca","specificmca","partialpca"] and choice not in ["ind","var"]:
         raise ValueError("'choice' should be one of 'var', 'ind'")
     
     if self.model_ == "ca" and choice not in ["row","col"]:
         raise ValueError("'choice' should be one of 'row', 'col'.")
     
-    if self.model_ == "famd" and choice not in ["ind","quanti_var","quali_var"]:
+    if self.model_ in ["famd","pcamix"] and choice not in ["ind","quanti_var","quali_var"]:
         raise ValueError("'choice' should be one of 'ind', 'quanti_var','quali_var'")
     
     if self.model_ == "mfa" and choice not in ["ind","quanti_var","group","partial_axes"]:

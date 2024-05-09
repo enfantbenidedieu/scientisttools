@@ -11,6 +11,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from .pca import PCA
 from .weightedcorrcoef import weightedcorrcoef
 from .function_eta2 import function_eta2
+from .revaluate_cat_variable import revaluate_cat_variable
 class FAMD(BaseEstimator,TransformerMixin):
     """
     Factor Analysis of Mixed Data (FAMD)
@@ -202,12 +203,14 @@ class FAMD(BaseEstimator,TransformerMixin):
         ####################################### Fill NA in quantitatives columns wih mean
         if is_quanti.isnull().any().any():
             col_list = is_quanti.columns.tolist()
-            X[col_list] = mapply(X[col_list], lambda x : x.fillna(x.mean(),inplace=True),axis=0,progressbar=False,n_workers=n_workers)
-            raise Warning("Missing values are imputed by the mean of the variable.")
+            for col in col_list:
+                if X.loc[:,col].isnull().any():
+                    X.loc[:,col] = X.loc[:,col].fillna(X.loc[:,col].mean())
+            print("Missing values are imputed by the mean of the variable.")
 
         ####################################### Save the base in a new variables
         # Store data
-        Xtot = X
+        Xtot = X.copy()
 
         ####################################### Drop supplementary qualitative columns ########################################
         if self.quali_sup is not None:
@@ -230,9 +233,12 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         # Check if NULL
         if X_quant.empty and not X_qual.empty:
-            raise ValueError("Error : There is no continuous variables in X. Please use MCA function.")
+            raise TypeError("There is no continuous variables in X. Please use MCA function.")
         elif X_qual.empty and not X_quant.empty:
-            raise ValueError("Error : There is no categoricals variables in X. Please use PCA function.")
+            raise TypeError("There is no categoricals variables in X. Please use PCA function.")
+        
+        # Revaluate categoricals variables
+        X_qual = revaluate_cat_variable(X_qual)
 
         ############################################## Summary
         ################## Summary quantitatives variables ####################
@@ -278,9 +284,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         if self.ind_weights is None:
             ind_weights = np.ones(X.shape[0])/X.shape[0]
         elif not isinstance(self.ind_weights,list):
-            raise ValueError("Error : 'ind_weights' must be a list of row weight.")
+            raise TypeError("'ind_weights' must be a list of row weight.")
         elif len(self.ind_weights) != X.shape[0]:
-            raise ValueError(f"Error : 'row_weights' must be a list with length {X.shape[0]}.")
+            raise ValueError(f"'row_weights' must be a list with length {X.shape[0]}.")
         else:
             ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
         
@@ -291,9 +297,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         if self.quanti_weights is None:
             quanti_weights = np.ones(X_quant.shape[1])
         elif not isinstance(self.quanti_weights,list):
-            raise ValueError("Error : 'quanti_weights' must be a list of quantitatives weights")
+            raise ValueError("'quanti_weights' must be a list of quantitatives weights")
         elif len(self.quanti_weights) != X_quant.shape[1]:
-            raise ValueError(f"Error : 'quanti_weights' must be a list with length {X_quant.shape[1]}.")
+            raise ValueError(f"'quanti_weights' must be a list with length {X_quant.shape[1]}.")
         else:
             quanti_weights = np.array(self.quanti_weights)
         
@@ -466,7 +472,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             if X_quali_sup.shape[1] > 1:
                 chi_sup_stats = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
                 cpt = 0
-                for i in range(X_quali_sup.shpe[1]-1):
+                for i in range(X_quali_sup.shape[1]-1):
                     for j in range(i+1,X_quali_sup.shape[1]):
                         tab = pd.crosstab(X_quali_sup.iloc[:,i],X_quali_sup.iloc[:,j])
                         chi = sp.stats.chi2_contingency(tab,correction=False)
@@ -495,7 +501,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             
             ###### Add 
             if X_quali_sup.shape[1] > 1 :
-                chi_sup_stats = pd.concat([chi_sup_stats,chi_sup_stats2],axos=0,ignore_index=True)
+                chi_sup_stats = pd.concat([chi_sup_stats,chi_sup_stats2],axis=0,ignore_index=True)
             else:
                 chi_sup_stats = chi_sup_stats2
             

@@ -48,9 +48,13 @@ res.ca = CA(women_work, col.sup=4:ncol(women_work))
 library("FactoMineR")
 library(Factoshiny)
 library(factoextra)
+data(children)
+res.ca <- CA (children, row.sup = 15:18, col.sup = 6:8)
 res.ca <- CA(housetasks, graph = FALSE)
+res.ca <- CA()
 res.shiny = CAshiny(res.ca)
 dimdesc(res.ca)
+res
 # PCA
 data("decathlon2")
 decathlon2.active <- decathlon2[1:23, 1:10]
@@ -116,7 +120,7 @@ df <- wine[,c(1,2, 16, 22, 29, 28, 30,31)]
 head(df[, 1:7], 4)
 
 library(FactoMineR)
-res.famd <- FAMD(df, graph = FALSE)
+res.famd <- FAMD(wine, graph = FALSE)
 res.pca <- FAMDshiny(res.famd)
 dimdesc(res.famd)
 fviz_contrib(res.famd,choice = "ind")

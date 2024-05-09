@@ -49,8 +49,8 @@ def fviz_famd_ind(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the Multiple Factor Analysis for Mixed Data (FAMD) individuals graphs
-    --------------------------------------------------------------------------
+    Draw the Factor Analysis of Mixed Data (FAMD) individuals graphs
+    ----------------------------------------------------------------
 
 
     Return
@@ -289,8 +289,8 @@ def fviz_famd_col(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the Multiple Factor Analysis for Mixed Data (FAMD) correlation circle graphs
-    ---------------------------------------------------------------------------------
+    Draw the Factor Analysis for Mixed Data (FAMD) correlation circle graphs
+    ------------------------------------------------------------------------
 
     Author
     ------
@@ -298,7 +298,7 @@ def fviz_famd_col(self,
     """
     
     if self.model_ != "famd":
-        raise ValueError("Error : 'self' must be an object of class FAMD.")
+        raise TypeError("'self' must be an object of class FAMD")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -441,8 +441,8 @@ def fviz_famd_mod(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the Multiple Factor Analysis for Mixed Data (FAMD) variables/categories graphs
-    -----------------------------------------------------------------------------------
+    Draw the Factor Analysis for Mixed Data (FAMD) variables/categories graphs
+    --------------------------------------------------------------------------
 
     Author
     ------
@@ -611,8 +611,8 @@ def fviz_famd_var(self,
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Draw the Multiple Factor Analysis for Mixed Data (FAMD) variables graphs
-    ------------------------------------------------------------------------
+    Draw the Factor Analysis for Mixed Data (FAMD) variables graphs
+    ---------------------------------------------------------------
 
 
     Return
@@ -727,8 +727,8 @@ def fviz_famd_var(self,
 
 def fviz_famd(self,choice="ind",**kwargs) -> pn:
     """
-    Draw the Multiple Factor Analysis for Mixed Data (FAMD) graphs
-    --------------------------------------------------------------
+    Draw the Factor Analysis for Mixed Data (FAMD) graphs
+    -----------------------------------------------------
     
     Description
     -----------
@@ -737,11 +737,13 @@ def fviz_famd(self,choice="ind",**kwargs) -> pn:
     Parameters
     ----------
     self : an object of class FAMD
+
     choice : a string corresponding to the graph that you want to do.
                 - "ind" for the individual graphs
                 - "quanti_var" for the correlation circle
                 - "quali_var" for the categorical variables graphs
                 - "var" for all the variables (quantitatives and categorical)
+    
     **kwargs : 	further arguments passed to or from other methods
 
     Return

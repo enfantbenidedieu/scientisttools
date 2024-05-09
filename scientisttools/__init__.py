@@ -16,10 +16,18 @@ from .mca import MCA
 from .get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
 from .fviz_mca import fviz_mca_ind, fviz_mca_mod, fviz_mca_var, fviz_mca
 
+# specific MCA
+from .specificmca import SpecificMCA
+
 # Factor Analysis of Mixed Data (FAMD)
 from .famd import FAMD
 from .get_famd import get_famd_ind, get_famd_var, get_famd, summaryFAMD
 from .fviz_famd import fviz_famd_ind, fviz_famd_col, fviz_famd_mod, fviz_famd_var, fviz_famd
+
+# PCA of Mixed Data (PCAMIX)
+from .pcamix import PCAMIX
+from .get_pcamix import get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX
+from .fviz_pcamix import fviz_pcamix_ind, fviz_pcamix_col, fviz_pcamix_mod, fviz_pcamix_var, fviz_pcamix
 
 # Partial PCA
 from .partialpca import PartialPCA

@@ -117,7 +117,7 @@ def dimdesc(self,axis=None,proba=0.05):
         for idx in row_coord.columns:
             corrdim[idx] = {"row" : (row_coord[idx].to_frame().sort_values(by=idx,ascending=True).rename(columns={idx:"coord"})),
                             "col" : (col_coord[idx].to_frame().sort_values(by=idx,ascending=True).rename(columns={idx:"coord"}))}
-    elif self.model_ == "mca":
+    elif self.model_ in ["mca","specificmca"]:
         # Select data
         data = self.call_["X"]
         # Extract individuals coordinates
@@ -167,7 +167,7 @@ def dimdesc(self,axis=None,proba=0.05):
                 else:
                     res = corqDim
             corrdim[idx] = res
-    elif self.model_ == "famd":
+    elif self.model_ in ["famd","pcamix"]:
         # Extract row coord
         ind_coord = self.ind_["coord"]
         # Select axis
@@ -186,7 +186,7 @@ def dimdesc(self,axis=None,proba=0.05):
             quanti_data = pd.concat([quanti_data,X_quanti_sup],axis=1)
 
         # Select categorical active variables
-        quali_data = self.call_["X"].drop(columns=quanti_data.columns.tolist())
+        quali_data = self.call_["X"].drop(columns=self.quanti_var_["coord"].index.tolist())
         # Add supplementary categorical variables
         if self.quali_sup is not None:
             X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
@@ -207,7 +207,7 @@ def dimdesc(self,axis=None,proba=0.05):
             # Filter by pvalue
             corDim = (corDim.query('pvalue < @proba').sort_values(by="correlation",ascending=False))
 
-            # For categorical variable    
+            # For categorical variable  
             corqDim = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','Eta2','F-stats','pvalue'])
             for col in quali_data.columns.tolist():
                 row_RD = pd.DataFrame(eta2(quali_data[col],ind_coord[idx],digits=8),index=[col])

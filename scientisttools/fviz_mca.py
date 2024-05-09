@@ -44,16 +44,20 @@ def fviz_mca_ind(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the Multiple Correspondence Analysis (MCA) individuals graphs
-    ------------------------------------------------------------------
+    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) individuals graphs
+    -----------------------------------------------------------------------------------------
 
-    Author
-    -----
+    Parameters
+    ----------
+    self : an object of class MCA or SpecificMCA
+
+    Author(s)
+    ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
-    if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an object of class MCA.")
+    if self.model_ not in ["mca","specificmca"]:
+        raise ValueError("'self' must be an object of class MCA or SpecificMCA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -258,15 +262,15 @@ def fviz_mca_mod(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the Multiple Correspondence Analysis (MCA) categorical graphs
-    ------------------------------------------------------------------
+    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) categorical graphs
+    ------------------------------------------------------------------------------------
 
     Description
     -----------
 
     Parameters
     ----------
-    self : an object of class MCA
+    self : an object of class MCA, speMCA
 
 
     Return
@@ -278,8 +282,8 @@ def fviz_mca_mod(self,
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
-    if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an object of class MCA.")
+    if self.model_ not in ["mca","specificmca"]:
+        raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -391,7 +395,7 @@ def fviz_mca_mod(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Qualitatives variables categories - MCA"
+        title = "Qualitatives variables categories - "+self.model_.upper()
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
     if y_lim is not None:
@@ -445,16 +449,16 @@ def fviz_mca_var(self,
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Draw the Multiple Correspondence Analysis (MCA) variables graphs
-    ----------------------------------------------------------------
+    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) variables graphs
+    ----------------------------------------------------------------------------------
 
     Author
     ------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
-    if self.model_ != "mca":
-        raise ValueError("Error : 'self' must be an object of class MCA.")
+    if self.model_ not in ["mca","specificmca"]:
+        raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -532,7 +536,7 @@ def fviz_mca_var(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Graphe of variables - MCA"
+        title = "Graphe of variables - "+self.model_.upper()
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
     if y_lim is not None:
@@ -554,16 +558,16 @@ def fviz_mca_var(self,
 
 def fviz_mca(self,choice="ind",**kwargs)->pn:
     """
-    Draw the Multiple Correspondence Analysis (MCA) graphs
-    ------------------------------------------------------
+    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) graphs
+    ------------------------------------------------------------------------
 
     Description
     -----------
-    Draw the Multiple Correspondence Analysis (MCA) graphs.
+    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) graphs.
 
     Parameters
     ----------
-    self : an object of class MCA
+    self : an object of class MCA, SpecificMCA
     choice : the graph to plot
                 - "ind" for the individuals graphs
                 - "mod" for the categories graphs
@@ -580,8 +584,8 @@ def fviz_mca(self,choice="ind",**kwargs)->pn:
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
-    if self.model_ != "mca":
-        raise TypeError("'self' must be an object of class MCA")
+    if self.model_ not in ["mca","specificmca"]:
+        raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
     if choice not in ["ind","mod","var","quanti_sup"]:
         raise ValueError("'choice' values allowed are : 'ind', 'mod', 'var' and 'quanti_sup'.")

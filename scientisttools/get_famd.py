@@ -187,8 +187,11 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
         print(eig)
     
     # Add individuals informations
-    print(f"\nIndividuals (the {nb_element} first)\n")
     ind = self.ind_
+    if ind["coord"].shape[0] > nb_element:
+        print(f"\nIndividuals (the {nb_element} first)\n")
+    else:
+        print("\nIndividuals\n")
     ind_infos = ind["infos"]
     for i in np.arange(0,ncp,1):
         ind_coord = ind["coord"].iloc[:,i]
@@ -205,15 +208,18 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
 
     # Add supplementary individuals
     if self.ind_sup is not None:
-        print(f"\nSupplementary individuals\n")
         ind_sup = self.ind_sup_
+        if ind["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary individuals (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary individuals\n")
         ind_sup_infos = ind_sup["dist"]
         for i in np.arange(0,ncp,1):
             ind_sup_coord = ind_sup["coord"].iloc[:,i]
             ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
             ind_sup_cos2.name = "cos2"
             ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
-        ind_sup_infos = ind_sup_infos.round(decimals=digits)
+        ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
@@ -224,7 +230,7 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     if quanti_var["coord"].shape[0]>nb_element:
         print(f"\nContinuous variables (the {nb_element} first)\n")
     else:
-         print("\nContinuous variables\n")
+        print("\nContinuous variables\n")
     quanti_var_infos = pd.DataFrame().astype("float")
     for i in np.arange(0,ncp,1):
         quanti_var_coord = quanti_var["coord"].iloc[:,i]
@@ -241,8 +247,11 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     
     # Add supplementary continuous variables informations
     if self.quanti_sup is not None:
-        print(f"\nSupplementary continuous variable\n")
         quanti_sup = self.quanti_sup_
+        if quanti_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary continuous variables\n")
         quanti_sup_infos = pd.DataFrame().astype("float")
         for i in np.arange(0,ncp,1):
             quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
@@ -287,8 +296,11 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     
     # Add Supplementary categories – Variable illustrative qualitative
     if self.quali_sup is not None:
-        print("\nSupplementary categories\n")
         quali_sup = self.quali_sup_
+        if quali_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary categories (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary categories\n")
         quali_sup_infos = quali_sup["dist"]
         for i in np.arange(0,ncp,1):
             quali_sup_coord = quali_sup["coord"].iloc[:,i]
