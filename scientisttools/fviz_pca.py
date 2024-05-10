@@ -119,7 +119,7 @@ def fviz_pca_ind(self,
                 legend_title = "Contrib"
         elif color in coord.columns.tolist():
             if not np.issubdtype(coord[color].dtype, np.number):
-                raise ValueError("Error : 'color' must me a numeric variable.")
+                raise TypeError("'color' must me a numeric variable.")
             c = coord[color].values
             if legend_title is None:
                 legend_title = color
@@ -164,7 +164,7 @@ def fviz_pca_ind(self,
                     p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     else:
         if habillage not in coord.columns:
-            raise ValueError(f"Error : {habillage} not in DataFrame.")
+            raise ValueError(f"{habillage} not in DataFrame.")
         if "point" in geom:
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size)
         if "text" in geom:
@@ -219,7 +219,7 @@ def fviz_pca_ind(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     # Set title
     if title is None:
-        title = "Individuals factor map - PCA"
+        title = "Individuals Factor Map - PCA"
     p = p + pn.labs(title=title,x=x_label,y = y_label)
     
     # Set x limits
@@ -282,13 +282,13 @@ def fviz_pca_var(self,
     """
     
     if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an object of class PCA.")
+        raise TypeError("'self' must be an object of class PCA.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
         (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
-        raise ValueError("Error : You must pass a valid 'axis'.")
+        raise ValueError("You must pass a valid 'axis'.")
 
     coord = self.var_["coord"]
 
@@ -300,7 +300,7 @@ def fviz_pca_var(self,
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
-            raise ValueError("Error : 'lim_cos2' must be a float or an integer.")
+            raise TypeError("'lim_cos2' must be a float or an integer.")
     
     # Using lim contrib
     if lim_contrib is not None:
@@ -310,7 +310,7 @@ def fviz_pca_var(self,
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
-            raise ValueError("Error : 'lim_contrib' must be a float or an integer.")
+            raise TypeError("'lim_contrib' must be a float or an integer.")
 
     if isinstance(color,str):
         if color == "cos2":
@@ -372,7 +372,7 @@ def fviz_pca_var(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Variables factor map - PCA"
+        title = "Variables Factor Map - PCA"
     
     p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+pn.labs(title=title,x=x_label,y=y_label)
 
@@ -390,34 +390,70 @@ def fviz_pca_var(self,
 # https://stackoverflow.com/questions/6578355/plotting-pca-biplot-with-ggplot2
 # https://github.com/vqv/ggbiplot/blob/master/R/ggbiplot.r
 
-def fviz_pca_biplot(self,axis=[0,1],circle_prob=0.69,scale=1) ->pn :
+def fviz_pca_biplot(self,
+                    axis=[0,1],
+                    scale=1,
+                    circle_prob=0.69,
+                    obs_scale = None,
+                    var_scale = None) ->pn :
 
     if self.model_ != "pca":
-        raise ValueError("Error : 'self' must be an instance of class PCA.")
+        raise TypeError("'self' must be an object of class PCA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
         (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
-        raise ValueError("Error : You must pass a valid 'axis'.")
+        raise ValueError("You must pass a valid 'axis'.")
+
+    # Number of observations
+    if obs_scale is None:
+        obs_scale = 1 - scale
+    if var_scale is None:
+        var_scale = scale
 
     # Number of observations
     nobs_factor = np.sqrt(self.call_["X"].shape[0])
-    obs_scale = 1 - scale
-    var_scale = scale
-    
-    # Extract individuals coordinates
-    ind_coord = self.res_["ind"]["coord"].iloc[:,axis]
-    ind_coord = ind_coord*nobs_factor
+    d = np.sqrt(self.eig_.iloc[0,0])
+    u = self.ind_["coord"].apply(lambda x : x*(1/(d*nobs_factor)),axis=0)
+    v = self.var_["coord"].apply(lambda x : x/np.sqrt(self.eig_.iloc[:self.var_["coord"].shape[1],0]),axis=1)
 
-    # Extract variables coordinates
-    var_coord = self.res_["var"]["coord"].iloc[:,axis]
+    # Parallel minimum
+    axis = np.minimum(axis,self.var_["coord"].shape[1])
+    # Modified u
+    df_u = u.iloc[:,axis].apply(lambda x : x*(d**obs_scale),axis=1)
+    # Modified v
+    v = v.apply(lambda x : x*(d**var_scale),axis=1)
+    df_v = v.iloc[:,axis]
+
+    # Rename columns
+    df_u.columns = ["xvar","yvar"]
+    df_v.columns = ["xvar","yvar"]
+
+    # Apply biplot modified
+    df_u = df_u * nobs_factor
 
     # Scale the radius of the correlation circle so that it corresponds to 
     # a data ellipse for the standardized PC scores
-    r = np.sqrt(sp.stats.chi2.ppf(circle_prob, df = 2)) * (ind_coord**2).mean(axis=0).prod()**(1/4)
+    r = np.sqrt(sp.stats.chi2.ppf(circle_prob, df = 2)) * (df_u**2).mean(axis=0).prod()**(1/4)
 
     # Scale direction
+    v_scale = (v**2).sum(axis=1)
+    df_v = (r * df_v)/np.sqrt(np.max(v_scale))
+    
+    if obs_scale == 0:
+        x_label, y_label = "Standardized PC" + str(axis[0]+1), "Standardized PC" + str(axis[1]+1)
+    else:
+        x_label, y_label = "PC" + str(axis[0]+1), "PC" + str(axis[1]+1)
+    # Reset u
+    df_u = df_u.reset_index()
+    df_u.columns = ["Individuals",*df_u.columns[1:]]
+    # Reset v
+    df_v = df_v.reset_index()
+    df_v.columns = ["Variables",*df_v.columns[1:]]
+
+    # Basic plot
+    p = pn.ggplot(df_u,pn.aes(x="xvar",y="yvar"))+pn.labs(x=x_label,y=y_label)+pn.coord_equal()
 
 
 def fviz_pca(self,choice="ind",**kwargs)->pn:

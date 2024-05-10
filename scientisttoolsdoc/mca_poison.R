@@ -4,6 +4,7 @@ library(factoextra)
 data (poison)
 res.mca <- MCA(poison,ind.sup = c(51:55),quanti.sup = c(1:2),quali.sup = c(3:4),graph = FALSE)
 
+fviz_mca_biplot(res.mca)
 
 fviz_cos2(res.mca,choice = "quanti.sup")
 

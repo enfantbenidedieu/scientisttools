@@ -4,7 +4,8 @@ from __future__ import annotations
 # Principal Components Analysis
 from .pca import PCA
 from .get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
-from .fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca
+from .fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot,fviz_pca
+from .fviz_pca3d import fviz_pca3d_ind
 
 # Correspondence Analysis (CA)
 from .ca import CA
@@ -16,7 +17,7 @@ from .mca import MCA
 from .get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
 from .fviz_mca import fviz_mca_ind, fviz_mca_mod, fviz_mca_var, fviz_mca
 
-# specific MCA
+# Specific MCA
 from .specificmca import SpecificMCA
 
 # Factor Analysis of Mixed Data (FAMD)
@@ -67,6 +68,10 @@ from .fviz_shepard import fviz_shepard
 
 from .cmdscale import CMDSCALE
 from .fviz_cmdscale import fviz_cmdscale
+
+# Canonical Correlation Analysis (CCA)
+from .cca import CCA
+from .fviz_cca import fviz_cca_ind, fviz_cca_var, fviz_cca_scatterplot, fviz_cca
 
 ########
 from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
