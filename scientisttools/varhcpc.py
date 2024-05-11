@@ -27,9 +27,13 @@ class VARHCPC(BaseEstimator,TransformerMixin):
 
 
 
-    Returns:
+    Returns
     -------
-    
+
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     def __init__(self,
                  model,

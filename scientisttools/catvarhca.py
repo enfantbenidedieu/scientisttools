@@ -5,13 +5,11 @@ import polars as pl
 import scipy as sp
 
 from mapply.mapply import mapply
-from scientistmetrics import association
 from scipy.cluster import hierarchy
 from scipy.spatial.distance import squareform 
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from .revaluate_cat_variable import revaluate_cat_variable
-
 
 def funSqDice(col1,col2):
     return 0.5*np.sum((col1-col2)**2)
@@ -24,9 +22,15 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
     Hierarchical Clustering Analysis of Categorical Variables (VATVARHCA)
     ---------------------------------------------------------------------
 
+    Description
+    -----------
+
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
+    Performs Hierarchical Clustering Analysis of Categoricals Variables (CATVARHCA)
+
     Parameters
     ----------
-
     n_clusters : an integer.  If a (positive) integer, the tree is cut with nb.cluters clusters.
                 if None, n_clusters is set to 3
     
@@ -36,8 +40,14 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
 
     max_cluster : an integer. The higher possible number of clusters suggested; by default the minimum between 10 and the number of individuals divided by 2.
  
-    
     diss_metric : {"cramer","dice","bothpos"}
+
+    Return
+    ------
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     def __init__(self,
                  n_clusters=None,
@@ -55,9 +65,21 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
     
     def fit(self,X,y=None):
         """
-        
+        Fit the model to X
+        ------------------
+
+        Parameters
+        ----------
+        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
+
+        y : None
+            y is ignored
+
+        Returns:
+        --------
+        self : object
+                Returns the instance itself
         """
-        
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
             X = X.to_pandas()
@@ -97,7 +119,12 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
         
         # Compute Dissimilarity Matrix
         if self.diss_metric == "cramer":
-            D = mapply(association(X=X,method="cramer"),lambda x : 1 - x, axis=0,progressbar=False,n_workers=n_workers)
+            cramer = pd.DataFrame(index=X.columns,columns=X.columns).astype("float")
+            for col1 in X.columns:
+                for col2 in X.columns:
+                    tab = pd.crosstab(X[col1],X[col2])
+                    cramer.loc[col1,col2] = sp.stats.contingency.association(tab,method="cramer")
+            D = mapply(cramer,lambda x : 1 - x, axis=0,progressbar=False,n_workers=n_workers)
         elif self.diss_metric in ["dice","bothpos"]:
             D = self._diss_modality(X)
         

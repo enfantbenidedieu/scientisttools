@@ -1,3 +1,5 @@
+![A test image](./figures/scientisttools.svg)
+
 # scientisttools : Python library for multidimensional analysis
 
 ## About scientisttools
