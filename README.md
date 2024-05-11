@@ -1,14 +1,14 @@
-![scientisttools](./figures/scientisttools.svg)
+<center>
+    <img src="./figures/scientisttools.svg" alt="centered image" width="50%" height="50%"/>
+</center>
 
-# scientisttools : Python library for multidimensional analysis
+# scientisttools : Exploratory Multivariate Data Analysis with Python
 
-## About scientisttools
-
-scientisttools is a Python package dedicated to multivariate Exploratory Data Analysis and clustering analysis.
+scientisttools is a python package dedicated to multivariate Exploratory Data Analysis, clustering analysis and multidimensional scaling.
 
 ## Why use scientisttools?
 
-* It performs **classical principal component methods** : 
+* It performs classical principal component methods : 
     * Principal Components Analysis (PCA)
     * Principal Components Analysis with partial correlation matrix (PartialPCA)
     * Exploratory Factor Analysis (EFA)
@@ -22,7 +22,7 @@ scientisttools is a Python package dedicated to multivariate Exploratory Data An
     * Multiple Factor Analysis of Mixed Data (MFAMIX)
     * Multiple Factor Analysis of Contingence Tables (MFACT)
 
-* In some methods, it allowed to **add supplementary informations** such as supplementary individuals and/or variables.
+* In some methods, it allowed to add supplementary informations such as supplementary individuals and/or variables.
 * It provides a geometrical point of view, a lot of graphical outputs.
 * It provides efficient implementations, using a scikit-learn API.
 
@@ -32,7 +32,7 @@ Those statistical methods can be used in two ways :
 
 scientisttools also performs clustering analysis
 
-* **Clustering analysis**:
+* Clustering analysis:
     * Hierarchical Clustering on Principal Components (HCPC)
     * Variables Hierarchical Clustering Analysis (VARHCA)
     * Variables Hierarchical Clustering Analysis on Principal Components (VARHCPC)
