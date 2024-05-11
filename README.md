@@ -1,5 +1,5 @@
 <center>
-    <img src="./figures/scientisttools.svg" alt="centered image" width="50%" height="50%"/>
+    <img src="./figures/scientisttools.svg" alt="centered image" width="50%"/>
 </center>
 
 # scientisttools : Exploratory Multivariate Data Analysis with Python
