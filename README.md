@@ -1,4 +1,4 @@
-![A test image](./figures/scientisttools.svg)
+![scientisttools](./figures/scientisttools.svg)
 
 # scientisttools : Python library for multidimensional analysis
 
