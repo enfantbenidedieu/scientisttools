@@ -583,7 +583,9 @@ def fviz_ca_biplot(self,
 
     return p
 
-def fviz_ca(self,choice,**kwargs)->pn:
+def fviz_ca(self,
+            choice="biplot",
+            **kwargs)->pn:
     """
     Draw the Correspondence Analysis (CA) graphs
     --------------------------------------------
@@ -599,7 +601,7 @@ def fviz_ca(self,choice,**kwargs)->pn:
     choice : the graph to plot
                 - 'row' for the row points factor map
                 - 'col' for the columns points factor map
-                - 'biplot' for biplot and row and columns factor map
+                - 'biplot' for biplot of row and columns factor map
 
     **kwargs : 	further arguments passed to or from other methods
 

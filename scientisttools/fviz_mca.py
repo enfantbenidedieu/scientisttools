@@ -51,6 +51,10 @@ def fviz_mca_ind(self,
     ----------
     self : an object of class MCA or SpecificMCA
 
+    Return
+    ------
+    a plotnine graph
+
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
@@ -270,12 +274,11 @@ def fviz_mca_mod(self,
 
     Parameters
     ----------
-    self : an object of class MCA, speMCA
-
+    self : an object of class MCA or SpecificMCA
 
     Return
     ------
-    a plotnine
+    a plotnine graph
 
     Author(s)
     ---------
@@ -450,10 +453,18 @@ def fviz_mca_var(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
     Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) variables graphs
-    ----------------------------------------------------------------------------------
+    ---------------------------------------------------------------------------------------
 
-    Author
+    Parameters
+    ----------
+    self : an object of class MCA or SpecificMCA
+
+    Return
     ------
+    a plotnine graph
+
+    Author(s)
+    ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
@@ -556,10 +567,211 @@ def fviz_mca_var(self,
     
     return p
 
-def fviz_mca(self,choice="ind",**kwargs)->pn:
+def fviz_mca_biplot(self,
+                    axis=[0,1],
+                    x_lim = None,
+                    y_lim = None,
+                    x_label = None,
+                    y_label = None,
+                    title = None,
+                    ind_color ="black",
+                    mod_color ="blue",
+                    ind_geom = ["point","text"],
+                    mod_geom = ["point","text"],
+                    ind_point_size = 1.5,
+                    mod_point_size = 1.5,
+                    ind_text_size = 8,
+                    mod_text_size = 8,
+                    ind_text_type = "text",
+                    mod_text_type = "text",
+                    ind_marker = "o",
+                    mod_marker = "o",
+                    add_grid =True,
+                    corrected = False,
+                    ind_sup=True,
+                    ind_sup_color = "red",
+                    ind_sup_marker = "^",
+                    add_ellipses=False, 
+                    ellipse_type = "t",
+                    confint_level = 0.95,
+                    geom_ellipse = "polygon",
+                    quali_sup = True,
+                    quali_sup_color = "green",
+                    quali_sup_marker = "^",
+                    habillage = None,
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    repel=False,
+                    ggtheme=pn.theme_minimal())->pn:
+    """
+    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) biplot graphs
+    ------------------------------------------------------------------------------------
+
+    Parameters
+    ----------
+    self : an object of class MCA or SpecificMCA
+
+    Return
+    ------
+    a plotnine graph
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    if self.model_ not in ["mca","specificmca"]:
+        raise TypeError("'self' must be an object of class MCA or SpecificMCA")
+    
+    if ((len(axis) !=2) or 
+        (axis[0] < 0) or 
+        (axis[1] > self.call_["n_components"]-1)  or
+        (axis[0] > axis[1])) :
+        raise ValueError("You must pass a valid 'axis'.")
+    
+    # Initialize
+    ind_coord = self.ind_["coord"]
+
+    # Add Categorical supplementary Variables
+    ind_coord = pd.concat([ind_coord, self.call_["X"]],axis=1)
+
+    ################ Add supplementary qualitatives columns
+    if self.quali_sup is not None:
+        X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+        if self.ind_sup is not None:
+            X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+        ind_coord = pd.concat([ind_coord,X_quali_sup],axis=1)
+    
+    # Initialize
+    p = pn.ggplot()
+    
+    ####################################################################################################################
+    # Individuals
+    ####################################################################################################################
+    if habillage is None :
+        if "point" in ind_geom:
+            p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),
+                                  color=ind_color,shape=ind_marker,size=ind_point_size,show_legend=False)
+        if "text" in ind_geom:
+            if repel :
+                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),
+                                   color=ind_color,size=ind_text_size,va=va,ha=ha,
+                                   adjust_text={'arrowprops': {'arrowstyle': '-','color': ind_color,'lw':1.0}})
+            else:
+                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),
+                                   color=ind_color,size=ind_text_size,va=va,ha=ha)
+    else:
+        if habillage not in ind_coord.columns:
+            raise ValueError(f"{habillage} not in DataFrame.")
+        if "point" in ind_geom:
+            p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,linetype = habillage),
+                                  size=ind_point_size)
+        if "text" in ind_geom:
+            if repel:
+                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color=habillage,label=ind_coord.index),
+                                   size=ind_text_size,va=va,ha=ha,
+                                   adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+            else:
+                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color=habillage,label=ind_coord.index),
+                                   size=ind_text_size,va=va,ha=ha)
+        
+        if add_ellipses:
+            p = p + pn.stat_ellipse(data=ind_coord,geom=geom_ellipse,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",fill=habillage),
+                                    type = ellipse_type,alpha = 0.25,level=confint_level)
+    # Adding supplementary individuals coordinates
+    if ind_sup:
+        if hasattr(self, "ind_sup_"):
+            sup_coord = self.ind_sup_["coord"]
+            if "point" in ind_geom:
+                p = p + pn.geom_point(data=sup_coord,
+                                    mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                    color = ind_sup_color,shape = ind_sup_marker,size=ind_point_size)
+            if "text" in ind_geom:
+                if repel:
+                    p = p + text_label(ind_text_type,data=sup_coord,
+                                    mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                    color=ind_sup_color,size=ind_text_size,va=va,ha=ha,
+                                    adjust_text={'arrowprops': {'arrowstyle': '-','color': ind_sup_color,'lw':1.0}})
+                else:
+                    p = p + text_label(ind_text_type,data=sup_coord,
+                                    mapping=pn.aes(x =f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
+                                        color = ind_sup_color,size=ind_text_size,va=va,ha=ha)
+
+    #########################################################################################################################################
+    # Categories informations
+    #########################################################################################################################################
+    # Corrected 
+    if corrected:
+        mod_coord = self.var_["corrected_coord"]
+    else:
+        mod_coord = self.var_["coord"]
+    
+    if "point" in mod_geom:
+        p = p + pn.geom_point(data=mod_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),
+                              color=mod_color,shape=mod_marker,size=mod_point_size,show_legend=False)
+    if "text" in mod_geom:
+        if repel :
+            p = p + text_label(mod_text_type,data=mod_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_coord.index),
+                               color=mod_color,size=mod_text_size,va=va,ha=ha,
+                                adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+        else:
+            p = p + text_label(mod_text_type,data=mod_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=mod_coord.index),
+                               color=mod_color,size=mod_text_size,va=va,ha=ha)
+        
+    # Add supplementary categories
+    if quali_sup:
+        if hasattr(self, "quali_sup_"):
+            var_sup_coord = self.quali_sup_["coord"]
+            if "point" in mod_geom:
+                p = p + pn.geom_point(var_sup_coord,pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_sup_coord.index.tolist()),
+                                      color=quali_sup_color,size=mod_point_size,shape=quali_sup_marker)
+            if "text" in mod_geom:
+                if repel:
+                    p = p + text_label(mod_text_type,data=var_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_sup_coord.index.tolist()),
+                                       color=quali_sup_color,size=mod_text_size,va=va,ha=ha,
+                                       adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+                else:
+                    p = p + text_label(mod_text_type,data=var_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_sup_coord.index),
+                                       color=quali_sup_color,size=mod_text_size,va=va,ha=ha)
+
+    # Add additionnal        
+    proportion = self.eig_.iloc[:,2].values
+    if x_label is None:
+        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
+    if y_label is None:
+        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+
+    if title is None:
+        title = "MCA - Biplot"
+    if x_lim is not None:
+        p = p + pn.xlim(x_lim)
+    if y_lim is not None:
+        p = p + pn.ylim(y_lim)
+   
+    p = p + pn.labs(title=title,x=x_label,y=y_label)
+    if add_hline:
+        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
+    if add_vline:
+        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
+    if add_grid:
+        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
+
+    # Add theme
+    p = p + ggtheme
+
+    return p
+
+def fviz_mca(self,
+             choice="biplot",
+             **kwargs)->pn:
     """
     Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) graphs
-    ------------------------------------------------------------------------
+    -----------------------------------------------------------------------------
 
     Description
     -----------
@@ -568,27 +780,30 @@ def fviz_mca(self,choice="ind",**kwargs)->pn:
     Parameters
     ----------
     self : an object of class MCA, SpecificMCA
+
     choice : the graph to plot
                 - "ind" for the individuals graphs
                 - "mod" for the categories graphs
                 - "var" for the variables graphs
                 - "quanti_sup" for the supplementary quantitatives variables.
+                - "biplot" for both individuals and categories graphs
+
     **kwargs : 	further arguments passed to or from other methods
 
     Return
     ------
-    figure : The individuals factor map and the variables factor map.
+    a plotnine graph
 
-    Author
-    ------
+    Author(s)
+    ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
     if self.model_ not in ["mca","specificmca"]:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
-    if choice not in ["ind","mod","var","quanti_sup"]:
-        raise ValueError("'choice' values allowed are : 'ind', 'mod', 'var' and 'quanti_sup'.")
+    if choice not in ["ind","mod","var","quanti_sup","biplot"]:
+        raise ValueError("'choice' values allowed are : 'ind', 'mod', 'var' and 'quanti_sup', 'biplot'")
     
     if choice == "ind":
         return fviz_mca_ind(self,**kwargs)
@@ -600,4 +815,6 @@ def fviz_mca(self,choice="ind",**kwargs)->pn:
         if hasattr(self, "quanti_sup_"):
             return fviz_corrcircle(self,**kwargs)
         else:
-            raise ValueError("No supplementary continuous variables available")
+            raise TypeError("No supplementary continuous variables available")
+    elif choice == "biplot":
+        return fviz_mca_biplot(self,**kwargs)

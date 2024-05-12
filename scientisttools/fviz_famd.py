@@ -691,8 +691,7 @@ def fviz_famd_var(self,
             if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=quali_sup_eta2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_eta2.index),
-                                       color=color_quali_sup,size=text_size,va=va,ha=ha,
-                                       adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                                       color=color_quali_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
                     p = p + text_label(text_type,data=quali_sup_eta2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_eta2.index),
                                        color=color_quali_sup,size=text_size,va=va,ha=ha)
@@ -723,7 +722,6 @@ def fviz_famd_var(self,
     p = p + ggtheme
     
     return p
-
 
 def fviz_famd(self,choice="ind",**kwargs) -> pn:
     """

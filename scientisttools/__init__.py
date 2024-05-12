@@ -4,8 +4,7 @@ from __future__ import annotations
 # Principal Components Analysis
 from .pca import PCA
 from .get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
-from .fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot,fviz_pca
-from .fviz_pca3d import fviz_pca3d_ind
+from .fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot,fviz_pca3d_ind,fviz_pca
 
 # Correspondence Analysis (CA)
 from .ca import CA
@@ -15,7 +14,7 @@ from .fviz_ca import fviz_ca_row, fviz_ca_col, fviz_ca_biplot, fviz_ca
 # Multiple Correspondence Analysis (MCA)
 from .mca import MCA
 from .get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
-from .fviz_mca import fviz_mca_ind, fviz_mca_mod, fviz_mca_var, fviz_mca
+from .fviz_mca import fviz_mca_ind, fviz_mca_mod, fviz_mca_var, fviz_mca_biplot, fviz_mca
 
 # Specific MCA
 from .specificmca import SpecificMCA

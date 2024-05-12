@@ -71,7 +71,6 @@ ggbiplot <- function(pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE,
   # Scale directions
   v.scale <- rowSums(v^2)
   df.v <- r * df.v / sqrt(max(v.scale))
-  print(df.v)
   
   # Change the labels for the axes
   if(obs.scale == 0) {
@@ -183,3 +182,61 @@ ggbiplot <- function(pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE,
 }
 
 ggbiplot(res.pca)
+
+
+
+E = data.frame(X1 = c(0.8970, 2.0949, 3.0307, 4.0135, 5.0515, 6.0261, 6.9059, 7.9838, 8.9854, 9.9468), 
+               X2 = c(8.1472, 9.0579, 1.2699, 9.1338, 6.3236, 0.9754, 2.7850, 5.4688, 9.5751, 9.6489), 
+               X3 = c(3.1101, 4.1008, 4.7876, 7.0677, 6.0858, 4.9309, 4.0449, 3.0101, 5.9495, 6.8729), 
+               X4 = c(1.9593, 2.5472, 3.1386, 4.1493, 5.2575, 9.3500, 10.1966, 11.2511, 9.6160, 10.4733), 
+               X5 = c(11.1682, 11.9124, 12.9516, 13.9288, 14.8826, 15.9808, 16.9726, 18.1530, 18.9751, 19.8936), 
+               X6 = c(1.5761, 9.7059, 9.5717, 4.8538, 8.0028, 1.4189, 4.2176, 9.1574, 7.9221, 9.5949), 
+               X7 = c(1.0898, 1.9868, 2.9853, 10.0080, 8.9052, 8.0411, 2.0826, 1.0536, 9.0649, 10.0826), 
+               X8 = c(16.8407, 17.2543, 18.8143, 19.2435, 20.9293, 11.3517, 9.8308, 10.5853, 11.5497, 9.9172))
+
+Z <- scale(E)
+Z1 <- Z[,c(1:4)]
+Z2 <- Z[,-c(1:4)]
+
+qx = qr(Z1)
+
+qrQ = qr.Q(qx)
+qxR = qr.R(qx)
+
+library(CCA)
+pop <- LifeCycleSavings[, 2:3]
+oec <- LifeCycleSavings[, -(2:3)]
+cc1 <- cc(pop, oec)
+
+library(candisc)
+cc <- cancor(pop, oec)
+
+X <- E[,c(1:4)]
+Y = E[,-c(1:4)]
+lambda1= 0
+Cxx <- var(X, na.rm = TRUE, use = "pairwise") + diag(lambda1, ncol(X))
+Cxy <- cov(X, Y, use = "pairwise")
+
+
+rho <- cc1$cor
+## Define number of observations, number of variables in first set, and number of variables in the second set.
+n <- dim(LifeCycleSavings)[1]
+p <- length(pop)
+q <- length(oec)
+
+## Calculate p-values using the F-approximations of different test statistics:
+on = p.asym(rho, n, p, q, tstat = "Wilks")
+p.asym(rho, n, p, q, tstat = "Hotelling")
+p.asym(rho, n, p, q, tstat = "Pillai")
+on = p.asym(rho, n, p, q, tstat = "Roy")
+plt.asym(on)
+plt.indiv(cc1,1,2)
+plt.var(cc1,1,2,var.label = TRUE)
+
+
+
+library(missMDA)
+data("orange")
+
+missings <- which(is.na(orange))
+res.comp <- imputePCA(orange,ncp=2)
