@@ -286,7 +286,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         elif not isinstance(self.ind_weights,list):
             raise TypeError("'ind_weights' must be a list of row weight.")
         elif len(self.ind_weights) != X.shape[0]:
-            raise ValueError(f"'row_weights' must be a list with length {X.shape[0]}.")
+            raise TypeError(f"'row_weights' must be a list with length {X.shape[0]}")
         else:
             ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
         
@@ -297,9 +297,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         if self.quanti_weights is None:
             quanti_weights = np.ones(X_quant.shape[1])
         elif not isinstance(self.quanti_weights,list):
-            raise ValueError("'quanti_weights' must be a list of quantitatives weights")
+            raise TypeError("'quanti_weights' must be a list of quantitatives weights")
         elif len(self.quanti_weights) != X_quant.shape[1]:
-            raise ValueError(f"'quanti_weights' must be a list with length {X_quant.shape[1]}.")
+            raise TypeError(f"'quanti_weights' must be a list with length {X_quant.shape[1]}.")
         else:
             quanti_weights = np.array(self.quanti_weights)
         
@@ -323,21 +323,21 @@ class FAMD(BaseEstimator,TransformerMixin):
             for col in X_qual.columns.tolist():
                 quali_weights[col] = 1/X_qual.shape[1]
         elif not isinstance(self.quali_weights,dict):
-            raise ValueError("Error : 'quali_weights' must be a dictionary where keys are qualitatives variables names and values are qualitatives variables weights.")
+            raise TypeError("'quali_weights' must be a dictionary where keys are qualitatives variables names and values are qualitatives variables weights.")
         elif len(self.quali_weights.keys()) != X_qual.shape[1]:
-            raise ValueError(f"Error : 'quali_weights' must be a dictionary with length {X_qual.shape[1]}.")
+            raise TypeError(f"'quali_weights' must be a dictionary with length {X_qual.shape[1]}.")
         else:
             for col in X_qual.columns.tolist():
                 quali_weights[col] = self.quali_weights[col]/sum(self.quali_weights)
         
         ###################### Set categories weights
         # Normalisation des variables qualitatives
-        dummies = pd.concat((pd.get_dummies(X_qual[col]) for col in X_qual.columns.tolist()),axis=1)
+        dummies = pd.concat((pd.get_dummies(X_qual[col],dtype=int) for col in X_qual.columns.tolist()),axis=1)
 
         ###### Define mod weights
         mod_weights = pd.Series().astype("float")
         for col in X_qual.columns.tolist():
-            data = pd.get_dummies(X_qual[col])
+            data = pd.get_dummies(X_qual[col],dtype=int)
             weights = data.mean(axis=0)*quali_weights[col]
             mod_weights = pd.concat((mod_weights,weights),axis=0)
         

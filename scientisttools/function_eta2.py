@@ -33,7 +33,7 @@ def function_eta2(X,lab,x,weights,n_workers):
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     def fct_eta2(idx):
-        tt = pd.get_dummies(X[lab])
+        tt = pd.get_dummies(X[lab],dtype=int)
         ni  = mapply(tt, lambda k : k*weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
         num = mapply(mapply(tt,lambda k : k*x[:,idx],axis=0,progressbar=False,n_workers=n_workers),
                         lambda k : k*weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)**2

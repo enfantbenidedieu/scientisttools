@@ -509,7 +509,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 var_weights = pd.concat((var_weights,weights),axis=0)
             elif all_cats[grp]:
                 # Compute dummies table : 0/1
-                dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
+                dummies = pd.concat((pd.get_dummies(X[col],dtype=int) for col in cols),axis=1)
                 # Effectif par categories
                 I_k = dummies.sum(axis=0)
                 # Apply standardize
@@ -519,7 +519,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 ###### Define weights of categories
                 weights = pd.Series(name="weight").astype("float")
                 for col in X[cols].columns.tolist():
-                    data = pd.get_dummies(X[cols][col])   
+                    data = pd.get_dummies(X[cols][col],dtype=int)   
                     m_k = (data.mean(axis=0)*quali_var_weights_mfa[grp][col])/model[grp].eig_.iloc[0,0]
                     weights = pd.concat([weights,m_k],axis=0)
                 var_weights = pd.concat([var_weights,weights],axis=0)
@@ -545,7 +545,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 # Apply weighted for categoricals variables
                 ####################################################################################################################
                 # Compute dummies table : 0/1
-                dummies = pd.concat((pd.get_dummies(X_quali[col]) for col in X_quali.columns.tolist()),axis=1)
+                dummies = pd.concat((pd.get_dummies(X_quali[col],dtype=int) for col in X_quali.columns.tolist()),axis=1)
                 # Effectif par categories
                 I_k = dummies.sum(axis=0)
                 # Apply standardize
@@ -745,7 +745,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 ind_coord_partiel = pd.concat([ind_coord_partiel,coord_partial],axis=1)
             elif all_cats[grp]:
                 # Compute Dummies table : 0/1
-                dummies = pd.concat((pd.get_dummies(X[cols][col]) for col in cols),axis=1)
+                dummies = pd.concat((pd.get_dummies(X[cols][col],dtype=int) for col in cols),axis=1)
                 # Partial coordinates
                 coord_partial = mapply(dummies.dot(quali_var["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),axis=0,progressbar=False,n_workers=n_workers)
                 coord_partial = len(nb_elt_group)*mapply(coord_partial,lambda x : x/self.eig_.iloc[:,0].values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
@@ -767,7 +767,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 #########################################################################################################
                 X_quali = X[cols].select_dtypes(include=["object"])
                 # Compute Dummies table : 0/1
-                dummies = pd.concat((pd.get_dummies(X_quali[col]) for col in X_quali.columns.tolist()),axis=1)
+                dummies = pd.concat((pd.get_dummies(X_quali[col],dtype=int) for col in X_quali.columns.tolist()),axis=1)
                 coord_partial2 = mapply(dummies.dot(quali_var["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(X_quali.shape[1]*self.separate_analyses_[grp].eig_.iloc[0,0]),
                                        axis=0,progressbar=False,n_workers=n_workers)
                 # Add the two
@@ -1201,7 +1201,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
             # If all variables in group are categoricals
             elif all(pd.api.types.is_string_dtype(X[col]) for col in cols):
                 # Compute Dummies table : 0/1
-                dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
+                dummies = pd.concat((pd.get_dummies(X[col],dtype=int) for col in cols),axis=1)
                 # Partiel coordinates
                 coord = mapply(dummies.dot(self.quali_var_["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),
                                axis=0,progressbar=False,n_workers=n_workers)

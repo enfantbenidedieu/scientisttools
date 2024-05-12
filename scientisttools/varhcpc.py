@@ -27,8 +27,8 @@ class VARHCPC(BaseEstimator,TransformerMixin):
 
 
 
-    Returns
-    -------
+    Return
+    ------
 
 
     Author(s)

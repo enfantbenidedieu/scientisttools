@@ -295,7 +295,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
         Z2 = pd.DataFrame()
         means_l = pd.Series()
         for col in X_qual.columns:
-            Yl = pd.get_dummies(X_qual[col])
+            Yl = pd.get_dummies(X_qual[col],dtype=int)
             Vx, Vylx = np.dot(np.dot(Z1.T,D),Z1), np.dot(np.dot(Yl.T,D),Z1)
             # Compute the mean
             Gl =  np.dot(np.dot(np.dot(np.dot(Vylx,np.linalg.pinv(Vx,hermitian=True)),Z1.T),D),np.ones(X.shape[0]))

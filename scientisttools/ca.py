@@ -480,7 +480,7 @@ class CA(BaseEstimator,TransformerMixin):
 
             ############################# Compute
             # Disjonctif table
-            dummies = pd.concat((pd.get_dummies(X_quali_sup[col]) for col in X_quali_sup.columns.tolist()),axis=1)
+            dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns.tolist()),axis=1)
             # Compute : weighted count by categories
             n_k = mapply(dummies,lambda x : x*row_marge,axis=0,progressbar=False,n_workers=self.n_workers).sum(axis=0)*total
 

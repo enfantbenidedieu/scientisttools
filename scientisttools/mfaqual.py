@@ -389,7 +389,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         var_weights = pd.Series(name="weight").astype("float")
         for grp,cols in group_active_dict.items():
             # Compute dummies table : 0/1
-            dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
+            dummies = pd.concat((pd.get_dummies(X[col],dtype=int) for col in cols),axis=1)
             # Effectif par categories
             I_k = dummies.sum(axis=0)
             # Apply standardize
@@ -399,7 +399,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
             ###### Define weights of categories
             weights = pd.Series(name="weight").astype("float")
             for col in cols:
-                data = pd.get_dummies(X[col])
+                data = pd.get_dummies(X[col],dtype=int)
                 m_k = (data.mean(axis=0)*var_weights_mfa[grp][col])/model[grp].eig_.iloc[0,0]
                 weights = pd.concat((weights,m_k),axis=0)
             var_weights = pd.concat((var_weights,weights),axis=0)
@@ -501,7 +501,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         ind_coord_partiel = pd.DataFrame().astype("float")
         for grp, cols in group_active_dict.items():
             # Compute Dummies table : 0/1
-            dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
+            dummies = pd.concat((pd.get_dummies(X[col],dtype=int) for col in cols),axis=1)
             # Partial coordinates
             coord_partial = mapply(dummies.dot(quali_var["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),axis=0,progressbar=False,n_workers=n_workers)
             coord_partial = len(list(group_active_dict.keys()))*mapply(coord_partial,lambda x : x/self.eig_.iloc[:,0].values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
@@ -846,7 +846,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
 
         # Check new dataframe are aligned
         if X.shape[1] != self.call_["X"].shape[1]:
-            raise ValueError("Error : DataFrame aren't aligned")
+            raise TypeError("DataFrame aren't aligned")
         
         # set parallelize
         if self.parallelize:
@@ -861,7 +861,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         row_coord = pd.DataFrame(np.zeros(shape=(X.shape[0],self.quali_var_["coord"].shape[1])),index=X.index.tolist(),columns=self.quali_var_["coord"].columns.tolist())
         for grp, cols in self.call_["group"].items():
             # Compute Dummies table : 0/1
-            dummies = pd.concat((pd.get_dummies(X[col]) for col in cols),axis=1)
+            dummies = pd.concat((pd.get_dummies(X[col],dtype=int) for col in cols),axis=1)
             # Apply
             coord = mapply(dummies.dot(self.quali_var_["coord"].loc[dummies.columns.tolist(),:]),lambda x : x/(len(cols)*self.separate_analyses_[grp].eig_.iloc[0,0]),axis=0,progressbar=False,n_workers=n_workers)
             row_coord = row_coord + coord

@@ -101,7 +101,6 @@ class STATIS(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    
     """
     def __init__(self,
                  n_components=5,

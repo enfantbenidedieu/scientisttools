@@ -233,7 +233,7 @@ class MCA(BaseEstimator,TransformerMixin):
         self.chi2_test_ = chi2_test
 
         ############################################### Dummies tables ############################################
-        dummies = pd.concat((pd.get_dummies(X[col],dtype=float) for col in X.columns.tolist()),axis=1)
+        dummies = pd.concat((pd.get_dummies(X[col],dtype=int) for col in X.columns.tolist()),axis=1)
         
         ###################################### Set number of components ########################################## 
         if self.n_components is None:
@@ -277,7 +277,7 @@ class MCA(BaseEstimator,TransformerMixin):
         ###### Define mod weights
         mod_weights = pd.Series(name="weight").astype("float")
         for col in X.columns.tolist():
-            data = pd.get_dummies(X[col],dtype=float)
+            data = pd.get_dummies(X[col],dtype=int)
             weights = data.mean(axis=0)*var_weights[col]
             mod_weights = pd.concat((mod_weights,weights),axis=0)
         
@@ -460,7 +460,7 @@ class MCA(BaseEstimator,TransformerMixin):
 
             #####################"
             X_quali_sup = X_quali_sup.astype("object")
-            X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=float) for col in X_quali_sup.columns.tolist()),axis=1)
+            X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns.tolist()),axis=1)
 
             # Correlation Ratio
             quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,

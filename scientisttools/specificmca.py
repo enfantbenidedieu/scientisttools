@@ -241,7 +241,7 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
                 var_weights[col] = self.var_weights[col]/self.var_weights.values.sum()
 
         ############################################### Dummies tables ############################################
-        dummies = pd.concat((pd.get_dummies(X[col],prefix=col,prefix_sep="_",dtype=float) for col in X.columns.tolist()),axis=1)
+        dummies = pd.concat((pd.get_dummies(X[col],prefix=col,prefix_sep="_",dtype=int) for col in X.columns.tolist()),axis=1)
 
         # Effectif par modalite
         I_k = dummies.sum(axis=0)
@@ -253,7 +253,7 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
         ###### Define mod weights
         mod_weights = pd.Series(name="weight").astype("float")
         for col in X.columns.tolist():
-            data = pd.get_dummies(X[col],prefix=col,prefix_sep="_",dtype=float)
+            data = pd.get_dummies(X[col],prefix=col,prefix_sep="_",dtype=int)
             weights = data.mean(axis=0)*var_weights[col]
             mod_weights = pd.concat((mod_weights,weights),axis=0)
 
@@ -309,13 +309,12 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
         
         # save eigen value grather than threshold
         lambd = eigen_values[eigen_values>(1/n_cols)]
-        if len(lambd)>0:
-            # Add modified rated
-            self.eig_["modified rates"] = 0.0
-            self.eig_["cumulative modified rates"] = 100.0
-            pseudo = (n_cols/(n_cols-1)*(lambd-1/n_cols))**2
-            self.eig_.iloc[:len(lambd),4] = 100*pseudo/np.sum(pseudo)
-            self.eig_.iloc[:,5] = np.cumsum(self.eig_.iloc[:,4])
+        # Add modified rated
+        self.eig_["modified rates"] = 0.0
+        self.eig_["cumulative modified rates"] = 100.0
+        pseudo = (n_cols/(n_cols-1)*(lambd-1/n_cols))**2
+        self.eig_.iloc[:len(lambd),4] = 100*pseudo/np.sum(pseudo)
+        self.eig_.iloc[:,5] = np.cumsum(self.eig_.iloc[:,4])
 
         ######################################################################################################################
         #################################             Coordinates                             ################################
@@ -403,18 +402,22 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
             Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
             """
             def fct_eta2(idx):
-                tt = pd.get_dummies(X[lab]).drop(columns=excl)
+                # Tratement of exclusion cases
+                if lab in excl.keys():
+                    tt = pd.get_dummies(X[lab],dtype=int).drop(columns=excl[lab])
+                else:
+                    tt = pd.get_dummies(X[lab],dtype=int)
                 ni  = mapply(tt, lambda k : k*weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
                 num = mapply(mapply(tt,lambda k : k*x[:,idx],axis=0,progressbar=False,n_workers=n_workers),
                                 lambda k : k*weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)**2
-                num = sum([num[k]/ni[k] for k in num.index])
-                denom = sum(x[:,idx]*x[:,idx]*weights)
+                num = np.sum([num[k]/ni[k] for k in num.index])
+                denom = np.sum(x[:,idx]*x[:,idx]*weights)
                 return num/denom
             res = pd.DataFrame(np.array(list(map(lambda i : fct_eta2(i),range(x.shape[1])))).reshape(1,-1),
                                index=[lab],columns=["Dim."+str(x+1) for x in range(x.shape[1])])
             return res
         
-        quali_eta2 = pd.concat((function2_eta2(X=X,lab=col,x=ind_coord.values,weights=ind_weights,excl=self.excl[col],n_workers=n_workers) for col in X.columns.tolist()),axis=0)
+        quali_eta2 = pd.concat((function2_eta2(X=X,lab=col,x=ind_coord.values,weights=ind_weights,excl=self.excl,n_workers=n_workers) for col in X.columns.tolist()),axis=0)
 
         # Contribution des variables
         quali_contrib = pd.DataFrame().astype("float")
@@ -492,7 +495,7 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
 
             #####################"
             X_quali_sup = X_quali_sup.astype("object")
-            X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],prefix=col,prefix_sep="_",dtype=float) for col in X_quali_sup.columns.tolist()),axis=1)
+            X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],prefix=col,prefix_sep="_",dtype=int) for col in X_quali_sup.columns.tolist()),axis=1)
 
             # Correlation Ratio
             quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns.tolist()),axis=0)
