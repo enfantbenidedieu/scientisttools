@@ -33,15 +33,15 @@ def fviz_corrcircle(self,
 
     Return
     ------
-    a plotnine
+    a plotnine graph
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
-    if self.model_ not in ["pca","ca","mca","spemca","famd","pcamix","mfa","mfaqual","mfamix","partialpca","efa"]:
-        raise TypeError("'self' must be an object of class PCA, CA, MCA, speMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, PartialPCA, EFA")
+    if self.model_ not in ["pca","ca","mca","spemca","famd","mpca","mfa","mfaqual","mfamix","partialpca","efa"]:
+        raise TypeError("'self' must be an object of class PCA, CA, MCA, speMCA, FAMD, MPCA, MFA, MFAQUAL, MFAMIX, PartialPCA, EFA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -51,7 +51,7 @@ def fviz_corrcircle(self,
     
     if self.model_ in ["pca","partialpca","efa"]:
         coord = self.var_["coord"]
-    elif self.model_ in ["famd","pcamix","mfa","mfamix"]:
+    elif self.model_ in ["famd","mpca","mfa","mfamix"]:
         coord = self.quanti_var_["coord"]
     else:
         if hasattr(self, "quanti_sup_"):
@@ -68,7 +68,7 @@ def fviz_corrcircle(self,
     if "text" in geom:
             p = p + text_label(text_type,color=color,size=text_size,va="center",ha="center")
         
-    if self.model_ in ["pca","famd","pcamix","mfa","mfamix"]:
+    if self.model_ in ["pca","famd","mpca","mfa","mfamix"]:
         if hasattr(self, "quanti_sup_"):
             sup_coord = self.quanti_sup_["coord"]
             if "arrow" in geom:

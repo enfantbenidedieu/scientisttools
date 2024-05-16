@@ -13,6 +13,15 @@ def fviz_corrplot(X,
                   legend_title = "Corr",
                   show_legend = True,
                   ggtheme = pn.theme_minimal()):
+    """
+    
+    
+    
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
     
     if not isinstance(X,pd.DataFrame):
            raise TypeError(

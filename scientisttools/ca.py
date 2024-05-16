@@ -142,9 +142,9 @@ class CA(BaseEstimator,TransformerMixin):
 
         # Set parallelize
         if self.parallelize:
-            self.n_workers = -1
+            n_workers = -1
         else:
-            self.n_workers = 1
+            n_workers = 1
     
         #################################################################################################
         #   Drop level if ndim greater than 1 and reset columns names
@@ -157,67 +157,79 @@ class CA(BaseEstimator,TransformerMixin):
         ###############################################################################################
         is_quali = X.select_dtypes(include=["object","category"])
         if is_quali.shape[1]>0:
-            for col in is_quali.columns.tolist():
+            for col in is_quali.columns:
                 X[col] = X[col].astype("object")
         
         ##############################################################################################
-        # Extract supplementary rows
+        # Set supplementary rows labels
         ##############################################################################################
         if self.row_sup is not None:
             if (isinstance(self.row_sup,int) or isinstance(self.row_sup,float)):
                 row_sup = [int(self.row_sup)]
             elif (isinstance(self.row_sup,list) or isinstance(self.row_sup,tuple)) and len(self.row_sup) >=1:
                 row_sup = [int(x) for x in self.row_sup]
+            row_sup_label = X.index[row_sup]
+        else:
+            row_sup_label = None
         
         ##############################################################################################
-        # Extract supplementary columns
+        # Set supplementary columns labels
         ##############################################################################################
         if self.col_sup is not None:
             if (isinstance(self.col_sup,int) or isinstance(self.col_sup,float)):
                 col_sup = [int(self.col_sup)]
             elif (isinstance(self.col_sup,list) or isinstance(self.col_sup,tuple)) and len(self.col_sup) >=1:
                 col_sup = [int(x) for x in self.col_sup]
+            col_sup_label = X.columns[col_sup]
+        else:
+            col_sup_label = None
         
         ##############################################################################################
-        # Extract supplementary qualitatives and put in list
-        ##############################################################################################
-        if self.quali_sup is not None:
-            if (isinstance(self.quali_sup,int) or isinstance(self.quali_sup,float)):
-                quali_sup = [int(self.quali_sup)]
-            elif (isinstance(self.quali_sup,list) or isinstance(self.quali_sup,tuple)) and len(self.quali_sup) >=1:
-                quali_sup = [int(x) for x in self.quali_sup]
-
-        ##############################################################################################
-        # Extract supplementary quantitatives and put in list
+        # Set supplementary quantitatives variables labels
         ##############################################################################################
         if self.quanti_sup is not None:
             if (isinstance(self.quanti_sup,int) or isinstance(self.quanti_sup,float)):
                 quanti_sup = [int(self.quanti_sup)]
             elif (isinstance(self.quanti_sup,list) or isinstance(self.quanti_sup,tuple)) and len(self.quanti_sup) >=1:
                 quanti_sup = [int(x) for x in self.quanti_sup]
+            quanti_sup_label = X.columns[quanti_sup]
+        else:
+            quanti_sup_label = None
         
+        ##############################################################################################
+        # Set supplementary qualitatives variables labels
+        ##############################################################################################
+        if self.quali_sup is not None:
+            if (isinstance(self.quali_sup,int) or isinstance(self.quali_sup,float)):
+                quali_sup = [int(self.quali_sup)]
+            elif (isinstance(self.quali_sup,list) or isinstance(self.quali_sup,tuple)) and len(self.quali_sup) >=1:
+                quali_sup = [int(x) for x in self.quali_sup]
+            quali_sup_label = X.columns[quali_sup]
+        else:
+            quali_sup_label = None
+
         #####################################################################################################
         # Store data - Save the base in a variables
         #####################################################################################################
-        Xtot = X
+        Xtot = X.copy()
         
         ################################# Drop supplementary columns #############################################
         if self.col_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in col_sup])
+            X = X.drop(columns=col_sup_label)
         
         ################################# Drop supplementary quantitatives variables ###############################
         if self.quanti_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quanti_sup])
+            X = X.drop(columns=quanti_sup_label)
         
          ################################# Drop supplementary qualitatives variables ###############################
         if self.quali_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quali_sup])
+            X = X.drop(columns=quali_sup_label)
         
         ################################## Drop supplementary rows ##################################################
         if self.row_sup is not None:
             # Extract supplementary rows
-            X_row_sup = X.iloc[row_sup,:]
-            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in row_sup])
+            X_row_sup = X.loc[row_sup_label,:]
+            X = X.drop(index=row_sup_label)
 
         ################################## Start Compute Correspondence Analysis (CA) ###############################
         # Active data
@@ -243,10 +255,10 @@ class CA(BaseEstimator,TransformerMixin):
 
         ####################################################################################################################
         ####### total
-        total = mapply(X,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=self.n_workers).sum(axis=0).sum()
+        total = mapply(X,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0).sum()
 
         ##### Table des frequences
-        freq = mapply(X,lambda x : x*(row_weights/total),axis=0,progressbar=False,n_workers=self.n_workers)
+        freq = mapply(X,lambda x : x*(row_weights/total),axis=0,progressbar=False,n_workers=n_workers)
         
         ####### Calcul des marges lignes et colones
         col_marge = freq.sum(axis=0)
@@ -255,11 +267,20 @@ class CA(BaseEstimator,TransformerMixin):
         row_marge.name = "row_marge"
 
         ###### Compute Matrix used in SVD
-        Z = mapply(freq,lambda x : x/row_marge,axis=0,progressbar=False,n_workers=self.n_workers)
-        Z = mapply(Z,lambda x : (x/col_marge)-1,axis=1,progressbar=False,n_workers=self.n_workers)
+        Z = mapply(freq,lambda x : x/row_marge,axis=0,progressbar=False,n_workers=n_workers)
+        Z = mapply(Z,lambda x : (x/col_marge)-1,axis=1,progressbar=False,n_workers=n_workers)
 
         ###### Store call informations
-        self.call_ = {"X" : X,"Xtot" : Xtot ,"Z" : Z ,"col_marge" : col_marge,"row_marge" : row_marge,"n_components":n_components}
+        self.call_ = {"X" : X,
+                      "Xtot" : Xtot ,
+                      "Z" : Z ,
+                      "col_marge" : col_marge,
+                      "row_marge" : row_marge,
+                      "n_components":n_components,
+                      "row_sup" : row_sup_label,
+                      "col_sup" : col_sup_label,
+                      "quanti_sup" : quanti_sup_label,
+                      "quali_sup" : quali_sup_label}
         
         ######################################## Singular Values Decomposition  (SVD) #############################""
         svd = svd_triplet(X=Z,row_weights=row_marge,col_weights=col_marge,n_components=n_components)
@@ -285,23 +306,23 @@ class CA(BaseEstimator,TransformerMixin):
 
         ################################ Contributions #####################################################################################
         ######### Row contributions
-        row_contrib = mapply(row_coord,lambda x: 100*(x**2)*row_marge,axis=0,progressbar=False,n_workers=self.n_workers)
-        row_contrib = mapply(row_contrib,lambda x : x/eigen_values[:n_components], axis=1,progressbar=False,n_workers=self.n_workers)
+        row_contrib = mapply(row_coord,lambda x: 100*(x**2)*row_marge,axis=0,progressbar=False,n_workers=n_workers)
+        row_contrib = mapply(row_contrib,lambda x : x/eigen_values[:n_components], axis=1,progressbar=False,n_workers=n_workers)
         
         ######## Columns contributions
-        col_contrib = mapply(col_coord,lambda x: 100*(x**2)*col_marge,axis=0,progressbar=False,n_workers=self.n_workers)
-        col_contrib = mapply(col_contrib,lambda x : x/eigen_values[:n_components], axis=1,progressbar=False,n_workers=self.n_workers)
+        col_contrib = mapply(col_coord,lambda x: 100*(x**2)*col_marge,axis=0,progressbar=False,n_workers=n_workers)
+        col_contrib = mapply(col_contrib,lambda x : x/eigen_values[:n_components], axis=1,progressbar=False,n_workers=n_workers)
         
         ################################ Cos2 #################################################################
         ###### Row Cos2
-        row_disto = mapply(Z,lambda x : (x**2)*col_marge,axis=1,progressbar=False,n_workers=self.n_workers).sum(axis=1)
+        row_disto = mapply(Z,lambda x : (x**2)*col_marge,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
         row_disto.name = "dist"
-        row_cos2 = mapply(row_coord,lambda x: (x**2)/row_disto,axis=0,progressbar=False,n_workers=self.n_workers)
+        row_cos2 = mapply(row_coord,lambda x: (x**2)/row_disto,axis=0,progressbar=False,n_workers=n_workers)
         
         ###### Columns Cos2
-        col_disto = mapply(Z,lambda x : (x**2)*row_marge,axis=0,progressbar=False,n_workers=self.n_workers).sum(axis=0)
+        col_disto = mapply(Z,lambda x : (x**2)*row_marge,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
         col_disto.name = "dist"
-        col_cos2 = mapply(col_coord,lambda x: (x**2)/col_disto, axis = 0,progressbar=False,n_workers=self.n_workers)
+        col_cos2 = mapply(col_coord,lambda x: (x**2)/col_disto, axis = 0,progressbar=False,n_workers=n_workers)
 
         ########################################"" Inertia ####################################################
         row_inertia = row_marge*row_disto
@@ -309,9 +330,9 @@ class CA(BaseEstimator,TransformerMixin):
 
         ## Row/columns informations
         row_infos = np.c_[np.sqrt(row_disto),row_marge,row_inertia]
-        row_infos = pd.DataFrame(row_infos,columns=["dist","marge","inertia"],index=X.index.tolist())
+        row_infos = pd.DataFrame(row_infos,columns=["dist","marge","inertia"],index=X.index)
         col_infos = np.c_[np.sqrt(col_disto),col_marge,col_inertia]
-        col_infos = pd.DataFrame(col_infos,columns=["dist","marge","inertia"],index=X.columns.tolist())
+        col_infos = pd.DataFrame(col_infos,columns=["dist","marge","inertia"],index=X.columns)
 
         ########################################## Store results
         self.col_ = {"coord" : col_coord, "contrib" : col_contrib, "cos2" : col_cos2, "infos" : col_infos}
@@ -321,7 +342,7 @@ class CA(BaseEstimator,TransformerMixin):
         #  Compute others indicators 
         #############################################################################################################
         # Weighted X with the row weight
-        weighted_X = mapply(X,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=self.n_workers)
+        weighted_X = mapply(X,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=n_workers)
 
         # Compute chi - squared test
         statistic,pvalue,dof, expected_freq = sp.stats.chi2_contingency(weighted_X, lambda_=None,correction=False)
@@ -336,11 +357,11 @@ class CA(BaseEstimator,TransformerMixin):
         standardized_resid = resid/np.sqrt(expected_freq)
 
         # Adjusted residuals
-        adjusted_resid = mapply(standardized_resid,lambda x : x/np.sqrt(1-row_marge),axis=0,progressbar=False,n_workers=self.n_workers)
-        adjusted_resid = mapply(adjusted_resid,lambda x : x/np.sqrt(1-col_marge),axis=1,progressbar=False,n_workers=self.n_workers)
+        adjusted_resid = mapply(standardized_resid,lambda x : x/np.sqrt(1-row_marge),axis=0,progressbar=False,n_workers=n_workers)
+        adjusted_resid = mapply(adjusted_resid,lambda x : x/np.sqrt(1-col_marge),axis=1,progressbar=False,n_workers=n_workers)
 
         ##### Chi2 contribution
-        chi2_contribution = mapply(standardized_resid,lambda x : 100*(x**2)/statistic,axis=0,progressbar=False,n_workers=self.n_workers)
+        chi2_contribution = mapply(standardized_resid,lambda x : 100*(x**2)/statistic,axis=0,progressbar=False,n_workers=n_workers)
 
         # Attraction repulsio,
         attraction_repulsion_index = weighted_X/expected_freq
@@ -377,48 +398,48 @@ class CA(BaseEstimator,TransformerMixin):
             X_row_sup = X_row_sup.astype("int")
             # Sum row
             row_sum = X_row_sup.sum(axis=1)
-            X_row_sup = mapply(X_row_sup,lambda x : x/row_sum,axis=0,progressbar=False,n_workers=self.n_workers)
+            X_row_sup = mapply(X_row_sup,lambda x : x/row_sum,axis=0,progressbar=False,n_workers=n_workers)
             # Supplementary coordinates
             row_sup_coord = np.dot(X_row_sup,svd["V"])
-            row_sup_coord = pd.DataFrame(row_sup_coord,index=X_row_sup.index.tolist(),columns=["Dim."+str(x+1) for x in range(row_sup_coord.shape[1])])
+            row_sup_coord = pd.DataFrame(row_sup_coord,index=X_row_sup.index,columns=["Dim."+str(x+1) for x in range(row_sup_coord.shape[1])])
             # Sup dist2
-            row_sup_dist2 = mapply(X_row_sup,lambda x : ((x - col_marge.values)**2)/col_marge.values,axis=1,progressbar=False,n_workers=self.n_workers).sum(axis=1)
+            row_sup_dist2 = mapply(X_row_sup,lambda x : ((x - col_marge.values)**2)/col_marge.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
             row_sup_dist2.name = "dist"
             # Sup cos2
-            row_sup_cos2 = mapply(row_sup_coord,lambda x : (x**2)/row_sup_dist2,axis=0,progressbar=False,n_workers=self.n_workers)
+            row_sup_cos2 = mapply(row_sup_coord,lambda x : (x**2)/row_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
             # Set informations
             self.row_sup_ = {"coord" : row_sup_coord,"cos2" : row_sup_cos2, "dist" : np.sqrt(row_sup_dist2)}
 
         # Compute supplementary columns
         if self.col_sup is not None:
-            X_col_sup = Xtot.iloc[:,col_sup]
+            X_col_sup = Xtot.loc[:,col_sup_label]
             if self.row_sup is not None:
-                X_col_sup = X_col_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in row_sup])
+                X_col_sup = X_col_sup.drop(index=row_sup_label)
             
             # Transform to int
             X_col_sup = X_col_sup.astype("int")
             ### weighted with row weight
-            X_col_sup = mapply(X_col_sup,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=self.n_workers)
+            X_col_sup = mapply(X_col_sup,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=n_workers)
             # Compute columns sum
             col_sum = X_col_sup.sum(axis=0)
-            X_col_sup = mapply(X_col_sup,lambda x : x/col_sum,axis=1,progressbar=False,n_workers=self.n_workers)
+            X_col_sup = mapply(X_col_sup,lambda x : x/col_sum,axis=1,progressbar=False,n_workers=n_workers)
             # Sup coord
             col_sup_coord = np.dot(X_col_sup.T,svd["U"])
-            col_sup_coord = pd.DataFrame(col_sup_coord,index=X_col_sup.columns.tolist(),columns=["Dim."+str(x+1) for x in range(col_sup_coord.shape[1])])
+            col_sup_coord = pd.DataFrame(col_sup_coord,index=X_col_sup.columns,columns=["Dim."+str(x+1) for x in range(col_sup_coord.shape[1])])
             # Sup disto
-            col_sup_dist2 = mapply(X_col_sup,lambda x : ((x - row_marge)**2)/row_marge,axis=0,progressbar=False,n_workers=self.n_workers).sum(axis=0)
+            col_sup_dist2 = mapply(X_col_sup,lambda x : ((x - row_marge)**2)/row_marge,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
             col_sup_dist2.name = "dist"
             # Sup Cos2
-            col_sup_cos2 = mapply(col_sup_coord,lambda x : (x**2)/col_sup_dist2,axis=0,progressbar=False,n_workers=self.n_workers)
+            col_sup_cos2 = mapply(col_sup_coord,lambda x : (x**2)/col_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
             self.col_sup_ = {"coord" : col_sup_coord,"cos2" : col_sup_cos2,"dist" : np.sqrt(col_sup_dist2)}
         
         #################################################################################################################################
         # Compute supplementary continues variables
         #################################################################################################################################
         if self.quanti_sup is not None:
-            X_quanti_sup = Xtot.iloc[:,quanti_sup]
+            X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.row_sup is not None:
-                X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in row_sup])
+                X_quanti_sup = X_quanti_sup.drop(index=row_sup_label)
             
             ##### From frame to DataFrame
             if isinstance(X_quanti_sup,pd.Series):
@@ -436,16 +457,16 @@ class CA(BaseEstimator,TransformerMixin):
             quanti_sup_coord = pd.DataFrame(quanti_sup_coord,index=X_quanti_sup.columns.tolist(),columns=["Dim."+str(x+1) for x in range(quanti_sup_coord.shape[1])])
             
             #################### Compute cos2
-            quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2),axis=0,progressbar=False,n_workers=self.n_workers)
+            quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers)
 
             # Set all informations
             self.quanti_sup_ = {"coord" : quanti_sup_coord, "cos2" : quanti_sup_cos2,"summary_quanti" : summary_quanti_sup}
         
         # Compute supplementary qualitatives informations
         if self.quali_sup is not None:
-            X_quali_sup = Xtot.iloc[:,quali_sup]
+            X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.row_sup is not None:
-                X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in row_sup])
+                X_quali_sup = X_quali_sup.drop(index=row_sup_label)
             
             ############### From Frame to DataFrame
             if isinstance(X_quali_sup,pd.Series):
@@ -464,36 +485,36 @@ class CA(BaseEstimator,TransformerMixin):
             # Calculate sum by row
             quali_sum = quali_sup.sum(axis=1)
             # Devide by sum
-            quali_sup = mapply(quali_sup,lambda x : x/quali_sum,axis=0,progressbar=False,n_workers=self.n_workers)
+            quali_sup = mapply(quali_sup,lambda x : x/quali_sum,axis=0,progressbar=False,n_workers=n_workers)
 
             ########################################################################################################
             # Categories coordinates
             quali_sup_coord = np.dot(quali_sup,svd["V"])
-            quali_sup_coord = pd.DataFrame(quali_sup_coord,index=quali_sup.index.tolist(),columns=["Dim."+str(x+1) for x in range(quali_sup_coord.shape[1])])
+            quali_sup_coord = pd.DataFrame(quali_sup_coord,index=quali_sup.index,columns=["Dim."+str(x+1) for x in range(quali_sup_coord.shape[1])])
 
             # Categories dist2
-            quali_sup_dist2 = mapply(quali_sup,lambda x : ((x - col_marge.values)**2)/col_marge.values,axis=1,progressbar=False,n_workers=self.n_workers).sum(axis=1)
+            quali_sup_dist2 = mapply(quali_sup,lambda x : ((x - col_marge.values)**2)/col_marge.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
             quali_sup_dist2.name="dist"
 
             # Sup Cos2
-            quali_sup_cos2 = mapply(quali_sup_coord,lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=self.n_workers)
+            quali_sup_cos2 = mapply(quali_sup_coord,lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
 
             ############################# Compute
             # Disjonctif table
-            dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns.tolist()),axis=1)
+            dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns),axis=1)
             # Compute : weighted count by categories
-            n_k = mapply(dummies,lambda x : x*row_marge,axis=0,progressbar=False,n_workers=self.n_workers).sum(axis=0)*total
+            n_k = mapply(dummies,lambda x : x*row_marge,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)*total
 
             ######## Weighted of coordinates to have 
             if total > 1:
                 coef = np.array([np.sqrt(n_k[i]*((total - 1)/(total - n_k[i]))) for i in range(len(n_k))])
             else:
                 coef = np.sqrt(n_k)
-            quali_sup_vtest = mapply(quali_sup_coord,lambda x : x*coef,axis=0,progressbar=False,n_workers=self.n_workers)
+            quali_sup_vtest = mapply(quali_sup_coord,lambda x : x*coef,axis=0,progressbar=False,n_workers=n_workers)
 
             ############## Correlation ratio
             ####################################" Correlation ratio #####################################################
-            quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=row_coord.values,weights=row_marge,n_workers=self.n_workers) for col in X_quali_sup.columns.tolist()),axis=0)
+            quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=row_coord.values,weights=row_marge,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
             
             #################################### Summary quali
             # Compute statistiques

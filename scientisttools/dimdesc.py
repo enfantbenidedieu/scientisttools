@@ -167,7 +167,7 @@ def dimdesc(self,axis=None,proba=0.05):
                 else:
                     res = corqDim
             corrdim[idx] = res
-    elif self.model_ in ["famd","pcamix"]:
+    elif self.model_ in ["famd","mpca"]:
         # Extract row coord
         ind_coord = self.ind_["coord"]
         # Select axis

@@ -22,20 +22,20 @@ def fviz_contrib(self,
     Description
     -----------
     This function can be used to visualize the contribution of rows/columns from the results of Principal Component Analysis (PCA), 
-    Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), PCA of Mixed Data (PCAMIX),
+    Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), Mixed PCA(MPCA),
     and Multiple Factor Analysis (MFA) functions.     
         
     Parameters
     ----------
-    self : an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA
+    self : an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA
 
     choice : allowed values are :
             - 'row' for CA
             - 'col' for CA
             - 'var' for PCA, MCA or SpecificMCA
-            - 'ind' for PCA, MCA, SpecificMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT
-            - 'quanti_var' for FAMD, PCAMIX, MFA, MFAMIX
-            - 'quali_var' for FAMD, PCAMIX, MFAQUAL
+            - 'ind' for PCA, MCA, SpecificMCA, FAMD, MPCA, MFA, MFAQUAL, MFAMIX, MFACT
+            - 'quanti_var' for FAMD, MPCA, MFA, MFAMIX
+            - 'quali_var' for FAMD, MPCA, MFAQUAL
             - 'freq' for MFACT
             - 'group' for MFA, MFAQUAL, MFAMIX, MFACT
             - 'partial_axes' for MFA, MFAQUAL, MFAMIX, MFACT
@@ -78,8 +78,8 @@ def fviz_contrib(self,
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ not in ["pca","ca","mca","specificmca","famd","pcamix","mfa","mfaqual","mfamix","mfact","partialpca"]:
-        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA")    
+    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","mfa","mfaqual","mfamix","mfact","partialpca"]:
+        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA")    
         
     if choice not in ["row","col","var","ind","quanti_var","quali_var","freq","group","partial_axes"]:
         raise ValueError("'choice' should be one of 'row', 'col', 'var', 'ind', 'quanti_var', 'quali_var',  'freq','group' 'partial_axes'.")
@@ -105,7 +105,7 @@ def fviz_contrib(self,
     if self.model_ == "ca" and choice not in ["row","col"]:
         raise ValueError("'choice' should be one of 'row', 'col'.")
     
-    if self.model_ in ["famd","pcamix"] and choice not in ["ind","quanti_var","quali_var"]:
+    if self.model_ in ["famd","mpca"] and choice not in ["ind","quanti_var","quali_var"]:
         raise ValueError("'choice' should be one of 'ind', 'quanti_var','quali_var'")
     
     if self.model_ == "mfa" and choice not in ["ind","quanti_var","group","partial_axes"]:

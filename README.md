@@ -77,6 +77,6 @@ pip install scientisttools
 
 Tutorial are available
 
-## Author
+## Author(s)
 
 Duvérier DJIFACK ZEBAZE ([duverierdjifack@gmail.com](duverierdjifack@gmail.com))

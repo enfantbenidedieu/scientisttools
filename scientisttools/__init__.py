@@ -24,10 +24,10 @@ from .famd import FAMD
 from .get_famd import get_famd_ind, get_famd_var, get_famd, summaryFAMD
 from .fviz_famd import fviz_famd_ind, fviz_famd_col, fviz_famd_mod, fviz_famd_var, fviz_famd
 
-# PCA of Mixed Data (PCAMIX)
-from .pcamix import PCAMIX
-from .get_pcamix import get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX
-from .fviz_pcamix import fviz_pcamix_ind, fviz_pcamix_col, fviz_pcamix_mod, fviz_pcamix_var, fviz_pcamix
+# Mixed Principal Components Analysis (MPCA)
+from .mpca import MPCA
+from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
+from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_var, fviz_mpca
 
 # Partial PCA
 from .partialpca import PartialPCA

@@ -25,8 +25,8 @@ def get_eig(self) -> pd.DataFrame:
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","pcamix","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
-        raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
+    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
+        raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
     
     return self.eig_
         
@@ -42,7 +42,7 @@ def get_eigenvalue(self) -> pd.DataFrame:
 
     Parameters:
     -----------
-    self : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA,FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, CMDS,  HMFA
+    self : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA,FAMD, MPCA, MFA, MFAQUAL, MFAMIX, MFACT, CMDS,  HMFA
 
     Returns
     -------
@@ -77,7 +77,7 @@ def fviz_screeplot(self,
 
     Parameters
     ----------
-    self : an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, CMDS, DISQUAL, MIXDISC, CMDSCALE
+    self : an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, MFA, MFAQUAL, MFAMIX, MFACT, CMDS, DISQUAL, MIXDISC, CMDSCALE
 
     choice : a text specifying the data to be plotted. Allowed values are "proportion" or "eigenvalue".
 
@@ -122,8 +122,8 @@ def fviz_screeplot(self,
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
         
-    if self.model_ not in ["pca","ca","mca","specificmca","famd","pcamix","partialpca","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
-        raise ValueError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, PartialPCA, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
+    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","partialpca","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
+        raise ValueError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PartialPCA, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
 
     eig = get_eigenvalue(self)
     eig = eig.iloc[:min(ncp,self.call_["n_components"]),:]

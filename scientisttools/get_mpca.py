@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 
-def get_pcamix_ind(self,choice = "ind") -> dict:
+def get_mpca_ind(self,choice = "ind") -> dict:
     """
     Extract the results for individuals
     -----------------------------------
@@ -10,11 +10,11 @@ def get_pcamix_ind(self,choice = "ind") -> dict:
     Description
     -----------
     Extract all the results (coordinates, squared cosine and contributions) for the individuals 
-    from Principal Components Analysis of Mixed Data (PCAMIX) outputs.
+    from Mixed Principal Components Analysis (MPCA) outputs.
 
     Parameters
     ----------
-    self : an object of class PCAMIX
+    self : an object of class MPCA
 
     choice : the element to subset from the output. Possible values are 
                 - "ind" for active individuals, 
@@ -32,8 +32,8 @@ def get_pcamix_ind(self,choice = "ind") -> dict:
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
-    if self.model_ != "pcamix":
-        raise ValueError("'self' must be an object of class PCAMIX")
+    if self.model_ != "mpca":
+        raise ValueError("'self' must be an object of class MPCA")
     
     if choice not in ["ind","ind_sup"]:
         raise ValueError("'choice' should be one of 'ind', 'ind_sup'")
@@ -45,7 +45,7 @@ def get_pcamix_ind(self,choice = "ind") -> dict:
             raise ValueError("No supplementary individuals")
         return self.ind_sup_
 
-def get_pcamix_var(self,choice="var") -> dict:
+def get_mpca_var(self,choice="var") -> dict:
     """
     Extract the results for quantitative and qualitative variables
     --------------------------------------------------------------
@@ -53,11 +53,11 @@ def get_pcamix_var(self,choice="var") -> dict:
     Description
     -----------
     Extract all the results (coordinates, squared cosine and contributions) for quantitative and 
-    qualitative variables from Principal Components Analysis of Mixed Data (PCAMIX) outputs.
+    qualitative variables from Mixed Principal Components Analysis (MPCA) outputs.
 
     Parameters
     ----------
-    self : an object of class PCAMIX
+    self : an object of class MPCA
 
     choice : the element to subset from the output. Possible values are 
                 - "quanti_var" for active quantitatives variables
@@ -78,8 +78,8 @@ def get_pcamix_var(self,choice="var") -> dict:
     --------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ != "pcamix":
-        raise ValueError("'self' must be an object of class PCAMIX")
+    if self.model_ != "mpca":
+        raise ValueError("'self' must be an object of class MPCA")
     
     if choice not in ["quanti_var","quali_var","var","quanti_sup","quali_sup","var_sup"]:
         raise ValueError("'choice' should be one of 'quanti_var', 'quali_var', 'var', 'quanti_sup', 'quali_sup', 'var_sup'")
@@ -102,19 +102,19 @@ def get_pcamix_var(self,choice="var") -> dict:
             raise ValueError("No supplementary columns")
         return self.var_sup_
 
-def get_pcamix(self,choice = "ind")-> dict:
+def get_mpca(self,choice = "ind")-> dict:
     """
-    Extract the results for individuals and variables - PCAMIX
-    ----------------------------------------------------------
+    Extract the results for individuals and variables - MPCA
+    --------------------------------------------------------
 
     Description
     -----------
     Extract all the results (coordinates, squared cosine and contributions) for the individuals and variables 
-    from Principal Components Analysis of Mixed Data (PCAMIX) outputs.
+    from Mixed Principal Components Analysis (MPCA) outputs.
 
     Parameters
     ----------
-    self : an object of class PCAMIX
+    self : an object of class MPCA
 
     choice : the element to subset from the output. 
 
@@ -129,27 +129,27 @@ def get_pcamix(self,choice = "ind")-> dict:
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ != "pcamix":
-        raise ValueError("'self' must be an object of class PCAMIX")
+    if self.model_ != "mpca":
+        raise ValueError("'self' must be an object of class MPCA")
     
     if choice not in ["ind","ind_sup","quanti_var","quali_var","var","quanti_sup","quali_sup","var_sup"]:
         raise ValueError("'choice' should be one of 'ind', 'ind_sup', 'quanti_var', 'quali_var', 'var', 'quanti_sup', 'quali_sup', 'var_sup'")
     
 
     if choice in ["ind", "ind_sup"]:
-        return get_pcamix_ind(self,choice=choice)
+        return get_mpca_ind(self,choice=choice)
     elif choice not in ["ind","ind_sup"]:
-        return get_pcamix_var(self,choice=choice)
+        return get_mpca_var(self,choice=choice)
 
 ###### FAMD
-def summaryPCAMIX(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
+def summaryMPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
-    Printing summaries of Principal Components Analysis of Mixed Data model
-    -----------------------------------------------------------------------
+    Printing summaries of Mixed Principal Components Analysis model
+    ---------------------------------------------------------------
 
     Parameters
     ----------
-    self        :   an obect of class PCAMIX
+    self        :   an obect of class MPCA
 
     digits      :   int, default=3. Number of decimal printed
 
@@ -168,14 +168,14 @@ def summaryPCAMIX(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt =
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     # check if famd model
-    if self.model_ != "pcamix":
-        raise ValueError("'self' must be an object of class PCAMIX")
+    if self.model_ != "mpca":
+        raise ValueError("'self' must be an object of class MPCA")
 
     ncp = min(ncp,self.call_["n_components"])
     nb_element = min(nb_element,self.call_["X"].shape[0])
 
     # Principal Components Analysis Results
-    print("                     Principal Components Analysis of Mixed Data - Results                     \n")
+    print("                     Mixed Principal Components Analysis - Results                     \n")
 
     # Add eigenvalues informations
     print("Importance of components")
