@@ -142,7 +142,7 @@ def fviz_mpca_ind(self,
     #p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
     p = pn.ggplot()
     if habillage is None :        
-        if (isinstance(color,str) and color in coord.columns):
+        if isinstance(color,str) and (color in coord.columns):
             # Add gradients colors
             if "point" in geom:
                 p = p + pn.geom_point(coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color=color),shape=marker,size=point_size,show_legend=False)
@@ -154,10 +154,10 @@ def fviz_mpca_ind(self,
                 else:
                     p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color=color,label=coord.index),
                                        size=text_size,va=va,ha=ha)
-        if isinstance(color,np.ndarray):
+        elif isinstance(color,np.ndarray):
             if "point" in geom:
                 p = p + pn.geom_point(coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="cont_var"),shape=marker,size=point_size,show_legend=False)
-                p = p +  pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
+                p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
             if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="cont_var",label=coord.index),
@@ -167,11 +167,11 @@ def fviz_mpca_ind(self,
                                        size=text_size,va=va,ha=ha)
         elif hasattr(color, "labels_"):
             if "point" in geom:
-                p = (p + pn.geom_point(coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="cluster"),size=point_size,show_legend=False)+
+                p = (p + pn.geom_point(coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="factor(cluster)"),size=point_size,show_legend=False)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
             if "text" in geom:
                 if repel :
-                    p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="cluster",label=coord.index),
+                    p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="factor(cluster)",label=coord.index),
                                        size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
                     p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="cluster",label=coord.index),
@@ -198,12 +198,10 @@ def fviz_mpca_ind(self,
             else:
                 p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color=habillage,label=coord.index),
                                    size=text_size,va=va,ha=ha)
-        
         if add_ellipses:
             #p = p + pn.geom_point(datapn.aes(color = habillage))
             p = p + pn.stat_ellipse(data=coord,geom=geom_ellipse,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",fill=habillage),
                                     type = ellipse_type,alpha = 0.25,level=confint_level)
-    
     ############################## Add qualitatives variables
     quali_coord = self.quali_var_["coord"]
     if "point" in geom:
@@ -227,8 +225,7 @@ def fviz_mpca_ind(self,
             if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                        color=color_sup,size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
                                         color = color_sup,size=text_size,va=va,ha=ha)
@@ -382,7 +379,7 @@ def fviz_mpca_col(self,
                     pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
         if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=color),size=text_size,va=va,ha=ha)
-    if isinstance(color,np.ndarray):
+    elif isinstance(color,np.ndarray):
         # Add gradients colors
         if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color="cont_var"), 
@@ -553,7 +550,7 @@ def fviz_mpca_mod(self,
                 p = p + text_label(text_type,mapping=pn.aes(color=color),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=color),size=text_size,va=va,ha=ha)
-    if isinstance(color,np.ndarray):
+    elif isinstance(color,np.ndarray):
         # Add gradients colors
         if "point" in geom:
             p = (p + pn.geom_point(pn.aes(color="cont_var"),shape=marker,size=point_size,show_legend=False)+ 
