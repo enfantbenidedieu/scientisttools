@@ -185,6 +185,9 @@ class FAMD(BaseEstimator,TransformerMixin):
                 quali_sup = [int(self.quali_sup)]
             elif ((isinstance(self.quali_sup,list) or isinstance(self.quali_sup,tuple))  and len(self.quali_sup)>=1):
                 quali_sup = [int(x) for x in self.quali_sup]
+            quali_sup_label = X.columns[quali_sup]
+        else:
+            quali_sup_label = None
 
         #  Check if quanti sup
         if self.quanti_sup is not None:
@@ -192,6 +195,9 @@ class FAMD(BaseEstimator,TransformerMixin):
                 quanti_sup = [int(self.quanti_sup)]
             elif ((isinstance(self.quanti_sup,list) or isinstance(self.quanti_sup,tuple))  and len(self.quanti_sup)>=1):
                 quanti_sup = [int(x) for x in self.quanti_sup]
+            quanti_sup_label = X.columns[quanti_sup]
+        else:
+            quanti_sup_label = None
         
         # Check if individuls supplementary
         if self.ind_sup is not None:
@@ -199,6 +205,9 @@ class FAMD(BaseEstimator,TransformerMixin):
                 ind_sup = [int(self.ind_sup)]
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
+            ind_sup_label = X.index[ind_sup]
+        else:
+            ind_sup_label = None
         
         ####################################### Fill NA in quantitatives columns wih mean
         if is_quanti.isnull().any().any():
@@ -214,17 +223,17 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         ####################################### Drop supplementary qualitative columns ########################################
         if self.quali_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quali_sup])
+            X = X.drop(columns=quali_sup_label)
         
         ######################################## Drop supplementary quantitatives columns #######################################
         if self.quanti_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quanti_sup])
+            X = X.drop(columns=quanti_sup_label)
         
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
-            X_ind_sup = X.iloc[self.ind_sup,:]
-            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+            X_ind_sup = X.loc[ind_sup_label,:]
+            X = X.drop(index=ind_sup_label)
         
         ############################ Split X in quantitatives and qualitatives
         # Compute statistics
@@ -357,17 +366,21 @@ class FAMD(BaseEstimator,TransformerMixin):
         if self.n_components is None:
             n_components = min(X.shape[0]-1, Z.shape[1]-X_qual.shape[1])
         elif not isinstance(self.n_components,int):
-            raise ValueError("Error : 'n_components' must be an integer.")
+            raise TypeError("'n_components' must be an integer.")
         elif self.n_components <= 0:
-            raise ValueError("Error : 'n_components' must be greater or equal than 1.")
+            raise TypeError("'n_components' must be greater or equal than 1.")
         else:
             n_components = min(self.n_components, X.shape[0]-1, Z.shape[1]-X_qual.shape[1])
 
          #Store call informations  : X = Z, M = diag(col_weight), D = diag(row_weight) : t(X)DXM
         self.call_ = {"Xtot" : Xtot,
                       "X" : X,
-                      "quanti" : X_quant,
-                      "quali" : X_qual,
+                      "ind" : X.index,
+                      "quanti" : X_quant.columns,
+                      "quali" : X_qual.columns,
+                      "ind_sup" : ind_sup_label,
+                      "quanti_sup" : quanti_sup_label,
+                      "quali_sup" : quali_sup_label,
                       "dummies" : dummies,
                       "Z" : Z,
                       "ind_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
@@ -635,8 +648,8 @@ class FAMD(BaseEstimator,TransformerMixin):
             n_workers = 1
         
         # Store continuous and categorical variables
-        X_sup_quant = X[self.call_["quanti"].columns.tolist()]
-        X_sup_qual = X[self.call_["quali"].columns.tolist()]
+        X_sup_quant = X[self.call_["quanti"]]
+        X_sup_qual = X[self.call_["quali"]]
 
         # Standardscaler numerical variable
         Z1 = (X_sup_quant - self.call_["means"].values.reshape(1,-1))/self.call_["std"].values.reshape(1,-1)
@@ -646,9 +659,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         for i in np.arange(0,X.shape[0],1):
             values = [str(X_sup_qual.iloc[i,k]) for k in np.arange(0,X_sup_qual.shape[1])]
             for j in np.arange(0,self.call_["dummies"].shape[1],1):
-                if self.call_["dummies"].columns.tolist()[j] in values:
+                if self.call_["dummies"].columns[j] in values:
                     Y[i,j] = 1
-        Y = pd.DataFrame(Y,index=X.index.tolist(),columns=self.call_["dummies"].columns.tolist())
+        Y = pd.DataFrame(Y,index=X.index.tolist(),columns=self.call_["dummies"].columns)
         # New normalized data
         Z2 = mapply(Y,lambda x : (x - self.call_["means_k"].values)/np.sqrt(self.call_["prop"].values),axis=1,progressbar=False,n_workers=n_workers)
         # Supplementary individuals coordinates

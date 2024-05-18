@@ -288,7 +288,7 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     
     # Add variables
     print("\nCategorical variables (eta2)\n")
-    quali_var_eta2 = self.var_["coord"].loc[self.call_["quali"].columns.tolist(),:].iloc[:nb_element,:ncp].round(decimals=digits)
+    quali_var_eta2 = self.var_["coord"].loc[self.call_["quali"],:].iloc[:nb_element,:ncp].round(decimals=digits)
     if to_markdown:
         print(quali_var_eta2.to_markdown(tablefmt=tablefmt,**kwargs))
     else:

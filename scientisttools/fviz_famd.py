@@ -577,7 +577,6 @@ def fviz_famd_mod(self,
     
     return p
     
-
 def fviz_famd_var(self,
                  axis=[0,1],
                  x_lim=None,
@@ -635,7 +634,7 @@ def fviz_famd_var(self,
 
     # Initialize
     quanti_var_cos2 = self.quanti_var_["cos2"]
-    quali_var_eta2 = self.var_["coord"].loc[self.call_["quali"].columns.tolist(),:]
+    quali_var_eta2 = self.var_["coord"].loc[self.call_["quali"],:]
     
     # Initialize
     p = pn.ggplot(data=quanti_var_cos2,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_var_cos2.index))
