@@ -1,0 +1,14 @@
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {3.1}Présentation des données}{\reset@font\mtcSfont 41}{section.3.1}}
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {3.2}ACM}{\reset@font\mtcSfont 44}{section.3.2}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {3.2.1}Objectifs}{\reset@font\mtcSSfont 44}{subsection.3.2.1}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {3.2.2}Chargement de scientisttools}{\reset@font\mtcSSfont 44}{subsection.3.2.2}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {3.2.3}Individus et variables actifs}{\reset@font\mtcSSfont 44}{subsection.3.2.3}}
+{\reset@font\mtcSSSfont\mtc@string\contentsline{subsubsection}{\noexpand \leavevmode \numberline {3.2.3.1}Les valeurs propres}{\reset@font\mtcSSSfont 44}{subsubsection.3.2.3.1}}
+{\reset@font\mtcSSSfont\mtc@string\contentsline{subsubsection}{\noexpand \leavevmode \numberline {3.2.3.2}Correction de Benzécri}{\reset@font\mtcSSSfont 47}{subsubsection.3.2.3.2}}
+{\reset@font\mtcSSSfont\mtc@string\contentsline{subsubsection}{\noexpand \leavevmode \numberline {3.2.3.3}Correction de Greenacre}{\reset@font\mtcSSSfont 47}{subsubsection.3.2.3.3}}
+{\reset@font\mtcSSSfont\mtc@string\contentsline{subsubsection}{\noexpand \leavevmode \numberline {3.2.3.4}Représentation graphique}{\reset@font\mtcSSSfont 48}{subsubsection.3.2.3.4}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {3.2.4}ACM avec les éléments supplémentaires}{\reset@font\mtcSSfont 50}{subsection.3.2.4}}
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {3.3}Interprétation des axes}{\reset@font\mtcSfont 52}{section.3.3}}
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {3.4}Description des axes}{\reset@font\mtcSfont 54}{section.3.4}}
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {3.5}Approche Machine Learning}{\reset@font\mtcSfont 55}{section.3.5}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {3.5.1}Intégration dans une Pipeline de scikit-learn}{\reset@font\mtcSSfont 55}{subsection.3.5.1}}

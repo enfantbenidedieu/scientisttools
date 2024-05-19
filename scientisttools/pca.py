@@ -172,7 +172,7 @@ class PCA(BaseEstimator,TransformerMixin):
         ###### Checks if categoricals variables is in X
         is_quali = X.select_dtypes(include=["object","category"])
         if is_quali.shape[1]>0:
-            for col in is_quali.columns.tolist():
+            for col in is_quali.columns:
                 X[col] = X[col].astype("object")
         
         ############################
@@ -182,6 +182,9 @@ class PCA(BaseEstimator,TransformerMixin):
                 quali_sup = [int(self.quali_sup)]
             elif ((isinstance(self.quali_sup,list) or isinstance(self.quali_sup,tuple))  and len(self.quali_sup)>=1):
                 quali_sup = [int(x) for x in self.quali_sup]
+            quali_sup_label = X.columns[quali_sup]
+        else:
+            quali_sup_label = None
 
         #  Check if quanti sup
         if self.quanti_sup is not None:
@@ -189,6 +192,9 @@ class PCA(BaseEstimator,TransformerMixin):
                 quanti_sup = [int(self.quanti_sup)]
             elif ((isinstance(self.quanti_sup,list) or isinstance(self.quanti_sup,tuple))  and len(self.quanti_sup)>=1):
                 quanti_sup = [int(x) for x in self.quanti_sup]
+            quanti_sup_label = X.columns[quanti_sup]
+        else:
+            quanti_sup_label = None
         
         # Check if individuls supplementary
         if self.ind_sup is not None:
@@ -196,6 +202,9 @@ class PCA(BaseEstimator,TransformerMixin):
                 ind_sup = [int(self.ind_sup)]
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
+            ind_sup_label = X.index[ind_sup]
+        else:
+            ind_sup_label = None
         
         ####################################### Check if missing values
         if X.isnull().any().any():
@@ -214,17 +223,17 @@ class PCA(BaseEstimator,TransformerMixin):
 
         ####################################### Drop supplementary qualitative columns ########################################
         if self.quali_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quali_sup])
+            X = X.drop(columns=quali_sup_label)
         
         ######################################## Drop supplementary quantitatives columns #######################################
         if self.quanti_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quanti_sup])
+            X = X.drop(columns=quanti_sup_label)
         
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
-            X_ind_sup = X.iloc[ind_sup,:]
-            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+            X_ind_sup = X.loc[ind_sup_label,:]
+            X = X.drop(index=ind_sup_label)
         
         ####################################### Principal Components Analysis (PCA) ##################################################
 
@@ -280,12 +289,15 @@ class PCA(BaseEstimator,TransformerMixin):
         self.call_ = {"Xtot":Xtot,
                       "X" : X,
                       "Z" : Z,
-                      "var_weights" : pd.Series(var_weights,index=X.columns.tolist(),name="weight"),
-                      "ind_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
-                      "means" : pd.Series(means[0],index=X.columns.tolist(),name="average"),
-                      "std" : pd.Series(std[0],index=X.columns.tolist(),name="scale"),
+                      "var_weights" : pd.Series(var_weights,index=X.columns,name="weight"),
+                      "ind_weights" : pd.Series(ind_weights,index=X.index,name="weight"),
+                      "means" : pd.Series(means[0],index=X.columns,name="average"),
+                      "std" : pd.Series(std[0],index=X.columns,name="scale"),
                       "n_components" : n_components,
-                      "standardize" : self.standardize}
+                      "standardize" : self.standardize,
+                      "ind_sup" : ind_sup_label,
+                      "quanti_sup" : quanti_sup_label,
+                      "quali_sup" : quali_sup_label}
 
         ########################## Multiply each columns by squared weight ########################################
         # Row information
@@ -320,11 +332,11 @@ class PCA(BaseEstimator,TransformerMixin):
         ################################# Coordinates ################################
         # Individuals coordinates
         ind_coord = svd["U"].dot(np.diag(np.sqrt(eigen_values[:n_components])))
-        ind_coord = pd.DataFrame(ind_coord,index=X.index.tolist(),columns=["Dim."+str(x+1) for x in range(ind_coord.shape[1])])
+        ind_coord = pd.DataFrame(ind_coord,index=X.index,columns=["Dim."+str(x+1) for x in range(ind_coord.shape[1])])
 
         # Variables coordinates
         var_coord = svd["V"].dot(np.diag(np.sqrt(eigen_values[:self.n_components])))
-        var_coord = pd.DataFrame(var_coord,index=X.columns.tolist(),columns=["Dim."+str(x+1) for x in range(var_coord.shape[1])])
+        var_coord = pd.DataFrame(var_coord,index=X.columns,columns=["Dim."+str(x+1) for x in range(var_coord.shape[1])])
 
         ################################# Contributions ####################################
         # Individuals contributions
@@ -345,7 +357,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         #### Weighted Pearson correlation
         weighted_corr = weightedcorrcoef(X,w=ind_weights)
-        weighted_corr = pd.DataFrame(weighted_corr,index=X.columns.tolist(),columns=X.columns.tolist())
+        weighted_corr = pd.DataFrame(weighted_corr,index=X.columns,columns=X.columns)
 
         #################################### Store result #############################################
         self.ind_ = {"coord":ind_coord,"cos2":ind_cos2,"contrib":ind_contrib,"dist":np.sqrt(ind_dist2),"infos" : ind_infos}
@@ -380,7 +392,7 @@ class PCA(BaseEstimator,TransformerMixin):
             ###### Multiply by variables weights & Apply transition relation
             ind_sup_coord = mapply(Z_ind_sup,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers)
             ind_sup_coord = np.dot(ind_sup_coord,svd["V"])
-            ind_sup_coord = pd.DataFrame(ind_sup_coord,index=X_ind_sup.index.tolist(),columns=["Dim."+str(x+1) for x in range(ind_sup_coord.shape[1])])
+            ind_sup_coord = pd.DataFrame(ind_sup_coord,index=X_ind_sup.index,columns=["Dim."+str(x+1) for x in range(ind_sup_coord.shape[1])])
 
             ###### Distance to origin
             ind_sup_dist2 = mapply(Z_ind_sup,lambda  x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
@@ -396,9 +408,9 @@ class PCA(BaseEstimator,TransformerMixin):
         #                               Compute supplementary quantitatives variables statistics
         ###############################################################################################################################
         if self.quanti_sup is not None:
-            X_quanti_sup = Xtot.iloc[:,quanti_sup]
+            X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.ind_sup is not None:
-                X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in self.ind_sup])
+                X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
             
             ###### Transform to float
             X_quanti_sup = X_quanti_sup.astype("float")
@@ -426,7 +438,7 @@ class PCA(BaseEstimator,TransformerMixin):
             ####### Compute Supplementary quantitatives variables coordinates
             var_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
             var_sup_coord = np.dot(var_sup_coord.T,svd["U"])
-            var_sup_coord = pd.DataFrame(var_sup_coord,index=X_quanti_sup.columns.tolist(),columns = ["Dim."+str(x+1) for x in range(var_sup_coord.shape[1])])
+            var_sup_coord = pd.DataFrame(var_sup_coord,index=X_quanti_sup.columns,columns = ["Dim."+str(x+1) for x in range(var_sup_coord.shape[1])])
 
             ############# Supplementary quantitatives variables Cos2
             var_sup_cor = mapply(Z_quanti_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
@@ -435,7 +447,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
             # Weighted correlation between supplementary quantitatives variables and actives quantitatives
             weighted_sup_corr = weightedcorrcoef(x=X_quanti_sup,y=X,w=ind_weights)[:X_quanti_sup.shape[1],:]
-            weighted_sup_corr = pd.DataFrame(weighted_sup_corr,columns=X_quanti_sup.columns.tolist()+X.columns.tolist(),index=X_quanti_sup.columns.tolist())        
+            weighted_sup_corr = pd.DataFrame(weighted_sup_corr,columns=X_quanti_sup.columns.tolist()+X.columns.tolist(),index=X_quanti_sup.columns)        
 
             # Store supplementary quantitatives informations
             self.quanti_sup_ =  {"coord":var_sup_coord,
@@ -447,9 +459,9 @@ class PCA(BaseEstimator,TransformerMixin):
         # Compute supplementary qualitatives variables statistics
         ###############################################################################################################################################
         if self.quali_sup is not None:
-            X_quali_sup = Xtot.iloc[:,quali_sup]
+            X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
-                X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+                X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
             
             ######################################## Barycentre of DataFrame ########################################
             X_quali_sup = X_quali_sup.astype("object")
@@ -459,16 +471,16 @@ class PCA(BaseEstimator,TransformerMixin):
 
             ####################################" Correlation ratio #####################################################
             quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,
-                                                      n_workers=n_workers) for col in X_quali_sup.columns.tolist()),axis=0)
+                                                      n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
 
             ###################################### Coordinates ############################################################
             barycentre = pd.DataFrame().astype("float")
             n_k = pd.Series().astype("float")
-            for col in X_quali_sup.columns.tolist():
+            for col in X_quali_sup.columns:
                 vsQual = X_quali_sup[col]
                 modalite, counts = np.unique(vsQual, return_counts=True)
                 n_k = pd.concat([n_k,pd.Series(counts,index=modalite)],axis=0)
-                bary = pd.DataFrame(index=modalite,columns=X.columns.tolist())
+                bary = pd.DataFrame(index=modalite,columns=X.columns)
                 for mod in modalite:
                     idx = [elt for elt, cat in enumerate(vsQual) if  cat == mod]
                     bary.loc[mod,:] = np.average(X.iloc[idx,:],axis=0,weights=ind_weights[idx])
@@ -494,7 +506,7 @@ class PCA(BaseEstimator,TransformerMixin):
             #################################### Summary quali
             # Compute statistiques
             summary_quali_sup = pd.DataFrame()
-            for col in X_quali_sup.columns.tolist():
+            for col in X_quali_sup.columns:
                 eff = X_quali_sup[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
                 eff.insert(0,"variable",col)
                 summary_quali_sup = pd.concat([summary_quali_sup,eff],axis=0,ignore_index=True)

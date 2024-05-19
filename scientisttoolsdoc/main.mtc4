@@ -1,0 +1,11 @@
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {4.1}Présentation des données}{\reset@font\mtcSfont 58}{section.4.1}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {4.1.1}Importation des données}{\reset@font\mtcSSfont 58}{subsection.4.1.1}}
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {4.2}AFDM}{\reset@font\mtcSfont 60}{section.4.2}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {4.2.1}Objectifs}{\reset@font\mtcSSfont 60}{subsection.4.2.1}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {4.2.2}Chargement de scientisttools}{\reset@font\mtcSSfont 60}{subsection.4.2.2}}
+{\reset@font\mtcSSSfont\mtc@string\contentsline{subsubsection}{\noexpand \leavevmode \numberline {4.2.2.1}Individus et variables actifs}{\reset@font\mtcSSSfont 60}{subsubsection.4.2.2.1}}
+{\reset@font\mtcSSSfont\mtc@string\contentsline{subsubsection}{\noexpand \leavevmode \numberline {4.2.2.2}Les valeurs propres}{\reset@font\mtcSSSfont 61}{subsubsection.4.2.2.2}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {4.2.3}Représentation graphique}{\reset@font\mtcSSfont 65}{subsection.4.2.3}}
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {4.3}Interprétation des axes}{\reset@font\mtcSfont 67}{section.4.3}}
+{\reset@font\mtcSfont\mtc@string\contentsline{section}{\noexpand \leavevmode \numberline {4.4}Approche Machine Learning}{\reset@font\mtcSfont 71}{section.4.4}}
+{\reset@font\mtcSSfont\mtc@string\contentsline{subsection}{\noexpand \leavevmode \numberline {4.4.1}Intégration dans une Pipeline de scikit-learn}{\reset@font\mtcSSfont 72}{subsection.4.4.1}}

@@ -83,9 +83,11 @@ header-includes:
 - \geometry{a4paper,total={160mm,240mm},left=25mm,right=25mm,top=25mm,bottom=25mm}
 - \usepackage{amsthm,thmtools,xcolor}
 - \usepackage{tcolorbox}
+editor_options: 
+  chunk_output_type: console
 ---
 
-
+```{=tex}
 \newtheorem{exemple}{Exemple}[chapter]
 \newtheorem{proposition}{Proposition}[chapter]
 \newtheorem{propriete}{Propriété}[chapter]
@@ -94,36 +96,38 @@ header-includes:
 \newtheorem{exercice}{Exercice}[chapter]
 \newtheorem{solution}{Solution}[section]
 \newtheorem{quiz}{Quiz}[section]
-
-
-
+```
+```{=tex}
 \mtcsetdepth{minitoc}{1} 
 \mtcsettitle{minitoc}{Sommaire}
 \newcommand{\Chapter}[1]{\chapter{#1}\minitoc}
 \setlength{\parindent}{0em}
 \setlength{\parskip}{1.15ex}
-
+```
+```{=tex}
 \newpage
 \dominitoc
 \renewcommand{\thepage}{\roman{page}}
 \setcounter{page}{1}
 \pagenumbering{roman}
-
+```
+```{=tex}
 \setcounter{tocdepth}{1}
 \tableofcontents
-
-
+```
+```{=tex}
 \newpage
 \renewcommand{\thepage}{\arabic{page}}
 \setcounter{page}{1}
-
+```
+```{=tex}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE]{\nouppercase{\thepage\hfill\leftmark}}
-\fancyhead[RO]{\nouppercase{\rightmark\hfill\thepage}}
-\fancyfoot[C]{\thepage}
+\fancyhead[LE]{\nouppercase{\arabic{page}\hfill\leftmark}}
+\fancyhead[RO]{\nouppercase{\rightmark\hfill\arabic{page}}}
+\fancyfoot[C]{\arabic{page}}
 \renewcommand{\headrulewidth}{0pt}
-
+```
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 library(reticulate)
 library(knitr)
@@ -132,7 +136,6 @@ knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning=FALSE,fig.pos = "h",
                       out.extra = "",fig.align = "center", collapse =  FALSE, 
                       highlight = TRUE,out.width = "100%")
 ```
-
 
 ```{python, echo = FALSE}
 import warnings
@@ -143,34 +146,26 @@ warnings.filterwarnings("ignore")
 plt.style.use('ggplot')
 ```
 
-
 ```{r child = "chapter1.Rmd"}
 
 ```
 
-
-```{r child = "chapter2.Rmd"}
-
-```
-
-```{r child = "chapter3.Rmd"}
+```{r child = "chapter2.Rmd",eval=FALSE,echo=FALSE}
 
 ```
 
-```{r child = "chapter4.Rmd"}
+```{r child = "chapter3.Rmd",eval=FALSE,echo=FALSE}
 
 ```
 
-```{r child = "chapter5.Rmd"}
+```{r child = "chapter4.Rmd",eval=FALSE,echo=FALSE}
 
 ```
 
-```{r child = "chapter6.Rmd"}
+```{r child = "chapter5.Rmd",eval=FALSE,echo=FALSE}
 
 ```
 
+```{r child = "chapter6.Rmd",eval=FALSE,echo=FALSE}
 
-
-
-
-
+```

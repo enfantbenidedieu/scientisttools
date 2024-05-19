@@ -80,16 +80,16 @@ def fviz_pca_ind(self,
 
     ################ Add supplementary quantitatives columns
     if self.quanti_sup is not None:
-        X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
+        X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
         if self.ind_sup is not None:
-            X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
         coord = pd.concat([coord,X_quanti_sup],axis=1)
     
     ################ Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+        X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
         if self.ind_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            X_quali_sup = X_quali_sup.drop(index=self.call_["ind_sup"])
         coord = pd.concat([coord,X_quali_sup],axis=1)
     
     # Using lim cos2
@@ -491,9 +491,9 @@ def fviz_pca_biplot(self,
 
     # Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+        X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
         if self.ind_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            X_quali_sup = X_quali_sup.drop(index=self.call_["ind_sup"])
         ind_coord = pd.concat([ind_coord,X_quali_sup],axis=1)
     
     # Variables coordinates
@@ -682,16 +682,16 @@ def fviz_pca3d_ind(self,
 
     ################ Add supplementary quantitatives columns
     if self.quanti_sup is not None:
-        X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
+        X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
         if self.ind_sup is not None:
-            X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
         coord = pd.concat([coord,X_quanti_sup],axis=1)
     
     ################ Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+        X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
         if self.ind_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            X_quali_sup = X_quali_sup.drop(index=self.call_["ind_sup"])
         coord = pd.concat([coord,X_quali_sup],axis=1)
     
     # Using lim cos2

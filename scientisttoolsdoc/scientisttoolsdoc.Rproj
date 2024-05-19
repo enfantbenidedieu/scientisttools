@@ -11,3 +11,7 @@ Encoding: UTF-8
 
 RnwWeave: knitr
 LaTeX: XeLaTeX
+
+MarkdownWrap: Sentence
+MarkdownReferences: Document
+MarkdownCanonical: Yes

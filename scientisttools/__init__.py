@@ -92,6 +92,18 @@ from .catvarhca import CATVARHCA
 from .varhcpc import VARHCPC
 from .fviz_hcpc import fviz_varhcpc_cluster
 
+## Load all datasets
+# PCA datasets
+from .datasets import load_decathlon, load_decathlon2, load_autos, load_temperature
+# CA datasets
+from .datasets import load_children, load_housetasks, load_women_work, load_femmes_travail
+# MCA datasets
+from .datasets import load_tea, load_poison, load_races_canines
+# FAMD datasets
+from .datasets import load_autos2
+# MFA datasets
+from .datasets import load_wine, load_qtevie
+
 __version__ = '0.1.5'
 __name__ = "scientisttools"
 __author__ = 'Duverier DJIFACK ZEBAZE'

@@ -452,9 +452,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         #                         Compute supplementary quantitatives variables statistics
         ###########################################################################################################
         if self.quanti_sup is not None:
-            X_quanti_sup = Xtot.iloc[:,quanti_sup]
+            X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.ind_sup is not None:
-                X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in self.ind_sup])
+                X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
             
             ##################################################################################################"
             summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
@@ -477,9 +477,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         #                         Compute supplementary qualitatives variables statistics
         ###########################################################################################################
         if self.quali_sup is not None:
-            X_quali_sup = Xtot.iloc[:,quali_sup]
+            X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
-                X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in self.ind_sup])
+                X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
             
             # Chi-squared test between new categorie
             if X_quali_sup.shape[1] > 1:

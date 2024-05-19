@@ -204,9 +204,11 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(eig)
     
     # Add individuals informations
-
-    print(f"\nIndividuals (the {nb_element} first)\n")
     ind = self.ind_
+    if ind["coord"].shape[0] > nb_element:
+        print(f"\nIndividuals (the {nb_element} first)\n")
+    else:
+        print("\nIndividuals\n")
     ind_infos = ind["infos"]
     for i in np.arange(0,ncp,1):
         ind_coord = ind["coord"].iloc[:,i]
@@ -223,16 +225,18 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     # Add supplementary individuals
     if self.ind_sup is not None:
-        print(f"\nSupplementary individuals\n")
-        # Save all informations
         ind_sup = self.ind_sup_
+        if ind_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary individuals (the {nb_element} first)\n")
+        else:
+            print(f"\nSupplementary individuals\n")
         ind_sup_infos = ind_sup["dist"]
         for i in np.arange(0,ncp,1):
             ind_sup_coord = ind_sup["coord"].iloc[:,i]
             ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
             ind_sup_cos2.name = "cos2"
             ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
-        ind_sup_infos = ind_sup_infos.round(decimals=digits)
+        ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
@@ -260,15 +264,18 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     
     # Add supplementary continuous variables informations
     if self.quanti_sup is not None:
-        print(f"\nSupplementary continuous variables\n")
-        quanti_sup_infos = pd.DataFrame().astype("float")
         quanti_sup = self.quanti_sup_
+        if quanti_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplemenetary continuous variables (the {nb_element} first)\n")
+        else:
+            print(f"\nSupplementary continuous variables\n")
+        quanti_sup_infos = pd.DataFrame().astype("float")
         for i in np.arange(0,ncp,1):
             quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
             quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
             quanti_sup_cos2.name = "cos2"
             quanti_sup_infos =pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
-        quanti_sup_infos = quanti_sup_infos.round(decimals=digits)
+        quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
@@ -276,8 +283,11 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     
     # Add Supplementary categories – Variable illustrative qualitative
     if self.quali_sup is not None:
-        print("\nSupplementary categories\n")
         quali_sup = self.quali_sup_
+        if quali_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary categories (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary categories\n")
         quali_sup_infos = quali_sup["dist"]
         for i in np.arange(0,ncp,1):
             quali_sup_coord = quali_sup["coord"].iloc[:,i]
@@ -293,7 +303,10 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(quali_sup_infos)
         
         # Add supplementary qualitatives - correlation ratio
-        print("\nSupplementary categorical variable (eta2)\n")
+        if quali_sup["eta2"].shape[0] > nb_element:
+            print(f"\nSupplementary categorical variable (eta2) (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary categorical variable (eta2)\n")
         quali_sup_eta2 = quali_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
         if to_markdown:
             print(quali_sup_eta2.to_markdown(tablefmt=tablefmt))
