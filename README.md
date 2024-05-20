@@ -22,8 +22,9 @@ scientisttools is a python package dedicated to multivariate Exploratory Data An
     * Correspondence Analysis (CA)
     * Multiple Correspondence Analysis (MCA)
     * Specific Multiple Correspondence Analysis (SpecificMCA)
-    * Factor Analysis of Mixed Data (FAMD)
-    * Principal Components Analysis of Mixed Data (PCAMIX)
+    * Factor Analysis of Mixed Data (FAMD) (Pagès J., 2004)
+    * Mixed Principal Components Analysis (MPCA) ()
+    * Principal Components Analysis of Mixed Data (PCAMIX) (Marie Chavent)
     * Canonical Correlation Analysis (CCA)
     * Multiple Factor Analysis (MFA)
     * Multiple Factor Analysis for qualitatives/categoricals variables (MFAQUAL)
@@ -49,9 +50,6 @@ scientisttools is a python package dedicated to multivariate Exploratory Data An
 Those statistical methods can be used in two ways :
 * as descriptive methods ("datamining approach")
 * as reduction methods in scikit-learn pipelines ("machine learning approach")
-
-
-
 
 Notebooks are availabled.
 

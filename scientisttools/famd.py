@@ -439,9 +439,9 @@ class FAMD(BaseEstimator,TransformerMixin):
                 for j in np.arange(0,dummies.shape[1],1):
                     if dummies.columns.tolist()[j] in values:
                         Y[i,j] = 1
-            row_sup_dummies = pd.DataFrame(Y,columns=dummies.columns.tolist(),index=X_ind_sup.index.tolist())
+            ind_sup_dummies = pd.DataFrame(Y,columns=dummies.columns.tolist(),index=X_ind_sup.index.tolist())
             
-            Z2_ind_sup = (row_sup_dummies - mean_k)/np.sqrt(prop)
+            Z2_ind_sup = (ind_sup_dummies - mean_k)/np.sqrt(prop)
             Z_ind_sup = pd.concat((Z1_ind_sup,Z2_ind_sup),axis=1)
             # Concatenate
             Z_ind_sup = pd.concat((Z,Z_ind_sup),axis=0)
