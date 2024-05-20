@@ -2,6 +2,13 @@
     <img src="./figures/scientisttools.svg" alt="centered image" height="50%"/>
 </center>
 
+<br>
+<br>
+
+[![Downloads](https://static.pepy.tech/badge/scientisttools)](https://pepy.tech/project/scientisttools)
+
+
+
 # scientisttools : Exploratory Multivariate Data Analysis with Python
 
 scientisttools is a python package dedicated to multivariate Exploratory Data Analysis, clustering analysis and multidimensional scaling.
