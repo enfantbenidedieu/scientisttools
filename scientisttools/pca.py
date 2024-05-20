@@ -240,6 +240,7 @@ class PCA(BaseEstimator,TransformerMixin):
         ################## Summary quantitatives variables ####################
         summary_quanti = X.describe().T.reset_index().rename(columns={"index" : "variable"})
         summary_quanti["count"] = summary_quanti["count"].astype("int")
+        print(summary_quanti)
         self.summary_quanti_ = summary_quanti
 
         ###################################### Set number of components ##########################################
@@ -507,10 +508,10 @@ class PCA(BaseEstimator,TransformerMixin):
             # Compute statistiques
             summary_quali_sup = pd.DataFrame()
             for col in X_quali_sup.columns:
-                eff = X_quali_sup[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
+                eff = X_quali_sup[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
                 eff.insert(0,"variable",col)
                 summary_quali_sup = pd.concat([summary_quali_sup,eff],axis=0,ignore_index=True)
-            summary_quali_sup["effectif"] = summary_quali_sup["effectif"].astype("int")
+            summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
 
             # Supplementary categories informations
             self.quali_sup_ = {"coord" : quali_sup_coord,

@@ -192,8 +192,11 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         print(eig)
     
     # Add individuals informations
-    print(f"\nRows\n")
-    row = get_ca(self,choice="row")
+    row = self.row_
+    if row["coord"].shape[0] > nb_element:
+        print(f"\nRows (the {nb_element} first)\n")
+    else:
+        print("\nRows\n")
     row_infos = row["infos"]
     for i in np.arange(0,ncp,1):
         row_coord = row["coord"].iloc[:,i]
@@ -210,9 +213,11 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
 
     # Add supplementary individuals
     if self.row_sup is not None:
-        print(f"\nSupplementary rows\n")
-        # Save all informations
         row_sup = self.row_sup_
+        if row_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary rows (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary rows\n")
         row_sup_infos = row_sup["dist"]
         for i in np.arange(0,ncp,1):
             row_sup_coord = row_sup["coord"].iloc[:,i]
@@ -226,8 +231,11 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
             print(row_sup_infos)
 
     # Add variables informations
-    print(f"\nColumns\n")
-    col = get_ca(self,choice="col")
+    col = self.col_
+    if col["coord"].shape[0] > nb_element:
+        print(f"\nColumns (the {nb_element} first)\n")
+    else:
+        print("\nColumns\n")
     col_infos = col["infos"]
     for i in np.arange(0,ncp,1):
         col_coord = col["coord"].iloc[:,i]
@@ -244,8 +252,11 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     
     # Add supplementary columns informations
     if self.col_sup is not None:
-        print(f"\nSupplementary columns\n")
         col_sup = self.col_sup_
+        if col_sup["coord"].shape[0]> nb_element:
+            print(f"\nSupplementary columns (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary columns\n")
         col_sup_infos = col_sup["dist"]
         for i in np.arange(0,ncp,1):
             col_sup_coord = col_sup["coord"].iloc[:,i]
@@ -260,8 +271,11 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     
     # Add supplementary quantitatives informations
     if self.quanti_sup is not None:
-        print(f"\nSupplementary quantitatives columns\n")
         quanti_sup = self.quanti_sup_
+        if quanti_sup["coord"].shape[0]> nb_element:
+            print(f"\nSupplementary quantitatives columns (the {nb_element})\n")
+        else:
+            print("\nSupplementary quantitatives columns\n")
         quanti_sup_infos = pd.DataFrame().astype("float")
         for i in np.arange(0,ncp,1):
             quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
@@ -276,8 +290,11 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     
     # Add supplementary qualitatives informations
     if self.quali_sup is not None:
-        print(f"\nSupplementary categories\n")
         quali_sup = self.quali_sup_
+        if quali_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary categories (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary categories\n")
         quali_sup_infos = quali_sup["dist"]
         for i in np.arange(0,ncp,1):
             quali_sup_coord = quali_sup["coord"].iloc[:,i]
@@ -293,8 +310,11 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
             print(quali_sup_infos)
         
         # Add supplementary qualitatives - correlation ratio
-        print("\nSupplementary qualitatives variables (eta2)\n")
-        quali_sup_eta2 = quali_sup["eta2"].iloc[:,:ncp].round(decimals=digits)
+        if quali_sup["eta2"].shape[0] > nb_element:
+            print(f"\nSupplementary qualitatives variables (eta2) (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary qualitatives variables (eta2)\n")
+        quali_sup_eta2 = quali_sup["eta2"].iloc[:nb_element,:ncp].round(decimals=digits)
         if to_markdown:
             print(quali_sup_eta2.to_markdown(tablefmt=tablefmt))
         else:

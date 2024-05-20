@@ -167,11 +167,11 @@ def fviz_mpca_ind(self,
                                        size=text_size,va=va,ha=ha)
         elif hasattr(color, "labels_"):
             if "point" in geom:
-                p = (p + pn.geom_point(coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="factor(cluster)"),size=point_size,show_legend=False)+
+                p = (p + pn.geom_point(coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="cluster"),size=point_size)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
             if "text" in geom:
                 if repel :
-                    p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="factor(cluster)",label=coord.index),
+                    p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="cluster",label=coord.index),
                                        size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
                     p = p + text_label(text_type,data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color="cluster",label=coord.index),
@@ -562,7 +562,7 @@ def fviz_mpca_mod(self,
                 p = p + text_label(text_type,mapping=pn.aes(color="cont_var"),size=text_size,va=va,ha=ha)
     elif hasattr(color, "labels_"):
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color="cluster"),size=point_size,show_legend=False)+
+            p = (p + pn.geom_point(pn.aes(color="cluster"),size=point_size)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :

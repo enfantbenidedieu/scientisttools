@@ -181,6 +181,9 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
                 quali_sup = [int(self.quali_sup)]
             elif ((isinstance(self.quali_sup,list) or isinstance(self.quali_sup,tuple))  and len(self.quali_sup)>=1):
                 quali_sup = [int(x) for x in self.quali_sup]
+            quali_sup_label = X.columns[quali_sup]
+        else:
+            quali_sup_label = None
 
         #  Check if quanti sup
         if self.quanti_sup is not None:
@@ -188,6 +191,9 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
                 quanti_sup = [int(self.quanti_sup)]
             elif ((isinstance(self.quanti_sup,list) or isinstance(self.quanti_sup,tuple))  and len(self.quanti_sup)>=1):
                 quanti_sup = [int(x) for x in self.quanti_sup]
+            quanti_sup_label = X.columns[quanti_sup]
+        else:
+            quanti_sup_label = None
         
         # Check if individuls supplementary
         if self.ind_sup is not None:
@@ -195,6 +201,9 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
                 ind_sup = [int(self.ind_sup)]
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
+            ind_sup_label = X.index[ind_sup]
+        else:
+            ind_sup_label = None
 
         ####################################### Save the base in a new variables
         # Store data
@@ -202,17 +211,17 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
 
         ####################################### Drop supplementary qualitative columns ########################################
         if self.quali_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quali_sup])
+            X = X.drop(columns=quali_sup_label)
         
         ######################################## Drop supplementary quantitatives columns #######################################
         if self.quanti_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quanti_sup])
+            X = X.drop(columns=quanti_sup_label)
         
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
-            X_ind_sup = X.iloc[self.ind_sup,:]
-            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+            X_ind_sup = X.loc[ind_sup_label,:]
+            X = X.drop(index=ind_sup_label)
         
         ####################################### Multiple Correspondence Anlysis (MCA) ##################################################
         # Check if 
@@ -288,7 +297,10 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
                       "col_marge" : mod_weights,
                       "excl" : exclusion,
                       "var_weights" : var_weights,
-                      "n_components" : n_components}
+                      "n_components" : n_components,
+                      "ind_sup" : ind_sup_label,
+                      "quali_sup" : quali_sup_label,
+                      "quanti_sup" : quanti_sup_label}
 
         #################### Singular Value Decomposition (SVD) ########################################
         svd = svd_triplet(X=Z,row_weights=ind_weights,col_weights=mod_weights.values,n_components=n_components)
@@ -489,9 +501,9 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
             self.ind_sup_ = {"coord" : ind_sup_coord, "cos2" : ind_sup_cos2, "dist" : ind_sup_dist2}
         
         if self.quali_sup is not None:
-            X_quali_sup = Xtot.iloc[:,quali_sup]
+            X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
-                X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+                X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
 
             #####################"
             X_quali_sup = X_quali_sup.astype("object")
@@ -526,9 +538,9 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
                                "eta2"  : quali_sup_eta2}
 
         if self.quanti_sup is not None:
-            X_quanti_sup = Xtot.iloc[:,quanti_sup]
+            X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.ind_sup is not None:
-                X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+                X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
 
             ##############################################################################################################################
             X_quanti_sup = X_quanti_sup.astype("float")

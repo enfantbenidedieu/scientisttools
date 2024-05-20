@@ -122,6 +122,9 @@ class EFA(BaseEstimator,TransformerMixin):
                 ind_sup = [int(self.ind_sup)]
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
+            ind_sup_label = X.index[ind_sup]
+        else:
+            ind_sup_label = None
 
         # Save dataframe
         Xtot = X.copy()
@@ -129,8 +132,8 @@ class EFA(BaseEstimator,TransformerMixin):
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
-            X_ind_sup = X.iloc[self.ind_sup,:]
-            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+            X_ind_sup = X.loc[ind_sup_label,:]
+            X = X.drop(index=ind_sup_label)
         
         ################################################################################################
         # Set individuals weight
@@ -214,7 +217,8 @@ class EFA(BaseEstimator,TransformerMixin):
                       "means" : pd.Series(means[0],index=X.columns.tolist(),name="average"),
                       "std" : pd.Series(std[0],index=X.columns.tolist(),name="scale"),
                       "n_components" : n_components,
-                      "standardize" : self.standardize}
+                      "standardize" : self.standardize,
+                      "ind_sup" : ind_sup_label}
 
         ##########################################################################################################################
         # Compute columns coordinates

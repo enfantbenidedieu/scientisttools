@@ -139,7 +139,7 @@ def fviz_mfa_ind(self,
             if legend_title is None:
                 legend_title = "Cluster"
             if "point" in geom:
-                p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+                p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
             if "text" in geom:
                 if repel :
@@ -532,7 +532,7 @@ def fviz_mfa_group(self,
             legend_title = "Cluster"
         
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :
@@ -798,7 +798,7 @@ def fviz_mfa_mod(self,
         if legend_title is None:
             legend_title = "Cluster"
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                     pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :
@@ -963,7 +963,7 @@ def fviz_mfa_freq(self,
         if legend_title is None:
             legend_title = "Cluster"
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                     pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :

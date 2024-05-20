@@ -182,16 +182,19 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
                 ind_sup = [int(self.ind_sup)]
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple))  and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
+            ind_sup_label = X.index[ind_sup]
+        else:
+            ind_sup_label = None
         
         ####################################### Save the base in a new variables
         # Store data
-        Xtot = X
+        Xtot = X.copy()
 
         ####################################### Drop supplementary individuals ########################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
-            X_ind_sup = X.iloc[self.ind_sup,:]
-            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+            X_ind_sup = X.loc[ind_sup_label,:]
+            X = X.drop(index=ind_sup_label)
         
         ##############################################################################################
         # check matrix

@@ -79,23 +79,26 @@ def fviz_famd_ind(self,
     
       ################ Add supplementary quantitatives columns
     if self.quanti_sup is not None:
-        X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
+        X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
         if self.ind_sup is not None:
-            X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
         coord = pd.concat([coord,X_quanti_sup],axis=1)
     
     ################ Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+        X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
         if self.ind_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.ind_sup_["coord"].index.tolist()])
+            X_quali_sup = X_quali_sup.drop(index=self.call_["ind_sup"])
         coord = pd.concat([coord,X_quali_sup],axis=1)
     
     # Using lim cos2
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = (self.ind_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2"))
+            cos2 = (self.ind_["cos2"].iloc[:,axis]
+                        .sum(axis=1).to_frame("cosinus")
+                        .sort_values(by="cosinus",ascending=False)
+                        .query("cosinus > @lim_cos2"))
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -105,7 +108,10 @@ def fviz_famd_ind(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = self.ind_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query(f"contrib > @lim_contrib")
+            contrib = (self.ind_["contrib"].iloc[:,axis]
+                           .sum(axis=1).to_frame("contrib")
+                           .sort_values(by="contrib",ascending=False)
+                           .query(f"contrib > @lim_contrib"))
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -150,7 +156,7 @@ def fviz_famd_ind(self,
             if legend_title is None:
                 legend_title = "Cluster"
             if "point" in geom:
-                p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+                p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
             if "text" in geom:
                 if repel :
@@ -312,7 +318,10 @@ def fviz_famd_col(self,
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.quanti_var_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = (self.quanti_var_["cos2"].iloc[:,axis]
+                        .sum(axis=1).to_frame("cosinus")
+                        .sort_values(by="cosinus",ascending=False)
+                        .query("cosinus > @lim_cos2"))
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -322,7 +331,10 @@ def fviz_famd_col(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = self.quanti_var_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = (self.quanti_var_["contrib"].iloc[:,axis]
+                           .sum(axis=1).to_frame("contrib")
+                           .sort_values(by="contrib",ascending=False)
+                           .query("contrib > @lim_contrib"))
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -465,7 +477,10 @@ def fviz_famd_mod(self,
     if lim_cos2 is not None:
         if isinstance(lim_cos2,float) or isinstance(lim_cos2,int):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.quali_var_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = (self.quali_var_["cos2"].iloc[:,axis]
+                        .sum(axis=1).to_frame("cosinus")
+                        .sort_values(by="cosinus",ascending=False)
+                        .query("cosinus > @lim_cos2"))
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -475,7 +490,10 @@ def fviz_famd_mod(self,
     if lim_contrib is not None:
         if isinstance(lim_contrib,float) or isinstance(lim_contrib,int):
             lim_contrib = float(lim_contrib)
-            contrib = self.quali_var_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = (self.quali_var_["contrib"].iloc[:,axis]
+                           .sum(axis=1).to_frame("contrib")
+                           .sort_values(by="contrib",ascending=False)
+                           .query("contrib > @lim_contrib"))
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -515,7 +533,7 @@ def fviz_famd_mod(self,
         if legend_title is None:
             legend_title = "Cluster"
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :

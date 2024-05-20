@@ -152,6 +152,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
             X = X.to_pandas()
+        
         # Check if X is an instance of pandas DataFrame
         if not isinstance(X,pd.DataFrame):
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
@@ -171,8 +172,8 @@ class MFAMIX(BaseEstimator,TransformerMixin):
             X.columns = X.columns.droplevel()
         
         # Drop mixed group
-        if "m" in self.group_type:
-            raise TypeError("Error: 'group_type' should be one of 'c', 's', 'n'")
+        # if "m" in self.group_type:
+        #     raise TypeError("'group_type' should be one of 'c', 's', 'n'")
         
         ###### Checks if quantitatives variables are in X
         is_quanti = X.select_dtypes(exclude=["object","category"])
@@ -193,9 +194,9 @@ class MFAMIX(BaseEstimator,TransformerMixin):
         #   Check if group is None
         #########################################################################################################################
         if self.group is None:
-            raise ValueError("Error : 'group' must be assigned.")
+            raise ValueError("'group' must be assigned.")
         elif not (isinstance(self.group, list) or isinstance(self.group,tuple)):
-            raise ValueError("Error : 'group' must be a list or a tuple with the number of variables in each group")
+            raise ValueError("'group' must be a list or a tuple with the number of variables in each group")
         else:
             nb_elt_group = [int(x) for x in self.group]
         
@@ -222,11 +223,11 @@ class MFAMIX(BaseEstimator,TransformerMixin):
         #   Check if group type in not None
         #########################################################################################################################
         if self.group_type is None:
-            raise ValueError("Error : 'group_type' must be assigned.")
+            raise ValueError("'group_type' must be assigned.")
         
         #######################################################################################################################
         if len(self.group) != len(self.group_type):
-            raise TypeError("Error : Not convenient group definition")
+            raise TypeError("Not convenient group definition")
 
         ############################################################################################################################
         #  Assigned group name
@@ -234,7 +235,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
         if self.name_group is None:
             group_name = ["Gr"+str(x+1) for x in range(len(nb_elt_group))]
         elif not (isinstance(self.name_group,list) or isinstance(self.name_group,tuple)):
-            raise TypeError("Error : 'group_name' must be a list or a tuple of group name")
+            raise TypeError("'group_name' must be a list or a tuple of group name")
         else:
             group_name = [x for x in self.name_group]
         
@@ -282,7 +283,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
         ############################# Check if an active group has only one columns
         for grp, cols in group_active_dict.items():
             if len(cols)==1:
-                raise ValueError(f"Error : {grp} group should have at least two columns")
+                raise ValueError(f"{grp} group should have at least two columns")
 
         # Extract qualitatives and quantitatives groups
         all_nums = {}
@@ -299,7 +300,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
         for grp, cols in group_active_dict.items():
             if all_cats[grp]:
                 for col in cols:
-                    eff = X[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
+                    eff = X[col].value_counts().to_frame("count").reset_index().rename(columns={col : "modalite"})
                     eff.insert(0,"variable",col)
                     eff.insert(0,"group",group_name.index(grp))
                     summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
@@ -319,7 +320,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
 
                 ###### Summary for qualitatives variables
                 for col in X_quali.columns.tolist():
-                    eff = X_quali[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
+                    eff = X_quali[col].value_counts().to_frame("count").reset_index().rename(columns={col: "categorie"})
                     eff.insert(0,"variable",col)
                     eff.insert(0,"group",group_name.index(grp))
                     summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
@@ -330,7 +331,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 summary_quanti = pd.concat((summary_quanti,summary),axis=0,ignore_index=True)
                 
         # Convert effectif and count to int
-        summary_quali["effectif"] = summary_quali["effectif"].astype("int")
+        summary_quali["count"] = summary_quali["count"].astype("int")
         summary_quanti["count"] = summary_quanti["count"].astype("int")
         self.group_label_ = group_label
 
@@ -346,9 +347,9 @@ class MFAMIX(BaseEstimator,TransformerMixin):
         if self.ind_weights is None:
             ind_weights = (np.ones(X.shape[0])/X.shape[0]).tolist()
         elif not isinstance(self.ind_weights,list):
-            raise ValueError("Error : 'ind_weights' must be a list of individuals weights")
+            raise ValueError("'ind_weights' must be a list of individuals weights")
         elif len(self.ind_weights) != X.shape[0]:
-            raise ValueError(f"Error : 'ind_weights' must be a list with length {X.shape[0]}.")
+            raise ValueError(f"'ind_weights' must be a list with length {X.shape[0]}.")
         else:
             ind_weights = [x/np.sum(self.ind_weights) for x in self.ind_weights]
         
@@ -359,7 +360,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 if all_nums[grp]:
                     quanti_var_weights_mfa[grp] = np.ones(len(cols)).tolist()
         elif not isinstance(self.quanti_var_weights_mfa,dict):
-            raise ValueError("Error : 'quanti_var_weights_mfa' must be a dictionary where keys are quantitatives groups names and values are list of quantitatives variables weights in group.")
+            raise ValueError("'quanti_var_weights_mfa' must be a dictionary where keys are quantitatives groups names and values are list of quantitatives variables weights in group.")
         else:
             for grp, cols in group_active_dict.items():
                 if all_nums[grp]:
@@ -375,7 +376,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                         var_weights[col] = 1/X[cols].shape[1]
                     quali_var_weights_mfa[grp] = var_weights
         elif not isinstance(self.quali_var_weights_mfa,dict):
-            raise ValueError("Error : 'var_weights_mfa' must be a dictionary where keys are qualitatives groups names and values are pandas series of qualitatives variables weights in group.")
+            raise ValueError("'var_weights_mfa' must be a dictionary where keys are qualitatives groups names and values are pandas series of qualitatives variables weights in group.")
         else:
             for grp, cols in group_active_dict.items():
                 if all_cats[grp]:
@@ -395,19 +396,19 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                     # Scale Principal Components Anlysis (PCA)
                     fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=quanti_var_weights_mfa[grp],ind_sup=None,parallelize=self.parallelize)
                 else:
-                    raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                    raise TypeError("For continues group 'group_type' should be one of 'c', 's'")
             elif all_cats[grp]:
                 if self.group_type[group_name.index(grp)]=="n":
                     # Multiple Correspondence Analysis (MCA)
                     fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize,benzecri=False,greenacre=False)
                 else:
-                    raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                    raise TypeError("For categoricals group 'group_type' should be 'n'")
             else:
                 if self.group_type[group_name.index(grp)]=="m":
                     # Factor Analysis of Mixed Data (FAMD)
                     fa = FAMD(n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
                 else:
-                    raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+                    raise TypeError("For mixed group 'group_type' should be 'm'")
             model[grp] = fa.fit(X[cols])
 
             ########################## Add supp
@@ -422,19 +423,19 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                         # Scale Principal Components Analysis (PCA)
                         fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=quanti_var_weights_mfa[grp],ind_sup=ind_sup,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                        raise TypeError("For continues group 'group_type' should be one of 'c', 's'")
                 elif all_cats[grp]:
                     if self.group_type[group_name.index(grp)]=="n":
                         # Multiple Correspondence Analysis (MCA)
                         fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=ind_sup,parallelize=self.parallelize,benzecri=False,greenacre=False)
                     else:
-                        raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                        raise TypeError("For categoricals group 'group_type' should be 'n'")
                 else:
                     if self.group_type[group_name.index(grp)]=="m":
                         # Factor Analysis of Mixed Data (FAMD)
                         fa = FAMD(n_components=None,ind_weights=ind_weights,ind_sup=ind_sup,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+                        raise TypeError("For mixed group 'group_type' should be 'm'")
                 model[grp] = fa.fit(pd.concat((X[cols],X_ind_sup[cols]),axis=0))
         
         ############################################### Separate  Factor Analysis for supplementary groups ######################################""
@@ -453,7 +454,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                     elif self.group_type[group_name.index(grp)]=="s":
                         fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                        raise TypeError("For continues group 'group_type' should be one of 'c', 's'")
                     
                     ##### Add to group_label
                     row_grp = pd.Series(group_sup_dict[grp],name='variable').to_frame()
@@ -464,12 +465,12 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                     if self.group_type[group_name.index(grp)]=="n":
                         fa = MCA(n_components=None,parallelize=self.parallelize,benzecri=False,greenacre=False)
                     else:
-                        raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                        raise TypeError("For categoricals group 'group_type' should be 'n'")
                 else:
                     if self.group_type[group_name.index(grp)]=="m":
                         fa = FAMD(n_components=None,ind_weights=ind_weights,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+                        raise TypeError("For mixed group 'group_type' should be 'm'")
                     
                 # Fit the model
                 model[grp] = fa.fit(X_group_sup[cols])
@@ -1113,7 +1114,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                     coord = (data.sum(axis=0)/(Xg.shape[1]*self.separate_analyses_[grp].eig_.iloc[0,0]))
                     group_sup_coord = pd.concat((group_sup_coord,coord.to_frame(grp).T),axis=0)
                 else:
-                    raise TypeError("Error : All columns should have the same type.")
+                    raise TypeError("All columns should have the same type.")
             
             #################################### group sup cos2 ###########################################################
             group_sup_cos2 = pd.concat((((group_sup_coord.loc[grp,:]**2)/group_sup_dist2.loc[grp]).to_frame(grp).T for grp in group_sup_coord.index.tolist()),axis=0)
@@ -1166,6 +1167,10 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """
+        # check if X is an instance of polars dataframe
+        if isinstance(X,pl.DataFrame):
+            X = X.to_pandas()
+        
         # Check if X is an instance of pd.DataFrame class
         if not isinstance(X,pd.DataFrame):
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "

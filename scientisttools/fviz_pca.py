@@ -152,7 +152,7 @@ def fviz_pca_ind(self,
             if legend_title is None:
                 legend_title = "Cluster"
                 if "point" in geom:
-                    p = (p + pn.geom_point(pn.aes(color=c,linetype = c),size=point_size,show_legend=False)+
+                    p = (p + pn.geom_point(pn.aes(color=c,linetype = c),size=point_size)+
                             pn.guides(color=pn.guide_legend(title=legend_title)))
                 if "text" in geom:
                     if repel :
@@ -766,7 +766,7 @@ def fviz_pca3d_ind(self,
                     p = p + text3d_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         elif hasattr(color, "labels_"):
             if "point" in geom:
-                p = (p + pn3d.geom_point_3d(pn.aes(color="cluster",linetype = "cluster"),size=point_size,show_legend=False)+
+                p = (p + pn3d.geom_point_3d(pn.aes(color="cluster",linetype = "cluster"),size=point_size)+
                          pn.guides(color=pn.guide_legend(title=legend_title)))
             if "text" in geom:
                 if repel :
@@ -785,7 +785,7 @@ def fviz_pca3d_ind(self,
                     p = p + text3d_label(text_type,color=color,size=text_size,va=va,ha=ha)
     else:
         if habillage not in coord.columns:
-            raise ValueError(f"Error : {habillage} not in DataFrame.")
+            raise ValueError(f"{habillage} not in DataFrame.")
         if "point" in geom:
             p = p + pn3d.geom_point_3d(pn.aes(color = habillage,linetype = habillage),size=point_size)
         if "text" in geom:

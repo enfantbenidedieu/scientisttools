@@ -85,30 +85,33 @@ def fviz_ca_row(self,
 
     ################ Add supplementary columns
     if self.col_sup is not None:
-        X_col_sup = self.call_["Xtot"].loc[:,self.col_sup_["coord"].index.tolist()].astype("float")
+        X_col_sup = self.call_["Xtot"].loc[:,self.call_["col_sup"]].astype("float")
         if self.row_sup is not None:
-            X_col_sup = X_col_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.row_sup_["coord"].index.tolist()])
+            X_col_sup = X_col_sup.drop(index=self.call_["row_sup"])
         coord = pd.concat([coord,X_col_sup],axis=1)
 
     ################ Add supplementary quantitatives columns
     if self.quanti_sup is not None:
-        X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_sup_["coord"].index.tolist()].astype("float")
+        X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
         if self.row_sup is not None:
-            X_quanti_sup = X_quanti_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.row_sup_["coord"].index.tolist()])
+            X_quanti_sup = X_quanti_sup.drop(index=self.call_["row_sup"])
         coord = pd.concat([coord,X_quanti_sup],axis=1)
     
     ################ Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].loc[:,self.quali_sup_["eta2"].index.tolist()].astype("object")
+        X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
         if self.row_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=[name for name in self.call_["Xtot"].index.tolist() if name in self.row_sup_["coord"].index.tolist()])
+            X_quali_sup = X_quali_sup.drop(index=self.call_["row_sup"])
         coord = pd.concat([coord,X_quali_sup],axis=1)
     
     # Using lim cos2
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.row_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = (self.row_["cos2"].iloc[:,axis]
+                        .sum(axis=1).to_frame("cosinus")
+                        .sort_values(by="cosinus",ascending=False)
+                        .query("cosinus > @lim_cos2"))
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -118,7 +121,10 @@ def fviz_ca_row(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = self.row_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = (self.row_["contrib"].iloc[:,axis]
+                           .sum(axis=1).to_frame("contrib")
+                           .sort_values(by="contrib",ascending=False)
+                           .query("contrib > @lim_contrib"))
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -166,7 +172,7 @@ def fviz_ca_row(self,
                     legend_title = "Cluster"
                 #####################################
                 if "point" in geom:
-                    p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+                    p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                             pn.guides(color=pn.guide_legend(title=legend_title)))
                 if "text" in geom:
                     if repel :
@@ -305,7 +311,7 @@ def fviz_ca_col(self,
     """
     
     if self.model_ != "ca":
-        raise ValueError("Error : 'self' must be an object of class CA.")
+        raise TypeError("'self' must be an object of class CA.")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -320,7 +326,10 @@ def fviz_ca_col(self,
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.col_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = (self.col_["cos2"].iloc[:,axis]
+                        .sum(axis=1).to_frame("cosinus")
+                        .sort_values(by="cosinus",ascending=False)
+                        .query("cosinus > @lim_cos2"))
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -368,7 +377,7 @@ def fviz_ca_col(self,
             if legend_title is None:
                 legend_title = "Cluster"
             if "point" in geom:
-                p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+                p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
             if "text" in geom:
                 if repel :

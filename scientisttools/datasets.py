@@ -409,6 +409,78 @@ def load_poison():
     data.name = "poison"
     return data
 
+def load_mushroom():
+    """
+    Mushroom
+    --------
+
+    Usage
+    -----
+    > from scientisttools import load_mushroom
+    > mushroom = load_mushroom()
+
+    Source
+    ------
+    The Mushroom uci dataset. See https://archive.ics.uci.edu/dataset/73/mushroom
+
+    Examples
+    --------
+    > # Load mushroom dataset
+    > from scientisttools import load_mushroom
+    > mushroom = load_mushroom()
+    >
+    > from scientisttools import MCA
+    > res_mca = MCA()
+    > res_mca.fit(mushroom)
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    data = pd.read_excel(DATASETS_DIR/"mushroom.xlsx")
+    data.name = "mushroom"
+    return data
+
+def load_music():
+    """
+    Music
+    ----
+
+    Description
+    -----------
+    The data concerns tastes for music of a set of 500 individuals. It contains 5 variables of likes for music genres (french pop, rap, rock, jazz and classical), 2 variables about music listening and 2 additional variables (gender and age).
+
+    Usage
+    -----
+    > from scientisttools import load_music
+    > music = load_music()
+
+    Format
+    ------
+    A data frame with 500 observations and 7 variables
+
+    Source
+    ------
+    The Music dataset in R GDAtools packages
+
+    Examples
+    --------
+    > # Load music dataset
+    > from scientisttools import load_music
+    > music = load_music()
+    >
+    > excl = {"FrenchPop" : "NA", "Rap" : "NA" , "Rock" : "NA", "Jazz" : "NA","Classical" : "NA"}
+    > res_spemca = SpecificMCA(n_components=5,excl=excl)
+    > res_spemca.fit(music)
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"Music.RData")["Music"]
+    data.name = "Music"
+    return data
+
 ################################## Factor Analysis of Mixed Data #####################################"
 
 def load_autos2():
@@ -439,11 +511,71 @@ def load_autos2():
     data.name = "autos_2005"
     return data
 
+def load_tennis():
+    """
+    Tennis
+    ------
+
+    Usage
+    -----
+    > from scientisttools import load_tennis
+    > tennis = load_tennis()
+
+    Examples
+    --------
+    > # Load tennis dataset
+    > from scientisttools import load_tennis
+    > tennis = load_tennis()
+    >
+    > from scientisttools import FAMD
+    > res_famd =  FAMD(n_components=2,ind_sup=list(range(16,tennis.shape[0])),quanti_sup=7)
+    > res_famd.fit(tennis)
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    data = pd.read_excel(DATASETS_DIR/"tennisplayers.xlsx",index_col=0)
+    return data
+
+# MPCA datasets
+def load_cars():
+    """
+    Cars
+    ----
+
+    Usage
+    ----
+    > from scientisttools import load_cars
+    > cars = load_cars()
+
+    Format
+    ------
+    a data frame with 27 individuals and 9 variables
+
+    Examples
+    --------
+    > # Load cars dataset
+    > from scientisttools import load_cars
+    > cars = load_cars()
+    > 
+    > from scientisttools import MPCA
+    > res_mpca = MPCA()
+    > res_mpca.fit(cars)
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    data = pd.read_csv(DATASETS_DIR/'acpm_cars.txt', delimiter = " ",header=0,index_col=0)
+    return data
+
 ################################## Multiple Fcator Analysis (MFA) ########################################
 
 def load_burgundy_wines():
     """
-    Burgundy wines dataset.
+    Burgundy wines dataset
+    ----------------------
 
     Source: https://personal.utdallas.edu/~herve/Abdi-MCA2007-pretty.pdf
 
@@ -581,3 +713,105 @@ def load_mortality():
     data.name = "wine"
     return data
 
+def load_lifecyclesavings():
+    """
+    Intercountry Life-Cycle Savings Data
+    ------------------------------------
+
+    Description
+    -----------
+    Data on the savings ratio 1960 - 1970
+
+    Usage
+    -----
+    > from scientisttools import load_lifecyclesavings
+    > lifecyclesavings = load_lifecyclesavings()
+
+    Format
+    -----
+    A data frame with 50 observations on 5 variables
+
+    Source
+    ------
+    The LifeCycle Savings dataset from R datasets
+
+    Examples
+    --------
+    > # Load lifecyclesavings dataset
+    > from scientisttools import load_lifecyclesavings
+    > lifecyclesavings = load_lifecyclesavings()
+    >
+    > from scientisttools import CCA
+    > res_cca = CCA(lifecyclesavings,vars=[1,2])
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com    
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"LifeCycleSavings.RData")["LifeCycleSavings"]
+    data.name = "LifeCycleSavings"
+    return data
+
+# Sparse PCA datasets
+def load_protein():
+    """
+    Protein
+    -------
+
+    Description
+    -----------
+    This dataset gives the amount of protein consumed for nine food groups in 25 European countries. The nine food groups are red meat (RedMeat), white meat (WhiteMeat), eggs (Eggs), milk (Milk), fish (Fish), cereal (Cereal), starch (Starch), nuts (Nuts), and fruits and vegetables (FruitVeg).
+
+    Usage
+    -----
+    > from scientisttools import load_protein
+    > protein = load_protein()
+
+    Format
+    ------
+    A numerical data matrix with 25 rows (the European countries) and 9 columns (the food groups)
+
+    Source
+    ------
+    The protein dataset for sparsePCA R package
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"protein.RData")["protein"]
+    data.name = "protein"
+    return data
+
+def load_vote():
+    """
+    Congressional Voting Records
+    ----------------------------
+
+
+    Usage
+    -----
+    > from scientisttools import load_vote
+    > vote = load_vote()
+
+    Source
+    ------
+    The Congressional Voting Records. See https://archive.ics.uci.edu/dataset/105/congressional+voting+records
+    
+    Examples
+    --------
+    > # Load vote dataset
+    > from scientistools import load_vote
+    > vote = load_vote()
+    >
+    > from scientisttools import CATVARHCA
+    > X = vote.iloc[:,1:]
+    > res_catvarhca =  CATVARHCA(n_clusters=2,diss_metric="cramer",metric="euclidean",method="ward",parallelize=True)
+    > res_catvarhca.fit(X)
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    data = pd.read_excel(DATASETS_DIR/"congressvotingrecords.xlsx")
+    return data

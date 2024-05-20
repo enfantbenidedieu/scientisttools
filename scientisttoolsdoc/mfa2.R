@@ -12,6 +12,11 @@ res2.mfa <- MFA(poison, group=c(2,2,5,6), type=c("s","n","n","n"),
 
 fviz_contrib(res2.mfa,choice = "partial.axes")
 
+DimDesc = dimdesc(res2.mfa)
+DimDesc$Dim.1$quanti
+DimDesc$Dim.1$quali
+DimDesc$Dim.1$category
+
 ################################################################
 # Eigenvalues
 ###############################################################

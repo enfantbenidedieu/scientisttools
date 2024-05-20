@@ -78,8 +78,8 @@ def fviz_contrib(self,
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","mfa","mfaqual","mfamix","mfact","partialpca"]:
-        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA")    
+    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","mfa","mfaqual","mfamix","mfact","partialpca","efa"]:
+        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA, EFA")    
         
     if choice not in ["row","col","var","ind","quanti_var","quali_var","freq","group","partial_axes"]:
         raise ValueError("'choice' should be one of 'row', 'col', 'var', 'ind', 'quanti_var', 'quali_var',  'freq','group' 'partial_axes'.")
@@ -96,7 +96,7 @@ def fviz_contrib(self,
         bar_width = 0.8
 
     ################## set
-    if self.model_ in ["pca","mca","specificmca","partialpca"] and choice not in ["ind","var"]:
+    if self.model_ in ["pca","mca","specificmca","partialpca","efa"] and choice not in ["ind","var"]:
         raise ValueError("'choice' should be one of 'var', 'ind'")
     
     if self.model_ == "efa" and choice != "var":

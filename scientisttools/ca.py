@@ -86,13 +86,9 @@ class CA(BaseEstimator,TransformerMixin):
     Examples
     --------
     > from scientisttools import load_children
-
     > children = load_children()
-
     > res_ca = CA(row_sup=list(range(14,18)),col_sup=list(range(5,8)),parallelize=True)
-
     > res_ca.fit(children)
-
     > summaryCA(res_ca)
     """
 

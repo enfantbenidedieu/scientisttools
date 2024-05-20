@@ -136,7 +136,7 @@ def fviz_partialpca_ind(self,
         if legend_title is None:
             legend_title = "Cluster"
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+
+            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
                         pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :
@@ -228,8 +228,11 @@ def fviz_partialpca_var(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
+
     
-    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     
     if self.model_ != "partialpca":

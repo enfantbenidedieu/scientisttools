@@ -28,6 +28,14 @@ res.mfa$global.pca$svd$V[c(1:5),]
 fviz_contrib(res.mfa,choice ="partial.axes")
 fviz_cos2(res.mfa,choice = "partial.axes")
 
+DimDesc <- dimdesc(res.mfa)
+DimDesc$Dim.1$quanti
+DimDesc$Dim.1$category
+DimDesc$Dim.2$quanti
+DimDesc$Dim.2$quali
+DimDesc$Dim.2$category
+DimDesc$Dim.3$quanti
+
 ###############################################################
 # Eigenvalues
 #############################################################
@@ -131,3 +139,16 @@ fviz_mfa_axes(res.mfa)
 quanti_var <- get_mfa_var(res.mfa,"quanti.var")
 quali_var <- get_mfa_var(res.mfa,"quali.var")
 groups <- get_mfa_var(res.mfa,"group")
+
+
+
+
+data("gironde")
+gironde <- 
+  cbind.data.frame(
+    gironde$employment,
+    gironde$housing,
+    gironde$services,
+    gironde$environment
+  )
+save(gironde,file = "./donnee/gironde.RData")

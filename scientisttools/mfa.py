@@ -189,9 +189,9 @@ class MFA(BaseEstimator,TransformerMixin):
         #   Check if group is None
         #########################################################################################################################
         if self.group is None:
-            raise ValueError("Error : 'group' must be assigned.")
+            raise ValueError("'group' must be assigned.")
         elif not (isinstance(self.group, list) or isinstance(self.group,tuple)):
-            raise ValueError("Error : 'group' must be a list or a tuple with the number of variables in each group")
+            raise ValueError("'group' must be a list or a tuple with the number of variables in each group")
         else:
             nb_elt_group = [int(x) for x in self.group]
 
@@ -217,11 +217,11 @@ class MFA(BaseEstimator,TransformerMixin):
         #   Check if group type in not None
         #########################################################################################################################
         if self.group_type is None:
-            raise ValueError("Error : 'group_type' must be assigned.")
+            raise ValueError("'group_type' must be assigned.")
         
         #######################################################################################################################
         if len(self.group) != len(self.group_type):
-            raise TypeError("Error : Not convenient group definition")
+            raise TypeError("Not convenient group definition")
         
         ############################################################################################################################
         #  Assigned group name
@@ -229,7 +229,7 @@ class MFA(BaseEstimator,TransformerMixin):
         if self.name_group is None:
             group_name = ["Gr"+str(x+1) for x in range(len(nb_elt_group))]
         elif not (isinstance(self.name_group,list) or isinstance(self.name_group,tuple)):
-            raise TypeError("Error : 'group_name' must be a list or a tuple of group name")
+            raise TypeError("'group_name' must be a list or a tuple of group name")
         else:
             group_name = [x for x in self.name_group]
         
@@ -328,7 +328,7 @@ class MFA(BaseEstimator,TransformerMixin):
             for grp, cols in group_active_dict.items():
                 var_weights_mfa[grp] = np.ones(len(cols)).tolist()
         elif not isinstance(self.var_weights_mfa,dict):
-            raise ValueError("Error : 'var_weights_mfa' must be a dictionary where keys are groups names and values are list of variables weights in group.")
+            raise ValueError("'var_weights_mfa' must be a dictionary where keys are groups names and values are list of variables weights in group.")
         else:
             for grp, cols in group_active_dict.items():
                 var_weights_mfa[grp] = np.array(self.var_weights_mfa[grp]).tolist()
@@ -343,7 +343,7 @@ class MFA(BaseEstimator,TransformerMixin):
                 # Scale Principal Components Anlysis (PCA)
                 fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=var_weights_mfa[grp],ind_sup=None,parallelize=self.parallelize)
             else:
-                raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                raise TypeError("For continues group 'group_type' should be one of 'c', 's'")
             model[grp] = fa.fit(X[cols])
 
             ##### Add supplementary individuals
@@ -358,7 +358,7 @@ class MFA(BaseEstimator,TransformerMixin):
                     # Scale Principal Components Anlysis (PCA)
                     fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,var_weights=var_weights_mfa[grp],ind_sup=ind_sup,parallelize=self.parallelize)
                 else:
-                    raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                    raise TypeError("For continues group 'group_type' should be one of 'c', 's'")
                 model[grp] = fa.fit(pd.concat((X[cols],X_ind_sup[cols]),axis=0))
         
         ############################################### Separate  Factor Analysis for supplementary groups ######################################""
@@ -376,17 +376,17 @@ class MFA(BaseEstimator,TransformerMixin):
                     elif self.group_type[group_name.index(grp)]=="s":
                         fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                        raise TypeError("For continues group 'group_type' should be one of 'c', 's'")
                 elif all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols):
                     if self.group_type[group_name.index(grp)]=="n":
                         fa = MCA(n_components=None,parallelize=self.parallelize,benzecri=False,greenacre=False)
                     else:
-                        raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                        raise TypeError("For categoricals group 'group_type' should be 'n'")
                 else:
                     if self.group_type[group_name.index(grp)]=="m":
                         fa = FAMD(n_components=None,ind_weights=ind_weights,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+                        raise TypeError("For mixed group 'group_type' should be 'm'")
                 # Fit the model
                 model[grp] = fa.fit(X_group_sup[cols])
 
@@ -408,19 +408,11 @@ class MFA(BaseEstimator,TransformerMixin):
         base        = pd.DataFrame().astype("float")
         var_weights = pd.Series(name="weight").astype("float")
         for grp,cols in group_active_dict.items():
-            ############################### Compute Mean and Standard deviation #################################
-            d1 = DescrStatsW(X[cols],weights=ind_weights,ddof=0)
-            ########################### Standardize #################################################################################
-            Z = (X[cols] - d1.mean.reshape(1,-1))/d1.std.reshape(1,-1)
-            ###################" Concatenate
+            Z = model[grp].call_["Z"]
             base = pd.concat([base,Z],axis=1)
-            ##################################"
-            means[grp] = d1.mean.reshape(1,-1)
-            std[grp] = d1.std.reshape(1,-1)
-            ################################ variables weights
-            weights = pd.Series(np.repeat(a=1/model[grp].eig_.iloc[0,0],repeats=len(cols)),index=cols)
-            # Ajout de la pondération de la variable
-            weights = weights*np.array(var_weights_mfa[grp])
+            means[grp] = model[grp].call_["means"].values.reshape(1,-1)
+            std[grp] = model[grp].call_["std"].values.reshape(1,-1)
+            weights = np.array(var_weights_mfa[grp])*pd.Series([1/model[grp].eig_.iloc[0,0]]*len(cols),index=cols)
             var_weights = pd.concat((var_weights,weights),axis=0)
         
         # Number of components
@@ -807,7 +799,7 @@ class MFA(BaseEstimator,TransformerMixin):
                     coord = (data.sum(axis=0)/(Xg.shape[1]*self.separate_analyses_[grp].eig_.iloc[0,0]))
                     group_sup_coord = pd.concat((group_sup_coord,coord.to_frame(grp).T),axis=0)
                 else:
-                    raise TypeError("Error : All columns should have the same type.")
+                    raise TypeError("All columns should have the same type.")
             
             #################################### group sup cos2 ###########################################################
             group_sup_cos2 = pd.concat((((group_sup_coord.loc[grp,:]**2)/group_sup_dist2.loc[grp]).to_frame(grp).T for grp in group_sup_coord.index.tolist()),axis=0)

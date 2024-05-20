@@ -260,7 +260,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         # Compute statistiques
         summary_quali = pd.DataFrame()
         for col in X_qual.columns.tolist():
-            eff = X_qual[col].value_counts().to_frame("count").reset_index().rename(columns={"index" : "categorie"})
+            eff = X_qual[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
             eff.insert(0,"variable",col)
             summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
         summary_quali["count"] = summary_quali["count"].astype("int")
@@ -522,7 +522,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             # Compute statistiques
             summary_quali_sup = pd.DataFrame()
             for col in X_quali_sup.columns.tolist():
-                eff = X_quali_sup[col].value_counts().to_frame("count").reset_index().rename(columns={"index" : "categorie"})
+                eff = X_quali_sup[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
                 eff.insert(0,"variable",col)
                 summary_quali_sup = pd.concat([summary_quali_sup,eff],axis=0,ignore_index=True)
             summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")

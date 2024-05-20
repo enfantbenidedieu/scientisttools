@@ -17,6 +17,11 @@ res=MFA(Biometrie2,group=c(3,3,3,3),
         #num.group.sup = c(3,4),
         graph = FALSE)
 
+DimDesc <- dimdesc(res)
+DimDesc$Dim.1$quanti
+DimDesc$Dim.1$quali
+DimDesc$Dim.1$category
+
 fviz_contrib(res,choice = "quanti.var")
 
 fviz_mfa_ind(res)
@@ -86,6 +91,23 @@ partial_axes$cor
 partial_axes$contrib
 partial_axes$cor.between
 
+
+dat <- cbind(gironde$employment,gironde$housing,gironde$services,gironde$environment) 
+names <- c("employment","housing","services","environment") 
+res.mfamix<- MFA(dat,
+                 type = c("s","m","n","s"),
+                 name.group = names,
+                 group = c(9,5,9,4),
+                 ncp = 3,
+                 graph = F)
+
+dat <- cbind(gironde$employment,gironde$housing,gironde$services,gironde$environment) 
+index <- c(rep(1,9),rep(2,5),rep(3,9),rep(4,4)) 
+names <- c("employment","housing","services","environment") 
+res.mfamix<-MFAmix(data=dat,groups=index,
+                   name.groups=names,ndim=3,rename.level=TRUE,graph=FALSE)
+
+print(res.mfamix)
 ################################################################
 # Inertia Informations
 ################################################################

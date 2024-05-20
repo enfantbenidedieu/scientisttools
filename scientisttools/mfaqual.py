@@ -187,9 +187,9 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         #   Check if group is None
         #########################################################################################################################
         if self.group is None:
-            raise ValueError("Error : 'group' must be assigned.")
+            raise ValueError("'group' must be assigned.")
         elif not (isinstance(self.group, list) or isinstance(self.group,tuple)):
-            raise ValueError("Error : 'group' must be a list or a tuple with the number of variables in each group")
+            raise TypeError("'group' must be a list or a tuple with the number of variables in each group")
         else:
             nb_elt_group = [int(x) for x in self.group]
         
@@ -216,11 +216,11 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         #   Check if group type in not None
         #########################################################################################################################
         if self.group_type is None:
-            raise ValueError("Error : 'group_type' must be assigned.")
+            raise ValueError("'group_type' must be assigned.")
         
         #######################################################################################################################
         if len(self.group) != len(self.group_type):
-            raise TypeError("Error : Not convenient group definition")
+            raise TypeError("Not convenient group definition")
 
         ############################################################################################################################
         #  Assigned group name
@@ -228,7 +228,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         if self.name_group is None:
             group_name = ["Gr"+str(x+1) for x in range(len(nb_elt_group))]
         elif not (isinstance(self.name_group,list) or isinstance(self.name_group,tuple)):
-            raise TypeError("Error : 'group_name' must be a list or a tuple of group name")
+            raise TypeError("'group_name' must be a list or a tuple of group name")
         else:
             group_name = [x for x in self.name_group]
         
@@ -289,11 +289,11 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         summary_quali = pd.DataFrame()
         for grp, cols in group_active_dict.items():
             for col in cols:
-                eff = X[col].value_counts().to_frame("effectif").reset_index().rename(columns={"index" : "modalite"})
+                eff = X[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
                 eff.insert(0,"variable",col)
                 eff.insert(0,"group",group_name.index(grp))
                 summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
-        summary_quali["effectif"] = summary_quali["effectif"].astype("int")
+        summary_quali["count"] = summary_quali["count"].astype("int")
         self.summary_quali_ = summary_quali
         
         ########### Set row weight and columns weight
@@ -301,9 +301,9 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
         if self.ind_weights is None:
             ind_weights = (np.ones(X.shape[0])/X.shape[0]).tolist()
         elif not isinstance(self.ind_weights,list):
-            raise ValueError("Error : 'ind_weights' must be a list of individuals weights")
+            raise ValueError("'ind_weights' must be a list of individuals weights")
         elif len(self.ind_weights) != X.shape[0]:
-            raise ValueError(f"Error : 'ind_weights' must be a list with length {X.shape[0]}.")
+            raise ValueError(f"'ind_weights' must be a list with length {X.shape[0]}.")
         else:
             ind_weights = [x/np.sum(self.ind_weights) for x in self.ind_weights]
         
@@ -316,7 +316,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                     var_weights[col] = 1/len(cols)
                 var_weights_mfa[grp] = var_weights
         elif not isinstance(self.var_weights_mfa,dict):
-            raise ValueError("Error : 'var_weights_mfa' must be a dictionary where keys are groups names and values are pandas series of variables weights in group.")
+            raise ValueError("'var_weights_mfa' must be a dictionary where keys are groups names and values are pandas series of variables weights in group.")
         else:
             for grp, cols in group_active_dict.items():
                 var_weights = pd.Series(index=cols,name="weights").astype("float")
@@ -331,7 +331,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                 # Multiple Correspondence Analysis (MCA)
                 fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=None,var_weights=var_weights_mfa[grp],benzecri=False,greenacre=False,parallelize=self.parallelize)
             else:
-                raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                raise TypeError("For categoricals group 'group_type' should be 'n'")
             model[grp] = fa.fit(X[cols])
 
             ##### Add supplementary individuals
@@ -342,7 +342,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                 if self.group_type[group_name.index(grp)]=="c":
                     fa = MCA(n_components=None,ind_weights=ind_weights,ind_sup=ind_sup,var_weights=var_weights_mfa[grp],benzecri=False,greenacre=False,parallelize=self.parallelize)
                 else:
-                    raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                    raise TypeError("For categoricals group 'group_type' should be 'n'")
                 model[grp] = fa.fit(pd.concat((X[cols],X_ind_sup[cols]),axis=0))
         
         ############################################### Separate  Factor Analysis for supplementary groups ######################################""
@@ -359,17 +359,17 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                     elif self.group_type[group_name.index(grp)]=="s":
                         fa = PCA(standardize=True,n_components=None,ind_weights=ind_weights,ind_sup=None,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for continues group 'group_type' should be one of 'c', 's'")
+                        raise TypeError("For continues group 'group_type' should be one of 'c', 's'")
                 elif all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols):
                     if self.group_type[group_name.index(grp)]=="n":
                         fa = MCA(n_components=None,ind_weights=ind_weights,benzecri=False,greenacre=False,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for categoricals group 'group_type' should be 'n'")
+                        raise TypeError("For categoricals group 'group_type' should be 'n'")
                 else:
                     if self.group_type[group_name.index(grp)]=="m":
                         fa = FAMD(n_components=None,ind_weights=ind_weights,parallelize=self.parallelize)
                     else:
-                        raise TypeError("Error : for mixed group 'group_type' should be 'm'")
+                        raise TypeError("For mixed group 'group_type' should be 'm'")
                 model[grp] = fa.fit(X_group_sup[cols])
 
         ##################### Compute group disto
@@ -450,6 +450,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                 summary_quanti_sup = X_sup_quanti.describe().T.reset_index().rename(columns={"index" : "variable"})
                 summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
                 summary_quanti_sup.insert(0,"group",group_name.index(grp))
+                self.summary_quanti_var_sup_ = summary_quanti_sup
                 
                 ####### Standardize the data
                 d2 = DescrStatsW(X_sup_quanti,weights=ind_weights,ddof=0)
@@ -473,7 +474,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                 summary_quali_var_sup.insert(0,"group",group_name.index(grp))
                 
                 # Append 
-                self.summary_quanti_ = pd.concat((self.summary_quali_,summary_quali_var_sup),axis=0,ignore_index=True)
+                self.summary_quali_ = pd.concat((self.summary_quali_,summary_quali_var_sup),axis=0,ignore_index=True)
 
         ##########################################
         self.global_pca_ = global_pca

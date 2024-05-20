@@ -168,6 +168,9 @@ class MCA(BaseEstimator,TransformerMixin):
                 quali_sup = [int(self.quali_sup)]
             elif ((isinstance(self.quali_sup,list) or isinstance(self.quali_sup,tuple))  and len(self.quali_sup)>=1):
                 quali_sup = [int(x) for x in self.quali_sup]
+            quali_sup_label = X.columns[quali_sup]
+        else:
+            quali_sup_label = None
 
         #  Check if quanti sup
         if self.quanti_sup is not None:
@@ -175,6 +178,9 @@ class MCA(BaseEstimator,TransformerMixin):
                 quanti_sup = [int(self.quanti_sup)]
             elif ((isinstance(self.quanti_sup,list) or isinstance(self.quanti_sup,tuple))  and len(self.quanti_sup)>=1):
                 quanti_sup = [int(x) for x in self.quanti_sup]
+            quanti_sup_label = X.columns[quanti_sup]
+        else:
+            quanti_sup_label = None
         
         # Check if individuls supplementary
         if self.ind_sup is not None:
@@ -182,6 +188,9 @@ class MCA(BaseEstimator,TransformerMixin):
                 ind_sup = [int(self.ind_sup)]
             elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
                 ind_sup = [int(x) for x in self.ind_sup]
+            ind_sup_label = X.index[ind_sup]
+        else:
+            ind_sup_label = None
 
         ####################################### Save the base in a new variables
         # Store data
@@ -189,26 +198,27 @@ class MCA(BaseEstimator,TransformerMixin):
 
         ####################################### Drop supplementary qualitative columns ########################################
         if self.quali_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quali_sup])
+            X = X.drop(columns=quali_sup_label)
         
         ######################################## Drop supplementary quantitatives columns #######################################
         if self.quanti_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in quanti_sup])
+            X = X.drop(columns=quanti_sup_label)
         
         ######################################## Drop supplementary individuls  ##############################################
         if self.ind_sup is not None:
             # Extract supplementary individuals
-            X_ind_sup = X.iloc[self.ind_sup,:]
-            X = X.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+            X_ind_sup = X.loc[ind_sup_label,:]
+            X = X.drop(index=ind_sup_label)
         
         ####################################### Multiple Correspondence Anlysis (MCA) ##################################################
         # Check if 
         X = revaluate_cat_variable(X)
+
         #########################################################################################################
         # Compute statistiques
         summary_quali = pd.DataFrame()
         for col in X.columns.tolist():
-            eff = X[col].value_counts().to_frame("count").reset_index().rename(columns={"index" : "categorie"})
+            eff = X[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
             eff.insert(0,"variable",col)
             summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
         summary_quali["count"] = summary_quali["count"].astype("int")
@@ -288,7 +298,10 @@ class MCA(BaseEstimator,TransformerMixin):
                       "row_marge" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
                       "col_marge" : mod_weights,
                       "var_weights" : var_weights,
-                      "n_components" : n_components}
+                      "n_components" : n_components,
+                      "ind_sup" : ind_sup_label,
+                      "quali_sup" : quali_sup_label,
+                      "quanti_sup" : quanti_sup_label}
 
         #################### Singular Value Decomposition (SVD) ########################################
         svd = svd_triplet(X=Z,row_weights=ind_weights,col_weights=mod_weights.values,n_components=n_components)
@@ -304,8 +317,7 @@ class MCA(BaseEstimator,TransformerMixin):
         ###############################################################
         # Store all informations
         eig = np.c_[eigen_values,difference,proportion,cumulative]
-        self.eig_ = pd.DataFrame(eig,columns = ["eigenvalue","difference","proportion","cumulative"],
-                                 index=["Dim."+str(x+1) for x in range(eig.shape[0])])
+        self.eig_ = pd.DataFrame(eig,columns = ["eigenvalue","difference","proportion","cumulative"],index=["Dim."+str(x+1) for x in range(eig.shape[0])])
         
         # save eigen value grather than threshold
         lambd = eigen_values[eigen_values>(1/X.shape[1])]
@@ -443,7 +455,7 @@ class MCA(BaseEstimator,TransformerMixin):
             ind_sup_coord = mapply(ind_sup_coord,lambda x : x/np.sqrt(eigen_values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
 
             ################################ Supplementary row Cos2 ##########################################################
-            Z_sup = pd.concat((ind_sup_dummies.loc[:,k]*(1/p_k[k])-1 for k  in ind_sup_dummies.columns.tolist()),axis=1)
+            Z_sup = pd.concat((ind_sup_dummies.loc[:,k]*(1/p_k[k])-1 for k  in ind_sup_dummies.columns),axis=1)
             ind_sup_dist2 = mapply(Z_sup,lambda x : (x**2)*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
             ind_sup_dist2.name = "dist"
 
@@ -454,17 +466,16 @@ class MCA(BaseEstimator,TransformerMixin):
             self.ind_sup_ = {"coord" : ind_sup_coord, "cos2" : ind_sup_cos2, "dist" : ind_sup_dist2}
         
         if self.quali_sup is not None:
-            X_quali_sup = Xtot.iloc[:,quali_sup]
+            X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
-                X_quali_sup = X_quali_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+                X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
 
             #####################"
             X_quali_sup = X_quali_sup.astype("object")
-            X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns.tolist()),axis=1)
+            X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns),axis=1)
 
             # Correlation Ratio
-            quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,
-                                                      n_workers=n_workers) for col in X_quali_sup.columns.tolist()),axis=0)
+            quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
             
             # # Coordinates of supplementary categories - corrected
             quali_sup_coord = mapply(X_quali_dummies,lambda x : x/np.sum(x),axis=0,progressbar=False,n_workers=n_workers).T.dot(ind_coord)
@@ -495,7 +506,7 @@ class MCA(BaseEstimator,TransformerMixin):
             # Compute statistiques
             summary_quali_sup = pd.DataFrame()
             for col in X_quali_sup.columns.tolist():
-                eff = X_quali_sup[col].value_counts().to_frame("count").reset_index().rename(columns={"index" : "categorie"})
+                eff = X_quali_sup[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
                 eff.insert(0,"variable",col)
                 summary_quali_sup = pd.concat([summary_quali_sup,eff],axis=0,ignore_index=True)
             summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
@@ -545,9 +556,9 @@ class MCA(BaseEstimator,TransformerMixin):
                 self.chi2_test_ = pd.concat((self.chi2_test_,chi2_test3),axis=0,ignore_index=True)
 
         if self.quanti_sup is not None:
-            X_quanti_sup = Xtot.iloc[:,quanti_sup]
+            X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.ind_sup is not None:
-                X_quanti_sup = X_quanti_sup.drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in ind_sup])
+                X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
 
             ##############################################################################################################################
             X_quanti_sup = X_quanti_sup.astype("float")

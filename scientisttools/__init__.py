@@ -29,6 +29,9 @@ from .mpca import MPCA
 from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
 from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_var, fviz_mpca
 
+# PCAMIX
+from .pcamix import PCAMIX
+
 # Partial PCA
 from .partialpca import PartialPCA
 from .get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
@@ -76,6 +79,10 @@ from .fviz_cca import fviz_cca_ind, fviz_cca_var, fviz_cca_scatterplot, fviz_cca
 from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
 from .dimdesc import dimdesc
 from .reconst import reconst
+from .recodecont import recodecont
+from .recodecat import recodecat
+from .recodevar import recodevar
+from .splitmix import splitmix
 
 from .fviz_contrib import fviz_contrib
 from .fviz_cos2 import fviz_cos2
@@ -98,11 +105,19 @@ from .datasets import load_decathlon, load_decathlon2, load_autos, load_temperat
 # CA datasets
 from .datasets import load_children, load_housetasks, load_women_work, load_femmes_travail
 # MCA datasets
-from .datasets import load_tea, load_poison, load_races_canines
+from .datasets import load_tea, load_poison, load_races_canines, load_mushroom, load_music
 # FAMD datasets
-from .datasets import load_autos2
+from .datasets import load_autos2, load_tennis
+# MPCA dataset
+from .datasets import load_cars
 # MFA datasets
 from .datasets import load_wine, load_qtevie
+# CCA datasets
+from .datasets import load_lifecyclesavings
+# Sparse PCA datasets
+from .datasets import load_protein
+# CATVARHCA dataset
+from .datasets import load_vote
 
 __version__ = '0.1.5'
 __name__ = "scientisttools"

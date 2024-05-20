@@ -275,7 +275,10 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(var_infos)
     
     # Add variables
-    print("\nCategorical variables (eta2)\n")
+    if var["inertia"].shape[0] > nb_element:
+        print(f"\nCategorical variables (eta2) (the {nb_element} first)\n")
+    else:
+        print("\nCategorical variables (eta2)\n")
     quali_var_infos = var["inertia"]
     for i in np.arange(0,ncp,1):
         quali_var_eta2 = var["eta2"].iloc[:,i]
@@ -310,7 +313,10 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         else:
             print(var_sup_infos)
         
-        print("\nSupplementary categorical variables (eta2)\n")
+        if var_sup["eta2"].shape[0] > nb_element:
+            print(f"\nSupplementary categorical variables (eta2) (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary categorical variables (eta2)\n")
         quali_var_sup_infos = var_sup["eta2"].iloc[:nb_element,:ncp].round(decimals=digits)
         if to_markdown:
             print(quali_var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
