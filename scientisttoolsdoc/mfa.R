@@ -151,4 +151,4 @@ gironde <-
     gironde$services,
     gironde$environment
   )
-save(gironde,file = "./donnee/gironde.RData")
+save(gironde,file = "./donnee/gironde.rda")

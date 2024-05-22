@@ -254,7 +254,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
         var_weights = pd.Series(name="weight").astype("float")
 
         # Set quantitatives variables weights
-        if n_cont != 0:
+        if n_cont > 0:
             if self.quanti_weights is None:
                 weights = np.ones(X_quanti.shape[1])
             elif not isinstance(self.quanti_weights,list):
@@ -268,7 +268,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             var_weights = pd.concat((var_weights,quanti_weights),axis=0)
         
         # Set categoricals variables weights
-        if n_cat != 0:
+        if n_cat > 0:
             quali_weights = pd.Series(index=X_quali.columns.tolist(),name="weight").astype("float")
             if self.quali_weights is None:
                 for col in X_quali.columns.tolist():
@@ -316,12 +316,14 @@ class PCAMIX(BaseEstimator,TransformerMixin):
         #Store call informations  : X = Z, M = diag(col_weight), D = diag(row_weight) : t(X)DXM
         self.call_ = {"Xtot" : Xtot,
                       "X" : X,
+                      "Z" : rec["Z"],
+                      "W" : rec["X"],
                       "ind_sup" : ind_sup_label,
                       "quanti_sup" : quanti_sup_label,
                       "quali_sup" : quali_sup_label,
-                      "dummies" : dummies,
                       "n_components" : n_components,
-                      "rec" :  rec}
+                      "rec" :  rec,
+                      "var_weights" : var_weights}
     
         # Set using n_components
         vs = svd["vs"][:n_components]
@@ -373,7 +375,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             moda_var_coord = mapply(moda_var_coord,lambda x : x*mod_weights,axis=0,progressbar=False,n_workers=n_workers)
 
             # Categoricals variables contributions
-            moda_var_contrib = mapply(moda_var_coord,lambda x : (x**2)*(1/mod_weights),axis=0,progressbar=False,n_workers=n_workers)
+            moda_var_contrib = mapply(moda_var_coord,lambda x : 100*(x**2)*(1/mod_weights),axis=0,progressbar=False,n_workers=n_workers)
             moda_var_contrib = mapply(moda_var_contrib,lambda x : x/(vs**2),axis=1,progressbar=False,n_workers=n_workers)
 
             # Categoricals variables cos2
@@ -439,12 +441,12 @@ class PCAMIX(BaseEstimator,TransformerMixin):
                 Z_ind_sup_quant = (X_ind_sup_quant - rec["means"].iloc[:n_cont].values.reshape(1,-1))/rec["std"].iloc[:n_cont].values.reshape(1,-1)
 
                 # Supplementary individuals coordinates
-                ind_sup_coord1 = mapply(Z_ind_sup_quant,lambda x : x*quanti_weights,axis=1,progressbar=False,n_workers=n_workers)
+                ind_sup_coord1 = mapply(Z_ind_sup_quant,lambda x : x*var_weights.values[:n_cont],axis=1,progressbar=False,n_workers=n_workers)
                 ind_sup_coord1 = np.dot(ind_sup_coord1,svd["V"][:n_cont,:n_components])
                 ind_sup_coord1 = pd.DataFrame(ind_sup_coord1,index=X_ind_sup.index,columns=["Dim."+str(x+1) for x in range(ind_sup_coord1.shape[1])])
 
                 # Supplementary individuals dist2
-                ind_sup_dist21 = mapply(Z_ind_sup_quant,lambda  x : (x**2)*quanti_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+                ind_sup_dist21 = mapply(Z_ind_sup_quant,lambda  x : (x**2)*var_weights.values[:n_cont],axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
                 ind_sup_dist21.name = "dist"
 
                 # Supplementary individuals cos2
@@ -472,12 +474,12 @@ class PCAMIX(BaseEstimator,TransformerMixin):
                 Z_ind_sup_qual = (ind_sup_dummies - (dummies.sum(axis=0)/n_rows).values.reshape(1,-1))
 
                 # Supplementary individuals coordinates
-                ind_sup_coord2 = mapply(Z_ind_sup_qual,lambda x : x*mod_weights,axis=1,progressbar=False,n_workers=n_workers)
+                ind_sup_coord2 = mapply(Z_ind_sup_qual,lambda x : x*var_weights.values[n_cont:],axis=1,progressbar=False,n_workers=n_workers)
                 ind_sup_coord2 = np.dot(ind_sup_coord2,svd["V"][n_cont:,:n_components])
                 ind_sup_coord2 = pd.DataFrame(ind_sup_coord2,index=X_ind_sup.index,columns=["Dim."+str(x+1) for x in range(ind_sup_coord2.shape[1])])
 
                 # Supplementary individuals dist2
-                ind_sup_dist22 = mapply(Z_ind_sup_qual,lambda x : (x**2)*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+                ind_sup_dist22 = mapply(Z_ind_sup_qual,lambda x : (x**2)*var_weights.values[n_cont:],axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
                 ind_sup_dist22.name = "dist"
 
                 # SSupplementary individuals cos2
@@ -504,7 +506,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
 
             ####### Compute Supplementary quantitatives variables coordinates
             var_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
-            var_sup_coord = np.dot(var_sup_coord.T,svd["U"][:,:n_components])
+            var_sup_coord = np.dot(var_sup_coord.T,U)
             var_sup_coord = pd.DataFrame(var_sup_coord,index=X_quanti_sup.columns,columns = ["Dim."+str(x+1) for x in range(var_sup_coord.shape[1])])
 
             ############# Supplementary quantitatives variables Cos2
@@ -522,29 +524,68 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
                 X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
+
+            ######################################## Barycentre of DataFrame ########################################
+            X_quali_sup = X_quali_sup.astype("object")
+            ############################################################################################################
+            # Check if two columns have the same categories
+            X_quali_sup = revaluate_cat_variable(X_quali_sup)
+
+            ####################################" Correlation ratio #####################################################
+            quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
+
+            ###################################### Coordinates ############################################################
+            barycentre = pd.DataFrame().astype("float")
+            n_k = pd.Series().astype("float")
+            for col in X_quali_sup.columns:
+                vsQual = X_quali_sup[col]
+                modalite, counts = np.unique(vsQual, return_counts=True)
+                n_k = pd.concat([n_k,pd.Series(counts,index=modalite)],axis=0)
+                bary = pd.DataFrame(index=modalite,columns=base.columns)
+                for mod in modalite:
+                    idx = [elt for elt, cat in enumerate(vsQual) if  cat == mod]
+                    bary.loc[mod,:] = np.average(X.iloc[idx,:],axis=0,weights=ind_weights[idx])
+                barycentre = pd.concat((barycentre,bary),axis=0)
             
+            ############### Standardize the barycenter
+            bary = (barycentre - rec["means"].values.reshape(1,-1))/rec["std"].values.reshape(1,-1)
+            quali_sup_dist2  = mapply(bary, lambda x : x**2*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+            quali_sup_dist2.name = "dist"
+
+            ################################### Barycentrique coordinates #############################################
+            quali_sup_coord = mapply(bary, lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers)
+            quali_sup_coord = quali_sup_coord.dot(V)
+            quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(quali_sup_coord.shape[1])]
+
+            ################################## Cos2
+            quali_sup_cos2 = mapply(quali_sup_coord, lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
             
-            Z_quali_sup = pd.concat((Z,X_quali_sup),axis=1)
-            # Find supplementary quantitatives columns index
-            index = [Z_quali_sup.columns.tolist().index(x) for x in X_quali_sup.columns.tolist()]
-            # Update PCA
-            global_pca = PCA(standardize=False,n_components=n_components,ind_sup=None,quali_sup=index).fit(Z_quali_sup)
-            self.quali_sup_ = global_pca.quali_sup_
+            ################################## v-test
+            quali_sup_vtest = mapply(quali_sup_coord,lambda x : x/vs,axis=1,progressbar=False,n_workers=n_workers)
+            quali_sup_vtest = pd.concat(((quali_sup_vtest.loc[k,:]/np.sqrt((X.shape[0]-n_k[k])/((X.shape[0]-1)*n_k[k]))).to_frame().T for k in n_k.index),axis=0)
+
+            # Supplementary categories informations
+            self.quali_sup_ = {"coord" : quali_sup_coord,
+                               "cos2" : quali_sup_cos2,
+                               "vtest" : quali_sup_vtest,
+                               "dist" : np.sqrt(quali_sup_dist2),
+                               "eta2" : quali_sup_eta2,
+                               "barycentre" : barycentre}
         
-        
-        
-        if self.quanti_sup is not None and self.quali_sup is not None:
-            var_sup_coord = pd.concat((self.quanti_sup_["cos2"],self.quali_sup_["eta2"]),axis=0)
-            var_sup_cos2 = pd.concat((self.quanti_sup_["cos2"]**2,self.quali_sup_["cos2"]),axis=0)
-            self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
-        elif self.quanti_sup is not None:
-            var_sup_coord = self.quanti_sup_["cos2"]
-            var_sup_cos2 = self.quanti_sup_["cos2"]**2
-            self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
-        elif self.quali_sup is not None:
-            var_sup_coord = self.quali_sup_["eta2"]
-            var_sup_cos2 = self.quali_sup_["cos2"]
-            self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
+        # If Mixed Data
+        if n_cont > 0 and n_cat > 0:
+            if self.quanti_sup is not None and self.quali_sup is not None:
+                var_sup_coord = pd.concat((self.quanti_sup_["cos2"],self.quali_sup_["eta2"]),axis=0)
+                var_sup_cos2 = pd.concat((self.quanti_sup_["cos2"]**2,self.quali_sup_["cos2"]),axis=0)
+                self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
+            elif self.quanti_sup is not None:
+                var_sup_coord = self.quanti_sup_["cos2"]
+                var_sup_cos2 = self.quanti_sup_["cos2"]**2
+                self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
+            elif self.quali_sup is not None:
+                var_sup_coord = self.quali_sup_["eta2"]
+                var_sup_cos2 = self.quali_sup_["cos2"]
+                self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
 
         self.model_ = "pcamix"
 
@@ -590,27 +631,58 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             n_workers = -1
         else:
             n_workers = 1
+    
+         ##### Prepare supplementary columns
+        X_quant = splitmix(X=X)["quanti"]
+        X_quali = splitmix(X=X)["quali"]
+
+        ####
+        rec = self.call_["rec"]
+        n_components = self.call_["n_components"]
+        n_rows = rec["n"]
+        n_cont = rec["k1"]
+        n_cat = rec["k2"]
+        dummies = rec["dummies"]
+        var_weights = self.call_["var_weights"]
+
+        # Initialize coord
+        coord = pd.DataFrame(np.zeros((X.shape[0],n_components)),index=X.index,columns=["Dim."+str(x+1) for x in range(n_components)])
         
-        # Store continuous and categorical variables
-        X_sup_quant = X[self.call_["quanti"]]
-        X_sup_qual = X[self.call_["quali"]]
+        if n_cont > 0:
+            X_quant = X_quant.astype("float")
 
-        # Standardscaler numerical variable
-        Z1 = (X_sup_quant - self.call_["means"].values.reshape(1,-1))/self.call_["std"].values.reshape(1,-1)
+            # Standardize the data
+            Z_quant = (X_quant - rec["means"].iloc[:n_cont].values.reshape(1,-1))/rec["std"].iloc[:n_cont].values.reshape(1,-1)
 
-        # Standardscaler categorical Variable
-        Y = np.zeros((X.shape[0],self.call_["dummies"].shape[1]))
-        for i in np.arange(0,X.shape[0],1):
-            values = [str(X_sup_qual.iloc[i,k]) for k in np.arange(0,X_sup_qual.shape[1])]
-            for j in np.arange(0,self.call_["dummies"].shape[1],1):
-                if self.call_["dummies"].columns[j] in values:
-                    Y[i,j] = 1
-        Y = pd.DataFrame(Y,index=X.index.tolist(),columns=self.call_["dummies"].columns)
-        # New normalized data
-        Z2 = mapply(Y,lambda x : (x - self.call_["means_k"].values)/np.sqrt(self.call_["prop"].values),axis=1,progressbar=False,n_workers=n_workers)
-        # Supplementary individuals coordinates
-        coord = pd.concat((Z1,Z2),axis=1).dot(self.svd_["V"])
-        coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
+            # Supplementary individuals coordinates
+            coord1 = mapply(Z_quant,lambda x : x*var_weights.values[:n_cont],axis=1,progressbar=False,n_workers=n_workers)
+            coord1 = np.dot(coord1,self.svd_["V"][:n_cont,:n_components])
+            coord1 = pd.DataFrame(coord1,index=X.index,columns=["Dim."+str(x+1) for x in range(coord1.shape[1])])
+            # Update coord
+            coord = coord + coord1
+            
+        if n_cat > 0:
+            # Revaluate the categorical variable
+            X_quali = revaluate_cat_variable(X_quali)
+
+            # Recode to dummies
+            Y = np.zeros((X_quali.shape[0],dummies.shape[1]))
+            for i in np.arange(0,X.shape[0],1):
+                values = [str(X_quali.iloc[i,k]) for k in np.arange(0,rec["quali"].shape[1])]
+                for j in np.arange(0,dummies.shape[1],1):
+                    if dummies.columns[j] in values:
+                        Y[i,j] = 1
+            ind_sup_dummies = pd.DataFrame(Y,columns=dummies.columns,index=X.index)
+
+            # Standardize the data
+            Z_qual = (ind_sup_dummies - (dummies.sum(axis=0)/n_rows).values.reshape(1,-1))
+
+            # Supplementary individuals coordinates
+            coord2 = mapply(Z_qual,lambda x : x*var_weights.values[n_cont:],axis=1,progressbar=False,n_workers=n_workers)
+            coord2 = np.dot(coord2,self.svd_["V"][n_cont:,:n_components])
+            coord2 = pd.DataFrame(coord2,index=X.index,columns=["Dim."+str(x+1) for x in range(coord2.shape[1])])
+            # Update Coord
+            coord = coord + coord2
         return  coord
 
     def fit_transform(self,X,y=None):
@@ -634,8 +706,3 @@ class PCAMIX(BaseEstimator,TransformerMixin):
 
         self.fit(X)
         return self.ind_["coord"]
-
-
-
-
-

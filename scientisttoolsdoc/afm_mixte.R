@@ -108,6 +108,10 @@ res.mfamix<-MFAmix(data=dat,groups=index,
                    name.groups=names,ndim=3,rename.level=TRUE,graph=FALSE)
 
 print(res.mfamix)
+
+
+gironde <- cbind.data.frame(gironde$employment,gironde$housing,gironde$services,gironde$environment) 
+save(gironde,file = "./donnee/gironde.rda")
 ################################################################
 # Inertia Informations
 ################################################################

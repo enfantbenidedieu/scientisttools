@@ -233,6 +233,15 @@ PCAmix<- function (X.quanti=NULL,X.quali=NULL,ndim=5,rename.level=FALSE,
 }
 # res.pcamix <- PCAmix(X.quanti = X.quanti,X.quali=X.quali,graph = F)
 # res.famd <- FAMD(wine,graph = F)
-# res.pca <- PCAmix(X.quanti=X.quanti,X.quali = NULL,graph = F)
-# res.mca <- MCA(X.quali,graph = F)
+res.pca <- PCAmix(X.quanti=X.quanti,X.quali = NULL,graph = F)
+res.mca <- MCA(X.quali,graph = F)
 res.pca2 = PCAmix(X.quanti = NULL,X.quali = X.quali,graph = F)
+
+pred = predict(res.pca,X.quanti = X.quanti,X.quali = NULL)
+pred2 <- predict(res.pca2,X.quanti = NULL,X.quali = X.quali)
+
+res.famd.pca <- FAMD(X.quanti)
+
+
+data(gironde)
+save(gironde,file = "./donnee/gironde.rda")

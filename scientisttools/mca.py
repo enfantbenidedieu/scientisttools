@@ -470,7 +470,7 @@ class MCA(BaseEstimator,TransformerMixin):
             if self.ind_sup is not None:
                 X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
 
-            #####################"
+            #####################
             X_quali_sup = X_quali_sup.astype("object")
             X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns),axis=1)
 

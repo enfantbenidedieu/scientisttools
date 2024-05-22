@@ -82,6 +82,7 @@ from .reconst import reconst
 from .recodecont import recodecont
 from .recodecat import recodecat
 from .recodevar import recodevar
+from .recodevarfamd import recodevarfamd
 from .splitmix import splitmix
 
 from .fviz_contrib import fviz_contrib

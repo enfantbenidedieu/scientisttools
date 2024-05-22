@@ -240,7 +240,6 @@ class PCA(BaseEstimator,TransformerMixin):
         ################## Summary quantitatives variables ####################
         summary_quanti = X.describe().T.reset_index().rename(columns={"index" : "variable"})
         summary_quanti["count"] = summary_quanti["count"].astype("int")
-        print(summary_quanti)
         self.summary_quanti_ = summary_quanti
 
         ###################################### Set number of components ##########################################
@@ -466,13 +465,13 @@ class PCA(BaseEstimator,TransformerMixin):
             
             ######################################## Barycentre of DataFrame ########################################
             X_quali_sup = X_quali_sup.astype("object")
+
             ############################################################################################################
             # Check if two columns have the same categories
             X_quali_sup = revaluate_cat_variable(X_quali_sup)
 
             ####################################" Correlation ratio #####################################################
-            quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,
-                                                      n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
+            quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
 
             ###################################### Coordinates ############################################################
             barycentre = pd.DataFrame().astype("float")

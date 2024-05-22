@@ -184,6 +184,8 @@ ggbiplot <- function(pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE,
 ggbiplot(res.pca)
 
 
+var <- facto_summarize(res.pca, element = "var", 
+                       result = c("coord", "contrib", "cos2"), axes = c(1,2))
 
 E = data.frame(X1 = c(0.8970, 2.0949, 3.0307, 4.0135, 5.0515, 6.0261, 6.9059, 7.9838, 8.9854, 9.9468), 
                X2 = c(8.1472, 9.0579, 1.2699, 9.1338, 6.3236, 0.9754, 2.7850, 5.4688, 9.5751, 9.6489), 
@@ -202,6 +204,12 @@ qx = qr(Z1)
 
 qrQ = qr.Q(qx)
 qxR = qr.R(qx)
+
+data (poison)
+res <- MCA (poison[,3:8],excl=c(1,3))
+
+pcamix <- PCAmixdata::PCAmix(X.quanti = wine[,c(3:ncol(wine))],X.quali = wine[,c(1,2)])
+res.famd = FAMD(wine)
 
 library(CCA)
 pop <- LifeCycleSavings[, 2:3]
@@ -240,3 +248,9 @@ data("orange")
 
 missings <- which(is.na(orange))
 res.comp <- imputePCA(orange,ncp=2)
+
+
+# Quadratic
+data("iris")
+library(MASS)
+res.qda <- qda(Species~.,data = iris)

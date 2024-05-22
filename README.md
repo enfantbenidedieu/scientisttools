@@ -28,7 +28,8 @@ scientisttools is a python package dedicated to multivariate Exploratory Data An
     * Canonical Correlation Analysis (CCA)
     * Multiple Factor Analysis (MFA)
     * Multiple Factor Analysis for qualitatives/categoricals variables (MFAQUAL)
-    * Multiple Factor Analysis of Mixed Data (MFAMIX)
+    * Multiple Factor Analysis of Mixed Data (MFAMD)
+    * Multiple Factor Analysis of Mixed group (MFAMIX)
     * Multiple Factor Analysis of Contingence Tables (MFACT)
 
 * It also performs clustering analysis:
@@ -41,7 +42,6 @@ scientisttools is a python package dedicated to multivariate Exploratory Data An
     * Scaling by MAjorizing a COmplicated Function (SMACOF)
     * Classical Multidimensional Scaling (CMDSCALE)
     * Metric and Non - Metric Multidimensional Scaling (MDS)
-    
 
 * In some methods, it allowed to add supplementary informations such as supplementary individuals and/or variables.
 * It provides a geometrical point of view, a lot of graphical outputs.
