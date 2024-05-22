@@ -1,5 +1,5 @@
 
-
+rm(list = ls())
 library(FactoMineR)
 library(PCAmixdata)
 library(dplyr)
@@ -8,15 +8,17 @@ data(wine)
 X.quanti <- select(wine,where(is.numeric))
 X.quali <- select(wine,where(is.character)|where(is.factor))
 
-recodequanti <- recodquant(X.quanti)
-recodequali <- recodqual(X.quali)
+# recodequanti <- recodquant(X.quanti)
+# recodequali <- recodqual(X.quali)
 
 
-rec1_quanti = recod(X.quanti = X.quanti,X.quali = NULL)
-rec2_quali = recod(X.quanti = NULL,X.quali = X.quali)
+# rec1_quanti = recod(X.quanti = X.quanti,X.quali = NULL)
+# rec2_quali = recod(X.quanti = NULL,X.quali = X.quali)
 res3 = recod(X.quanti = X.quanti,X.quali = X.quali)
 
 res.pcamix <- PCAmix(X.quanti = X.quanti,X.quali=X.quali,graph = F)
+pred <- predict(res.pcamix,X.quanti = X.quanti,X.quali = X.quali)
+sup.quanti <- supvar(res.pcamix,X.quanti.sup = X.quanti,X.quali.sup = X.quali)
 
 PCAmix<- function (X.quanti=NULL,X.quali=NULL,ndim=5,rename.level=FALSE,
                    weight.col.quanti=NULL,weight.col.quali=NULL,graph=TRUE)

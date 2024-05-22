@@ -361,7 +361,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             quanti_var_coord = pd.DataFrame(quanti_var_coord,index=X_quanti.columns,columns=["Dim."+str(x+1) for x in range(quanti_var_coord.shape[1])])
 
             # Continues variables contrib
-            quanti_var_contrib = mapply(quanti_var_coord,lambda x : 100*(x**2)*quanti_weights,axis=0,progressbar=False,n_workers=n_workers)
+            quanti_var_contrib = mapply(quanti_var_coord,lambda x : 100*(x**2)*var_weights.values[:n_cont],axis=0,progressbar=False,n_workers=n_workers)
             quanti_var_contrib = mapply(quanti_var_contrib, lambda x : x/(vs**2),axis=1,progressbar=False,n_workers=n_workers)
 
             # Continuous variables cos2
@@ -372,14 +372,14 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             # Categoricals variables coordinates
             moda_var_coord = V[n_cont:,:].dot(np.diag(vs))
             moda_var_coord = pd.DataFrame(moda_var_coord,index=base.columns[n_cont:],columns=["Dim."+str(x+1) for x in range(moda_var_coord.shape[1])])
-            moda_var_coord = mapply(moda_var_coord,lambda x : x*mod_weights,axis=0,progressbar=False,n_workers=n_workers)
+            moda_var_coord = mapply(moda_var_coord,lambda x : x*var_weights.values[n_cont:],axis=0,progressbar=False,n_workers=n_workers)
 
             # Categoricals variables contributions
-            moda_var_contrib = mapply(moda_var_coord,lambda x : 100*(x**2)*(1/mod_weights),axis=0,progressbar=False,n_workers=n_workers)
+            moda_var_contrib = mapply(moda_var_coord,lambda x : 100*(x**2)*(1/var_weights.values[n_cont:]),axis=0,progressbar=False,n_workers=n_workers)
             moda_var_contrib = mapply(moda_var_contrib,lambda x : x/(vs**2),axis=1,progressbar=False,n_workers=n_workers)
 
             # Categoricals variables cos2
-            moda_var_dist2 = (np.apply_along_axis(func1d=lambda x : x*mod_weights,axis=0,arr=svd["V"][n_cont:,:]*svd["vs"])**2).sum(axis=1)
+            moda_var_dist2 = (np.apply_along_axis(func1d=lambda x : x*var_weights.values[n_cont:],axis=0,arr=svd["V"][n_cont:,:]*svd["vs"])**2).sum(axis=1)
             moda_var_cos2 = mapply(moda_var_coord,lambda x : (x**2)/moda_var_dist2,axis=0,progressbar=False,n_workers=n_workers)
 
             # Categoricals variables Vtest
@@ -387,7 +387,10 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             moda_var_vtest = pd.concat(((moda_var_coord.loc[k,:]*np.sqrt(((X.shape[0]-1)*I_k[k])/(X.shape[0]-I_k[k]))).to_frame(k).T for k in dummies.columns),axis=0)
             moda_var_vtest = mapply(moda_var_vtest,lambda x : x/vs,axis=1,progressbar=False,n_workers=n_workers)
 
-            self.quali_var_ = {"coord" : moda_var_coord, "contrib" : moda_var_contrib, "cos2" : moda_var_cos2,"vtest":moda_var_vtest}
+            # 
+            moda_dist2 = pd.Series(np.sqrt(moda_var_dist2),index=base.columns[n_cont:],name="dist")
+
+            self.quali_var_ = {"coord" : moda_var_coord, "contrib" : moda_var_contrib, "cos2" : moda_var_cos2,"vtest":moda_var_vtest,"dist" : moda_dist2}
 
             ## Qualitatives eta2
             quali_var_eta2 = pd.concat((function_eta2(X=X_quali,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali.columns),axis=0)
@@ -405,21 +408,6 @@ class PCAMIX(BaseEstimator,TransformerMixin):
                 var_cos2 = pd.concat((quanti_var_cos2**2,quali_var_cos2),axis=0)
                 self.var_ = {"coord" : var_coord,"contrib" : var_contrib,"cos2" : var_cos2}
 
-        ########################################################################################################################
-        ################################  Informations about categories ########################################################
-        ########################################################################################################################
-        # Distance between ctegories
-        # dummies_weight = (dummies/prop)-1
-        # # Distance à l'origine
-        # quali_dist2 = mapply(dummies_weight,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
-        # quali_dist2.name = "dist"
-        # # Inertie des lignes
-        # quali_inertia = quali_dist2*mod_weights
-        # quali_inertia.name = "inertia"
-        # # Save all informations
-        # quali_infos = pd.concat((np.sqrt(quali_dist2),quali_inertia),axis=1)
-        # quali_infos.insert(1,"weight",mod_weights)
-
         ###########################################################################################################
         #                            Compute supplementary individuals informations
         ##########################################################################################################
@@ -432,7 +420,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             # Prepare DataFrame
             ind_sup_coord = pd.DataFrame(np.zeros((X_ind_sup.shape[0],n_components)),index=X_ind_sup.index,columns=["Dim."+str(x+1) for x in range(n_components)])
             ind_sup_cos2 = pd.DataFrame(np.zeros((X_ind_sup.shape[0],n_components)),index=X_ind_sup.index,columns=["Dim."+str(x+1) for x in range(n_components)])
-            ind_sup_dist2 = pd.Series([0]*X_ind_sup.shape[0],index=X_ind_sup.index)
+            ind_sup_dist2 = pd.Series([0]*X_ind_sup.shape[0],index=X_ind_sup.index,name="dist")
             
             if n_cont > 0:
                 X_ind_sup_quant = X_ind_sup_quant.astype("float")

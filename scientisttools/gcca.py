@@ -1,1 +1,0 @@
-# generalized Canonical Analysis

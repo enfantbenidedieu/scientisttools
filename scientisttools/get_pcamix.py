@@ -2,19 +2,18 @@
 import numpy as np
 import pandas as pd
 
-def get_famd_ind(self,choice = "ind") -> dict:
+def get_pcamix_ind(self,choice = "ind") -> dict:
     """
     Extract the results for individuals
     -----------------------------------
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosine and contributions) for the individuals 
-    from Factor Analysis of Mixed Date (FAMD) outputs.
+    Extract all the results (coordinates, squared cosine and contributions) for the individuals from Principal Components Analysis of Mixed Data (PCAMIX) outputs.
 
     Parameters
     ----------
-    self : an object of class FAMD
+    self : an object of class PCAMIX
 
     choice : the element to subset from the output. Possible values are 
                 - "ind" for active individuals, 
@@ -27,7 +26,7 @@ def get_famd_ind(self,choice = "ind") -> dict:
     coord	: coordinates of indiiduals.
 
     cos2	: cos2 values representing the quality of representation on the factor map.
-    
+
     contrib	: contributions of individuals to the principal components.
 
     Author(s)
@@ -35,8 +34,8 @@ def get_famd_ind(self,choice = "ind") -> dict:
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
-    if self.model_ != "famd":
-        raise ValueError("'self' must be an object of class FAMD")
+    if self.model_ != "pcamix":
+        raise ValueError("'self' must be an object of class PCAMIX")
     
     if choice not in ["ind","ind_sup"]:
         raise ValueError("'choice' should be one of 'ind', 'ind_sup'")
@@ -48,19 +47,18 @@ def get_famd_ind(self,choice = "ind") -> dict:
             raise ValueError("No supplementary individuals")
         return self.ind_sup_
 
-def get_famd_var(self,choice="var") -> dict:
+def get_pcamix_var(self,choice="var") -> dict:
     """
     Extract the results for quantitative and qualitative variables
     --------------------------------------------------------------
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosine and contributions) for quantitative and 
-    qualitative variables from Factor Analysis of Mixed Date (FAMD) outputs.
+    Extract all the results (coordinates, squared cosine and contributions) for quantitative and qualitative variables from Principal Components Analysis of Mixed Date (FAMD) outputs.
 
     Parameters
     ----------
-    self : an object of class FAMD
+    self : an object of class PCAMIX
 
     choice : the element to subset from the output. Possible values are 
                 - "quanti_var" for active quantitatives variables
@@ -73,86 +71,97 @@ def get_famd_var(self,choice="var") -> dict:
     Returns
     -------
     a list of matrices containing the results for the active individuals and variables, including :
+
     coord	: coordinates of variables.
+
     cos2	: cos2 values representing the quality of representation on the factor map.
+
     contrib	: contributions of variables to the principal components.
 
     Author(s)
     --------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ != "famd":
-        raise ValueError("'self' must be an object of class FAMD")
+    if self.model_ != "pcamix":
+        raise ValueError("'self' must be an object of class PCAMIX")
     
     if choice not in ["quanti_var","quali_var","var","quanti_sup","quali_sup","var_sup"]:
         raise ValueError("'choice' should be one of 'quanti_var', 'quali_var', 'var', 'quanti_sup', 'quali_sup', 'var_sup'")
     
     if choice == "quanti_var":
+        if not hasattr(self,"quanti_var_"):
+            raise ValueError("No quantitatives variables")
         return self.quanti_var_
     elif choice == "quali_var":
+        if not hasattr(self,"quali_var_"):
+            raise ValueError("No qualitatives variables")
         return self.quali_var_
     elif choice == "var":
+        if not hasattr(self,"var_"):
+            raise ValueError("No mixed columns")
         return self.var_
     elif choice == "quanti_sup":
-        if self.quanti_sup is None:
+        if not hasattr(self,"quanti_sup_"):
             raise ValueError("No supplementary quantitatives columns")
         return self.quanti_sup_
     elif choice == "quali_sup":
-        if self.quali_sup is None:
+        if not hasattr(self,"quali_sup_"):
             raise ValueError("No supplementary qualitatives columns")
     elif choice == "var_sup":
-        if self.quanti_sup is None or self.quali_sup is None:
-            raise ValueError("No supplementary columns")
+        if not hasattr(self,"var_sup_"):
+            raise ValueError("No supplementary mixed columns")
         return self.var_sup_
 
-def get_famd(self,choice = "ind")-> dict:
+def get_pcamix(self,choice = "ind")-> dict:
     """
-    Extract the results for individuals and variables - FAMD
-    --------------------------------------------------------
+    Extract the results for individuals and variables - PCAMIX
+    ----------------------------------------------------------
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosine and contributions) for the individuals and variables 
-    from Factor Analysis of Mixed Date (FAMD) outputs.
+    Extract all the results (coordinates, squared cosine and contributions) for the individuals and variables from Principal Components Analysis of Mixed Data (PCAMIX) outputs.
 
     Parameters
     ----------
-    self : an object of class FAMD
+    self : an object of class PCAMIX
 
     choice : the element to subset from the output. 
 
     Return
     ------
     a dict of dataframes containing the results for the active individuals and variables, including :
+
     coord	: coordinates of indiiduals/variables.
+
     cos2	: cos2 values representing the quality of representation on the factor map.
+
     contrib	: contributions of individuals / variables to the principal components.
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ != "famd":
-        raise ValueError("'self' must be an object of class FAMD")
+    if self.model_ != "pcamix":
+        raise ValueError("'self' must be an object of class PCAMIX")
     
     if choice not in ["ind","ind_sup","quanti_var","quali_var","var","quanti_sup","quali_sup","var_sup"]:
         raise ValueError("'choice' should be one of 'ind', 'ind_sup', 'quanti_var', 'quali_var', 'var', 'quanti_sup', 'quali_sup', 'var_sup'")
     
 
     if choice in ["ind", "ind_sup"]:
-        return get_famd_ind(self,choice=choice)
+        return get_pcamix_ind(self,choice=choice)
     elif choice not in ["ind","ind_sup"]:
-        return get_famd_var(self,choice=choice)
+        return get_pcamix_var(self,choice=choice)
 
 ###### FAMD
-def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
+def summaryPCAMIX(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
-    Printing summaries of Factor Analysis of Mixed Data model
-    ---------------------------------------------------------
+    Printing summaries of Principal Components of Mixed Data model
+    --------------------------------------------------------------
 
     Parameters
     ----------
-    self        :   an obect of class FAMD
+    self        :   an obect of class PCAMIX
 
     digits      :   int, default=3. Number of decimal printed
 
@@ -171,14 +180,14 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     # check if famd model
-    if self.model_ != "famd":
-        raise ValueError("'self' must be an object of class FAMD")
+    if self.model_ != "pcamix":
+        raise ValueError("'self' must be an object of class PCAMIX")
 
     ncp = min(ncp,self.call_["n_components"])
     nb_element = min(nb_element,self.call_["X"].shape[0])
 
     # Principal Components Analysis Results
-    print("                     Factor Analysis of Mixed Data - Results                     \n")
+    print("                     Principal Components Analysis of Mixed Data - Results                     \n")
 
     # Add eigenvalues informations
     print("Importance of components")
@@ -210,7 +219,7 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
         print(ind_infos)
 
     # Add supplementary individuals
-    if self.ind_sup is not None:
+    if hasattr(self,"ind_sup_"):
         ind_sup = self.ind_sup_
         if ind["coord"].shape[0] > nb_element:
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
@@ -229,27 +238,28 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
             print(ind_sup_infos)
 
     # Add variables informations
-    quanti_var = self.quanti_var_
-    if quanti_var["coord"].shape[0]>nb_element:
-        print(f"\nContinuous variables (the {nb_element} first)\n")
-    else:
-        print("\nContinuous variables\n")
-    quanti_var_infos = pd.DataFrame().astype("float")
-    for i in np.arange(0,ncp,1):
-        quanti_var_coord = quanti_var["coord"].iloc[:,i]
-        quanti_var_cos2 = quanti_var["cos2"].iloc[:,i]
-        quanti_var_cos2.name = "cos2"
-        quanti_var_ctr = quanti_var["contrib"].iloc[:,i]
-        quanti_var_ctr.name = "ctr"
-        quanti_var_infos = pd.concat([quanti_var_infos,quanti_var_coord,quanti_var_ctr,quanti_var_cos2],axis=1)
-    quanti_var_infos = quanti_var_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(quanti_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(quanti_var_infos)
+    if hasattr(self,"quanti_var_"):
+        quanti_var = self.quanti_var_
+        if quanti_var["coord"].shape[0]>nb_element:
+            print(f"\nContinuous variables (the {nb_element} first)\n")
+        else:
+            print("\nContinuous variables\n")
+        quanti_var_infos = pd.DataFrame().astype("float")
+        for i in np.arange(0,ncp,1):
+            quanti_var_coord = quanti_var["coord"].iloc[:,i]
+            quanti_var_cos2 = quanti_var["cos2"].iloc[:,i]
+            quanti_var_cos2.name = "cos2"
+            quanti_var_ctr = quanti_var["contrib"].iloc[:,i]
+            quanti_var_ctr.name = "ctr"
+            quanti_var_infos = pd.concat([quanti_var_infos,quanti_var_coord,quanti_var_ctr,quanti_var_cos2],axis=1)
+        quanti_var_infos = quanti_var_infos.iloc[:nb_element,:].round(decimals=digits)
+        if to_markdown:
+            print(quanti_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quanti_var_infos)
     
     # Add supplementary continuous variables informations
-    if self.quanti_sup is not None:
+    if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
         if quanti_sup["coord"].shape[0] > nb_element:
             print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
@@ -268,37 +278,46 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
             print(quanti_sup_infos)
     
     # Add variables informations
-    quali_var = self.quali_var_
-    if quali_var["coord"].shape[0] > nb_element:
-        print(f"\nCategories (the {nb_element} first)\n")
-    else:
-        print("\nCategories\n")
-    quali_var_infos = quali_var["infos"]
-    for i in np.arange(0,ncp,1):
-        quali_var_coord = quali_var["coord"].iloc[:,i]
-        quali_var_cos2 = quali_var["cos2"].iloc[:,i]
-        quali_var_cos2.name = "cos2"
-        quali_var_ctr = quali_var["contrib"].iloc[:,i]
-        quali_var_ctr.name = "ctr"
-        quali_var_vtest = quali_var["vtest"].iloc[:,i]
-        quali_var_vtest.name = "vtest"
-        quali_var_infos = pd.concat([quali_var_infos,quali_var_coord,quali_var_ctr,quali_var_cos2,quali_var_vtest],axis=1)
-    quali_var_infos = quali_var_infos.iloc[:nb_element,:].round(decimals=digits)
-    if to_markdown:
-        print(quali_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(quali_var_infos)
+    if hasattr(self,"quali_var_"):
+        quali_var = self.quali_var_
+        if quali_var["coord"].shape[0] > nb_element:
+            print(f"\nCategories (the {nb_element} first)\n")
+        else:
+            print("\nCategories\n")
+        quali_var_infos = quali_var["dist"]
+        for i in np.arange(0,ncp,1):
+            quali_var_coord = quali_var["coord"].iloc[:,i]
+            quali_var_cos2 = quali_var["cos2"].iloc[:,i]
+            quali_var_cos2.name = "cos2"
+            quali_var_ctr = quali_var["contrib"].iloc[:,i]
+            quali_var_ctr.name = "ctr"
+            quali_var_vtest = quali_var["vtest"].iloc[:,i]
+            quali_var_vtest.name = "vtest"
+            quali_var_infos = pd.concat([quali_var_infos,quali_var_coord,quali_var_ctr,quali_var_cos2,quali_var_vtest],axis=1)
+        quali_var_infos = quali_var_infos.iloc[:nb_element,:].round(decimals=digits)
+        if to_markdown:
+            print(quali_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quali_var_infos)
     
-    # Add variables
-    print("\nCategorical variables (eta2)\n")
-    quali_var_eta2 = self.var_["coord"].loc[self.call_["quali"],:].iloc[:nb_element,:ncp].round(decimals=digits)
-    if to_markdown:
-        print(quali_var_eta2.to_markdown(tablefmt=tablefmt,**kwargs))
-    else:
-        print(quali_var_eta2)
+        # Add variables
+        if hasattr(self,"quanti_var_"):
+            quali_eta2 = self.var_["coord"].loc[self.call_["rec"]["quali"].columns,:]
+        else:
+            quali_eta2 = self.quali_var_["eta2"]
+        
+        if quali_eta2.shape[0] > nb_element:
+            print(f"\nCategorical variables (eta2)(the {nb_element} first)\n")
+        else:
+            print("\nCategorical variables (eta2)\n")
+        quali_var_eta2 = quali_eta2.iloc[:nb_element,:ncp].round(decimals=digits)
+        if to_markdown:
+            print(quali_var_eta2.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quali_var_eta2)
     
     # Add Supplementary categories – Variable illustrative qualitative
-    if self.quali_sup is not None:
+    if hasattr(self,"quali_sup_"):
         quali_sup = self.quali_sup_
         if quali_sup["coord"].shape[0] > nb_element:
             print(f"\nSupplementary categories (the {nb_element} first)\n")

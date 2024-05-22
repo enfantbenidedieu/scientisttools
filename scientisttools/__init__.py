@@ -31,6 +31,7 @@ from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_va
 
 # PCAMIX
 from .pcamix import PCAMIX
+from .get_pcamix import get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX
 
 # Partial PCA
 from .partialpca import PartialPCA
