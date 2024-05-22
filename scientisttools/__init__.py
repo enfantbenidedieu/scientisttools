@@ -79,10 +79,11 @@ from .fviz_cca import fviz_cca_ind, fviz_cca_var, fviz_cca_scatterplot, fviz_cca
 from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
 from .dimdesc import dimdesc
 from .reconst import reconst
+
+# Useful for PCAMIX
 from .recodecont import recodecont
 from .recodecat import recodecat
 from .recodevar import recodevar
-from .recodevarfamd import recodevarfamd
 from .splitmix import splitmix
 
 from .fviz_contrib import fviz_contrib
