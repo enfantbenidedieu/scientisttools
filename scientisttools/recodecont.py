@@ -49,8 +49,9 @@ def recodecont(X):
 
     # Fill NA by mean
     if X.shape[0] > 1:
-        if X.isnull().any().any():
-            X = X.apply(lambda x : x.fillna(x.mean(),inplace=True),axis=0)
+        for col in X.columns:
+            if X.loc[:,col].isnull().any():
+                X.loc[:,col] = X.loc[:,col].fillna(X.loc[:,col].mean())
     
     if X.shape[0] == 1:
         Xcod = X

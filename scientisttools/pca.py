@@ -209,7 +209,9 @@ class PCA(BaseEstimator,TransformerMixin):
         ####################################### Check if missing values
         if X.isnull().any().any():
             if self.quali_sup is None:
-                X = mapply(X, lambda x : x.fillna(x.mean(),inplace=True),axis=0,progressbar=False,n_workers=n_workers)
+                for col in X.columns:
+                    if X.loc[:,col].isnull().any():
+                        X.loc[:,col] = X.loc[:,col].fillna(X.loc[:,col].mean())
             else:
                 col_list = [x for x in list(range(X.shape[1])) if x not in quali_sup]
                 for i in col_list:

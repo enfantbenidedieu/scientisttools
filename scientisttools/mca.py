@@ -97,7 +97,7 @@ class MCA(BaseEstimator,TransformerMixin):
     > summaryMCA(res_mca)
     """
     def __init__(self,
-                 n_components = None,
+                 n_components = 5,
                  ind_weights = None,
                  var_weights = None,
                  benzecri=True,
@@ -267,13 +267,12 @@ class MCA(BaseEstimator,TransformerMixin):
             ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
 
         ################### Set variables weights ##################################################
-        var_weights = pd.Series(name="weight").astype("float")
         if self.var_weights is None:
-            for col in X.columns.tolist():
-                var_weights[col] = 1/X.shape[1]
+            var_weights = pd.Series([1/X.shape[1]]*X.shape[1],index=X.columns,name="weight").astype("float")
         elif not isinstance(self.var_weights,pd.Series):
             raise ValueError("'var_weights' must be a pandas series where index are variables names and values are variables weights.")
         else:
+            var_weights = pd.Series(name="weight").astype("float")
             for col in X.columns.tolist():
                 var_weights[col] = self.var_weights[col]/self.var_weights.values.sum()
 

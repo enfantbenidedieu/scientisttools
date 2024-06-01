@@ -92,6 +92,8 @@ partial_axes$contrib
 partial_axes$cor.between
 
 
+library(PCAmixdata)
+data(gironde)
 dat <- cbind(gironde$employment,gironde$housing,gironde$services,gironde$environment) 
 names <- c("employment","housing","services","environment") 
 res.mfamix<- MFA(dat,

@@ -46,5 +46,5 @@ def recodecat(X,dummy_na=False):
 
     # Revaluate
     X = revaluate_cat_variable(X)
-    TDC = pd.concat((pd.get_dummies(X[col],dtype=int,dummy_na=dummy_na) for col in X.columns),axis=1)
-    return TDC
+    dummies = pd.concat((pd.get_dummies(X[col],dtype=int,dummy_na=dummy_na) for col in X.columns),axis=1)
+    return {"X" : X, "dummies" : dummies}

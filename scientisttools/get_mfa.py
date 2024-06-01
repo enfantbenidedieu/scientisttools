@@ -13,7 +13,7 @@ def get_mfa_ind(self):
 
     Parameters
     ----------
-    self : an object of class MFA, MFAQUAL, MFAMIX
+    self : an object of class MFA, MFAQUAL, MFAMD, MFAMIX, MFACT
 
     Return
     ------
@@ -30,8 +30,8 @@ def get_mfa_ind(self):
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ not in ["mfa","mfaqual","mfamix","mfact"]:
-        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMIX, MFACT")
+    if self.model_ not in ["mfa","mfaqual","mfamd","mfamix","mfact"]:
+        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMD, MFAMIX, MFACT")
     return self.ind_
 
 def get_mfa_var(self,choice = "group"):
@@ -67,8 +67,8 @@ def get_mfa_var(self,choice = "group"):
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ not in ["mfa","mfaqual","mfamix"]:
-        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMIX")
+    if self.model_ not in ["mfa","mfaqual","mfamd","mfamix"]:
+        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMD, MFAMIX")
     
     if choice not in ["group","quanti_var","quali_var"]:
         raise ValueError("'choice' should be one of 'group', 'quanti_var', 'quali_var'")
@@ -76,7 +76,7 @@ def get_mfa_var(self,choice = "group"):
     if choice == "group":
         return self.group_
     if choice == "quanti_var":
-        if self.model_ in ["mfa","mfamix"]:
+        if self.model_ in ["mfa","mfamd","mfamix"]:
             return self.quanti_var_
         elif self.model_ == "mfaqual":
             if hasattr(self, "quanti_var_sup_"):
@@ -84,7 +84,7 @@ def get_mfa_var(self,choice = "group"):
             else:
                 raise ValueError("No quantitative variable")
     if choice == "quali_var":
-        if self.model_ in ["mfaqual","mfamix"]:
+        if self.model_ in ["mfaqual","mfamd","mfamix"]:
             return self.quali_var_
         elif self.model_ == "mfa":
             if hasattr(self, "quali_var_sup_"):
@@ -131,11 +131,11 @@ def get_mfa_partial_axes(self):
     Description
     -----------
     Extract all the results (coordinates, squared cosine and contributions) for the active 
-    partial axes from Multiple Factor Analysis (MFA, MFAQUAL, MFAMIX) outputs.
+    partial axes from Multiple Factor Analysis (MFA, MFAQUAL, MFAMD, MFAMIX) outputs.
 
     Parameters
     ----------
-    self : an object of class MFA, MFAQUAL, MFAMIX
+    self : an object of class MFA, MFAQUAL, MFAMD, MFAMIX
 
     Return
     ------
@@ -146,8 +146,8 @@ def get_mfa_partial_axes(self):
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     
     """
-    if self.model_ not in ["mfa","mfaqual","mfamix","mfact"]:
-        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMIX, MFACT")
+    if self.model_ not in ["mfa","mfaqual","mfamd","mfamix","mfact"]:
+        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMD, MFAMIX, MFACT")
     
     return self.partial_axes_
 
@@ -173,7 +173,7 @@ def get_mfa(self,choice="ind"):
 
     Parameters
     ----------
-    self : an object of class MFA, MFAQUAL, MFAMIX, MFACT
+    self : an object of class MFA, MFAQUAL, MFAMD, MFAMIX, MFACT
 
     choice : he element to subset from the output. Possible values are "ind", "quanti_var", "group", 'quali_var', 'freq' or "partial_axes".
 
@@ -192,8 +192,8 @@ def get_mfa(self,choice="ind"):
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
 
-    if self.model_ not in ["mfa","mfaqual","mfamix","mfact"]:
-        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMIX, MFACT")
+    if self.model_ not in ["mfa","mfaqual","mfamd","mfamix","mfact"]:
+        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMD, MFAMIX, MFACT")
 
     if choice not in ["ind","quanti_var","group","quali_var","freq","partial_axes"]:
         raise ValueError("'choice' should be one of 'ind', 'quanti_var', 'group', 'quali_var', 'freq','partial_axes'")
