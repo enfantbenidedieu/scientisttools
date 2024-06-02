@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import polars as pl
+import scipy as sp
 from mapply.mapply import mapply
 from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -10,6 +11,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from .function_eta2 import function_eta2
 from .svd_triplet import svd_triplet
 from .revaluate_cat_variable import revaluate_cat_variable
+from .recodecont import recodecont
 from .recodevar import recodevar
 from .splitmix import splitmix
 
@@ -24,12 +26,21 @@ class PCAMIX(BaseEstimator,TransformerMixin):
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Performs Principal Components Analysis of Mixed Data (PCAMIX) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables. 
-    It includes standard principal component analysis (PCA) and multiple correspondence analysis (MCA) as special cases.
-
+    
     Details
     -------
 
+    PCAMIX includes standard Principal Component Analysis (PCA) and Multiple Correspondence Analysis (MCA) as special cases. If all variables are quantitative, standard PCA is performed.
+    if all variables are qualitative, then standard MCA is performed.
 
+    Missing values are replaced by means for quantitative variables. Note that, when all the variables are qualitative, the factor coordinates of the individuals are equal to the factor scores
+    of standard MCA times squares root of J (the number of qualitatives variables) and the eigenvalues are then equal to the usual eigenvalues of MCA times J.
+    When all the variables are quantitative, PCAMIX gives exactly the same results as standard PCA.
+
+    Usage
+    -----
+
+    PCAMIX(n_components = 5,ind_weights = None,quanti_weights = None,quali_weights = None,ind_sup=None,quanti_sup=None,quali_sup=None,parallelize = False).fit(X)
 
     Parameters
     ----------
@@ -58,17 +69,29 @@ class PCAMIX(BaseEstimator,TransformerMixin):
 
     var_  : a dictionary of pandas dataframe containing all the results for the variables considered as group (coordinates, square cosine, contributions)
     
+    var_sup_  : a dictionary of pandas dataframe containing all the results for the supplementary variables considered as group (coordinates, square cosine)
+    
     ind_ : a dictionary of pandas dataframe with all the results for the individuals (coordinates, square cosine, contributions)
 
     ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
 
     quali_var_ : a dictionary of pandas dataframe with all the results for the categorical variables (coordinates, square cosine, contributions, v.test)
     
+    quali_sup_ : a dictionary of pandas dataframe with all the results for the supplementary categorical variables (coordinates, square cosine, v.test)
+
     quanti_var_ : a dictionary of pandas datafrme with all the results for the quantitative variables (coordinates, correlation, square cosine, contributions)
+
+    quanti_sup_ : a dictionary of pandas dataframe with all the results for the supplementary quantitative variables (coordinates, correlation, square cosine)
 
     call_ : a dictionary with some statistics
 
-    model_ : string. The model fitted = 'mca'
+    summary_quanti_ : descriptive statistics of quantitatives variables
+
+    summary_quali_ : statistics of categories variables
+
+    chi2_test_ : chi2 statistics test
+
+    model_ : string. The model fitted = 'pcamix'
 
     Author(s)
     ---------
@@ -76,36 +99,70 @@ class PCAMIX(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    Escofier B, Pagès J (2008), Analyses Factorielles Simples et Multiples.4ed, Dunod
+    Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
 
-    Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    Hill M., Smith A. (1976). Principal Component Analysis of taxonomic data withmulti-state discrete characters. Taxon, 25, pp. 249-255
 
-    Pages J. (2004). Analyse factorielle de donnees mixtes. Revue Statistique Appliquee. LII (4). pp. 93-111.
+    Husson F., Le S. and Pagès J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+
+    Husson F., Josse L, Lê S. & Mazet J. (2009). FactoMineR : Factor Analysis and Data Mining with R. R package version 2.11
+
+    Kiers H.A.L (1991). Simple structure in Component Analysis Techniques for mixtures of qualitative and quantitative variables. Psychometrika, 56, pp. 197-212.
+    
+    Lebart L., Piron M. & Morineau A. (2006). Statistique exploratoire multidimensionelle. Dunod Paris 4ed
+
+    Lê, S., Josse, J., & Husson, F. (2008). FactoMineR: An R Package for Multivariate Analysis. Journal of Statistical Software, 25(1), 1–18. https://doi.org/10.18637/jss.v025.i01
+
+    Pagès J. (2004). Analyse factorielle de donnees mixtes. Revue Statistique Appliquee. LII (4). pp. 93-111.
+
+    Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. edp sciences
 
     Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
 
     See Also
     --------
-    get_famd_ind, get_famd_var, get_famd, summaryFAMD, dimdesc
+    get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX, dimdesc
 
     Examples
     --------
-    > X = wine # from FactoMineR R package
+    > # Load gironde dataset
 
-    > res_famd = FAMD(parallelize=True)
+    > from scientisttools import load_gironde
 
-    > res_famd.fit(X)
+    > gironde = load_gironde()
 
-    > summaryFAMD(res_famd)
+    > # Split data
+
+    > from scientisttools import splitmix
+
+    > X_quant = splitmix(gironde)["quanti"]
+
+    > X_qual = splitmix(gironde)["quali"]
+
+    > from scientisttools import PCAMIX
+
+    > # PCA with PCAMIX function
+
+    > res_pca = PCAMIX().fit(X_quant)
+
+    > # MCA with PCAMIX function
+
+    > res_mca = PCAMIX().fit(X_qual)
+
+    > # FAMD with PCAMIX function
+
+    > res_pcamix = PCAMIX().fit(gironde)
+
+    > summaryPCAMIX(res_pcamix)
     """
     def __init__(self,
                  n_components = 5,
                  ind_weights = None,
                  quanti_weights = None,
                  quali_weights = None,
-                 ind_sup=None,
-                 quanti_sup=None,
-                 quali_sup=None,
+                 ind_sup = None,
+                 quanti_sup = None,
+                 quali_sup = None,
                  parallelize = False):
         self.n_components = n_components
         self.ind_weights = ind_weights
@@ -155,20 +212,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
         ###############################################################################################################
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
-        
-        ###### Checks if categoricals variables re in X
-        is_quali = X.select_dtypes(include=["object","category"])
-        if is_quali.shape[1]>0:
-            for col in is_quali.columns.tolist():
-                X[col] = X[col].astype("object")
-        
-        ##### Checks if quantitatives variables are in X
-        is_quanti = X.select_dtypes(exclude=["object","category"])
-        if is_quanti.shape[1]>0:
-            for col in is_quanti.columns.tolist():
-                X[col] = X[col].astype("float")
 
-        ############################
         # Check is quali sup
         if self.quali_sup is not None:
             if (isinstance(self.quali_sup,int) or isinstance(self.quali_sup,float)):
@@ -199,13 +243,6 @@ class PCAMIX(BaseEstimator,TransformerMixin):
         else:
             ind_sup_label = None
         
-        ####################################### Fill NA in quantitatives columns wih mean
-        if is_quanti.shape[1]>0:
-            if is_quanti.isnull().any().any():
-                for col in is_quanti.columns:
-                    if X[col].isnull().any().any():
-                        X[col].fillna(X[col].mean(),inplace=True)
-
         ####################################### Save the base in a new variables
         # Store data
         Xtot = X.copy()
@@ -233,8 +270,6 @@ class PCAMIX(BaseEstimator,TransformerMixin):
         n_cat = rec["k2"]
         dummies = rec["dummies"]
         nb_moda = rec["nb_moda"]
-        
-        # 
         X = rec["X"]
         base = rec["W"]
         X_quanti = rec["quanti"]
@@ -255,8 +290,13 @@ class PCAMIX(BaseEstimator,TransformerMixin):
 
         # Set quantitatives variables weights
         if n_cont > 0:
-            quanti_weights = np.ones(n_cont)
+            # Summary quantitatives variables 
+            summary_quanti = X_quanti.describe().T.reset_index().rename(columns={"index" : "variable"})
+            summary_quanti["count"] = summary_quanti["count"].astype("int")
+            self.summary_quanti_ = summary_quanti
 
+            # Continuous weights
+            quanti_weights = np.ones(n_cont)
             if self.quanti_weights is None:
                 weights1 = np.ones(n_cont)
             elif not isinstance(self.quanti_weights,list):
@@ -273,9 +313,37 @@ class PCAMIX(BaseEstimator,TransformerMixin):
         
         # Set categoricals variables weights
         if n_cat > 0:
+            # Compute statistiques
+            summary_quali = pd.DataFrame()
+            for col in X_quali.columns.tolist():
+                eff = X_quali[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
+                eff.insert(0,"variable",col)
+                summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
+            summary_quali["count"] = summary_quali["count"].astype("int")
+            self.summary_quali_ = summary_quali
+
+            # Chi2 statistic test
+            if n_cat>1:
+                chi2_test = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
+                idx = 0
+                for i in np.arange(n_cat-1):
+                    for j in np.arange(i+1,n_cat):
+                        tab = pd.crosstab(X_quali.iloc[:,i],X_quali.iloc[:,j])
+                        chi = sp.stats.chi2_contingency(tab,correction=False)
+                        row_chi2 = pd.DataFrame({"variable1" : X_quali.columns[i],
+                                                "variable2" : X_quali.columns[j],
+                                                "statistic" : chi.statistic,
+                                                "dof"       : chi.dof,
+                                                "pvalue"    : chi.pvalue},index=[idx])
+                        chi2_test = pd.concat((chi2_test,row_chi2),axis=0,ignore_index=True)
+                        idx = idx + 1
+                # Transform to int
+                chi2_test["dof"] = chi2_test["dof"].astype("int")
+                self.chi2_test_ = chi2_test
+
             # Set qualitative variables weights
             if self.quali_weights is None:
-                weights2 = pd.Series([1]*n_cat,index=X_quali.columns,name="weight").astype("float")
+                weights2 = pd.Series(np.ones(n_cat),index=X_quali.columns,name="weight").astype("float")
             elif not isinstance(self.quali_weights,pd.Series):
                 raise ValueError("'quali_weights' must be a pandas series where index are qualitatives variables names and values are qualitatives variables weights.")
             else:
@@ -407,19 +475,19 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             elif n_cont > 0:
                 # Contributions des variables qualitatives
                 quali_var_contrib = mapply(quali_var_eta2,lambda x : 100*x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
-
                 # Cosinus carrés des variables qualitatives
                 quali_var_cos2 = pd.concat((((quali_var_eta2.loc[col,:]**2)/(nb_moda[col]-1)).to_frame(name=col).T for col in X_quali.columns.tolist()),axis=0)
+                
                 var_coord = pd.concat((quanti_var_cos2,quali_var_eta2),axis=0)
                 var_contrib = pd.concat((quanti_var_contrib,quali_var_contrib),axis=0)
                 var_cos2 = pd.concat((quanti_var_cos2**2,quali_var_cos2),axis=0)
+                # Store all informations
                 self.var_ = {"coord" : var_coord,"contrib" : var_contrib,"cos2" : var_cos2}
 
         ###########################################################################################################
         #                            Compute supplementary individuals informations
         ##########################################################################################################
         if self.ind_sup is not None:
-
             ##### Prepare supplementary columns
             X_ind_sup_quant = splitmix(X=X_ind_sup)["quanti"]
             X_ind_sup_quali = splitmix(X=X_ind_sup)["quali"]
@@ -427,7 +495,7 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             # Prepare DataFrame
             ind_sup_coord = pd.DataFrame(np.zeros((X_ind_sup.shape[0],n_components)),index=X_ind_sup.index,columns=["Dim."+str(x+1) for x in range(n_components)])
             ind_sup_cos2 = pd.DataFrame(np.zeros((X_ind_sup.shape[0],n_components)),index=X_ind_sup.index,columns=["Dim."+str(x+1) for x in range(n_components)])
-            ind_sup_dist2 = pd.Series([0]*X_ind_sup.shape[0],index=X_ind_sup.index,name="dist")
+            ind_sup_dist2 = pd.Series(np.zeros(X_ind_sup.shape[0]),index=X_ind_sup.index,name="dist")
             
             if n_cont > 0:
                 X_ind_sup_quant = X_ind_sup_quant.astype("float")
@@ -463,10 +531,10 @@ class PCAMIX(BaseEstimator,TransformerMixin):
                     for j in np.arange(0,dummies.shape[1],1):
                         if dummies.columns[j] in values:
                             Y[i,j] = 1
-                ind_sup_dummies = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup_quali.index)
+                Y = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup_quali.index)
 
                 # Standardize the data
-                Z_ind_sup_qual = (ind_sup_dummies - (dummies.sum(axis=0)/n_rows).values.reshape(1,-1))
+                Z_ind_sup_qual = (Y - (dummies.sum(axis=0)/n_rows).values.reshape(1,-1))
 
                 # Supplementary individuals coordinates
                 ind_sup_coord2 = mapply(Z_ind_sup_qual,lambda x : x*var_weights.values[n_cont:],axis=1,progressbar=False,n_workers=n_workers)
@@ -496,21 +564,34 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             if self.ind_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
             
+            X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
+            summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
+            summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
+
+            # Store
+            if n_cont > 0:
+                self.summary_quanti_.insert(0,"group","active")
+                summary_quanti_sup.insert(0,"group","sup")
+                self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
+            elif n_cont == 0:
+                self.summary_quanti_ = summary_quanti_sup
+
+            # Standardize
             d2 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
             Z_quanti_sup = (X_quanti_sup - d2.mean.reshape(1,-1))/d2.std.reshape(1,-1)
 
             ####### Compute Supplementary quantitatives variables coordinates
-            var_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
-            var_sup_coord = np.dot(var_sup_coord.T,U)
-            var_sup_coord = pd.DataFrame(var_sup_coord,index=X_quanti_sup.columns,columns = ["Dim."+str(x+1) for x in range(var_sup_coord.shape[1])])
+            Z_quanti_sup = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
+            quanti_sup_coord = Z_quanti_sup.T.dot(U)
+            quanti_sup_coord.columns = ["Dim."+str(x+1) for x in range(quanti_sup_coord.shape[1])]
 
             ############# Supplementary quantitatives variables Cos2
             var_sup_cor = mapply(Z_quanti_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
             var_sup_dist2 = np.dot(np.ones(X_quanti_sup.shape[0]),var_sup_cor)
-            var_sup_cos2 = mapply(var_sup_coord,lambda x : (x**2)/np.sqrt(var_sup_dist2),axis=0,progressbar=False,n_workers=n_workers)
+            quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2)/np.sqrt(var_sup_dist2),axis=0,progressbar=False,n_workers=n_workers)
 
             # Store supplementary quantitatives informations
-            self.quanti_sup_ =  {"coord":var_sup_coord,"cor" : var_sup_coord, "cos2" : var_sup_cos2}
+            self.quanti_sup_ =  {"coord":quanti_sup_coord,"cor" : quanti_sup_coord, "cos2" : quanti_sup_cos2}
 
         ##########################################################################################################
         #                         Compute supplementary qualitatives variables statistics
@@ -524,6 +605,68 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             X_quali_sup = X_quali_sup.astype("object")
             # Check if two columns have the same categories levels
             X_quali_sup = revaluate_cat_variable(X_quali_sup)
+
+            # Chi-squared test between new categorie
+            if X_quali_sup.shape[1] > 1:
+                chi2_sup_test = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
+                cpt = 0
+                for i in range(X_quali_sup.shape[1]-1):
+                    for j in range(i+1,X_quali_sup.shape[1]):
+                        tab = pd.crosstab(X_quali_sup.iloc[:,i],X_quali_sup.iloc[:,j])
+                        chi = sp.stats.chi2_contingency(tab,correction=False)
+                        row_chi2 = pd.DataFrame({"variable1" : X_quali_sup.columns[i],
+                                    "variable2" : X_quali_sup.columns[j],
+                                    "statistic" : chi.statistic,
+                                    "dof"       : chi.dof,
+                                    "pvalue"    : chi.pvalue},index=[cpt])
+                        chi2_sup_test = pd.concat([chi2_sup_test,row_chi2],axis=0)
+                        cpt = cpt + 1
+                chi2_sup_test["dof"] = chi2_sup_test["dof"].astype("int")
+            
+            # Chi-squared between old and new qualitatives variables
+            if n_cat > 0:
+                chi2_sup_test2 = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"])
+                cpt = 0
+                for i in range(X_quali_sup.shape[1]):
+                    for j in range(n_cat):
+                        tab = pd.crosstab(X_quali_sup.iloc[:,i],X_quali.iloc[:,j])
+                        chi = sp.stats.chi2_contingency(tab,correction=False)
+                        row_chi2 = pd.DataFrame({"variable1" : X_quali_sup.columns[i],
+                                                "variable2" : X_quali.columns[j],
+                                                "statistic" : chi.statistic,
+                                                "dof"       : chi.dof,
+                                                "pvalue"    : chi.pvalue},index=[cpt])
+                        chi2_sup_test2 = pd.concat([chi2_sup_test2,row_chi2],axis=0,ignore_index=True)
+                        cpt = cpt + 1
+                chi2_sup_test2["dof"] = chi2_sup_test2["dof"].astype("int")
+            
+            ###### Add 
+            if n_cat > 0:
+                if X_quali_sup.shape[1] > 1 :
+                    chi2_sup_test = pd.concat([chi2_sup_test,chi2_sup_test2],axis=0,ignore_index=True)
+                else:
+                    chi2_sup_test = chi2_sup_test2
+                chi2_sup_test["dof"] = chi2_sup_test["dof"].astype("int")
+                self.chi2_test_ = pd.concat((self.chi2_test_,chi2_sup_test),axis=0,ignore_index=True)
+            else:
+                if X_quali_sup.shape[1] > 1 :
+                    self.chi2_test_ = chi2_sup_test2
+            
+            #################################### Summary quali
+            # Compute statistiques
+            summary_quali_sup = pd.DataFrame()
+            for col in X_quali_sup.columns:
+                eff = X_quali_sup[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
+                eff.insert(0,"variable",col)
+                summary_quali_sup = pd.concat([summary_quali_sup,eff],axis=0,ignore_index=True)
+            summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
+
+            if n_cat == 0:
+                self.summary_quali_sup_ = summary_quali_sup
+            elif n_cat > 0:
+                summary_quali_sup.insert(0,"group","sup")
+                self.summary_quali_.insert(0,"group","active")
+                self.summary_quali_ = pd.concat([self.summary_quali_,summary_quali_sup],axis=0,ignore_index=True)
 
             ####################################" Correlation ratio #####################################################
             quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
@@ -550,26 +693,8 @@ class PCAMIX(BaseEstimator,TransformerMixin):
             quali_sup_vtest = mapply(quali_sup_coord,lambda x : x/vs,axis=1,progressbar=False,n_workers=n_workers)
             quali_sup_vtest = pd.concat(((quali_sup_vtest.loc[k,:]/np.sqrt((n_rows-n_k_sup[k])/((n_rows-1)*n_k_sup[k]))).to_frame().T for k in n_k_sup.index),axis=0)
 
-            #################################### Summary quali
-            # Compute statistiques
-            summary_quali_sup = pd.DataFrame()
-            for col in X_quali_sup.columns:
-                eff = X_quali_sup[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
-                eff.insert(0,"variable",col)
-                summary_quali_sup = pd.concat([summary_quali_sup,eff],axis=0,ignore_index=True)
-            summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
-            self.summary_quali_sup_ = summary_quali_sup
-
             # Supplementary categories informations
             self.quali_sup_ = {"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : np.sqrt(quali_sup_dist2), "eta2" : quali_sup_eta2}
-        
-        # If Mixed Data
-        if n_cont > 0 and n_cat > 0:
-            if self.quanti_sup is not None and self.quali_sup is not None:
-                var_sup_coord = pd.concat((self.quanti_sup_["cos2"],quali_sup_eta2),axis=0)
-                quali_var_sup_cos2 = pd.concat((((quali_sup_eta2.loc[col,:]**2)/(X_quali_sup[col].nunique()-1)).to_frame(name=col).T for col in X_quali_sup.columns),axis=0)
-                var_sup_cos2 = pd.concat((self.quanti_sup_["cos2"]**2,quali_var_sup_cos2),axis=0)
-                self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
 
         self.model_ = "pcamix"
 

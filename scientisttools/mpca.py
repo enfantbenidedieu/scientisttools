@@ -13,6 +13,10 @@ from .weightedcorrcoef import weightedcorrcoef
 from .function_eta2 import function_eta2
 from .revaluate_cat_variable import revaluate_cat_variable
 
+from .recodevarfamd import recodevarfamd
+from .recodecont import recodecont
+from .recodecat import recodecat
+
 class MPCA(BaseEstimator,TransformerMixin):
     """
     Mixed Principal Components Analysis (MPCA)
@@ -95,14 +99,18 @@ class MPCA(BaseEstimator,TransformerMixin):
     > summaryMPCA(res_mpca)
     """
     def __init__(self,
-                 n_components = None,
+                 n_components = 5,
                  ind_weights = None,
+                 quanti_weights = None,
+                 quali_weights = None,
                  ind_sup=None,
                  quanti_sup=None,
                  quali_sup=None,
                  parallelize = False):
         self.n_components = n_components
         self.ind_weights = ind_weights
+        self.quanti_weights = quanti_weights
+        self.quali_weights  = quali_weights
         self.ind_sup = ind_sup
         self.quanti_sup = quanti_sup
         self.quali_sup = quali_sup
@@ -148,24 +156,8 @@ class MPCA(BaseEstimator,TransformerMixin):
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
         
-        ###### Checks if categoricals variables re in X
-        is_quali = X.select_dtypes(include=["object","category"])
-        if is_quali.shape[1]>0:
-            for col in is_quali.columns.tolist():
-                X[col] = X[col].astype("object")
-        else:
-            raise TypeError("No qualitatives columns in data. Please use PCA function instead.")
-        
-        ##### Checks if quantitatives variables are in X
-        is_quanti = X.select_dtypes(exclude=["object","category"])
-        if is_quanti.shape[1]>0:
-            for col in is_quanti.columns.tolist():
-                X[col] = X[col].astype("float")
-        else:
-            raise TypeError("No quantitatives columns in data. Please use MCA function instead.")
-
-        ##################################################################################
-        # Set supplementary qualitatuves variables labels
+        ###################################################################################
+        # Set supplementary qualitative variables labels
         if self.quali_sup is not None:
             if (isinstance(self.quali_sup,int) or isinstance(self.quali_sup,float)):
                 quali_sup = [int(self.quali_sup)]
@@ -176,7 +168,7 @@ class MPCA(BaseEstimator,TransformerMixin):
             quali_sup_label = None
 
         ####################################################################################
-        #  Set supplementary quantitatives variables labels
+        #  Set supplementary quantitative variables labels
         if self.quanti_sup is not None:
             if (isinstance(self.quanti_sup,int) or isinstance(self.quanti_sup,float)):
                 quanti_sup = [int(self.quanti_sup)]
@@ -197,14 +189,6 @@ class MPCA(BaseEstimator,TransformerMixin):
         else:
             ind_sup_label = None
         
-        ####################################### Fill NA in quantitatives columns wih mean
-        if is_quanti.isnull().any().any():
-            col_list = is_quanti.columns.tolist()
-            for col in col_list:
-                if X.loc[:,col].isnull().any():
-                    X.loc[:,col] = X.loc[:,col].fillna(X.loc[:,col].mean())
-            print("Missing values are imputed by the mean of the variable.")
-
         ####################################### Save the base in a new variables
         # Store data
         Xtot = X.copy()
@@ -223,90 +207,115 @@ class MPCA(BaseEstimator,TransformerMixin):
             X_ind_sup = X.loc[ind_sup_label,:]
             X = X.drop(index=ind_sup_label)
         
-        ############################ Split X in quantitatives and qualitatives
-        # Compute statistics
-        X_quant = X.select_dtypes(include=np.number)
-        X_qual = X.select_dtypes(include=["object","category"])
+        ###################################### Mixed Principal Components Analysis ######################################################
+        rec = recodevarfamd(X)
 
-        # Check if NULL
-        if X_quant.empty and not X_qual.empty:
-            raise TypeError("No continuous variables in X. Please use MCA function.")
-        elif X_qual.empty and not X_quant.empty:
-            raise TypeError("No categoricals variables in X. Please use PCA function.")
+        # Extract elements
+        X = rec["X"]
+        n_rows = rec["n"]
+        n_cont = rec["k1"]
+        n_cat = rec["k2"]
+        X_quanti = rec["quanti"]
+        X_quali = rec["quali"]
+        dummies = rec["dummies"]
+        nb_moda = rec["nb_moda"]
+
+        # Check if no quantitatives variables
+        if n_cont==0:
+            raise TypeError("No quantitatives variables in X. X must be a mixed data")
+
+        # Check if no qualitatives variables
+        if n_cat == 0:
+            raise TypeError("No qualitatives variables in X. X must be a mixed data")
         
-        # Revaluate qualitative variables
-        X_qual = revaluate_cat_variable(X_qual)
+        # Set individuals weights
+        if self.ind_weights is None:
+            ind_weights = np.ones(n_rows)/n_rows
+        elif not isinstance(self.ind_weights,list):
+            raise ValueError("'ind_weights' must be a list of row weight.")
+        elif len(self.ind_weights) != X.shape[0]:
+            raise ValueError(f"'ind _weights' must be a list with length {X.shape[0]}.")
+        else:
+            ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
 
-        ############################################## Summary
-        ################## Summary quantitatives variables ####################
-        summary_quanti = X_quant.describe().T.reset_index().rename(columns={"index" : "variable"})
+        #########################################################################################
+        #                                 For quantitatives variables
+        #########################################################################################
+
+        # Summary quantitatives variables
+        summary_quanti = X_quanti.describe().T.reset_index().rename(columns={"index" : "variable"})
         summary_quanti["count"] = summary_quanti["count"].astype("int")
         self.summary_quanti_ = summary_quanti
 
-        ################# Summary categoricals variables ##########################
-        #########################################################################################################
+        # Compute weighted average mean and standard deviation
+        d1 = DescrStatsW(X_quanti,weights=ind_weights,ddof=0)
+        means1 = pd.Series(d1.mean,index=X_quanti.columns,name="weight")
+
+        # Center quantitatives variables
+        Z1 = X_quanti - means1.values.reshape(1,-1)
+
+        # Set quantitatives variables weights
+        if self.quanti_weights is None:
+            weights1 = np.ones(n_cont)
+        elif not isinstance(self.quanti_weights,list):
+            raise TypeError("'quanti_weights' must be a list of quantitatives weights")
+        elif len(self.quanti_weights) != n_cont:
+            raise TypeError(f"'quanti_weights' must be a list with length {n_cont}.")
+        else:
+            weights1 = np.array(self.quanti_weights)
+        
+        # Apply weighted correction
+        weights1 = pd.Series(weights1,index=X_quanti.columns)
+
+        ########################################################################################
+        #                    For qualitatives variables
+        ##########################################################################################
+    
         # Compute statistiques
         summary_quali = pd.DataFrame()
-        for col in X_qual.columns.tolist():
-            eff = X_qual[col].value_counts().to_frame("count").reset_index().rename(columns={"index" : "categorie"})
+        for col in X_quali.columns.tolist():
+            eff = X_quali[col].value_counts().to_frame("count").reset_index().rename(columns={"index" : "categorie"})
             eff.insert(0,"variable",col)
             summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
         summary_quali["count"] = summary_quali["count"].astype("int")
         self.summary_quali_ = summary_quali
-        
-        ################################### Chi2 statistic test ####################################
-        if X_qual.shape[1]>1:
+    
+        # Chi2 statistic test
+        if n_cat > 1:
             chi2_test = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
             idx = 0
-            for i in np.arange(X_qual.shape[1]-1):
-                for j in np.arange(i+1,X_qual.shape[1]):
-                    tab = pd.crosstab(X_qual.iloc[:,i],X_qual.iloc[:,j])
+            for i in np.arange(n_cat-1):
+                for j in np.arange(i+1,n_cat):
+                    tab = pd.crosstab(X_quali.iloc[:,i],X_quali.iloc[:,j])
                     chi = sp.stats.chi2_contingency(tab,correction=False)
-                    row_chi2 = pd.DataFrame({"variable1" : X_qual.columns.tolist()[i],
-                                            "variable2" : X_qual.columns.tolist()[j],
+                    row_chi2 = pd.DataFrame({"variable1" : X_quali.columns[i],
+                                            "variable2" : X_quali.columns[j],
                                             "statistic" : chi.statistic,
                                             "dof"       : chi.dof,
                                             "pvalue"    : chi.pvalue},index=[idx])
                     chi2_test = pd.concat((chi2_test,row_chi2),axis=0,ignore_index=True)
                     idx = idx + 1
-            # Transform to int
             chi2_test["dof"] = chi2_test["dof"].astype("int")
             self.chi2_test_ = chi2_test
-
-        ###########################################################################################
-        ########### Set row weight and quanti weight
-        ###########################################################################################
-
-        # Set row weight
-        if self.ind_weights is None:
-            ind_weights = np.ones(X.shape[0])/X.shape[0]
-        elif not isinstance(self.ind_weights,list):
-            raise ValueError("'ind_weights' must be a list of row weight.")
-        elif len(self.ind_weights) != X.shape[0]:
-            raise ValueError(f"'row_weights' must be a list with length {X.shape[0]}.")
-        else:
-            ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
         
-        ###########################################################################
-        # Weighted Pearson correlation between continuous variables
-        col_corr = weightedcorrcoef(x=X_quant,w=ind_weights)
+        # Set qualitative variables weights
+        if self.quali_weights is None:
+            quali_weights = pd.Series(np.ones(n_cat),index=X_quali.columns,name="weight").astype("float")
+        elif not isinstance(self.quali_weights,pd.Series):
+            raise ValueError("'quali_weights' must be a pandas series where index are qualitatives variables names and values are qualitatives variables weights.")
+        else:
+            quali_weights = self.quali_weights
 
-        ############# Compute weighted average mean and standard deviation
-        d1 = DescrStatsW(X_quant,weights=ind_weights,ddof=0)
-        means = d1.mean.reshape(1,-1)
-        Z1 = X_quant - means
-
-        ###############################################################################################
-        ##################################### Treatment of qualitatives variables #####################
-        ###############################################################################################
-        # Matrice des poids des individus
+        # Diagonal matrix of individuals weights
         D = np.diag(ind_weights)
 
-        dummies = pd.DataFrame()
-        Z2 = pd.DataFrame()
-        means_l = pd.Series()
-        for col in X_qual.columns:
-            Yl = pd.get_dummies(X_qual[col],dtype=int)
+        # Initialize dataframe
+        dummies = pd.DataFrame().astype("int")
+        Z2 = pd.DataFrame().astype("float")
+        means2 = pd.Series().astype("float")
+        weights2 = pd.Series(name="weight").astype("float")
+        for col in X_quali.columns:
+            Yl = pd.get_dummies(X_quali[col],dtype=int)
             Vx, Vylx = np.dot(np.dot(Z1.T,D),Z1), np.dot(np.dot(Yl.T,D),Z1)
             # Compute the mean
             Gl =  np.dot(np.dot(np.dot(np.dot(Vylx,np.linalg.pinv(Vx,hermitian=True)),Z1.T),D),np.ones(X.shape[0]))
@@ -314,70 +323,84 @@ class MPCA(BaseEstimator,TransformerMixin):
             Zl = Yl - Gl
             # Concatenate
             Z2 = pd.concat((Z2,Zl),axis=1)
-            # Save the dummies
-            dummies = pd.concat((dummies,Yl))
-            # Save the mean
-            means_l = pd.concat((means_l,pd.Series(Gl,index=Yl.columns)),axis=0)
+            dummies = pd.concat((dummies,Yl),axis=1)
+            means2 = pd.concat((means2,pd.Series(Gl,index=Yl.columns)),axis=0)
+            # Categories weights
+            weights = pd.Series([quali_weights[col]]*Yl.shape[1],index=Yl.columns,name="weight")
+            weights2 = pd.concat((weights2,weights),axis=0) 
         
-        # Concatenate the 2 dataframe
-        Z = pd.concat([Z1,Z2],axis=1)
+        # Concatenate
+        Z = pd.concat((Z1,Z2),axis=1)
+        means = pd.concat((means1,means2),axis=0)
+        var_weights = pd.concat((weights1,weights2),axis=0)
+
+        # set maximum number of components
+        max_components = min(n_rows-1,n_cont + dummies.shape[1] - n_cat)
 
         #################### Set number of components
         if self.n_components is None:
-            n_components = min(X.shape[0]-1, Z.shape[1]-X_qual.shape[1])
+            n_components = min(n_rows-1,n_cont + dummies.shape[1] - n_cat)
         elif not isinstance(self.n_components,int):
             raise TypeError("'n_components' must be an integer.")
         elif self.n_components <= 0:
             raise ValueError("'n_components' must be greater or equal than 1.")
         else:
-            n_components = min(self.n_components, X.shape[0]-1, Z.shape[1]-X_qual.shape[1])
+            n_components = min(self.n_components, max_components)
 
-         #Store call informations  : X = Z, M = diag(col_weight), D = diag(row_weight) : t(X)DXM
+        #Store call informations  : X = Z, M = diag(col_weight), D = diag(row_weight) : t(X)DXM
         self.call_ = {"Xtot" : Xtot,
                       "X" : X,
+                      "Z" : Z,
                       "ind" : X.index,
-                      "quanti" : X_quant.columns,
-                      "quali" : X_qual.columns,
+                      "quali" : X_quali.columns,
+                      "quanti" : X_quanti.columns,
                       "ind_sup" : ind_sup_label,
                       "quanti_sup" : quanti_sup_label,
                       "quali_sup" : quali_sup_label,
-                      "dummies" : dummies,
-                      "Z" : Z,
+                      "means" : means,
+                      "n_components" : n_components,
                       "ind_weights" : pd.Series(ind_weights,index=X.index,name="weight"),
-                      "means" : pd.Series(means[0],index=X_quant.columns,name="average"),
-                      "means_l" : means_l,
-                      "n_components" : n_components}
+                      "var_weights" : var_weights,
+                      "dummies" : dummies,
+                      "rec" : rec}
 
         #########################################################################################################
-        global_pca = PCA(standardize=True,n_components=n_components).fit(Z)
+        global_pca = PCA(standardize=True,n_components=n_components,ind_weights=ind_weights.tolist(),var_weights=var_weights.values.tolist()).fit(Z)
 
         ###########################################################################################################
         #                            Compute supplementary individuals informations
         ##########################################################################################################
         if self.ind_sup is not None:
             ##### Prepare supplementary columns
-            X_ind_sup_quant = X_ind_sup[X_quant.columns]
-            X_ind_sup_qual = X_ind_sup[X_qual.columns]
+            X_ind_sup_quant = X_ind_sup[X_quanti.columns]
+            X_ind_sup_qual = X_ind_sup[X_quali.columns]
+
             # Revaluate categories
             X_ind_sup_qual = revaluate_cat_variable(X_ind_sup_qual)
 
-            #######
-            Z1_ind_sup = X_ind_sup_quant - means
-
+            # Dummies with qualitatives variables in supplementary individuals
             Y = np.zeros((X_ind_sup.shape[0],dummies.shape[1]))
             for i in np.arange(0,X_ind_sup.shape[0],1):
-                values = [str(X_ind_sup_qual.iloc[i,k]) for k in np.arange(0,X_qual.shape[1])]
+                values = [str(X_ind_sup_qual.iloc[i,k]) for k in np.arange(0,X_quali.shape[1])]
                 for j in np.arange(0,dummies.shape[1],1):
                     if dummies.columns[j] in values:
                         Y[i,j] = 1
-            row_sup_dummies = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup.index)
-            
-            Z2_ind_sup = row_sup_dummies - means_l.values.reshape(1,-1)
-            Z_ind_sup = pd.concat((Z1_ind_sup,Z2_ind_sup),axis=1)
+            Y = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup.index)
+
+            # Concatenate and centered the data
+            Z_ind_sup = pd.concat((X_ind_sup_quant,Y),axis=1) - means.values.reshape(1,-1)
             # Concatenate
             Z_ind_sup = pd.concat((Z,Z_ind_sup),axis=0)
-            global_pca = PCA(standardize=True,n_components=n_components,ind_sup=self.ind_sup).fit(Z_ind_sup)
-            self.ind_sup_ = global_pca.ind_sup_
+
+            # Update PCA using supplementary individuals
+            global_pca = PCA(standardize=True,n_components=n_components,ind_weights=ind_weights.tolist(),var_weights=var_weights.values.tolist(),ind_sup=self.ind_sup).fit(Z_ind_sup)
+
+            # Extract all elements
+            ind_sup_coord = global_pca.ind_sup_["coord"].iloc[:,:n_components]
+            ind_sup_cos2 = global_pca.ind_sup_["cos2"].iloc[:,:n_components] 
+            ind_sup_dist = global_pca.ind_sup_["dist"]
+            # Save all informations
+            self.ind_sup_ = {"coord" : ind_sup_coord, "cos2" : ind_sup_cos2, "dist" : ind_sup_dist}
         
         ##########################################################################################################
         #                         Compute supplementary quantitatives variables statistics
@@ -387,23 +410,35 @@ class MPCA(BaseEstimator,TransformerMixin):
             if self.ind_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
             
-            ##################################################################################################"
+            # Recode to fill NA with means
+            X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
+            
+            # Summary statistics with supplementary quantitatives variables.
             summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
             summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
+            summary_quanti_sup.insert(0,"group","sup")
             self.summary_quanti_.insert(0,"group","active")
             # Concatenate
             self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
             
-            # Standardize
+            # Centered
             d2 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
             Z_quanti_sup = X_quanti_sup - d2.mean.reshape(1,-1)
+            # Concatenate
             Z_quanti_sup = pd.concat((Z,Z_quanti_sup),axis=1)
+
             # Find supplementary quantitatives columns index
             index = [Z_quanti_sup.columns.tolist().index(x) for x in X_quanti_sup.columns.tolist()]
-            # Update PCA
-            global_pca = PCA(standardize=True,n_components=n_components,ind_sup=None,quanti_sup=index).fit(Z_quanti_sup)
-            self.quanti_sup_ = global_pca.quanti_sup_
-        
+            # Update PCA with supplementary qualitatives variables
+            global_pca = PCA(standardize=True,n_components=n_components,ind_weights=ind_weights.tolist(),var_weights=var_weights.values.tolist(),quanti_sup=index).fit(Z_quanti_sup)
+            
+            # Extract all informations
+            quanti_sup_coord = global_pca.quanti_sup_["coord"].iloc[:,:n_components]
+            quanti_sup_cos2 = global_pca.quanti_sup_["cos2"].iloc[:,:n_components]
+            
+            # Store informations
+            self.quanti_sup_ = {"coord" : quanti_sup_coord, "cos2" : quanti_sup_cos2}
+
         ##########################################################################################################
         #                         Compute supplementary qualitatives variables statistics
         ###########################################################################################################
@@ -414,7 +449,7 @@ class MPCA(BaseEstimator,TransformerMixin):
             
             # Chi-squared test between new categorie
             if X_quali_sup.shape[1] > 1:
-                chi_sup_stats = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
+                chi2_sup_test = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
                 cpt = 0
                 for i in range(X_quali_sup.shape[1]-1):
                     for j in range(i+1,X_quali_sup.shape[1]):
@@ -425,29 +460,36 @@ class MPCA(BaseEstimator,TransformerMixin):
                                     "statistic" : chi.statistic,
                                     "dof"       : chi.dof,
                                     "pvalue"    : chi.pvalue},index=[cpt])
-                        chi_sup_stats = pd.concat([chi_sup_stats,row_chi2],axis=0)
+                        chi2_sup_test = pd.concat([chi2_sup_test,row_chi2],axis=0)
                         cpt = cpt + 1
+                chi2_sup_test["dof"] = chi2_sup_test["dof"].astype("int")
             
             # Chi-squared between old and new qualitatives variables
-            chi_sup_stats2 = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"])
+            chi2_sup_test2 = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"])
             cpt = 0
             for i in range(X_quali_sup.shape[1]):
-                for j in range(X_qual.shape[1]):
-                    tab = pd.crosstab(X_quali_sup.iloc[:,i],X_qual.iloc[:,j])
+                for j in range(X_quali.shape[1]):
+                    tab = pd.crosstab(X_quali_sup.iloc[:,i],X_quali.iloc[:,j])
                     chi = sp.stats.chi2_contingency(tab,correction=False)
                     row_chi2 = pd.DataFrame({"variable1" : X_quali_sup.columns[i],
-                                            "variable2" : X_qual.columns[j],
+                                            "variable2" : X_quali.columns[j],
                                             "statistic" : chi.statistic,
                                             "dof"       : chi.dof,
                                             "pvalue"    : chi.pvalue},index=[cpt])
-                    chi_sup_stats2 = pd.concat([chi_sup_stats2,row_chi2],axis=0,ignore_index=True)
+                    chi2_sup_test2 = pd.concat([chi2_sup_test2,row_chi2],axis=0,ignore_index=True)
                     cpt = cpt + 1
+            chi2_sup_test2["dof"] = chi2_sup_test2["dof"].astype("int")
             
-            ###### Add 
-            if X_quali_sup.shape[1] > 1 :
-                chi_sup_stats = pd.concat([chi_sup_stats,chi_sup_stats2],axis=0,ignore_index=True)
+            ###### Add
+            if n_cat > 1:
+                if X_quali_sup.shape[1] > 1 :
+                    chi2_sup_test = pd.concat([chi2_sup_test,chi2_sup_test2],axis=0,ignore_index=True)
+                else:
+                    chi2_sup_test = chi2_sup_test2
+                self.chi2_test_ = pd.concat((self.chi2_test_,chi2_sup_test),axis=0,ignore_index=True)
             else:
-                chi_sup_stats = chi_sup_stats2
+                if X_quali_sup.shape[1] > 1 :
+                    self.chi2_test_ = chi2_sup_test2
             
             #################################### Summary quali
             # Compute statistiques
@@ -469,15 +511,30 @@ class MPCA(BaseEstimator,TransformerMixin):
             Z_quali_sup = pd.concat((Z,X_quali_sup),axis=1)
             # Find supplementary quantitatives columns index
             index = [Z_quali_sup.columns.tolist().index(x) for x in X_quali_sup.columns]
-            # Update PCA
-            global_pca = PCA(standardize=True,n_components=n_components,ind_sup=None,quali_sup=index).fit(Z_quali_sup)
-            self.quali_sup_ = global_pca.quali_sup_
+            # Update PCA with supplementary qualitatives variables
+            global_pca = PCA(standardize=True,n_components=n_components,ind_weights=ind_weights.tolist(),var_weights=var_weights.values.tolist(),quali_sup=index).fit(Z_quali_sup)
+            
+            # Extract all elements
+            quali_sup_coord = global_pca.quali_sup_["coord"].iloc[:,:n_components]
+            quali_sup_cos2 = global_pca.quali_sup_["cos2"].iloc[:,:n_components]
+            quali_sup_vtest = global_pca.quali_sup_["vtest"].iloc[:,:n_components]
+            quali_sup_dist = global_pca.quali_sup_["dist"]
+            quali_sup_eta2 = global_pca.quali_sup_["eta2"].iloc[:,:n_components]
+
+            # Store all elements
+            self.quali_sup_ = {"coord" : quali_sup_coord, "cos2" : quali_sup_cos2, "vtest": quali_sup_vtest, "dist": quali_sup_dist, "eta2" : quali_sup_eta2}
         
-        # Store Singular Value Decomposition
-        self.svd_ = global_pca.svd_
+        #######################################################
+        # Store singular value decomposition
+        vs = global_pca.svd_["vs"][:max_components]
+        U = global_pca.svd_["U"][:,:n_components]
+        V = global_pca.svd_["V"][:,:n_components]
         
+        self.svd_ = {"vs" : vs, "U" : U, "V" : V}
+
+        #########################################
         # Eigen - values
-        eigen_values = global_pca.svd_["vs"][:min(X.shape[0]-1, Z.shape[1]-X_qual.shape[1])]**2
+        eigen_values = global_pca.svd_["vs"][:max_components]**2
         difference = np.insert(-np.diff(eigen_values),len(eigen_values)-1,np.nan)
         proportion = 100*eigen_values/np.sum(eigen_values)
         cumulative = np.cumsum(proportion)
@@ -486,48 +543,44 @@ class MPCA(BaseEstimator,TransformerMixin):
         self.eig_ = pd.DataFrame(eig,columns=["eigenvalue","difference","proportion","cumulative"],index=["Dim."+str(x+1) for x in range(eig.shape[0])])
         
         ########################### Row informations #################################################################
-        self.ind_ = global_pca.ind_
+        ind_coord = global_pca.ind_["coord"].iloc[:,:n_components]
+        ind_cos2  = global_pca.ind_["cos2"].iloc[:,:n_components]
+        ind_contrib = global_pca.ind_["contrib"].iloc[:,:n_components]
+        ind_infos = global_pca.ind_["infos"]
+        # Store informations
+        self.ind_ = {"coord": ind_coord, "cos2" :ind_cos2, "contrib" : ind_contrib,"infos" : ind_infos}
 
         ############################ Quantitatives columns ###########################################################
-        quanti_coord =  global_pca.var_["coord"].loc[X_quant.columns,:]
-        quanti_contrib = global_pca.var_["contrib"].loc[X_quant.columns,:]
-        quanti_cos2 = global_pca.var_["cos2"].loc[X_quant.columns,:]
-        self.quanti_var_ = {"coord" : quanti_coord, "contrib" : quanti_contrib,"cor":quanti_coord,"cos2" : quanti_cos2,"corr" : col_corr}
+        quanti_coord =  global_pca.var_["coord"].iloc[:n_cont,:n_components]
+        quanti_contrib = global_pca.var_["contrib"].iloc[:n_cont,:n_components]
+        quanti_cos2 = global_pca.var_["cos2"].iloc[:n_cont,:n_components]
+        # Store all informations
+        self.quanti_var_ = {"coord" : quanti_coord, "contrib" : quanti_contrib,"cor":quanti_coord,"cos2" : quanti_cos2}
         
+        ############################# Qualitatives variables informations ######################
         # Extract categories coordinates form PCA
-        quali_coord = global_pca.var_["coord"].loc[dummies.columns,:]
-        quali_contrib = global_pca.var_["contrib"].loc[dummies.columns,:]
-        quali_cos2 = global_pca.var_["cos2"].loc[dummies.columns,:]
+        quali_coord = global_pca.var_["coord"].iloc[n_cont:,:n_components]
+        quali_contrib = global_pca.var_["contrib"].iloc[n_cont:,:]
+        quali_cos2 = global_pca.var_["cos2"].iloc[n_cont:,:]
         I_k = dummies.sum(axis=0)
-        quali_vtest = pd.concat(((quali_coord.loc[k,:]*np.sqrt(((X.shape[0]-1)*I_k[k])/(X.shape[0]-I_k[k]))).to_frame(k).T for k in dummies.columns),axis=0)
+        quali_vtest = pd.concat(((quali_coord.loc[k,:]*np.sqrt(((n_rows-1)*I_k[k])/(n_rows-I_k[k]))).to_frame(k).T for k in dummies.columns),axis=0)
         quali_vtest = mapply(quali_vtest,lambda x : x/np.sqrt(eigen_values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
+        # Store all informations
         self.quali_var_ = {"coord" : quali_coord, "contrib" : quali_contrib, "cos2" : quali_cos2,"vtest":quali_vtest}
 
         ####################################   Add elements ###############################################
         #### Qualitatives eta2
-        quali_var_eta2 = pd.concat((function_eta2(X=X_qual,lab=col,x=global_pca.ind_["coord"].values,weights=ind_weights,n_workers=n_workers) for col in X_qual.columns),axis=0)
+        quali_var_eta2 = pd.concat((function_eta2(X=X_quali,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali.columns),axis=0)
         # Contributions des variables qualitatives
         quali_var_contrib = mapply(quali_var_eta2,lambda x : 100*x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
         # Cosinus carrés des variables qualitatives
-        quali_var_cos2 = pd.concat((((quali_var_eta2.loc[col,:]**2)/(len(np.unique(X_qual[[col]]))-1)).to_frame(name=col).T for col in X_qual.columns),axis=0)
-
+        quali_var_cos2 = pd.concat((((quali_var_eta2.loc[col,:]**2)/(nb_moda[col]-1)).to_frame(name=col).T for col in X_quali.columns),axis=0)
+        
+        ######################################## Global variables informations ######################################
         var_coord = pd.concat((quanti_cos2,quali_var_eta2),axis=0)
         var_contrib = pd.concat((quanti_contrib,quali_var_contrib),axis=0)
         var_cos2 = pd.concat((quanti_cos2**2,quali_var_cos2),axis=0)
         self.var_ = {"coord" : var_coord,"contrib" : var_contrib,"cos2" : var_cos2}
-
-        if self.quanti_sup is not None and self.quali_sup is not None:
-            var_sup_coord = pd.concat((self.quanti_sup_["cos2"],self.quali_sup_["eta2"]),axis=0)
-            var_sup_cos2 = pd.concat((self.quanti_sup_["cos2"]**2,self.quali_sup_["cos2"]),axis=0)
-            self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
-        elif self.quanti_sup is not None:
-            var_sup_coord = self.quanti_sup_["cos2"]
-            var_sup_cos2 = self.quanti_sup_["cos2"]**2
-            self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
-        elif self.quali_sup is not None:
-            var_sup_coord = self.quali_sup_["eta2"]
-            var_sup_cos2 = self.quali_sup_["cos2"]
-            self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
 
         self.model_ = "mpca"
 
@@ -570,37 +623,34 @@ class MPCA(BaseEstimator,TransformerMixin):
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
         # Store continuous and categorical variables
-        X_sup_quant = X[self.call_["quanti"]]
-        X_sup_qual = X[self.call_["quali"]]
+        X_quanti = X[self.call_["quanti"]]
+        X_quali = X[self.call_["quali"]]
 
         # Revaluate
-        X_sup_qual = revaluate_cat_variable(X_sup_qual)
-
-        # Center according to PCAMIX
-        Z1 = X_sup_quant - self.call_["means"].values.reshape(1,-1)
+        X_quali = revaluate_cat_variable(X_quali)
 
         # Standardscaler according to PCA
         means = self.call_["Z"].mean(axis=0)
         std = self.call_["Z"].std(axis=0,ddof=0)
-        Z1 = (Z1 - means.loc[Z1.columns].values.reshape(1,-1))/std.loc[Z1.columns].values.reshape(1,-1)
-
-        # Standardscaler categorical Variable
+        
+        # Dummies encoding
         Y = np.zeros((X.shape[0],self.call_["dummies"].shape[1]))
         for i in np.arange(0,X.shape[0],1):
-            values = [str(X_sup_qual.iloc[i,k]) for k in np.arange(0,X_sup_qual.shape[1])]
+            values = [str(X_quali.iloc[i,k]) for k in np.arange(0,X_quali.shape[1])]
             for j in np.arange(0,self.call_["dummies"].shape[1],1):
                 if self.call_["dummies"].columns[j] in values:
                     Y[i,j] = 1
         Y = pd.DataFrame(Y,index=X.index,columns=self.call_["dummies"].columns)
-        # Center according to PCAMIX
-        Z2 = Y - self.call_["means_l"].values.reshape(1,-1)
+
+        # Concatenate and centered according to PCAMIX
+        Z = pd.concat((X_quanti,Y),axis=1) - self.call_["means"].values.reshape(1,-1)
 
         # Standardscaler according to PCA
-        Z2 = (Z2 - means.loc[Z2.columns].values.reshape(1,-1))/std.loc[Z2.columns].values.reshape(1,-1)
-        # Supplementary individuals coordinates
-        coord = pd.concat((Z1,Z2),axis=1).dot(self.svd_["V"])
+        Z = (Z - means.values.reshape(1,-1))/std.values.reshape(1,-1)
+        ## Multiply by columns weight & Apply transition relation
+        coord = Z.apply(lambda x : x*self.call_["var_weights"].values,axis=1).dot(self.svd_["V"])
         coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
-        return  coord
+        return coord
 
     def fit_transform(self,X,y=None):
         """

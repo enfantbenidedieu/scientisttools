@@ -602,3 +602,62 @@ class PCA(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.ind_["coord"]
+    
+def predictPCA(object,newdata):
+    """
+    Predict projection for new individuals with Principal Component Analysis (PCA)
+    ------------------------------------------------------------------------------
+
+    Description
+    -----------
+
+
+
+
+    Parameters
+    ----------
+
+    object : an object of class PCA
+
+    newdata : a pandas/polars dataframe in which to look for variables with which to predict. newdata must contain columns with the same names as the original data.
+    
+    Return
+    ------
+
+    a dictionary
+    
+    coord :
+
+    cos2 :
+
+    dist : distance for new individuals to origin
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    pass
+
+def supvarPCA(object,X_quanti_sup=None, X_quali_sup=None):
+    """
+    Supplementary variables in Principal Components Analysis (PCA)
+    --------------------------------------------------------------
+
+    Parameters
+    ----------
+    object : an object of class PCA
+
+    X_quanti_sup : a numeric pandas/polars dataframe
+
+    X_quali_sup : a categorical pandas/polars dataframe.
+
+
+    Return
+    ------
+
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    pass

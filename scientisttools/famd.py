@@ -42,7 +42,7 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     Missing values are replaced by means for quantitative variables. Note that, when all the variable are qualitative, the factor coordinates of the individuals are equal to the factor scores
     of standard MCA times squares root of J (the number of qualitatives variables) and the eigenvalues are then equal to the usual eigenvalues of MCA times J.
-    When all the variables are quantitative, FAMD gives excatly the same results as standard PCA.
+    When all the variables are quantitative, FAMD gives exactly the same results as standard PCA.
 
     Usage
     -----
@@ -144,6 +144,8 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     > X_qual = splitmix(gironde)["quali"]
 
+    > from scientisttools import FAMD
+
     > # PCA with FAMD function
 
     > res_pca = FAMD().fit(X_quant)
@@ -163,9 +165,9 @@ class FAMD(BaseEstimator,TransformerMixin):
                  ind_weights = None,
                  quanti_weights = None,
                  quali_weights = None,
-                 ind_sup=None,
-                 quanti_sup=None,
-                 quali_sup=None,
+                 ind_sup = None,
+                 quanti_sup = None,
+                 quali_sup = None,
                  parallelize = False):
         self.n_components = n_components
         self.ind_weights = ind_weights
@@ -216,8 +218,8 @@ class FAMD(BaseEstimator,TransformerMixin):
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
         
-        ############################
-        # Check is quali sup
+        ##########################################################################################
+        # Set supplementary qualitative variables labels
         if self.quali_sup is not None:
             if (isinstance(self.quali_sup,int) or isinstance(self.quali_sup,float)):
                 quali_sup = [int(self.quali_sup)]
@@ -227,7 +229,8 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             quali_sup_label = None
 
-        #  Check if quanti sup
+        ############################################################################################
+        #  Set supplementary qualitative variables labels
         if self.quanti_sup is not None:
             if (isinstance(self.quanti_sup,int) or isinstance(self.quanti_sup,float)):
                 quanti_sup = [int(self.quanti_sup)]
@@ -237,7 +240,8 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             quanti_sup_label = None
         
-        # Check if individuls supplementary
+        ###################################################################################################
+        # Set supplementary individuals labels
         if self.ind_sup is not None:
             if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
                 ind_sup = [int(self.ind_sup)]
@@ -267,6 +271,8 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         ###################################### Factor Analysis of Mixed Data ######################################################
         rec = recodevarfamd(X)
+
+        # Extract elements
         X = rec["X"]
         n_rows = rec["n"]
         n_cont = rec["k1"]
@@ -274,7 +280,8 @@ class FAMD(BaseEstimator,TransformerMixin):
         X_quanti = rec["quanti"]
         X_quali = rec["quali"]
         dummies = rec["dummies"]
-        
+        nb_moda = rec["nb_moda"]
+
         # Set individuals weights
         if self.ind_weights is None:
             ind_weights = np.ones(n_rows)/n_rows
@@ -476,10 +483,10 @@ class FAMD(BaseEstimator,TransformerMixin):
                     for j in np.arange(dummies.shape[1]):
                         if dummies.columns[j] in values:
                             Y[i,j] = 1
-                ind_sup_dummies = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup.index)
+                Y = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup.index)
 
                 # Standardize the data
-                Z2_ind_sup = (ind_sup_dummies - means.values[n_cont:].reshape(1,-1))/std.values[n_cont:].reshape(1,-1)
+                Z2_ind_sup = (Y - means.values[n_cont:].reshape(1,-1))/std.values[n_cont:].reshape(1,-1)
                 # Concatenate
                 Z_ind_sup = pd.concat((Z_ind_sup,Z2_ind_sup),axis=1)
             
@@ -487,6 +494,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             Z_ind_sup = pd.concat((Z,Z_ind_sup),axis=0)
             # Update PCA
             global_pca = PCA(standardize=False,n_components=int(max_components),ind_sup=ind_sup).fit(Z_ind_sup)
+            
             # Extract elements
             ind_sup_coord = global_pca.ind_sup_["coord"].iloc[:,:n_components]
             ind_sup_cos2 = global_pca.ind_sup_["cos2"].iloc[:,:n_components]
@@ -502,13 +510,17 @@ class FAMD(BaseEstimator,TransformerMixin):
             if self.ind_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
             
+            # Recode to fill NA
             X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
+
+            # Summary statistics with supplementary quantitatives variables
             summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
             summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
 
             # Store
             if n_cont > 0:
                 self.summary_quanti_.insert(0,"group","active")
+                summary_quanti_sup.insert(0,"group","sup")
                 self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
             elif n_cont == 0:
                 self.summary_quanti_ = summary_quanti_sup
@@ -522,6 +534,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             index = [Z_quanti_sup.columns.tolist().index(x) for x in X_quanti_sup.columns]
             # Update PCA
             global_pca = PCA(standardize=False,n_components=int(max_components),ind_sup=None,quanti_sup=index).fit(Z_quanti_sup)
+            
             # Extract elements
             quanti_sup_coord = global_pca.quanti_sup_["coord"].iloc[:,:n_components]
             quanti_sup_cos2  = global_pca.quanti_sup_["cos2"].iloc[:,:n_components]
@@ -538,7 +551,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             
             # Chi-squared test between new categorie
             if X_quali_sup.shape[1] > 1:
-                chi_sup_stats = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
+                chi2_sup_test = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
                 cpt = 0
                 for i in range(X_quali_sup.shape[1]-1):
                     for j in range(i+1,X_quali_sup.shape[1]):
@@ -549,12 +562,13 @@ class FAMD(BaseEstimator,TransformerMixin):
                                     "statistic" : chi.statistic,
                                     "dof"       : chi.dof,
                                     "pvalue"    : chi.pvalue},index=[cpt])
-                        chi_sup_stats = pd.concat([chi_sup_stats,row_chi2],axis=0)
+                        chi2_sup_test  = pd.concat([chi2_sup_test,row_chi2],axis=0)
                         cpt = cpt + 1
+                chi2_sup_test["dof"] = chi2_sup_test["dof"].astype("int")
             
             # Chi-squared between old and new qualitatives variables
             if n_cat > 0:
-                chi_sup_stats2 = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"])
+                chi2_sup_test2 = pd.DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"])
                 cpt = 0
                 for i in range(X_quali_sup.shape[1]):
                     for j in range(n_cat):
@@ -565,16 +579,21 @@ class FAMD(BaseEstimator,TransformerMixin):
                                                 "statistic" : chi.statistic,
                                                 "dof"       : chi.dof,
                                                 "pvalue"    : chi.pvalue},index=[cpt])
-                        chi_sup_stats2 = pd.concat([chi_sup_stats2,row_chi2],axis=0,ignore_index=True)
+                        chi2_sup_test2 = pd.concat([chi2_sup_test2,row_chi2],axis=0,ignore_index=True)
                         cpt = cpt + 1
+                chi2_sup_test2["dof"] = chi2_sup_test2["dof"].astype("int")
             
             ###### Add 
-            if n_cat > 0:
+            if n_cat > 1:
                 if X_quali_sup.shape[1] > 1 :
-                    chi_sup_stats = pd.concat([chi_sup_stats,chi_sup_stats2],axis=0,ignore_index=True)
+                    chi2_sup_test = pd.concat([chi2_sup_test,chi2_sup_test2],axis=0,ignore_index=True)
                 else:
-                    chi_sup_stats = chi_sup_stats2
-            
+                    chi2_sup_test = chi2_sup_test2
+                self.chi2_test_ = pd.concat((self.chi2_test_,chi2_sup_test),axis=0,ignore_index=True)
+            else:
+                if X_quali_sup.shape[1] > 1 :
+                    self.chi2_test_ = chi2_sup_test2
+
             #################################### Summary quali
             # Compute statistiques
             summary_quali_sup = pd.DataFrame()
@@ -585,7 +604,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
 
             if n_cat == 0:
-                self.summary_quali_sup_ = summary_quali_sup
+                self.summary_quali_ = summary_quali_sup
             elif n_cat > 0:
                 summary_quali_sup.insert(0,"group","sup")
                 self.summary_quali_.insert(0,"group","active")
@@ -597,6 +616,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             index = [Z_quali_sup.columns.tolist().index(x) for x in X_quali_sup.columns]
             # Update PCA
             global_pca = PCA(standardize=False,n_components=int(max_components),ind_sup=None,quali_sup=index).fit(Z_quali_sup)
+            
             # Extract elements
             quali_sup_coord = global_pca.quali_sup_["coord"].iloc[:,:n_components]
             quali_sup_cos2 = global_pca.quali_sup_["cos2"].iloc[:,:n_components]
@@ -645,19 +665,13 @@ class FAMD(BaseEstimator,TransformerMixin):
                 # Contributions des variables qualitatives
                 quali_var_contrib = mapply(quali_var_eta2,lambda x : 100*x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
                 # Cosinus carrés des variables qualitatives
-                quali_var_cos2 = pd.concat((((quali_var_eta2.loc[col,:]**2)/(X_quali[col].nunique()-1)).to_frame(name=col).T for col in X_quali.columns),axis=0)
+                quali_var_cos2 = pd.concat((((quali_var_eta2.loc[col,:]**2)/(nb_moda[col]-1)).to_frame(name=col).T for col in X_quali.columns),axis=0)
 
                 var_coord = pd.concat((quanti_cos2,quali_var_eta2),axis=0)
                 var_contrib = pd.concat((quanti_contrib,quali_var_contrib),axis=0)
                 var_cos2 = pd.concat((quanti_cos2**2,quali_var_cos2),axis=0)
+                #Store all informations
                 self.var_ = {"coord" : var_coord,"contrib" : var_contrib,"cos2" : var_cos2}        
-
-                # Add additionals informations
-                if self.quanti_sup is not None and self.quali_sup is not None:
-                    var_sup_coord = pd.concat((self.quanti_sup_["cos2"],quali_sup_eta2),axis=0)
-                    quali_var_sup_cos2 = pd.concat((((quali_sup_eta2.loc[col,:]**2)/(X_quali_sup[col].nunique()-1)).to_frame(name=col).T for col in X_quali_sup.columns),axis=0)
-                    var_sup_cos2 = pd.concat((self.quanti_sup_["cos2"]**2,quali_var_sup_cos2),axis=0)
-                    self.var_sup_ = {"coord" : var_sup_coord, "cos2" : var_sup_cos2}
 
         self.model_ = "famd"
 
