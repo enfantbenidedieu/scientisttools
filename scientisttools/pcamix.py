@@ -809,3 +809,15 @@ class PCAMIX(BaseEstimator,TransformerMixin):
 
         self.fit(X)
         return self.ind_["coord"]
+
+def predictPCAMIX(self,X):
+    """
+    
+    """
+    pass
+
+def supvarPCAMIX(self,X_quanti_sup=None,X_quali_sup=None):
+    """
+    
+    """
+    pass

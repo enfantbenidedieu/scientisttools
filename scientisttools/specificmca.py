@@ -654,3 +654,15 @@ class SpecificMCA(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.ind_["coord"]
+
+def predictSpecificMCA(self,X):
+    """
+    
+    """
+    pass
+
+def supvarSpecificMCA(self,X_quanti_sup=None, X_quali_sup=None):
+    """
+    
+    """
+    pass

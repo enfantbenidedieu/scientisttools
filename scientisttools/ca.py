@@ -10,6 +10,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from .svd_triplet import svd_triplet
 from .weightedcorrcoef import weightedcorrcoef
 from .function_eta2 import function_eta2
+from .recodecont import recodecont
+from .revaluate_cat_variable import revaluate_cat_variable
 
 class CA(BaseEstimator,TransformerMixin):
     """
@@ -21,9 +23,7 @@ class CA(BaseEstimator,TransformerMixin):
 
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
-    CA performs a Correspondence Analysis, given a contingency table
-    containing absolute frequencies ; shape= n_rows x n_columns.
-    This implementation only works for dense dataframe.
+    CA performs a Correspondence Analysis, given a contingency table containing absolute frequencies ; shape= n_rows x n_columns. This implementation only works for dense dataframe.
 
     It Performs Correspondence Analysis (CA) including supplementary row and/or column points.
 
@@ -41,10 +41,9 @@ class CA(BaseEstimator,TransformerMixin):
 
     quali_sup : a list/tuple indicating the indexes of the categorical supplementary variables
 
-    parallelize : boolean, default = False
-        If model should be parallelize
-            - If True : parallelize using mapply
-            - If False : parallelize using apply
+    parallelize : boolean, default = False. If model should be parallelize
+        * If True : parallelize using mapply
+        * If False : parallelize using apply
 
     Return
     ------
@@ -93,10 +92,10 @@ class CA(BaseEstimator,TransformerMixin):
     """
 
     def __init__(self,
-                 n_components=None,
+                 n_components = 5,
                  row_weights = None,
-                 row_sup=None,
-                 col_sup=None,
+                 row_sup = None,
+                 col_sup = None,
                  quanti_sup = None,
                  quali_sup = None,
                  parallelize = False):
@@ -272,6 +271,7 @@ class CA(BaseEstimator,TransformerMixin):
         self.call_ = {"X" : X,
                       "Xtot" : Xtot ,
                       "Z" : Z ,
+                      "row_weights" : pd.Series(row_weights,index=X.index,name="weight"),
                       "col_marge" : col_marge,
                       "row_marge" : row_marge,
                       "n_components":n_components,
@@ -472,11 +472,12 @@ class CA(BaseEstimator,TransformerMixin):
             
              ########### Set all elements as objects
             X_quali_sup = X_quali_sup.astype("object")
+            X_quali_sup = revaluate_cat_variable(X_quali_sup)
 
             # Sum of columns by group
             quali_sup = pd.DataFrame().astype("float")
-            for name in X_quali_sup.columns.tolist():
-                data = pd.concat((X,X_quali_sup[col]),axis=1).groupby(by=name,as_index=True).sum()
+            for col in X_quali_sup.columns.tolist():
+                data = pd.concat((X,X_quali_sup[col]),axis=1).groupby(by=col,as_index=True).sum()
                 data.index.name = None
                 quali_sup = pd.concat((quali_sup,data),axis=0)
             ############################################################################################
@@ -598,3 +599,295 @@ class CA(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.row_["coord"]
+
+def predictCA(self,X):
+    """
+    Predict projection for new rows with Correspondence Analysis (CA)
+    -----------------------------------------------------------------
+
+    Description
+    -----------
+    Performs the coordinates, squared cosinus and distance to origin of new rows with Correspondence Analysis
+
+    Parameters
+    ----------
+    self : an object of class CA
+
+    X : pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data
+
+    Return
+    ------
+    a dictionary including
+
+    coord : factor coordinates for supplementary rows
+
+    cos2 : squared cosinus for supplementary rows
+
+    dist : distance to origin for supplementary rows
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+    # Check if self is an object of class CA
+    if self.model_ != "ca":
+        raise TypeError("'self' must be an object of class CA")
+    
+    # check if X is an instance of polars dataframe
+    if isinstance(X,pl.DataFrame):
+        X = X.to_pandas()
+
+    if not isinstance(X,pd.DataFrame):
+        raise TypeError(
+        f"{type(X)} is not supported. Please convert to a DataFrame with "
+        "pd.DataFrame. For more information see: "
+        "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
+    # Set parallelize
+    if self.parallelize:
+        n_workers = -1
+    else:
+        n_workers = 1
+    
+    # Extract elements
+    n_components = self.call_["n_components"]
+    col_marge = self.call_["col_marge"]
+
+    # Transform to int
+    X = X.astype("int")
+    # Sum row
+    row_sum = X.sum(axis=1)
+
+    # Correction with row sum
+    X = mapply(X,lambda x : x/row_sum,axis=0,progressbar=False,n_workers=n_workers)
+
+    # Supplementary coordinates
+    coord = X.dot(self.svd_["V"][:,:n_components])
+    coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
+    
+    # Supplementary distance to origin
+    dist2 = mapply(X,lambda x : ((x - col_marge.values)**2)/col_marge.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+    dist2.name = "dist"
+    
+    # Supplementary cos2
+    cos2 = mapply(coord,lambda x : (x**2)/dist2,axis=0,progressbar=False,n_workers=n_workers)
+
+    # Store all informations
+    res = {"coord" : coord, "cos2" : cos2, "dist" : np.sqrt(dist2)}
+    return res
+
+def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
+    """
+    Supplementary columns/variables with Correspondence Analysis (CA)
+    -----------------------------------------------------------------
+
+    Description
+    -----------
+    Performns the coordinates, squared cosinus and distance to origin of supplementary columns/variables with Correspondence Analysis (CA)
+
+    Parameters
+    ----------
+    self : an object of class CA
+
+    X_col_sup : pandas/polars dataframe of supplementary columns
+
+    X_quanti_sup : pandas/polars dataframe of supplementary quantitatives columns
+
+    X_quali_sup : pandas/polars dataframe of supplementary qualitatives columns
+
+    Return
+    ------
+    a dictionary including : 
+
+    col : a dictionary containing the results of the supplementary columns variables:
+
+    quanti : a dictionary containing the results of the supplementary quantitatives variables:
+        * coord : factor coordinates of the supplementary quantitativaes variables
+        * cos2 : squared cosinus of the supplementary quantitatives variables
+    
+    quali : a dictionary containing the results of the supplementary qualitatives/categories variables :
+        * coord : factor coordinates of the supplementary categories
+        * cos2 : squared cosinus of the supplementary categories
+        * vtest : value-test of the supplementary categories
+        * dist : distance to origin of the supplementary categories
+        * eta2 : squared correlation ratio of the supplementary qualitatives variables
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    """
+
+    # Check if self is and object of class CA
+    if self.model_ != "ca":
+        raise TypeError("'self' must be an object of class CA")
+    
+    # set parallelize
+    if self.parallelize:
+        n_workers = -1
+    else:
+        n_workers = 1
+    
+    # Extract elements
+    row_weights = self.call_["row_weights"] # row weights
+    n_components = self.call_["n_components"]
+    row_marge = self.call_["row_marge"]
+    row_coord = self.row_["coord"]
+    
+    ## For supplementary columns
+    if X_col_sup is not None:
+        # check if X is an instance of polars dataframe
+        if isinstance(X_col_sup,pl.DataFrame):
+            X_col_sup = X_col_sup.to_pandas()
+        
+        # If pandas series, transform to pandas dataframe
+        if isinstance(X_col_sup,pd.Series):
+            X_col_sup = X_col_sup.to_frame()
+        
+        # Check if X is an instance of pd.DataFrame class
+        if not isinstance(X_col_sup,pd.DataFrame):
+            raise TypeError(
+            f"{type(X_col_sup)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Transform to int
+        X_col_sup = X_col_sup.astype("int")
+
+        ### weighted with row weight
+        X_col_sup = mapply(X_col_sup,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=n_workers)
+        # Compute columns sum
+        col_sum = X_col_sup.sum(axis=0)
+        X_col_sup = mapply(X_col_sup,lambda x : x/col_sum,axis=1,progressbar=False,n_workers=n_workers)
+
+        # Supplementary columns coordinates
+        col_sup_coord = X_col_sup.T.dot(self.svd_["U"][:,:n_components])
+        col_sup_coord.columns = ["Dim."+str(x+1) for x in range(col_sup_coord.shape[1])]
+
+        # Supplementary distance to origin
+        col_sup_dist2 = mapply(X_col_sup,lambda x : ((x - row_marge)**2)/row_marge,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        col_sup_dist2.name = "dist"
+
+        # Supplementary squared cosinus
+        col_sup_cos2 = mapply(col_sup_coord,lambda x : (x**2)/col_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
+        
+        # Store all informations
+        col_sup = {"coord" : col_sup_coord,"cos2" : col_sup_cos2,"dist" : np.sqrt(col_sup_dist2)}
+    else:
+        col_sup = None
+
+    ########################################################################################################################
+    #                                          For supplementary quantitatives variables
+    #########################################################################################################################
+
+    if X_quanti_sup is not None:
+        # check if X is an instance of polars dataframe
+        if isinstance(X_quanti_sup,pl.DataFrame):
+            X_quanti_sup = X_quanti_sup.to_pandas()
+        
+        # If pandas series, transform to pandas dataframe
+        if isinstance(X_quanti_sup,pd.Series):
+            X_quanti_sup = X_quanti_sup.to_frame()
+        
+        # Check if X is an instance of pd.DataFrame class
+        if not isinstance(X_quanti_sup,pd.DataFrame):
+            raise TypeError(
+            f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Transform to float
+        X_quanti_sup = X_quanti_sup.astype("float")
+
+        # Recode variables
+        X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
+     
+        ############# Compute average mean
+        quanti_sup_coord = weightedcorrcoef(x=X_quanti_sup,y=row_coord,w=row_marge)[:X_quanti_sup.shape[1],X_quanti_sup.shape[1]:]
+        quanti_sup_coord = pd.DataFrame(quanti_sup_coord,index=X_quanti_sup.columns,columns=["Dim."+str(x+1) for x in range(quanti_sup_coord.shape[1])])
+        
+        #################### Compute cos2
+        quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers)
+
+        # Set all informations
+        quanti_sup = {"coord" : quanti_sup_coord, "cos2" : quanti_sup_cos2}
+    else:
+        quanti_sup = None
+    
+    ###########################################################################################################################
+    #                                                   For supplementary qualitatives variables
+    ###########################################################################################################################
+
+    if X_quali_sup is not None:
+        # check if X is an instance of polars dataframe
+        if isinstance(X_quali_sup,pl.DataFrame):
+            X_quali_sup = X_quali_sup.to_pandas()
+        
+        # If pandas series, transform to pandas dataframe
+        if isinstance(X_quali_sup,pd.Series):
+            X_quali_sup = X_quali_sup.to_frame()
+        
+        # Check if X is an instance of pd.DataFrame class
+        if not isinstance(X_quali_sup,pd.DataFrame):
+            raise TypeError(
+            f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Transform to object
+        X_quali_sup = X_quali_sup.astype("object")
+
+        # Extract active data
+        X = self.call_["X"]
+        col_marge = self.call_["col_marge"]
+        total = X.sum().sum()
+
+        # Check if two columns have the same categories
+        X_quali_sup = revaluate_cat_variable(X_quali_sup)
+
+        # Sum of columns by group
+        quali = pd.DataFrame().astype("float")
+        for col in X_quali_sup.columns.tolist():
+            data = pd.concat((X,X_quali_sup[col]),axis=1).groupby(by=col,as_index=True).sum()
+            data.index.name = None
+            quali = pd.concat((quali,data),axis=0)
+        ############################################################################################
+        # Calculate sum by row
+        quali_sum = quali.sum(axis=1)
+        # Devide by sum
+        quali = mapply(quali,lambda x : x/quali_sum,axis=0,progressbar=False,n_workers=n_workers)
+
+        # Categories coordinates
+        quali_sup_coord = quali.dot(self.svd_["V"][:,:n_components])
+        quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(quali_sup_coord.shape[1])]
+
+        # Categories dist2
+        quali_sup_dist2 = mapply(quali,lambda x : ((x - col_marge.values)**2)/col_marge.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+        quali_sup_dist2.name="dist"
+
+        # Sup Cos2
+        quali_sup_cos2 = mapply(quali_sup_coord,lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
+
+        # Disjonctif table
+        dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns),axis=1)
+        # Compute : weighted count by categories
+        n_k = mapply(dummies,lambda x : x*row_marge,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)*total
+
+        ######## Weighted of coordinates to have 
+        if total > 1:
+            coef = np.array([np.sqrt(n_k[i]*((total - 1)/(total - n_k[i]))) for i in range(len(n_k))])
+        else:
+            coef = np.sqrt(n_k)
+        # Value - test
+        quali_sup_vtest = mapply(quali_sup_coord,lambda x : x*coef,axis=0,progressbar=False,n_workers=n_workers)
+
+        # Correlation ratio
+        quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=row_coord.values,weights=row_marge,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
+        
+        # Set all informations
+        quali_sup = {"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"eta2" : quali_sup_eta2,"dist" : np.sqrt(quali_sup_dist2)}
+    else:
+        quali_sup = None
+    
+    # Store all informations
+    res = {"col" : col_sup, "quanti" : quanti_sup, "quali" : quali_sup}
+    return res

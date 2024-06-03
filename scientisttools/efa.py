@@ -337,3 +337,9 @@ class EFA(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.ind_["coord"]
+
+def predictEFA(self,X):
+    """
+    
+    """
+    pass

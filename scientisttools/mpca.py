@@ -672,3 +672,16 @@ class MPCA(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.ind_["coord"]
+
+
+def predictMPCA(self,X=None):
+    """
+    
+    """
+    pass
+
+def supvarMPCA(self,X_quanti_sup=None,X_quali_sup=None):
+    """
+    
+    """
+    pass

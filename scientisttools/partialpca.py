@@ -357,3 +357,11 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         coord = mapply(Z,lambda x : x*self.call_["var_weights"],axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"])
         coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
         return coord
+    
+
+def predictPartialPCA(self,X):
+    """
+    
+    
+    """
+    pass

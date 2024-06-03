@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 # Principal Components Analysis
-from .pca import PCA
+from .pca import PCA, predictPCA, supvarPCA
 from .get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
 from .fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot,fviz_pca3d_ind,fviz_pca
 
 # Correspondence Analysis (CA)
-from .ca import CA
+from .ca import CA, predictCA, supvarCA
 from .get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
 from .fviz_ca import fviz_ca_row, fviz_ca_col, fviz_ca_biplot, fviz_ca
 

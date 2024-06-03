@@ -785,3 +785,15 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         self.fit(X)
         return self.ind_["coord"]
+    
+
+def predictFAMD(self,X):
+    """
+    """
+    pass
+
+def supvarFAMD(self,X_quanti_sup=None,X_quali_sup=None):
+    """
+    
+    """
+    pass

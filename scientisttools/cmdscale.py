@@ -361,3 +361,10 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         
         self.fit(X)
         return self.result_["coord"]
+    
+
+def predictCMDSCALE(self,X):
+    """
+    
+    """
+    pass
