@@ -11,6 +11,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from .revaluate_cat_variable import revaluate_cat_variable
 from .function_eta2 import function_eta2
 from .svd_triplet import svd_triplet
+from .recodecont import recodecont
 
 class MCA(BaseEstimator,TransformerMixin):
     """
@@ -294,17 +295,39 @@ class MCA(BaseEstimator,TransformerMixin):
                       "X" : X, 
                       "dummies" : dummies,
                       "Z" : Z , 
-                      "row_marge" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
-                      "col_marge" : mod_weights,
+                      "ind_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
+                      "mod_weights" : mod_weights,
                       "var_weights" : var_weights,
                       "n_components" : n_components,
                       "ind_sup" : ind_sup_label,
                       "quali_sup" : quali_sup_label,
                       "quanti_sup" : quanti_sup_label}
+        
+        # Individuals informations : Weights, Squared distance to origin and Inertia
+        # Individuals squared distance to origin
+        ind_dist2 = mapply(Z,lambda x : (x**2)*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+        ind_dist2.name = "dist"
+        # individuals Inertia
+        ind_inertia = ind_dist2*ind_weights
+        ind_inertia.name = "inertia"
+        # Store all informations
+        ind_infos = np.c_[ind_weights,ind_dist2,ind_inertia]
+        ind_infos = pd.DataFrame(ind_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.index.tolist())
 
-        #################### Singular Value Decomposition (SVD) ########################################
+        ## Variables/categories infomations : Weights, Squared distance to origin and Inertia
+        # Variables squared distance to origin
+        var_dist2 = mapply(Z,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        var_dist2.name = "dist"
+        # Variables inertia
+        var_inertia = var_dist2*mod_weights
+        var_inertia.name = "inertia"
+        # Variables/categoires
+        var_infos = np.c_[mod_weights, var_dist2,var_inertia]
+        var_infos = pd.DataFrame(var_infos,columns=["Weight","Sq. Dist.","Inertia"],index=dummies.columns)
+
+        # Generalized Singular Value Decomposition (GSVD)
         svd = svd_triplet(X=Z,row_weights=ind_weights,col_weights=mod_weights.values,n_components=n_components)
-        # Store Singular Value Decomposition (SVD) information
+        # Store Generalized Singular Value Decomposition (GSVD) information
         self.svd_ = svd
 
         # Eigen - values
@@ -318,7 +341,7 @@ class MCA(BaseEstimator,TransformerMixin):
         eig = np.c_[eigen_values,difference,proportion,cumulative]
         self.eig_ = pd.DataFrame(eig,columns = ["eigenvalue","difference","proportion","cumulative"],index=["Dim."+str(x+1) for x in range(eig.shape[0])])
         
-        # save eigen value grather than threshold
+        # save eigen value greater than threshold
         lambd = eigen_values[eigen_values>(1/X.shape[1])]
         
         # Benzecri correction
@@ -344,76 +367,55 @@ class MCA(BaseEstimator,TransformerMixin):
                                                     columns=["eigenvalue","proportion","cumulative"],
                                                     index = ["Dim."+str(x+1) for x in np.arange(0,len(lambd))])
         
-        ######################################################################################################################
-        #################################             Coordinates                             ################################
-        ######################################################################################################################
+        ## Individuals informations : Coordinates, Contributions & Squared cosinus
         # Individuals coordinates
-        ind_coord = svd["U"].dot(np.diag(np.sqrt(eigen_values[:n_components])))
-        ind_coord = pd.DataFrame(ind_coord,index=X.index.tolist(),columns=["Dim."+str(x+1) for x in range(ind_coord.shape[1])])
+        ind_coord = svd["U"].dot(np.diag(svd["vs"][:n_components]))
+        ind_coord = pd.DataFrame(ind_coord,index=X.index.tolist(),columns=["Dim."+str(x+1) for x in range(n_components)])
 
-        # Variables coordinates
-        var_coord = svd["V"].dot(np.diag(np.sqrt(eigen_values[:n_components])))
-        var_coord = pd.DataFrame(var_coord,index=dummies.columns.tolist(),columns=["Dim."+str(x+1) for x in range(var_coord.shape[1])])
-
-        # Normalized columns coordinates : see (Saporta, p235)  or (Husson, 138)
-        corrected_var_coord = mapply(var_coord,lambda x: x*np.sqrt(eigen_values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
-
-        ####################################### Contribution ########################################
         # Individuals contributions
         ind_contrib = mapply(ind_coord,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
         ind_contrib = mapply(ind_contrib,lambda x : 100*x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+
+        # Individuals Cos2
+        ind_cos2 = mapply(ind_coord,lambda x : (x**2)/ind_dist2,axis=0,progressbar=False,n_workers=n_workers)
+
+        # Store all informations
+        self.ind_ = {"coord" : ind_coord, "contrib" : ind_contrib, "cos2" : ind_cos2, "infos" : ind_infos}
+
+        ## Variables informations : Coordinates, Contributions & Squared cosinus
+        # Variables coordinates
+        var_coord = svd["V"].dot(np.diag(svd["vs"][:n_components]))
+        var_coord = pd.DataFrame(var_coord,index=dummies.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
+
+        # Normalized columns coordinates : see (Saporta, p235)  or (Husson, 138)
+        corrected_var_coord = mapply(var_coord,lambda x: x*svd["vs"][:n_components],axis=1,progressbar=False,n_workers=n_workers)
 
         # Variables contributions
         var_contrib = mapply(var_coord,lambda x : (x**2)*mod_weights.values,axis=0,progressbar=False,n_workers=n_workers)
         var_contrib = mapply(var_contrib,lambda x : 100*x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
         
-        ######################################### Cos2 - Quality of representation ##################################################"
-        # Row and columns cos2
-        ind_dist2 = mapply(Z,lambda x : (x**2)*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-        ind_dist2.name = "dist"
-        ind_inertia = ind_dist2*ind_weights
-        ind_inertia.name = "inertia"
-        ind_infos = pd.concat([np.sqrt(ind_dist2),ind_inertia],axis=1)
-        ind_infos.insert(1,"weight",ind_weights)
-
-        ################################ Columns informations ##################################################
-        var_dist2 = mapply(Z,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
-        var_dist2.name = "dist"
-        var_inertia = var_dist2*mod_weights
-        var_inertia.name = "inertia"
-        var_infos = pd.concat([np.sqrt(var_dist2),var_inertia],axis=1)
-        var_infos.insert(1,"weight",mod_weights)
-
-        #######################################" Cos2 ########################################################
-        # Individuals Cos2
-        ind_cos2 = mapply(ind_coord,lambda x : (x**2)/ind_dist2,axis=0,progressbar=False,n_workers=n_workers)
-        
         # Variables Cos2
         var_cos2 = mapply(var_coord,lambda x : (x**2)/var_dist2,axis=0,progressbar=False,n_workers=n_workers)
 
-        ####################################################################################################################
-        # Valeur test des modalités
-        var_vtest = pd.concat(((var_coord.loc[k,:]*np.sqrt(((X.shape[0]-1)*I_k[k])/(X.shape[0]-I_k[k]))).to_frame().T for k in I_k.index.tolist()),axis=0)
+        # Value - test
+        var_vtest = pd.concat(((var_coord.loc[k,:]*np.sqrt(((X.shape[0]-1)*I_k[k])/(X.shape[0]-I_k[k]))).to_frame().T for k in I_k.index),axis=0)
 
-        ########################################################################################################################
-        #       Qualitative informations
-        ####################################" Correlation ratio #####################################################
-        quali_eta2 = pd.concat((function_eta2(X=X,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X.columns.tolist()),axis=0)
+        # Variables squared correlation ratio
+        quali_var_eta2 = pd.concat((function_eta2(X=X,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X.columns),axis=0)
         
         # Contribution des variables
-        quali_contrib = pd.DataFrame().astype("float")
+        quali_var_contrib = pd.DataFrame().astype("float")
         for col in X.columns.tolist():
             modalite = np.unique(X[col]).tolist()
             contrib = var_contrib.loc[modalite,:].sum(axis=0).to_frame(col).T
-            quali_contrib = pd.concat((quali_contrib,contrib),axis=0)
+            quali_var_contrib = pd.concat((quali_var_contrib,contrib),axis=0)
 
         # Inertia for the variables
-        quali_inertia = pd.Series([(len(np.unique(X[col]))-1)/X.shape[0] for col in X.columns.tolist()],index=X.columns.tolist(),name="inertia")
+        quali_var_inertia = pd.Series([(len(np.unique(X[col]))-1)/X.shape[0] for col in X.columns.tolist()],index=X.columns.tolist(),name="inertia")
 
-        #####################################
-        self.ind_ = {"coord" : ind_coord, "contrib" : ind_contrib, "cos2" : ind_cos2, "infos" : ind_infos}
+        # Store all informations
         self.var_ = {"coord" : var_coord, "corrected_coord":corrected_var_coord,"contrib" : var_contrib, "cos2" : var_cos2, "infos" : var_infos,
-                     "vtest" : var_vtest, "eta2" : quali_eta2, "inertia" : quali_inertia,"var_contrib" : quali_contrib}
+                     "vtest" : var_vtest, "eta2" : quali_var_eta2, "inertia" : quali_var_inertia,"var_contrib" : quali_var_contrib}
 
         # Inertia
         inertia = (dummies.shape[1]/X.shape[1]) - 1
@@ -422,9 +424,7 @@ class MCA(BaseEstimator,TransformerMixin):
         kaiser_threshold = 1/X.shape[1]
         kaiser_proportion_threshold = 100/inertia
 
-        self.others_ = {"inertia" : inertia,
-                        "threshold" : kaiser_threshold,
-                        "proportion" : kaiser_proportion_threshold}
+        self.others_ = {"inertia" : inertia,"threshold" : kaiser_threshold,"proportion" : kaiser_proportion_threshold}
         
         #################################################################################################################
         #   Supplementary individuals informations
@@ -433,44 +433,50 @@ class MCA(BaseEstimator,TransformerMixin):
         if self.ind_sup is not None:
             # Convert to object
             X_ind_sup = X_ind_sup.astype("object")
-            # Create dummies table for supplementary
+            # Revaluate if at least two columns have same levels
+            X_ind_sup = revaluate_cat_variable(X_ind_sup)
+
+            # Create dummies table for supplementary individuals
             Y = np.zeros((X_ind_sup.shape[0],dummies.shape[1]))
-            for i in np.arange(0,X_ind_sup.shape[0],1):
+            for i in np.arange(X_ind_sup.shape[0]):
                 values = [X_ind_sup.iloc[i,k] for k in np.arange(0,X.shape[1])]
-                for j in np.arange(0,dummies.shape[1],1):
-                    if dummies.columns.tolist()[j] in values:
+                for j in np.arange(dummies.shape[1]):
+                    if dummies.columns[j] in values:
                         Y[i,j] = 1
-            ind_sup_dummies = pd.DataFrame(Y,columns=dummies.columns.tolist(),index=X_ind_sup.index.tolist())
+            Y = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup.index.tolist())
 
-            ################################ Supplementary row coordinates ##################################################
-            ind_sup_coord = pd.DataFrame(np.zeros(shape=(X_ind_sup.shape[0],n_components)),index=X_ind_sup.index.tolist(),
-                                     columns=["Dim."+str(x+1) for x in range(0,n_components)]).astype("float")
-            for col in X.columns.tolist():
-                modalite = np.unique(X[col]).tolist()
-                data1 = ind_sup_dummies.loc[:,modalite]
-                data2 = var_coord.loc[modalite,:]
-                coord = (var_weights[col])*data1.dot(data2)
-                ind_sup_coord = ind_sup_coord.add(coord)
-            ind_sup_coord = mapply(ind_sup_coord,lambda x : x/np.sqrt(eigen_values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
+            # Standardization
+            Z_sup = pd.concat((Y.loc[:,k]*(1/p_k[k])-1 for k  in dummies.columns),axis=1)
 
-            ################################ Supplementary row Cos2 ##########################################################
-            Z_sup = pd.concat((ind_sup_dummies.loc[:,k]*(1/p_k[k])-1 for k  in ind_sup_dummies.columns),axis=1)
+            # Supplementary individuals Coordinates
+            ind_sup_coord = mapply(Z_sup,lambda x : x*mod_weights,axis=1,progressbar=False,n_workers=n_workers).dot(svd["V"][:,:n_components])
+            ind_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)] 
+            
+            # Supplementary individuals squared distance to origin
             ind_sup_dist2 = mapply(Z_sup,lambda x : (x**2)*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-            ind_sup_dist2.name = "dist"
+            ind_sup_dist2.name = "Sq. Dist."
 
-            ##### Cos2
+            # Supplementary individuals squared cosinus (Cos2)
             ind_sup_cos2 = mapply(ind_sup_coord,lambda x : (x**2)/ind_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
-
-            ##### 
+            
+            # Store all informations
             self.ind_sup_ = {"coord" : ind_sup_coord, "cos2" : ind_sup_cos2, "dist" : ind_sup_dist2}
         
+        ###############################################################################################################
+        #   Supplementary qualitatives variables
+        ################################################################################################################
+        # Supplementary qualitatives variables statistics
         if self.quali_sup is not None:
             X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
                 X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
 
-            #####################
+            # Transform to object
             X_quali_sup = X_quali_sup.astype("object")
+            # Reevaluate if two variables have the same level
+            X_quali_sup = revaluate_cat_variable(X_quali_sup)
+
+            # Compute dummies tables
             X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns),axis=1)
 
             # Correlation Ratio
@@ -478,28 +484,25 @@ class MCA(BaseEstimator,TransformerMixin):
             
             # # Coordinates of supplementary categories - corrected
             quali_sup_coord = mapply(X_quali_dummies,lambda x : x/np.sum(x),axis=0,progressbar=False,n_workers=n_workers).T.dot(ind_coord)
-            quali_sup_coord = mapply(quali_sup_coord,lambda x : x/np.sqrt(eigen_values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
+            quali_sup_coord = mapply(quali_sup_coord,lambda x : x/svd["vs"][:n_components],axis=1,progressbar=False,n_workers=n_workers)
 
-            #####################################################################################################################################
-            ###### Distance à l'origine
-            #####################################################################################################################################
+            # Supplementary qualitatives variables proportions
             quali_sup_p_k = X_quali_dummies.mean(axis=0)
-            Z_quali_sup = pd.concat((X_quali_dummies.loc[:,k]*(1/quali_sup_p_k[k])-1 for k  in X_quali_dummies.columns.tolist()),axis=1)
+            Z_quali_sup = pd.concat(((X_quali_dummies.loc[:,k]/quali_sup_p_k[k])-1 for k  in X_quali_dummies.columns.tolist()),axis=1)
+            
+            # Supplementary categories squared distance to origin
             quali_sup_dist2 = mapply(Z_quali_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
-            quali_sup_dist2.name = "dist"
+            quali_sup_dist2.name = "Sq. Dist."
 
-            ################################## Cos2
+            # Supplementary qualitatives variables squared cosinus (Cos2)
             quali_sup_cos2 = mapply(quali_sup_coord, lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
             
-            ################################## v-test
+            # v-test
             quali_sup_n_k = X_quali_dummies.sum(axis=0)
             quali_sup_vtest = pd.concat(((quali_sup_coord.loc[k,:]*np.sqrt(((X.shape[0]-1)*quali_sup_n_k[k])/(X.shape[0] - quali_sup_n_k[k]))).to_frame(name=k).T for k in quali_sup_n_k.index.tolist()),axis=0)
 
-            self.quali_sup_ = {"coord" : quali_sup_coord,
-                               "cos2"  : quali_sup_cos2,
-                               "dist"  : np.sqrt(quali_sup_dist2),
-                               "vtest" : quali_sup_vtest,
-                               "eta2"  : quali_sup_eta2}
+            # Store all informations
+            self.quali_sup_ = {"coord" : quali_sup_coord,"cos2"  : quali_sup_cos2,"dist"  : quali_sup_dist2,"vtest" : quali_sup_vtest,"eta2"  : quali_sup_eta2}
 
             #################################### Summary supplementary qualitatives variables ##################################
             # Compute statistiques
@@ -554,35 +557,44 @@ class MCA(BaseEstimator,TransformerMixin):
                 chi2_test3.insert(0,"group","sup")
                 self.chi2_test_ = pd.concat((self.chi2_test_,chi2_test3),axis=0,ignore_index=True)
 
+        ##################################################################################################
+        # Supplementary quantitatives variables
+        ##################################################################################################
+        # Supplementary quantiatives variables statistics
         if self.quanti_sup is not None:
             X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.ind_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
 
-            ##############################################################################################################################
+            # Transform to float
             X_quanti_sup = X_quanti_sup.astype("float")
+            # Recode continuous variables : Fill NA if missing
+            X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
             
-            ############# Compute average mean and standard deviation
+            # Compute weighted average and and weighted standard deviation
             d1 = DescrStatsW(X_quanti_sup.values,weights=ind_weights,ddof=0)
 
-            # Z = (X - mu)/sigma
+            # Standardization
             Z_quanti_sup = (X_quanti_sup -  d1.mean.reshape(1,-1))/d1.std.reshape(1,-1)
 
-            ####### Compute row coord
+            # Multiply with individuals weights
             quanti_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
-            quanti_sup_coord = quanti_sup_coord.T.dot(svd["U"])
-            quanti_sup_coord.columns = ["Dim."+str(x+1) for x in range(quanti_sup_coord.shape[1])]
+            # Apply transition relation
+            quanti_sup_coord = quanti_sup_coord.T.dot(svd["U"][:,:n_components])
+            quanti_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
 
-            ############# Supplementary cos2 ###########################################
+            # Supplementary quantitatives variables squared distance to origin
             quanti_sup_cor = mapply(Z_quanti_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
             dist2 = np.dot(np.ones(X_quanti_sup.shape[0]),quanti_sup_cor)
+
+            # Supplementary quantitatives variables squared cosinus (Cos2)
             quanti_sup_co2 = mapply(quanti_sup_coord,lambda x : (x**2)/dist2,axis=0,progressbar=False,n_workers=n_workers)
 
-            #############################################################################################################
-            ##################### Compute statistics
+            # Compute statistics
             summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
             summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
             
+            # Store all informations
             self.quanti_sup_ = {"coord" : quanti_sup_coord,"cos2" : quanti_sup_co2}
             self.summary_quanti_ = summary_quanti_sup
 
@@ -636,27 +648,28 @@ class MCA(BaseEstimator,TransformerMixin):
         
         # Add revaluate
         X = revaluate_cat_variable(X)
-        
-        Y = np.zeros((X.shape[0],self.call_["dummies"].shape[1]))
-        for i in np.arange(0,X.shape[0],1):
-            values = [X.iloc[i,k] for k in np.arange(0,self.call_["X"].shape[1])]
-            for j in np.arange(0,self.call_["dummies"].shape[1],1):
-                if self.call_["dummies"].columns.tolist()[j] in values:
-                    Y[i,j] = 1
-        ind_sup_dummies = pd.DataFrame(Y,columns=self.call_["dummies"].columns.tolist(),index=X.index.tolist())
 
-        ################################ Supplementary row coordinates ##################################################
-        ind_sup_coord = pd.DataFrame(np.zeros(shape=(X.shape[0],self.ind_["coord"].shape[1])),index=X.index.tolist(),
-                                     columns=self.ind_["coord"].columns.tolist()).astype("float")
-        for col in self.call_["X"].columns.tolist():
-            modalite = np.unique(self.call_["X"][col]).tolist()
-            data1 = ind_sup_dummies.loc[:,modalite]
-            data2 = self.var_["coord"].loc[modalite,:]
-            coord = (self.call_["var_weights"][col])*data1.dot(data2)
-            ind_sup_coord = ind_sup_coord.add(coord)
-        # Apply correction
-        ind_sup_coord = mapply(ind_sup_coord,lambda x : x/np.sqrt(self.eig_.iloc[:,0][:self.call_["n_components"]]),axis=1,progressbar=False,n_workers=n_workers)
-        return ind_sup_coord
+        # Extract some elements
+        n_components = self.call_["n_components"]
+        dummies = self.call_["dummies"]
+        mod_weights =self.call_["mod_weights"]
+        p_k = dummies.mean(axis=0)
+        
+        Y = np.zeros((X.shape[0],dummies.shape[1]))
+        for i in np.arange(X.shape[0]):
+            values = [X.iloc[i,k] for k in np.arange(0,self.call_["X"].shape[1])]
+            for j in np.arange(dummies.shape[1]):
+                if dummies.columns[j] in values:
+                    Y[i,j] = 1
+        Y = pd.DataFrame(Y,columns=dummies.columns,index=X.index.tolist())
+
+        # Standardization
+        Z_sup = pd.concat(((Y.loc[:,k]/p_k[k])-1 for k in dummies.columns),axis=1)
+
+        # Supplementary individuals Coordinates
+        coord = mapply(Z_sup,lambda x : x*mod_weights,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
+        coord.columns = ["Dim."+str(x+1) for x in range(n_components)] 
+        return coord
 
     def fit_transform(self,X,y=None):
         """
@@ -681,12 +694,252 @@ class MCA(BaseEstimator,TransformerMixin):
 
 def predictMCA(self,X):
     """
+    Predict projection for new individuals with Multiple Correspondence Analysis (MCA)
+    ----------------------------------------------------------------------------------
+
+    Description
+    -----------
+    Performs the coordinates, squared cosinus and squared distance to origin of new individuals with Multiple Correspondence Analysis (MCA)
+
+    Parameters
+    ----------
+    self : an object of class MCA
+
+    X : a pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
     
+    Return
+    ------
+    a dictionary including : 
+    
+    coord : factor coordinates of the new individuals
+
+    cos2 : squared cosines of the new individuals
+
+    dist : distance to origin for new individuals
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    pass
+    # Check if self is an object of class PCA
+    if self.model_ != "mca":
+        raise TypeError("'self' must be an object of class MCA")
+    
+    # Check if columns are aligned
+    if X.shape[1] != self.call_["X"].shape[1]:
+        raise ValueError("'columns' aren't aligned")
+
+    # check if X is an instance of polars dataframe
+    if isinstance(X,pl.DataFrame):
+        X = X.to_pandas()
+    
+    # Check if X is an instance of pd.DataFrame class
+    if not isinstance(X,pd.DataFrame):
+        raise TypeError(
+        f"{type(X)} is not supported. Please convert to a DataFrame with "
+        "pd.DataFrame. For more information see: "
+        "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
+    # set parallelize
+    if self.parallelize:
+        n_workers = -1
+    else:
+        n_workers = 1
+    
+    # Extract some elements
+    dummies = self.call_["dummies"]
+    n_components = self.call_["n_components"]
+    mod_weights = self.call_["mod_weights"]
+    p_k = dummies.mean(axis=0)
+
+    # Transform to object
+    X = X.astype("object")
+    # Revaluate if at least two columns have same levels
+    X = revaluate_cat_variable(X)
+
+    # Create dummies table for supplementary individuals
+    Y = np.zeros((X.shape[0],dummies.shape[1]))
+    for i in np.arange(X.shape[0]):
+        values = [X.iloc[i,k] for k in np.arange(0,X.shape[1])]
+        for j in np.arange(dummies.shape[1]):
+            if dummies.columns[j] in values:
+                Y[i,j] = 1
+    Y = pd.DataFrame(Y,columns=dummies.columns,index=X.index.tolist())
+
+    # Standardization
+    Z = pd.concat((Y.loc[:,k]*(1/p_k[k])-1 for k  in dummies.columns),axis=1)
+
+    # Supplementary individuals Coordinates
+    coord = mapply(Z,lambda x : x*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
+    coord.columns = ["Dim."+str(x+1) for x in range(n_components)] 
+    
+    # Supplementary individuals squared distance to origin
+    dist2 = mapply(Z,lambda x : (x**2)*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+    dist2.name = "Sq. Dist."
+
+    # Supplementary individuals squared cosinus (Cos2)
+    cos2 = mapply(coord,lambda x : (x**2)/dist2.values,axis=0,progressbar=False,n_workers=n_workers)
+    
+    # Store all informations
+    res = {"coord" : coord, "cos2" : cos2, "dist" : dist2}
+    return res
 
 def supvarMCA(self,X_quanti_sup=None,X_quali_sup=None):
     """
+    Supplementary variables in Multiple Correspondence Analysis (MCA)
+    -----------------------------------------------------------------
+
+    Description
+    -----------
+    Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables with Multiple Correspondence Analysis (MCA)
+
+    Parameters
+    ----------
+    self : an object of class MCA
+
+    X_quanti_sup : a pandas/polars dataframe of supplementary quantitatives variables
+
+    X_quali_sup : a pandas/polars dataframe of supplementary qualitatives variables
+
+    Return
+    ------
+    a dictionary including : 
+
+    quanti : a dictionary containing the results of the supplementary quantitatives variables:
+        * coord : factor coordinates of the supplementary quantitativaes variables
+        * cos2 : squared cosinus of the supplementary quantitatives variables
     
+    quali : a dictionary containing the results of the supplementary qualitatives/categories variables :
+        * coord : factor coordinates of the supplementary categories
+        * cos2 : squared cosinus of the supplementary categories
+        * vtest : value-test of the supplementary categories
+        * dist : distance to origin of the supplementary categories
+        * eta2 : squared correlation ratio of the supplementary qualitatives variables
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    pass
+    # Check if self is and object of class MCA
+    if self.model_ != "mca":
+        raise TypeError("'self' must be an object of class MCA")
+    
+    # set parallelize
+    if self.parallelize:
+        n_workers = -1
+    else:
+        n_workers = 1
+
+    ind_weights = self.call_["ind_weights"].values
+    n_components = self.call_["n_components"]
+    
+    ########################################################################################################################
+    #                                          For supplementary quantitatives variables
+    #########################################################################################################################
+
+    if X_quanti_sup is not None:
+        # check if X is an instance of polars dataframe
+        if isinstance(X_quanti_sup,pl.DataFrame):
+            X_quanti_sup = X_quanti_sup.to_pandas()
+        
+        # If pandas series, transform to pandas dataframe
+        if isinstance(X_quanti_sup,pd.Series):
+            X_quanti_sup = X_quanti_sup.to_frame()
+        
+        # Check if X is an instance of pd.DataFrame class
+        if not isinstance(X_quanti_sup,pd.DataFrame):
+            raise TypeError(
+            f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Transform to float
+        X_quanti_sup = X_quanti_sup.astype("float")
+
+        # Recode variables
+        X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
+
+        # Compute weighted average and and weighted standard deviation
+        d1 = DescrStatsW(X_quanti_sup.values,weights=ind_weights,ddof=0)
+
+        # Standardization
+        Z_quanti_sup = (X_quanti_sup -  d1.mean.reshape(1,-1))/d1.std.reshape(1,-1)
+
+        # Multiply with individuals weights
+        quanti_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
+        # Apply transition relation
+        quanti_sup_coord = quanti_sup_coord.T.dot(self.svd_["U"][:,:n_components])
+        quanti_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+
+        # Supplementary quantitatives variables squared distance to origin
+        quanti_sup_cor = mapply(Z_quanti_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
+        quanti_sup_dist2 = np.dot(np.ones(X_quanti_sup.shape[0]),quanti_sup_cor)
+
+        # Supplementary quantitatives variables squared cosinus (Cos2)
+        quanti_sup_co2 = mapply(quanti_sup_coord,lambda x : (x**2)/quanti_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
+
+        # Store all informations
+        quanti_sup = {"coord" : quanti_sup_coord,"cos2" : quanti_sup_co2}
+    else:
+        quanti_sup = None
+    
+    ###########################################################################################################################
+    #                                                   For supplementary qualitatives variables
+    ###########################################################################################################################
+
+    if X_quali_sup is not None:
+        # check if X is an instance of polars dataframe
+        if isinstance(X_quali_sup,pl.DataFrame):
+            X_quali_sup = X_quali_sup.to_pandas()
+        
+        # If pandas series, transform to pandas dataframe
+        if isinstance(X_quali_sup,pd.Series):
+            X_quali_sup = X_quali_sup.to_frame()
+        
+        # Check if X is an instance of pd.DataFrame class
+        if not isinstance(X_quali_sup,pd.DataFrame):
+            raise TypeError(
+            f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Transform to object
+        X_quali_sup = X_quali_sup.astype("object")
+
+        # Check if two columns have the same categories
+        X_quali_sup = revaluate_cat_variable(X_quali_sup)
+        n_rows = X_quali_sup.shape[0]
+
+        # Compute dummies tables
+        X_quali_dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns),axis=1)
+
+        # Correlation Ratio
+        quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=self.ind_["coord"].values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
+        
+        # # Coordinates of supplementary categories - corrected
+        quali_sup_coord = mapply(X_quali_dummies,lambda x : x/np.sum(x),axis=0,progressbar=False,n_workers=n_workers).T.dot(self.ind_["coord"])
+        quali_sup_coord = mapply(quali_sup_coord,lambda x : x/self.svd_["vs"][:n_components],axis=1,progressbar=False,n_workers=n_workers)
+
+        # Supplementary qualitatives variables proportions
+        quali_sup_p_k = X_quali_dummies.mean(axis=0)
+        Z_quali_sup = pd.concat(((X_quali_dummies.loc[:,k]/quali_sup_p_k[k])-1 for k  in X_quali_dummies.columns.tolist()),axis=1)
+        
+        # Supplementary categories squared distance to origin
+        quali_sup_dist2 = mapply(Z_quali_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        quali_sup_dist2.name = "Sq. Dist."
+
+        # Supplementary qualitatives variables squared cosinus (Cos2)
+        quali_sup_cos2 = mapply(quali_sup_coord, lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
+        
+        # v-test
+        quali_sup_n_k = X_quali_dummies.sum(axis=0)
+        quali_sup_vtest = pd.concat(((quali_sup_coord.loc[k,:]*np.sqrt(((n_rows-1)*quali_sup_n_k[k])/(n_rows - quali_sup_n_k[k]))).to_frame(name=k).T for k in quali_sup_n_k.index.tolist()),axis=0)
+
+        # Store all informations
+        quali_sup = {"coord" : quali_sup_coord,"cos2"  : quali_sup_cos2,"dist"  : quali_sup_dist2,"vtest" : quali_sup_vtest,"eta2"  : quali_sup_eta2}
+    else:
+        quali_sup = None
+    
+    # Store all informations
+    res = {"quanti" : quanti_sup, "quali" :quali_sup}
+    return res

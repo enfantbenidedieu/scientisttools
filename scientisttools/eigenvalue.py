@@ -13,9 +13,15 @@ def get_eig(self) -> pd.DataFrame:
     -----------
     Eigenvalues correspond to the amount of the variation explained by each principal component.
 
+    Usage
+    -----
+    ```python
+    >>> get_eig(self)
+    ```
+
     Parameters:
     -----------
-    self : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMD, MFAMIX, MFACT, CMDSCALE
+    `self` : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMD, MFAMIX, MFACT, CMDSCALE
 
     Returns
     -------
@@ -24,10 +30,22 @@ def get_eig(self) -> pd.DataFrame:
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, get_eig
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> eig = get_eig(res_ca)
+    >>> print(eig)
+    ```
     """
     if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamd","mfamix","mfact","cmdscale"]:
         raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMD, MFAMIX, MFACT, CMDSCALE")
-    
     return self.eig_
 
 def get_eigenvalue(self) -> pd.DataFrame:
@@ -35,17 +53,7 @@ def get_eigenvalue(self) -> pd.DataFrame:
     Extract the eigenvalues/variances of dimensions
     -----------------------------------------------
 
-    Description
-    -----------
-    Eigenvalues correspond to the amount of the variation explained by each principal component.
-
-    Parameters:
-    -----------
-    self : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, CMDS,  HMFA
-
-    Returns
-    -------
-    eigenvalue, difference, variance percent and cumulative variance of percent
+    see get_eig(self)
 
     Author(s)
     ---------
@@ -54,71 +62,93 @@ def get_eigenvalue(self) -> pd.DataFrame:
     return get_eig(self)
 
 def fviz_screeplot(self,
-                   choice="proportion",
-                   geom_type=["bar","line"],
-                   y_lim=None,
+                   choice = "proportion",
+                   geom_type =["bar","line"],
+                   y_lim = None,
                    bar_fill = "steelblue",
-                   bar_color="steelblue",
-                   line_color="black",
-                   line_type="solid",
-                   bar_width=None,
-                   ncp=10,
-                   add_labels=False,
+                   bar_color = "steelblue",
+                   line_color = "black",
+                   line_type = "solid",
+                   bar_width = None,
+                   ncp = 10,
+                   add_labels = False,
                    ha = "center",
                    va = "bottom",
-                   title=None,
-                   x_label=None,
-                   y_label=None,
-                   ggtheme=pn.theme_minimal()) -> pn:
+                   title = None,
+                   x_label = None,
+                   y_label = None,
+                   ggtheme = pn.theme_minimal()) -> pn:
     """
-    Extract and visualize the eigenvalues/proportions of dimensions
-    -------------------------------------------------------------
+    Visualize the eigenvalues/proportions/cumulative of dimensions
+    ------------------------------------------------------------
 
+    Description
+    -----------
+    This function suppport the results of multiple general factor analysis methods such as PCA (Principal Components Analysis), CA (Correspondence Analysis), MCA (Multiple Correspondence Analysis), etc...
+
+    Usage
+    -----
+    ```python
+    >>> fviz_screeplot(self, choice="proportion", geom_type=["bar","line"], y_lim=None, bar_fill = "steelblue", bar_color="steelblue",line_color="black",line_type="solid",
+                        bar_width=None, ncp=10, add_labels=False, ha = "center", va = "bottom", title=None, x_label=None, y_label=None, ggtheme=pn.theme_minimal())
+    ```
+    
     Parameters
     ----------
-    self : an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, CMDS, DISQUAL, MIXDISC, CMDSCALE
+    `self` : an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, MIXDISC, CMDSCALE
 
-    choice : a text specifying the data to be plotted. Allowed values are "proportion" or "eigenvalue".
+    `choice` : a text specifying the data to be plotted. Allowed values are "proportion", "eigenvalue" or "cumulative"
 
-    geom_type : a text specifying the geometry to be used for the graph. Allowed values are "bar" for barplot, 
-                "line" for lineplot or ["bar", "line"] to use both types.
+    `geom_type` : a text specifying the geometry to be used for the graph. Allowed values are "bar" for barplot, "line" for lineplot or ["bar", "line"] to use both types.
 
-    ylim : y-axis limits, default = None
+    `y_lim` : a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
 
-    barfill : 	fill color for bar plot.
+    `bar_fill` : fill color for bar plot.
 
-    barcolor : outline color for bar plot.
+    `bar_color` : outline color for bar plot.
 
-    linecolor : color for line plot (when geom contains "line").
+    `line_color` : color for line plot (when geom contains "line").
 
-    linetype : line type
+    `line_type` : line type. Allowed values are : "solid", "dashed", "dashdot" or "dotted"
 
-    barwidth : float, the width(s) of the bars
+    `bar_width` : float, the width(s) of the bars
 
-    ncp : a numeric value specifying the number of dimensions to be shown.
+    `ncp` : a numeric value specifying the number of dimensions to be shown.
 
-    addlabels : logical value. If TRUE, labels are added at the top of bars or points showing the information retained by each dimension.
+    `add_labels` : logical value. If TRUE, labels are added at the top of bars or points showing the information retained by each dimension.
 
-    ha : horizontal adjustment of the labels.
+    `ha` : horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
 
-    va : vertical adjustment of the labels.
+    `va` : vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
 
-    title : title of the graph
+    `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
 
-    xlabel : x-axis title
+    `x_label` : a string specifying the label text of x (by default = None and a x_label is chosen).
 
-    ylabel : y-axis title
+    `y_label` : a string specifying the label text of y (by default = None and a x_label is chosen).
     
-    ggtheme : function plotnine theme name. Default value is theme_gray(). Allowed values include plotnine official themes: 
-                theme_gray(), theme_bw(), theme_minimal(), theme_classic(), theme_void(), ....
+    `ggtheme` : function plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes: theme_gray(), theme_bw(), theme_gray(), theme_classic(), theme_void(), ....
     
     Return
     ------
-    figure : a plotnine graphs
+    a plotnine
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, fviz_screeplot
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> p = fviz_screeplot(res_ca)
+    >>> print(p)
+    ```
     """
     if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","pcamix","partialpca","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
         raise ValueError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, PartialPCA, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
@@ -128,18 +158,23 @@ def fviz_screeplot(self,
 
     if choice == "eigenvalue":
         eig = eig["eigenvalue"]
-        text_labels = list([str(np.around(x,3)) for x in eig.values])
+        text_labels = [str(np.around(x,3)) for x in eig.values]
         if y_label is None:
             y_label = "Eigenvalue"
     elif choice == "proportion":
         eig = (1/100)*eig["proportion"]
-        text_labels = list([str(np.around(100*x,2))+"%" for x in eig.values])
+        text_labels = [str(np.around(100*x,2))+"%" for x in eig.values]
+    elif choice == "cumulative":
+        eig = (1/100)*eig["cumulative"]
+        text_labels = [str(np.around(100*x,2))+"%" for x in eig.values]
+        if y_label is None:
+            y_label = "Cumulative % of explained variances"
     else:
-        raise ValueError("'choice' must be one of 'proportion', 'eigenvalue'")
+        raise ValueError("'choice' must be one of 'proportion', 'eigenvalue', 'cumulative'")
 
     if isinstance(geom_type,str):
         if geom_type not in ["bar","line"]:
-            raise ValueError("The specified value for the argument geomtype are not allowed ")
+            raise ValueError("The specified value for the argument geom_type are not allowed ")
     elif (isinstance(geom_type,list) or isinstance(geom_type,tuple)):
         intersect = [x for x in geom_type if x in ["bar","line"]]
         if len(intersect)==0:
@@ -156,7 +191,7 @@ def fviz_screeplot(self,
         p = p + pn.geom_text(label=text_labels,ha = ha,va = va)
     
     # Scale y continuous
-    if choice == "proportion":
+    if choice in ["proportion","cumulative"]:
         p = p + pn.scale_y_continuous(labels=percent_format())
 
     if title is None:
@@ -175,8 +210,8 @@ def fviz_screeplot(self,
 
 def fviz_eig(self,**kwargs) -> pn:
     """
-    Extract and visualize the eigenvalues/proportions of dimensions
-    -------------------------------------------------------------
+    Visualize the eigenvalues/proportions/cumulative of dimensions
+    --------------------------------------------------------------
 
     see fviz_screeplot(...)
 

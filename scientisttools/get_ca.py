@@ -1,102 +1,110 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 
-def get_ca_row(self,choice="row")-> dict:
+def get_ca_row(self)-> dict:
     """
-    Extract the resultst for rows - CA
+    Extract the results for rows - CA
     ----------------------------------
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosine, contributions and inertia) for the active/supplementary 
-    row variables from Correspondence Analysis (CA) outputs.
+    Extract all the results (factor coordinates, square cosinus, relative contributions) of the active row variables from Correspondence Analysis (CA) outputs.
+
+    Usage
+    -----
+    ```python
+    >>> get_ca_row(self)
+    ```
 
     Parameters
     ----------
-    self. : an object of class CA
+    `self` : an object of class CA
 
-    choice : the element to subset from the output. Allowed values are "row" (for active rows) or "row_sup" (for supplementary rows).
-
-    Returns
+    Return
     -------
-    a dictionary of dataframes containing the results for the active rows including :
-    coord   : coordinates for the rows of shape (n_rows, n_components)
-    cos2    : cos2 for the rows of shape (n_rows, n_components)
-    contrib : contributions for the rows of shape (n_rows, n_components)
-    infos   : additionnal informations for the rows:
-                - square root distance between rows and inertia
-                - marge for the rows
-                - inertia for the rows
+    a dictionary of dataframes containing the results for the active rows including : 
+
+    `coord` : factor coordinates (scores) of the rows
+
+    `cos2` : square cosinus of the rows
+
+    `contrib` : relative contributions of the rows
+
+    `infos` : additionnal informations (weights, margin, square distance to origin and inertia) of the rows
     
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, get_ca_row
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> row = get_ca_row(res_ca) # Extract the results of rows
+    ```
     """
+    # Check if self is an object of class CA
     if self.model_ != "ca":
-        raise ValueError("'self' must be an object of class CA.")
-
-    if choice not in ["row", "row_sup"]:
-        raise ValueError("'choice' should be one of 'row', 'row_sup'")
-    
-    if choice == "row":
-        return self.row_
-    elif choice == "row_sup":
-        if self.row_sup is None:
-            raise ValueError("Error : No supplementary rows")
-        return self.row_sup_
+        raise TypeError("'self' must be an object of class CA")
+    return self.row_
             
-def get_ca_col(self,choice="col")-> dict:
-
+def get_ca_col(self)-> dict:
     """
     Extract the results for columns - CA
     ------------------------------------
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosine, contributions and inertia) for the active column variables from Correspondence Analysis (CA) outputs.
+    Extract all the results (factor coordinates, square cosinus, relative contributions) of the active column variables from Correspondence Analysis (CA) outputs.
 
+    Usage
+    -----
+    ```python
+    >>> get_ca_col(self)
+    ```
+    
     Parameters
     ----------
-    self : an object of class CA
-
-    choice : 
+    `self` : an object of class CA
 
     Returns
     -------
-    a dictionary of dataframes containing the results for the active columns including :
-    coord   : coordinates for the columns of shape (n_cols, n_components)
-    cos2    : cos2 for the columns of shape (n_cols, n_components)
-    contrib : contributions for the columns of shape (n_cols, n_components)
-    infos   : additionnal informations for the columns:
-                - square root distance between columns and inertia
-                - marge for the columns
-                - inertia for the columns
+    a dictionary of dataframes containing the results for the columns including : 
+
+    `coord` : factor coordinates of the columns
+
+    `cos2` : square cosinus of the columns
+
+    `contrib` : relatve contributions of the columns
+    
+    `infos` : additionals informations (margin, square distance to origin and inertia) of the columns
     
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, get_ca_col
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> col = get_ca_col(res_ca) # Extract the results of columns
+    ```
     """
+    # Check if self is an object of class CA
     if self.model_ != "ca":
-        raise ValueError("Error : 'self' must be an object of class CA.")
-    
-    if choice not in ["col","col_sup","quanti_sup","quali_sup"]:
-        raise ValueError("Error : 'choice' should be one of 'col', 'col_sup', 'quanti_sup', 'quali_sup'")
-    
-    if choice == "col":
-        return self.col_
-    elif choice == "col_sup":
-        if self.col_sup is None:
-            raise ValueError("Error : No supplementary columns")
-        return self.col_sup_
-    elif choice == "quanti_sup":
-        if self.quanti_sup is None:
-            raise ValueError("Error : No supplementary quantitatives columns")
-        return self.quanti_sup_
-    elif choice == "quali_sup":
-        if self.quali_sup is None:
-            raise ValueError("Error : No supplementary qualitatives columns")
+        raise TypeError("'self' must be an object of class CA")
+    return self.col_
 
 def get_ca(self,choice = "row")-> dict:
     """
@@ -105,73 +113,117 @@ def get_ca(self,choice = "row")-> dict:
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosine, contributions and inertia) for the active row/column variables from Correspondence Analysis (CA) outputs.
+    Extract all the results (factor coordinates, square cosinus, relative contributions) for the active row/column variables from Correspondence Analysis (CA) outputs.
 
     * get_ca() : Extract the results for rows and columns
     * get_ca_row() : Extract the results for rows only
     * get_ca_col() : Extract the results for columns only
 
+    Usage
+    -----
+    ```python
+    >>> get_ca(self, choice = ("row", "col"))
+    >>> get_ca_row(self)
+    >>> get_ca_col(self) 
+    ```
+
     Parameters
     ----------
-    self : an object of class CA
+    `self` : an object of class CA
 
-    choice : the element to subset from the output. Possible values are "row" or "col", "biplot"
+    `choice` : the element to subset from the output. Possible values are : 
+        * "row" for rows
+        * "col" for columns
 
     Return
     ------
     a dictionary of dataframes containing the results for the active rows/columns including :
-    coord   : coordinates for the rows/columns
-    cos2    : cos2 for the rows/columns
-    contrib	: contributions of the rows/columns
-    infos   : additionnal informations for the row/columns:
-                - square root distance between rows/columns and inertia
-                - marge for the rows/columns
-                - inertia for the rows/columns
+
+    `coord` : factor coordinates for the rows/columns
+
+    `cos2` : square cosinus for the rows/columns
+
+    `contrib` : relative contributions of the rows/columns
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    if self.model_ != "ca":
-        raise ValueError("'self' must be an object of class CA")
-    
-    if choice not in ["row","row_sup","col","col_sup","quanti_sup","quali_sup"]:
-        raise ValueError("'choice' should be one of 'row', 'row_sup', 'col', 'col_sup', 'quanti_sup', 'quali_sup'")
-    
-    if choice in ["row","row_sup"]:
-        return get_ca_row(self,choice=choice)
-    else:
-        return get_ca_col(self,choice=choice)
-    
 
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, get_ca
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> row = get_ca(res_ca, choice = "row") # Extract the results of rows
+    >>> col = get_ca(res_ca, choice = "col") # Extract the results of columns
+    ```
+    """
+    # Check if self is an obkect of class CA
+    if self.model_ != "ca":
+        raise TypeError("'self' must be an object of class CA")
+    
+    if choice not in ["row","col"]:
+        raise ValueError("'choice' should be one of 'row','col'")
+    
+    if choice == "row":
+        return get_ca_row(self)
+    else:
+        return get_ca_col(self)
+    
 def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe",**kwargs):
     """
     Printing summaries of Correspondence Analysis model
     ---------------------------------------------------
 
+    Description
+    -----------
+    Printing summaries of correspondence analysis (CA) objects
+
+    Usage
+    -----
+    ```python
+    >>> summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe",**kwargs)
+    ```
+    
     Parameters
     ----------
-    self        :   an obect of class CA
+    `self` : an object of class CA
 
-    digits      :   int, default=3. Number of decimal printed
+    `digits` : int, default=3. Number of decimal printed
 
-    nb_element  :   int, default = 10. Number of element
+    `nb_element` : int, default = 10. Number of element
 
-    ncp         :   int, default = 3. Number of componennts
+    `ncp` : int, default = 3. Number of componennts
 
-    to_markdown :   Print DataFrame in Markdown-friendly format.
+    `to_markdown` : Print DataFrame in Markdown-friendly format.
 
-    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
 
-    **kwargs    :   These parameters will be passed to tabulate.
+    `**kwargs` : These parameters will be passed to tabulate.
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
 
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, summaryCA
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> summaryCA(res_ca)
+    ```
+    """
+    # Check if self is an object of class CA
     if self.model_ != "ca":
-        raise ValueError("Error : 'self' must be an object of class CA")
+        raise TypeError("'self' must be an object of class CA")
 
     # Set number of components
     ncp = min(ncp,self.call_["n_components"])
@@ -182,16 +234,23 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     print("                     Correspondence Analysis - Results                     \n")
 
     # Add eigenvalues informations
-    print("Importance of components")
+    print("Eigenvalues")
     eig = self.eig_.T.round(decimals=digits)
     eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
-    
     if to_markdown:
         print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(eig)
     
-    # Add individuals informations
+    # Chi-squared test
+    print("\nChi-squared test\n")
+    chi2_test = self.others_["chi2"]
+    if to_markdown:
+        print(chi2_test.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(chi2_test)
+
+    # Add rows informations
     row = self.row_
     if row["coord"].shape[0] > nb_element:
         print(f"\nRows (the {nb_element} first)\n")
@@ -211,7 +270,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     else:
         print(row_infos)
 
-    # Add supplementary individuals
+    # Add supplementary rows informations
     if self.row_sup is not None:
         row_sup = self.row_sup_
         if row_sup["coord"].shape[0] > nb_element:
@@ -230,7 +289,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         else:
             print(row_sup_infos)
 
-    # Add variables informations
+    # Add columns informations
     col = self.col_
     if col["coord"].shape[0] > nb_element:
         print(f"\nColumns (the {nb_element} first)\n")

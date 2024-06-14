@@ -12,7 +12,7 @@ from .get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
 from .fviz_ca import fviz_ca_row, fviz_ca_col, fviz_ca_biplot, fviz_ca
 
 # Multiple Correspondence Analysis (MCA)
-from .mca import MCA
+from .mca import MCA, predictMCA, supvarMCA
 from .get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
 from .fviz_mca import fviz_mca_ind, fviz_mca_mod, fviz_mca_var, fviz_mca_biplot, fviz_mca
 

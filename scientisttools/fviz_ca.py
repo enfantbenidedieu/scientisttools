@@ -44,32 +44,127 @@ def fviz_ca_row(self,
                  lim_contrib = None,
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
-    
     """
     Visualize Correspondence Analysis - Graph of row variables
     ----------------------------------------------------------
 
     Description
     -----------
-    Correspondence analysis (CA) is an extension of Principal Component Analysis (PCA) suited to analyze frequencies formed by two categorical variables.
+    Correspondence analysis (CA) is an extension of Principal Component Analysis (PCA) suited to analyze frequencies formed by two categorical variables. fviz_ca_row provides plotnine based elegant visualization of CA outputs from Python functions.
+
+    Usage
+    -----
+    ```python
+    >>> fviz_ca_row(self,axis=[0,1],x_lim=None,y_lim=None,x_label = None,y_label = None,title =None,color ="black",geom = ["point","text"],gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),point_size = 1.5,
+                    text_size = 8,text_type = "text",marker = "o",add_grid =True,row_sup=True,color_sup = "blue",marker_sup = "^",quali_sup = True,color_quali_sup = "red",marker_quali_sup = ">",add_hline = True,
+                    add_vline=True,legend_title = None,habillage=None,add_ellipses=False, ellipse_type = "t",confint_level = 0.95,geom_ellipse = "polygon",ha="center",va="center",hline_color="black",
+                    hline_style="dashed",vline_color="black",vline_style ="dashed",lim_cos2 = None,lim_contrib = None,repel=False,ggtheme=pn.theme_minimal())
+    ```
 
     Parameters
     ----------
-    self : an object of class CA
+    `self` : an object of class CA
 
-    axis : a numeric list or vector of length 2 specifying the dimensions to be plotted, default = [0,1]
+    `axis` : a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
+
+    `x_lim` : a numeric list of length 2 specifying the range of the plotted 'x' values (by default = None).
+
+    `y_lim` : a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
+
+    `x_label` : a string specifying the label text of x (by default = None and a x_label is chosen).
+
+    `y_label` : a string specifying the label text of y (by default = None and a x_label is chosen).
+
+    `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
+
+    `color` : a color for the active rows points (by default = "black").
+
+    `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
+    
+    `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+    
+    `point_size` : a numeric value specifying the marker size (by default = 1.5).
+    
+    `text_size` : a numeric value specifying the label size (by default = 8).
+
+    `text_type` :  a string specifying either `geom_text` or `geom_label` (by default = "text"). Allowed values are : "text" or "label".
+
+    `marker` : the marker style (by default = "o").
+    
+    `add_grid` : a boolean to either add or not a grid customization (by default = True).
+
+    `row_sup` : a boolean to either add or not supplementary row points (by default = True).
+
+    `color_sup` : a color for the supplementary rows points (by default = "blue").
+
+    `marker_sup` :  a marker style for the supplementary rows points (by default = "^").
+
+    `quali_sup` : a boolean to either add or not supplementary categorical variables (by default = True).
+
+    `color_quali_sup` : a color for supplementary categorical vaiables (by default = "red").
+
+    `marker_quali_sup` : the marker stype for the supplementary categorical variables (by default = ">")
+
+    `add_hline` : a boolean to either add or not a horizontal ligne (by default = True).
+
+    `add_vline` : a boolean to either add or not a vertical ligne (by default = True).
+
+    `legend_title` : a string corresponding to the title of the legend (by default = None).
+
+    `habillage` : color the rows points among a categorical variables, give the name of the supplementary categorical variable (by default = None).
+
+    `add_ellipses` : a boolean to either add or not ellipses (by default = False). 
+
+    `ellipse_type` : ellipse multivariate distribution (by default = "t" for t-distribution). However, you can set type = "norm" to assume a multivariate normal distribution or type = "euclid" for an euclidean ellipse.
+
+    `confint_level` : ellipse confindence level (by default = 0.95).
+
+    `geom_ellipse` : ellipse geometry (by default = "polygon").
+
+    `ha` : horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
+
+    `va` : vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
+
+    `hline_color` : a string specifying the horizontal ligne color (by default = "black").
+
+    `hline_style` : a string specifying the horizontal ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+
+    `vline_color` : a string specifying the vertical ligne color (by default = "black").
+
+    `vline_style` : a string specifying the vertical ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+
+    `lim_cos2` : a numeric specifying the square cosinus limit (by default = None).
+
+    `lim_contrib` : a numeric specifying the relative contribution limit (by default = None),
+
+    `repel` : a boolean, whether to avoid overplotting text labels or not (by default == False)
+
+    `ggtheme`: function, plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes : theme_gray(), theme_bw(), theme_classic(), theme_void(),...
 
     Return
     ------
-    a plotnine graph
+    a plotnine
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, fviz_ca_row
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> p = fviz_ca_row(res_ca)
+    >>> print(p)
+    ```
     """
-    
+    # check if self is an object of class CA
     if self.model_ != "ca":
-        raise ValueError("Error : 'self' must be an object of class CA.")
+        raise TypeError("'self' must be an object of class CA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -295,9 +390,18 @@ def fviz_ca_col(self,
     -----------
     Correspondence analysis (CA) is an extension of Principal Component Analysis (PCA) suited to analyze frequencies formed by two categorical variables.
 
+    Usage
+    -----
+    ```python
+    >>> fviz_ca_col(self, axis=[0,1], x_lim= None, y_lim=None, x_label = None, y_label = None, title =None, color ="black", geom = ["point","text"], gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    text_type = "text", marker = "o", point_size = 1.5, text_size = 8, add_grid =True, legend_title = None, col_sup=True, color_sup = "blue", marker_sup = "^", add_hline = True,
+                    add_vline = True, ha="center", va="center", hline_color="black", hline_style="dashed", vline_color="black", vline_style ="dashed", lim_cos2 = None, lim_contrib = None, repel=False,
+                    ggtheme=pn.theme_minimal())
+    ```
+
     Parameters
     ----------
-    self : an object of class CA
+    `self` : an object of class CA
 
     axis : a numeric list or vector of length 2 specifying the dimensions to be plotted, default = [0,1]
 

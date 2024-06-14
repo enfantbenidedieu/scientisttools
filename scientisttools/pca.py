@@ -10,7 +10,6 @@ from scipy.sparse import issparse
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from .function_eta2 import function_eta2
-from .weightedcorrcoef import weightedcorrcoef
 from .revaluate_cat_variable import revaluate_cat_variable
 from .svd_triplet import svd_triplet
 from .recodecont import recodecont
@@ -20,20 +19,17 @@ class PCA(BaseEstimator,TransformerMixin):
     Principal Component Analysis (PCA)
     ----------------------------------
 
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
+
     Description
     -----------
 
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
+    Performs Principal Component Analysis (PCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables. Missing values are replaced by the column mean.
 
-    This is a standard Principal Component Analysis implementation
-    based on the Singular Value Decomposition
-
-    Performs Principal Component Analysis (PCA) with supplementary
-    individuals, supplementary quantitative variables and supplementary
-    categorical variables.
-
-    Missing values are replaced by the column mean.
-
+    Usage
+    -----
+    > PCA(standardize = True, n_components = 5, ind_weights = None, var_weights = None, ind_sup = None, quanti_sup = None, quali_sup = None, parallelize=False)
+    
     Parameters
     ----------
     standardize : a boolean, default = True
@@ -60,21 +56,25 @@ class PCA(BaseEstimator,TransformerMixin):
     ------
     eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    var_ : a dictionary of pandas dataframe containing all the results for the active variables (coordinates, correlation between variables and axes, squared cosinus, contributions)
+    var_ : a dictionary of pandas dataframe containing all the results for the active variables (coordinates, correlation between variables and axes, square cosine, contributions)
 
-    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, squared cosinus, contributions)
+    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine, contributions)
 
-    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, squared cosinus)
+    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
 
-    quanti_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates, correlation and squared cosinus)
+    quanti_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates, correlation between variables and axes, square cosine)
 
     quali_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of each categories of each variables, vtest which is a criterion with a Normal distribution, and eta2 which is the square correlation coefficient between a qualitative variable and a dimension)
     
-    summary_ quali_	: a summary of the results for the categorical variables if quali_sup is not None
+    summary_quanti_ : a summary statistics for quantitative variables (actives and supplementary)
 
-    summary_quanti_	: a summary of the results for the quantitative variables
+    summary_quali_ : a summary statistics for supplementary qualitative variables if quali_sup is not None
+
+    chi2_test_ : chi-squared test. If supplementary qualitative are greater than 2. 
     
     call_ : a dictionary with some statistics
+
+    others_ : others statistics (Bartlett's test of Spericity, Kaiser threshold, ...)
 
     model_ : string. The model fitted = 'pca'
 
@@ -100,7 +100,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
     Examples
     --------
-    > # Load decathlon2
+    > # Load decathlon2 dataset
 
     > from scientisttools import load_decatlon2
 
@@ -239,7 +239,10 @@ class PCA(BaseEstimator,TransformerMixin):
             # Extract supplementary individuals
             X_ind_sup = X.loc[ind_sup_label,:]
             X = X.drop(index=ind_sup_label)
-        
+
+        # Number of rows/columns
+        n_rows, n_cols = X.shape
+
         # Statistics of quantitatives variables 
         summary_quanti = X.describe().T.reset_index().rename(columns={"index" : "variable"})
         summary_quanti["count"] = summary_quanti["count"].astype("int")
@@ -247,78 +250,83 @@ class PCA(BaseEstimator,TransformerMixin):
 
         # Set number of components
         if self.n_components is None:
-            n_components = min(X.shape[0]-1,X.shape[1])
+            n_components = min(n_rows-1,n_cols)
         elif not isinstance(self.n_components,int):
             raise ValueError("'n_components' must be an integer.")
         elif self.n_components < 1:
             raise ValueError("'n_components' must be equal or greater than 1.")
         else:
-            n_components = min(self.n_components,X.shape[0]-1,X.shape[1])
+            n_components = min(self.n_components,n_rows-1,n_cols)
         
         # Set individuals weights
         if self.ind_weights is None:
-            ind_weights = np.ones(X.shape[0])/X.shape[0]
+            ind_weights = np.ones(n_rows)/n_rows
         elif not isinstance(self.ind_weights,list):
             raise ValueError("'ind_weights' must be a list of individuals weights.")
-        elif len(self.ind_weights) != X.shape[0]:
-            raise ValueError(f"'ind_weights' must be a list with length {X.shape[0]}.")
+        elif len(self.ind_weights) != n_rows:
+            raise ValueError(f"'ind_weights' must be a list with length {n_rows}.")
         else:
             ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
 
         # Set variables weights
         if self.var_weights is None:
-            var_weights = np.ones(X.shape[1])
+            var_weights = np.ones(n_cols)
         elif not isinstance(self.var_weights,list):
             raise ValueError("'var_weights' must be a list of variables weights.")
-        elif len(self.var_weights) != X.shape[1]:
-            raise ValueError(f"'var_weights' must be a list with length {X.shape[1]}.")
+        elif len(self.var_weights) != n_cols:
+            raise ValueError(f"'var_weights' must be a list with length {n_cols}.")
         else:
             var_weights = np.array(self.var_weights)
 
-        # Compute average mean and standard deviation
+        # Compute weighted average and standard deviation
         d1 = DescrStatsW(X,weights=ind_weights,ddof=0)
 
         # Initializations - scale data
-        means = d1.mean.reshape(1,-1)
+        means = d1.mean
         if self.standardize:
-            std = d1.std.reshape(1,-1)
+            std = d1.std
         else:
-            std = np.ones(X.shape[1]).reshape(1,-1)
-        # Z = (X - mu)/sigma
-        Z = (X - means)/std
+            std = np.ones(X.shape[1])
+        
+        # Standardization
+        Z = (X - means.reshape(1,-1))/std.reshape(1,-1)
         
         #Store call informations  : X = Z, M = diag(col_weight), D = diag(row_weight) : t(X)DXM
         self.call_ = {"Xtot":Xtot,
                       "X" : X,
                       "Z" : Z,
+                      "ind_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
                       "var_weights" : pd.Series(var_weights,index=X.columns,name="weight"),
-                      "ind_weights" : pd.Series(ind_weights,index=X.index,name="weight"),
-                      "means" : pd.Series(means[0],index=X.columns,name="average"),
-                      "std" : pd.Series(std[0],index=X.columns,name="scale"),
+                      "means" : pd.Series(means,index=X.columns,name="average"),
+                      "std" : pd.Series(std,index=X.columns,name="scale"),
                       "n_components" : n_components,
-                      "standardize" : self.standardize,
                       "ind_sup" : ind_sup_label,
                       "quanti_sup" : quanti_sup_label,
                       "quali_sup" : quali_sup_label}
 
-        ########################## Multiply each columns by squared weight ########################################
-        # Row information
+        ## Individuals informations : Squared distance to origin, weights and Inertia
+        # Individuals square distance to origin
         ind_dist2 = mapply(Z,lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
         ind_dist2.name = "dist"
+        # Individuals inertia
         ind_inertia = ind_dist2*ind_weights
         ind_inertia.name = "inertia"
-        ind_infos = pd.concat([np.sqrt(ind_dist2),ind_inertia],axis=1)
-        ind_infos.insert(1,"weight",ind_weights)
+        # Store all informations
+        ind_infos = np.c_[ind_weights,ind_dist2,ind_inertia]
+        ind_infos = pd.DataFrame(ind_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.index.tolist())
 
-        ################################ Columns informations ##################################################
+        ## Variables informations : Squared distance to origin, weights and Inertia
+        # Variables square distance to origin
         var_dist2 = mapply(Z,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
         var_dist2.name = "dist"
+        # Variables inertia
         var_inertia = var_dist2*var_weights
         var_inertia.name = "inertia"
-        var_infos = pd.concat([np.sqrt(var_dist2),var_inertia],axis=1)
-        var_infos.insert(1,"weight",var_weights)
+        # Variables/categoires
+        var_infos = np.c_[var_weights, var_dist2,var_inertia]
+        var_infos = pd.DataFrame(var_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.columns)
         
-        ####### Singular Value Decomposition (SVD) ################################
+        # Generalized Singular Value Decomposition (GSVD)
         svd = svd_triplet(X=Z,row_weights=ind_weights,col_weights=var_weights,n_components=n_components)
         self.svd_ = svd
 
@@ -331,93 +339,94 @@ class PCA(BaseEstimator,TransformerMixin):
         eig = np.c_[eigen_values,difference,proportion,cumulative]
         self.eig_ = pd.DataFrame(eig,columns=["eigenvalue","difference","proportion","cumulative"],index = ["Dim."+str(x+1) for x in range(eig.shape[0])])
 
-        ################################# Coordinates ################################
+        ## Individuals informations : coordinates, contributions and squared Cosinus
         # Individuals coordinates
-        ind_coord = svd["U"].dot(np.diag(np.sqrt(eigen_values[:n_components])))
-        ind_coord = pd.DataFrame(ind_coord,index=X.index,columns=["Dim."+str(x+1) for x in range(ind_coord.shape[1])])
+        ind_coord = svd["U"].dot(np.diag(svd["vs"][:n_components]))
+        ind_coord = pd.DataFrame(ind_coord,index=X.index.tolist(),columns=["Dim."+str(x+1) for x in range(n_components)])
 
-        # Variables coordinates
-        var_coord = svd["V"].dot(np.diag(np.sqrt(eigen_values[:self.n_components])))
-        var_coord = pd.DataFrame(var_coord,index=X.columns,columns=["Dim."+str(x+1) for x in range(var_coord.shape[1])])
-
-        ################################# Contributions ####################################
         # Individuals contributions
         ind_contrib = mapply(ind_coord,lambda x : 100*(x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
         ind_contrib = mapply(ind_contrib,lambda x : x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+
+        # Individuals square cosine
+        ind_cos2 = mapply(ind_coord,lambda x : (x**2)/ind_dist2,axis=0,progressbar=False,n_workers=n_workers)
+
+        # Store all informations
+        self.ind_ = {"coord":ind_coord, "cos2":ind_cos2, "contrib":ind_contrib, "infos" : ind_infos}
+
+        ## Variables informations : coordinates, contributions and squared cosinus
+        # Variables coordinates
+        var_coord = svd["V"].dot(np.diag(svd["vs"][:n_components]))
+        var_coord = pd.DataFrame(var_coord,index=X.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
 
         # Variables contributions
         var_contrib = mapply(var_coord,lambda x : 100*(x**2)*var_weights,axis=0,progressbar=False,n_workers=n_workers)
         var_contrib = mapply(var_contrib, lambda x : x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
     
-        ####################################### Cos2 ###########################################
-        # Individuals Cos2
-        ind_cos2 = mapply(ind_coord,lambda x : x**2/ind_dist2,axis=0,progressbar=False,n_workers=n_workers)
+        # Variables square cosine
+        var_cos2 = mapply(var_coord,  lambda x : (x**2)/var_dist2,axis=0,progressbar=False,n_workers=n_workers)
 
-        # Variables Cos2
-        cor_var  = mapply(var_coord,lambda x : x/np.sqrt(var_dist2),axis=0,progressbar=False,n_workers=n_workers)
-        var_cos2 = mapply(cor_var,  lambda x : x**2,axis=0,progressbar=False,n_workers=n_workers)
-
-        #### Weighted Pearson correlation
-        weighted_corr = weightedcorrcoef(X,w=ind_weights)
-        weighted_corr = pd.DataFrame(weighted_corr,index=X.columns,columns=X.columns)
-
-        #################################### Store result #############################################
-        self.ind_ = {"coord":ind_coord,"cos2":ind_cos2,"contrib":ind_contrib,"dist":np.sqrt(ind_dist2),"infos" : ind_infos}
-        self.var_ = {"coord":var_coord,"cor":cor_var,"cos2":var_cos2,"contrib":var_contrib,"weighted_corr":weighted_corr,"infos" : var_infos}
+        # Store all informations
+        self.var_ = {"coord":var_coord, "cor":var_coord, "cos2":var_cos2, "contrib":var_contrib}
 
         ####################################################################################################
         # Bartlett - statistics
-        bartlett_stats = -(X.shape[0]-1-(2*X.shape[1]+5)/6)*np.sum(np.log(eigen_values))
-        bs_dof = X.shape[1]*(X.shape[1]-1)/2
+        bartlett_stats = -(n_rows-1-(2*n_cols+5)/6)*np.sum(np.log(eigen_values))
+        bs_dof = n_cols*(n_cols-1)/2
         bs_pvalue = 1-sp.stats.chi2.cdf(bartlett_stats,df=bs_dof)
-        bartlett_sphericity_test = pd.Series([bartlett_stats,bs_dof,bs_pvalue],index=["statistic","dof","p-value"],name="Bartlett Sphericity test")
+        bartlett_sphericity_test = pd.DataFrame({
+            "Statistics" : ["|CORR.MATRIX|","statistic","dof","p-value"],
+            "value" : [np.sum(np.log(eigen_values)),bartlett_stats,bs_dof,bs_pvalue]
+        })
     
         kaiser_threshold = np.mean(eigen_values)
         kaiser_proportion_threshold = 100/np.sum(var_inertia)
         # Karlis - Saporta - Spinaki threshold
-        kss_threshold =  1 + 2*np.sqrt((X.shape[1]-1)/(X.shape[0]-1))
+        kss_threshold =  1 + 2*np.sqrt((n_cols-1)/(n_rows-1))
         # Broken stick threshold
-        broken_stick_threshold = np.flip(np.cumsum(1/np.arange(X.shape[1],0,-1)))[:n_components]
+        broken_stick_threshold = np.flip(np.cumsum(1/np.arange(n_cols,0,-1)))[:n_components]
 
         self.others_ = {"bartlett" : bartlett_sphericity_test,"kaiser" : kaiser_threshold, "kaiser_proportion" : kaiser_proportion_threshold,"kss" : kss_threshold,"bst" : broken_stick_threshold}
         
         ##############################################################################################################################################
         #                                        Compute supplementrary individuals statistics
-        ###################################################################################################################################################
+        ###############################################################################################################################################
+        # Statistics for supplementary individuals
         if self.ind_sup is not None:
-            ###################### Transform to float ##############################
+            # Transform to float
             X_ind_sup = X_ind_sup.astype("float")
 
-            ########### Standarddize data
-            Z_ind_sup = (X_ind_sup - means)/std
+            # Standardization
+            Z_ind_sup = (X_ind_sup - means.reshape(1,-1))/std.reshape(1,-1)
 
-            ###### Multiply by variables weights & Apply transition relation
-            ind_sup_coord = mapply(Z_ind_sup,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers)
-            ind_sup_coord = np.dot(ind_sup_coord,svd["V"])
-            ind_sup_coord = pd.DataFrame(ind_sup_coord,index=X_ind_sup.index,columns=["Dim."+str(x+1) for x in range(ind_sup_coord.shape[1])])
+            # Supplementary individuals coordinates
+            ind_sup_coord = mapply(Z_ind_sup,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(svd["V"][:,:n_components])
+            ind_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+            ind_sup_coord.index = X_ind_sup.index.tolist()
 
-            ###### Distance to origin
+            # Supplementary individuals squared distance to origin
             ind_sup_dist2 = mapply(Z_ind_sup,lambda  x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-            ind_sup_dist2.name = "dist"
+            ind_sup_dist2.name = "Sq. Dist."
 
-            ######## Compute cos2
+            # Supplementary individuals square cosine
             ind_sup_cos2 = mapply(ind_sup_coord,lambda x : (x**2)/ind_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
 
             # Store all informations
-            self.ind_sup_ = {"coord" : ind_sup_coord,"cos2" : ind_sup_cos2,"dist" : np.sqrt(ind_sup_dist2)}
+            self.ind_sup_ = {"coord" : ind_sup_coord,"cos2" : ind_sup_cos2,"dist" : ind_sup_dist2}
 
         ###############################################################################################################################
         #                               Compute supplementary quantitatives variables statistics
         ###############################################################################################################################
+        # Statistics for supplementary quantitatives variables
         if self.quanti_sup is not None:
             X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.ind_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
             
-            ###### Transform to float
+            # Transform to float
             X_quanti_sup = X_quanti_sup.astype("float")
 
-            ################ Summary
+            # Summary statistics
             self.summary_quanti_.insert(0,"group","active")
             summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
             summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
@@ -425,7 +434,7 @@ class PCA(BaseEstimator,TransformerMixin):
             # Concatenate
             self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
 
-            ############# Compute average mean and standard deviation
+            # Compute weighted average and standard deviation
             d1 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
 
             # Initializations - scale data
@@ -435,45 +444,42 @@ class PCA(BaseEstimator,TransformerMixin):
             else:
                 std_sup = np.ones(X_quanti_sup.shape[1]).reshape(1,-1)
             
-            # Z = (X - mu)/sigma
+            # Standardization
             Z_quanti_sup = (X_quanti_sup - means_sup)/std_sup
 
-            ####### Compute Supplementary quantitatives variables coordinates
-            var_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
-            var_sup_coord = np.dot(var_sup_coord.T,svd["U"])
-            var_sup_coord = pd.DataFrame(var_sup_coord,index=X_quanti_sup.columns,columns = ["Dim."+str(x+1) for x in range(var_sup_coord.shape[1])])
+            # Supplementary quantitatives variables coordinates
+            var_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers).T.dot(svd["U"][:,:n_components])
+            var_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
 
-            ############# Supplementary quantitatives variables Cos2
+            # Supplementary quantitatives variables squared distance to origin
             var_sup_cor = mapply(Z_quanti_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
             var_sup_dist2 = np.dot(np.ones(X_quanti_sup.shape[0]),var_sup_cor)
-            var_sup_cos2 = mapply(var_sup_coord,lambda x : (x**2)/np.sqrt(var_sup_dist2),axis=0,progressbar=False,n_workers=n_workers)
 
-            # Weighted correlation between supplementary quantitatives variables and actives quantitatives
-            weighted_sup_corr = weightedcorrcoef(x=X_quanti_sup,y=X,w=ind_weights)[:X_quanti_sup.shape[1],:]
-            weighted_sup_corr = pd.DataFrame(weighted_sup_corr,columns=X_quanti_sup.columns.tolist()+X.columns.tolist(),index=X_quanti_sup.columns)        
+            # Supplementary quantitatives variables square cosine
+            var_sup_cos2 = mapply(var_sup_coord,lambda x : (x**2)/np.sqrt(var_sup_dist2),axis=0,progressbar=False,n_workers=n_workers)    
 
             # Store supplementary quantitatives informations
-            self.quanti_sup_ =  {"coord":var_sup_coord,"cor" : var_sup_coord,"cos2" : var_sup_cos2,"weighted_corr" : weighted_sup_corr}
+            self.quanti_sup_ =  {"coord":var_sup_coord,"cor" : var_sup_coord,"cos2" : var_sup_cos2}
 
-        #################################################################################################################################################
+        ##############################################################################################################################################
         # Compute supplementary qualitatives variables statistics
         ###############################################################################################################################################
+        # Statistics for supplementary qualitatives variables
         if self.quali_sup is not None:
             X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
                 X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
             
-            ######################################## Barycentre of DataFrame ########################################
+            # Transform to object
             X_quali_sup = X_quali_sup.astype("object")
 
-            ############################################################################################################
             # Check if two columns have the same categories
             X_quali_sup = revaluate_cat_variable(X_quali_sup)
 
-            ####################################" Correlation ratio #####################################################
+            # Square correlation ratio
             quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
 
-            ###################################### Coordinates ############################################################
+            # Barycenter of original data
             barycentre = pd.DataFrame().astype("float")
             n_k = pd.Series().astype("float")
             for col in X_quali_sup.columns:
@@ -486,24 +492,22 @@ class PCA(BaseEstimator,TransformerMixin):
                     bary.loc[mod,:] = np.average(X.iloc[idx,:],axis=0,weights=ind_weights[idx])
                 barycentre = pd.concat((barycentre,bary),axis=0)
             
-            ############### Standardize the barycenter
+            # Standardize the barycenter
             bary = (barycentre - means)/std
-            quali_sup_dist2  = mapply(bary, lambda x : x**2*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-            quali_sup_dist2.name = "dist"
+            quali_sup_dist2  = mapply(bary, lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+            quali_sup_dist2.name = "Sq. Dist."
 
-            ################################### Barycentrique coordinates #############################################
-            quali_sup_coord = mapply(bary, lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers)
-            quali_sup_coord = quali_sup_coord.dot(svd["V"])
-            quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(quali_sup_coord.shape[1])]
+            # Supplementary categories coordinates
+            quali_sup_coord = mapply(bary, lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(svd["V"][:,:n_components])
+            quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
 
-            ################################## Cos2
+            # Supplementary categories square cosine
             quali_sup_cos2 = mapply(quali_sup_coord, lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
             
-            ################################## v-test
-            quali_sup_vtest = mapply(quali_sup_coord,lambda x : x/np.sqrt(eigen_values[:n_components]),axis=1,progressbar=False,n_workers=n_workers)
-            quali_sup_vtest = pd.concat(((quali_sup_vtest.loc[k,:]/np.sqrt((X.shape[0]-n_k[k])/((X.shape[0]-1)*n_k[k]))).to_frame().T for k in n_k.index),axis=0)
+            # Supplementary categories v-test
+            quali_sup_vtest = mapply(quali_sup_coord,lambda x : x/svd["vs"][:n_components],axis=1,progressbar=False,n_workers=n_workers)
+            quali_sup_vtest = pd.concat(((quali_sup_vtest.loc[k,:]/np.sqrt((n_rows-n_k[k])/((n_rows-1)*n_k[k]))).to_frame().T for k in n_k.index),axis=0)
 
-            #################################### Summary quali
             # Compute statistiques
             summary_quali_sup = pd.DataFrame()
             for col in X_quali_sup.columns:
@@ -513,11 +517,9 @@ class PCA(BaseEstimator,TransformerMixin):
             summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
 
             # Supplementary categories informations
-            self.quali_sup_ = {"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : np.sqrt(quali_sup_dist2),"eta2" : quali_sup_eta2}
+            self.quali_sup_ = {"coord" : quali_sup_coord, "cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : quali_sup_dist2,"eta2" : quali_sup_eta2}
             self.summary_quali_ = summary_quali_sup
             
-        ########################################################################################################
-        # store model name
         self.model_ = "pca"
 
         return self
@@ -564,18 +566,25 @@ class PCA(BaseEstimator,TransformerMixin):
         else:
             n_workers = 1
 
+        # Transform to float
         X = X.astype("float")
 
         ######### check if X.shape[1] = ncols
         if X.shape[1] != self.call_["X"].shape[1]:
             raise ValueError("'columns' aren't aligned")
 
-        # Apply transition relation
-        Z = (X - self.call_["means"].values.reshape(1,-1))/self.call_["std"].values.reshape(1,-1)
+        # Extract elements
+        means = self.call_["means"].values
+        std = self.call_["std"].values
+        var_weigths = self.call_["var_weights"].values
+        n_components = self.call_["n_components"]
+
+        # Standardize
+        Z = (X - means.reshape(1,-1))/std.reshape(1,-1)
 
         ###### Multiply by columns weight & Apply transition relation
-        coord = mapply(Z,lambda x : x*self.call_["var_weights"],axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"])
-        coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
+        coord = mapply(Z,lambda x : x*var_weigths,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"])
+        coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
         return coord
 
     def fit_transform(self,X,y=None):
@@ -617,15 +626,14 @@ def predictPCA(self,X):
     
     coord : factor coordinates of the new individuals
 
-    cos2 : squared cosines of the new individuals
+    cos2 : square cosine of the new individuals
 
-    dist : distance to origin for new individuals
+    dist : square distance to origin for new individuals
     
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-
     # Check if self is an object of class PCA
     if self.model_ != "pca":
         raise TypeError("'self' must be an object of class PCA")
@@ -652,33 +660,30 @@ def predictPCA(self,X):
         n_workers = 1
 
     # Extract elements
-    means = self.call_["means"] # Average
-    std = self.call_["std"] # Standard deviation
-    var_weights = self.call_["var_weights"]  # Variables weights
+    means = self.call_["means"].values # Average
+    std = self.call_["std"].values # Standard deviation
+    var_weights = self.call_["var_weights"].values  # Variables weights
     n_components = self.call_["n_components"] # number of components
     
     # Convert to float
     X = X.astype("float")
 
     # Standardize data
-    Z = (X - means.values.reshape(1,-1))/std.values.reshape(1,-1)
-
-    # Multiply by variables weights
-    Z = mapply(Z,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers)
+    Z = (X - means.reshape(1,-1))/std.reshape(1,-1)
 
     # New data coordinates
-    coord = Z.dot(self.svd_["V"][:,:n_components])
+    coord = mapply(Z,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
     coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
     
-    #  New data distance to origin
+    #  New data square distance to origin
     dist2 = mapply(Z,lambda  x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-    dist2.name = "dist"
+    dist2.name = "Sq. Dist."
 
-    # New data squared cosinus
+    # New data square cosinus
     cos2 = mapply(coord,lambda x : (x**2)/dist2,axis=0,progressbar=False,n_workers=n_workers)
 
     # Store all informations
-    res = {"coord" : coord,"cos2" : cos2,"dist" : np.sqrt(dist2)}
+    res = {"coord" : coord, "cos2" : cos2,"dist" : dist2}
     return res
 
 def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
@@ -688,7 +693,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
 
     Description
     -----------
-    Performs the coordinates, squared cosinus and distance to origin of supplementary quantitatives/qualitatives with Principal Components Analysis (PCA)
+    Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables with Principal Components Analysis (PCA)
 
     Parameters
     ----------
@@ -704,14 +709,14 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
 
     quanti : a dictionary containing the results of the supplementary quantitatives variables:
         * coord : factor coordinates of the supplementary quantitativaes variables
-        * cos2 : squared cosinus of the supplementary quantitatives variables
+        * cos2 : square cosinus of the supplementary quantitatives variables
     
     quali : a dictionary containing the results of the supplementary qualitatives/categories variables :
         * coord : factor coordinates of the supplementary categories
-        * cos2 : squared cosinus of the supplementary categories
+        * cos2 : square cosinus of the supplementary categories
         * vtest : value-test of the supplementary categories
-        * dist : distance to origin of the supplementary categories
-        * eta2 : squared correlation ratio of the supplementary qualitatives variables
+        * dist : square distance to origin of the supplementary categories
+        * eta2 : square correlation ratio of the supplementary qualitatives variables
 
     Author(s)
     ---------
@@ -734,9 +739,9 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
     ########################################################################################################################
     #                                          For supplementary quantitatives variables
     #########################################################################################################################
-
+    # Supplementary quantitatives variables statistics
     if X_quanti_sup is not None:
-        # check if X is an instance of polars dataframe
+        # check if X_quanti_sup is an instance of polars dataframe
         if isinstance(X_quanti_sup,pl.DataFrame):
             X_quanti_sup = X_quanti_sup.to_pandas()
         
@@ -744,7 +749,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
         if isinstance(X_quanti_sup,pd.Series):
             X_quanti_sup = X_quanti_sup.to_frame()
         
-        # Check if X is an instance of pd.DataFrame class
+        # Check if X_quanti_sup is an instance of pd.DataFrame class
         if not isinstance(X_quanti_sup,pd.DataFrame):
             raise TypeError(
             f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with "
@@ -757,7 +762,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
         # Recode variables
         X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
 
-        ############# Compute average mean and standard deviation
+        # Compute weighted average and standard deviation
         d1 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
 
         # Average
@@ -770,18 +775,15 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
         # Standardization
         Z_quanti_sup = (X_quanti_sup - means_sup)/std_sup
 
-        # Correction with individuals weights
-        Z_quanti_sup = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
+        # Supplementary quantitatives variables coordinates
+        quanti_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers).T.dot(self.svd_["U"][:,:n_components])
+        quanti_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
 
-        # Apply transition relation to have coordinates
-        quanti_sup_coord = Z_quanti_sup.T.dot(self.svd_["U"][:,:n_components])
-        quanti_sup_coord.columns = ["Dim."+str(x+1) for x in range(quanti_sup_coord.shape[1])]
-
-        #Supplementary quantitatives variables Cos2
+        #Supplementary quantitatives variables square distance to origin
         quanti_sup_cor = mapply(Z_quanti_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
         quanti_sup_dist2 = np.dot(np.ones(X_quanti_sup.shape[0]),quanti_sup_cor)
 
-        # Squares cosinus
+        # Supplementary quantitatives variables square cosinus
         quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2)/np.sqrt(quanti_sup_dist2),axis=0,progressbar=False,n_workers=n_workers)       
 
         # Store supplementary quantitatives informations
@@ -792,9 +794,9 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
     ###########################################################################################################################
     #                                                   For supplementary qualitatives variables
     ###########################################################################################################################
-
+    # Supplementary qualitatives statistics
     if X_quali_sup is not None:
-        # check if X is an instance of polars dataframe
+        # check if X_quali_sup is an instance of polars dataframe
         if isinstance(X_quali_sup,pl.DataFrame):
             X_quali_sup = X_quali_sup.to_pandas()
         
@@ -802,7 +804,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
         if isinstance(X_quali_sup,pd.Series):
             X_quali_sup = X_quali_sup.to_frame()
         
-        # Check if X is an instance of pd.DataFrame class
+        # Check if X_quali_sup is an instance of pd.DataFrame class
         if not isinstance(X_quali_sup,pd.DataFrame):
             raise TypeError(
             f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
@@ -818,10 +820,10 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
 
         # Variables weights
         var_weights = self.call_["var_weights"].values
-        means = self.call_["means"].values.reshape(1,-1)
-        std = self.call_["std"].values.reshape(1,-1)
+        means = self.call_["means"].values
+        std = self.call_["std"].values
 
-        # Squared correlation ratio
+        # Square correlation ratio
         quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=self.ind_["coord"].values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
 
         # Barycenter
@@ -837,25 +839,24 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
                 bary.loc[mod,:] = np.average(self.call_["X"].iloc[idx,:],axis=0,weights=ind_weights[idx])
             barycentre = pd.concat((barycentre,bary),axis=0)
         
-        ############### Standardize the barycenter
-        bary = (barycentre - means)/std
+        # Supplementary qualitatives squared distance
+        bary = (barycentre - means.reshape(1,-1))/std.reshape(1,-1)
         quali_sup_dist2  = mapply(bary, lambda x : x**2*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-        quali_sup_dist2.name = "dist"
+        quali_sup_dist2.name = "Sq. Dist."
 
-        ################################### Barycentrique coordinates #############################################
-        quali_sup_coord = mapply(bary, lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers)
-        quali_sup_coord = quali_sup_coord.dot(self.svd_["V"][:,:n_components])
-        quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(quali_sup_coord.shape[1])]
+        # Supplementary qualitatives coordinates
+        quali_sup_coord = mapply(bary, lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
+        quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
 
-        # Cos2
+        # Supplementary qualiatives square cosine
         quali_sup_cos2 = mapply(quali_sup_coord, lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
         
-        # Value-test
+        # Supplementary qualitatives value-test
         quali_sup_vtest = mapply(quali_sup_coord,lambda x : x/self.svd_["vs"][:n_components],axis=1,progressbar=False,n_workers=n_workers)
         quali_sup_vtest = pd.concat(((quali_sup_vtest.loc[k,:]/np.sqrt((n_rows-n_k[k])/((n_rows-1)*n_k[k]))).to_frame().T for k in n_k.index),axis=0)
 
         # Supplementary categories informations
-        quali_sup = {"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : np.sqrt(quali_sup_dist2),"eta2" : quali_sup_eta2}
+        quali_sup = {"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : quali_sup_dist2,"eta2" : quali_sup_eta2}
     else:
         quali_sup = None
     

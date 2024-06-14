@@ -764,6 +764,9 @@ def load_protein():
 
     Usage
     -----
+    ```python
+    >>> 
+    ```
     > from scientisttools import load_protein
     > protein = load_protein()
 

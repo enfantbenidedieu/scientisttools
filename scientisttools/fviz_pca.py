@@ -53,6 +53,8 @@ def fviz_pca_ind(self,
     ----------
     self : an object of class PCA
 
+
+
     Return
     ------
     a plotnine graph
@@ -61,24 +63,23 @@ def fviz_pca_ind(self,
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    
+    # Check if self is an object of class PCA
     if self.model_ != "pca":
         raise TypeError("'self' must be an object of class PCA")
     
-
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
         (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
 
-    #### Extract individuals coordinates
+    # Extract individuals coordinates
     coord = self.ind_["coord"]
 
     # Add Active Data
     coord = pd.concat([coord,self.call_["X"]],axis=1)
 
-    ################ Add supplementary quantitatives columns
+    # Add supplementary quantitatives columns
     if self.quanti_sup is not None:
         X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
         if self.ind_sup is not None:
@@ -143,8 +144,7 @@ def fviz_pca_ind(self,
                          pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
             if "text" in geom:
                 if repel :
-                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '-','color': "black",'lw':1.0}})
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': "black",'lw':1.0}})
                 else:
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         elif hasattr(color, "labels_"):
