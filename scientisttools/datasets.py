@@ -12,6 +12,60 @@ DATASETS_DIR = pathlib.Path(__file__).parent / "datasets"
 
 ############################################################## Principal Components Analysis ############################
 
+def load_cars2006(which="actif"):
+    """
+    Cars dataset
+    ------------
+
+    Description
+    -----------
+    18 cars described by 6 quantitatives variables
+
+    Parameters
+    ----------
+    which : the element to subset from the output. Allowed values are :
+        * "actif" for actifs elements
+        * "indsup" for supplementary individuals
+        * "varquantsup" for supplementary quantitatives variables
+        * "varqualsup" for supplementary qualitatives variables
+    
+    Returns
+    -------
+    pandas dataframe
+
+    References
+    ----------
+    Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
+
+    Rakotomalala R. (2020). Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2. Version 1.0
+
+    Examples
+    --------
+    ```python
+    >>> # load cars2006 dataset
+    >>> from scientisttools import load_cars2006
+    >>> D = load_cars2006(which="actif")
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(n_components=5)
+    >>> res_pca.fit(D)
+    >>> # Load supplementary individuals
+    >>> ind_sup = load_cars2006(which="indsup")
+    >>> ind_sup_coord = res_pca.transform(ind_sup)
+    ```
+    """
+    if which not in ["actif","indsup","varquantsup","varqualsup"]:
+        raise ValueError("'which' must be one of 'actif', 'indsup', 'varquantsup', 'varqualsup'")
+
+    if which == "actif":
+        cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="actif",index_col=0,header=0)
+    elif which == "indsup":
+        cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="ind. sup.",index_col=0,header=0)
+    elif which == "varquantsup":
+        cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. quant.",index_col=0,header=0)
+    elif which == "varqualsup":
+        cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. qual.",index_col=0,header=0)
+    return cars
+
 def load_decathlon():
     """
     Performance in decathlon (data)
@@ -217,6 +271,52 @@ def load_femmes_travail():
     data.name = "femmes_travail"
     return data
 
+def load_body():
+    """
+    Body dimensions datasets
+    ------------------------
+
+    Description
+    -----------
+    The data give some body dimension measurements as well as age, weight, height, and gender on 507 individuals. The 247 men and 260 women were primarily individuals in their twenties and thirties, with a scattering of older men and women, all exercising serveral hours a week. 
+
+    Returns
+    -------
+    dataframe with 507 observations and 15 variables :
+
+    shoulder.girth : shoulder girth (in cm) -- épaule (fr)
+
+    chest.girth : Chest girth (in cm) -- poitrine (fr)
+
+    waist.girth : Waist girth (in cm) -- taille (fr)
+
+    navel.girth : Navel girth (in cm) -- nombril (fr)
+
+    hip.girth : Hip girth (in cm) -- hanche (fr)
+
+    thigh.girth : Thigh girth (in cm) -- cuisse (fr)
+
+    bicep.girth : Bicep girth (in cm) -- biceps (fr)
+
+    forearm.girth : Forearm girth (in cm) -- avant-bras (fr)
+
+    knee.girth : Knee girth (in cm) -- genou (fr)
+
+    calf.girth : Calf girth (in cm) -- mollet (fr)
+
+    ankle.girth : Ankle girth (in cm) -- cheville (fr)
+
+    wrist.girth : Wrist girth (in cm)  -- poignet (fr)
+
+    weight : Weight (in kg)
+
+    height : Height (in cm)
+
+    gender : Gender ; 1 for males and 0 for females.
+    """
+    body = pd.read_excel(DATASETS_DIR/"body.xls",sheet_name="body")
+    return body
+
 def load_housetasks():
     """
     House tasks contingency table
@@ -228,12 +328,14 @@ def load_housetasks():
 
     Usage
     -----
-    > from scientisttools import load_housetasks
-    > housetasks = load_housetasks()
+    ```python
+    >>> from scientisttools import load_housetasks
+    >>> housetasks = load_housetasks()
+    ```
 
     Format
     ------
-    A data frame with 13 observations (house tasks) on the following 4 columns : Wife, Alternating, Husband and Jointly
+    dataframe with 13 observations (house tasks) on the following 4 columns : Wife, Alternating, Husband and Jointly
 
     Source
     ------
@@ -241,17 +343,18 @@ def load_housetasks():
 
     Examples
     --------
-    > # Load housetasks datasest
-    > from scientisttools import load_housetasks
-    > housetasks = load_housetasks()
-    >
-    > from scientisttools import CA
-    > res_ca = CA()
-    > res_ca.fit(housetasks)
+    ```python
+    >>> # Load housetasks datasest
+    >>> from scientisttools import load_housetasks
+    >>> housetasks = load_housetasks()
+    >>> from scientisttools import CA
+    >>> res_ca = CA()
+    >>> res_ca.fit(housetasks)
+    ```
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     data = pyreadr.read_r(DATASETS_DIR/"housetasks.rda")["housetasks"]
     data.name = "housetasks"

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -17,12 +16,10 @@ class CA(BaseEstimator,TransformerMixin):
     """
     Correspondence Analysis (CA)
     ----------------------------
-
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
-
     Performs Correspondence Analysis (CA) including supplementary row and/or column points, supplementary quantitative variables and supplementary categorical variables.
 
     Usage
@@ -37,43 +34,43 @@ class CA(BaseEstimator,TransformerMixin):
 
     `row_weights` : an optional row weights (by default, a list/tuple of 1 and each row has a weight equals to its margin); the weights are given only for the active rows
 
-    `row_sup` : a list/tuple indicating the indexes of the supplementary rows
+    `row_sup` : list/tuple indicating the indexes of the supplementary rows
 
-    `col_sup` : a list/tuple indicating the indexes of the supplementary columns
+    `col_sup` : list/tuple indicating the indexes of the supplementary columns
 
-    `quanti_sup` : a list/tuple indicating the indexes of the supplementary continuous variables
+    `quanti_sup` : list/tuple indicating the indexes of the supplementary continuous variables
 
-    `quali_sup` : a list/tuple indicating the indexes of the categorical supplementary variables
+    `quali_sup` : list/tuple indicating the indexes of the categorical supplementary variables
 
-    `parallelize` : boolean, default = False (see https://mapply.readthedocs.io/en/stable/README.html#installation). If model should be parallelize
-        * If `True` : parallelize using mapply
-        * If `False` : parallelize using apply
+    `parallelize` : boolean, default = False. If model should be parallelize
+        * If `True` : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
+        * If `False` : parallelize using pandas apply
 
-    Return
-    ------
-    `eig_`  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+    Attributes
+    ----------
+    `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    `col_` : 	a dictionary of pandas dataframe with all the results for the column variable (coordinates, square cosine, contributions, inertia)
+    `col_` : dictionary of pandas dataframe with all the results for the column variable (coordinates, square cosine, contributions, inertia)
 
-    `row_` : a dictionary of pandas dataframe with all the results for the row variable (coordinates, square cosine, contributions, inertia)
+    `row_` : dictionary of pandas dataframe with all the results for the row variable (coordinates, square cosine, contributions, inertia)
 
-    `col_sup_` : a dictionary of pandas dataframe containing all the results for the supplementary column points (coordinates, square cosine)
+    `col_sup_` : dictionary of pandas dataframe containing all the results for the supplementary column points (coordinates, square cosine)
 
-    `row_sup_` : a dictionary of pandas dataframe containing all the results for the supplementary row points (coordinates, square cosine)
+    `row_sup_` : dictionary of pandas dataframe containing all the results for the supplementary row points (coordinates, square cosine)
 
     `quanti_sup_` : if quanti_sup is not None, a dictionary of pandas dataframe containing the results for the supplementary continuous variables (coordinates, square cosine)
 
     `quali_sup_` : if quali.sup is not None, a dictionary of pandas dataframe with all the results for the supplementary categorical variables (coordinates of each categories of each variables, v.test which is a criterion with a Normal distribution, square correlation ratio)
 
-    `summary_quanti_` : a summary statistics for quantitative variables (actives and supplementary)
+    `summary_quanti_` : summary statistics for quantitative variables (actives and supplementary)
 
-    `summary_quali_` : a summary statistics for supplementary qualitative variables if quali_sup is not None
+    `summary_quali_` : summary statistics for supplementary qualitative variables if quali_sup is not None
 
     `chi2_test_` : chi-squared test. If supplementary qualitative variables are greater than 2. 
     
-    `call_` : a dictionary with some statistics
+    `call_` : dictionary with some statistics
 
-    `model_` : string. The model fitted = 'ca'
+    `model_` : string specifying the model fitted = 'ca'
 
     Author(s)
     ---------
@@ -91,7 +88,7 @@ class CA(BaseEstimator,TransformerMixin):
 
     Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
 
-    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+    Rakotomalala R. (2020), Pratique des méthodes factorielles avec Python, Université Lumière Lyon 2, Version 1.0
 
     See Also
     --------
@@ -132,17 +129,16 @@ class CA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        X : a pandas/polars DataFrame of shape (n_rows, n_columns)
-            Training data, where n_rows in the number of rows and
-            n_columns is the number of columns.
+        `X` : pandas/polars dataframe of shape (n_rows, n_columns)
+            Training data, where `n_rows` in the number of rows and `n_columns` is the number of columns.
             X is a contingency table containing absolute frequencies.
 
-        y : None
+        `y` : None
             y is ignored.
         
         Returns
         -------
-        self : object
+        `self` : object
             Returns the instance itself.
         """
         # check if X is an instance of polars dataframe
@@ -332,8 +328,9 @@ class CA(BaseEstimator,TransformerMixin):
         row_contrib = mapply(row_coord,lambda x: 100*(x**2)*row_marge,axis=0,progressbar=False,n_workers=n_workers)
         row_contrib = mapply(row_contrib,lambda x : x/eigen_values[:n_components], axis=1,progressbar=False,n_workers=n_workers)
 
-        # Row square cosines
+        # Row square cosines (Cos2)
         row_cos2 = mapply(row_coord,lambda x: (x**2)/row_dist2.values,axis=0,progressbar=False,n_workers=n_workers)
+
         # Store all informations
         self.row_ = {"coord" : row_coord, "contrib" : row_contrib, "cos2" : row_cos2, "infos" : row_infos}
 
@@ -346,8 +343,9 @@ class CA(BaseEstimator,TransformerMixin):
         col_contrib = mapply(col_coord,lambda x: 100*(x**2)*col_marge,axis=0,progressbar=False,n_workers=n_workers)
         col_contrib = mapply(col_contrib,lambda x : x/eigen_values[:n_components], axis=1,progressbar=False,n_workers=n_workers)
         
-        ###### Columns Cos2
+        # Columns square cosinus (Cos2)
         col_cos2 = mapply(col_coord,lambda x: (x**2)/col_dist2.values, axis = 0,progressbar=False,n_workers=n_workers)
+
         # Store all informations
         self.col_ = {"coord" : col_coord, "contrib" : col_contrib, "cos2" : col_cos2, "infos" : col_infos}
         
@@ -380,12 +378,15 @@ class CA(BaseEstimator,TransformerMixin):
         attraction_repulsion_index = weighted_X/expected_freq
 
         # Return indicators
-        chi2_test = pd.DataFrame({"Statistics" : ["statistic","dof","pvalue"],"value" : [statistic,dof,pvalue]})
-        # log-likelihood test
-        log_likelihood_test = pd.DataFrame({"Statistics" : ["statistic","pvalue"],"value" : [g_test_res[0],g_test_res[1]]})
-        # Association test
-        association = pd.DataFrame({"Statistics" : ["cramer","tschuprow","pearson"],"value" : [sp.stats.contingency.association(X, method=name) for name in ["cramer","tschuprow","pearson"]]})
+        chi2_test = pd.DataFrame([statistic,dof,pvalue],columns=["value"],index=["statistic","dof","pvalue"])
         
+        # log-likelihood test
+        log_likelihood_test = pd.DataFrame([g_test_res[0],g_test_res[1]],columns=["value"],index=["statistic","pvalue"],)
+
+        # Association test
+        association = pd.DataFrame([sp.stats.contingency.association(X, method=name) for name in ["cramer","tschuprow","pearson"]],
+                                   columns=["statistic"],index=["cramer","tschuprow","pearson"])
+    
         # Inertia
         inertia = np.sum(row_inertia)
         kaiser_threshold = np.mean(eigen_values)
@@ -393,16 +394,16 @@ class CA(BaseEstimator,TransformerMixin):
        
        # Others informations
         self.others_ = {"res" : resid,
-                      "chi2" : chi2_test,
-                      "g_test" : log_likelihood_test,
-                      "adj_resid" : adjusted_resid,
-                      "chi2_contrib" : chi2_contribution,
-                      "std_resid" : standardized_resid,
-                      "attraction" : attraction_repulsion_index,
-                      "association" : association,
-                      "inertia" : inertia,
-                      "kaiser_threshold" : kaiser_threshold,
-                      "kaiser_proportion_threshold" : kaiser_proportion_threshold}
+                        "chi2" : chi2_test,
+                        "g_test" : log_likelihood_test,
+                        "adj_resid" : adjusted_resid,
+                        "chi2_contrib" : chi2_contribution,
+                        "std_resid" : standardized_resid,
+                        "attraction" : attraction_repulsion_index,
+                        "association" : association,
+                        "inertia" : inertia,
+                        "kaiser_threshold" : kaiser_threshold,
+                        "kaiser_proportion_threshold" : kaiser_proportion_threshold}
 
         # Compute supplementary rows
         if self.row_sup is not None:
@@ -504,6 +505,15 @@ class CA(BaseEstimator,TransformerMixin):
             X_quali_sup = X_quali_sup.astype("object")
             X_quali_sup = revaluate_cat_variable(X_quali_sup)
 
+            # Compute statistiques summary_quali
+            summary_quali = pd.DataFrame()
+            for col in X.columns.tolist():
+                eff = X[col].value_counts().to_frame("count").reset_index().rename(columns={"index" : "categorie"})
+                eff.insert(0,"variable",col)
+                summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
+            summary_quali["count"] = summary_quali["count"].astype("int")
+            self.summary_quali_ = summary_quali
+
             # Sum of columns by group
             quali_sup = pd.DataFrame().astype("float")
             for col in X_quali_sup.columns.tolist():
@@ -542,16 +552,6 @@ class CA(BaseEstimator,TransformerMixin):
             # Supplementary categories correlation ratio
             quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=row_coord.values,weights=row_marge,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
             
-            #################################### Summary quali
-            # Compute statistiques
-            summary_quali_sup = pd.DataFrame()
-            for col in X.columns.tolist():
-                eff = X[col].value_counts().to_frame("count").reset_index().rename(columns={"index" : "categorie"})
-                eff.insert(0,"variable",col)
-                summary_quali_sup = pd.concat([summary_quali_sup,eff],axis=0,ignore_index=True)
-            summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
-            self.summary_quali_ = summary_quali_sup
-
             # Store all informations
             self.quali_sup_ = {"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"eta2" : quali_sup_eta2,"dist" : quali_sup_dist2}
         
@@ -559,30 +559,46 @@ class CA(BaseEstimator,TransformerMixin):
 
         return self
 
-    def transform(self,X,y=None):
+    def fit_transform(self,X,y=None):
+        """
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
+
+        Parameters
+        ----------
+        `X` : pandas/polars dataframe of shape (n_rows, n_columns)
+            Training data, where `n_rows` is the number of rows and `n_columns` is the number of columns.
+            X is a contingency table containing absolute frequencies.
+
+        `y` : None.
+            y is ignored.
+
+        Returns
+        -------
+        `X_new` : pandas dataframe of shape (n_rows, n_components)
+            Transformed values.
+        """
+        self.fit(X)
+        return self.row_["coord"]
+
+    def transform(self,X):
         """
         Apply the dimensionality reduction on X
         ---------------------------------------
 
-        X is projected on the first axes previous extracted from a training set.
+        Description
+        -----------
+        X is projected on the principal components previously extracted from a training set.
 
         Parameters
         ----------
-        X : DataFrame of float, shape (n_rows_sup, n_columns)
-            New data, where n_row_sup is the number of supplementary
-            row points and n_columns is the number of columns
-            X rows correspond to supplementary row points that are
-            projected on the axes
-            X is a table containing numeric values
-
-        y : None
-            y is ignored
+        `X` : pandas/polars dataframe of shape (n_rows, n_columns)
+            New data, where `n_rows` is the number of row points and `n_columns` is the number of columns
 
         Returns
         -------
-        X_new : DataFrame of float, shape (n_rows_sup, n_components_)
-                X_new : coordinates of the projections of the supplementary
-                row points on the axes.
+        `X_new` : pandas dataframe of shape (n_rows, n_components)
+            Projection of X in the principal components where `n_rows` is the number of rows and `n_components` is the number of the components.
         """
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
@@ -609,27 +625,8 @@ class CA(BaseEstimator,TransformerMixin):
         row_sum = X.sum(axis=1)
         coord = mapply(X,lambda x : x/row_sum,axis=0,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
         coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+        coord.index = X.index.tolist()
         return coord
-            
-    def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X
-        ----------------------------------------------------------------
-
-        Parameters
-        ----------
-        X : pd.DataFrame, shape (n_samples, n_features)
-            New data, where n_samples in the number of samples
-            and n_features is the number of features.
-
-        y : None
-
-        Returns
-        -------
-        X_new : array-like, shape (n_samples, n_components)
-        """
-        self.fit(X)
-        return self.row_["coord"]
 
 def predictCA(self,X):
     """
@@ -640,25 +637,50 @@ def predictCA(self,X):
     -----------
     Performs the coordinates, square cosinus and square distance to origin of new rows with Correspondence Analysis
 
+    Usage
+    -----
+    ```python
+    >>> predictCA(self,X)
+    ```
+
     Parameters
     ----------
-    self : an object of class CA
+    `self` : an object of class CA
 
-    X : pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data
+    `X` : pandas/polars dataframe in which to look for columns with which to predict. X must contain columns with the same names as the original data
 
     Return
     ------
-    a dictionary including : 
+    dictionary of dataframes including :
 
-    coord : factor coordinates (scores) for supplementary rows
+    `coord` : factor coordinates (scores) for supplementary rows
 
-    cos2 : square cosinus for supplementary rows
+    `cos2` : square cosinus for supplementary rows
 
-    dist : square distance to origin for supplementary rows
+    `dist` : square distance to origin for supplementary rows
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load children dataset
+    >>> from scientisttools import load_children
+    >>> children = load_children()
+    >>> # Actifs elements
+    >>> actif = children.iloc[:14,:5]
+    >>> # Supplementary rows
+    >>> row_sup = children.iloc[14:,:5]
+    >>> # Correspondence Analysis (CA)
+    >>> from scientisttools import CA
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)))
+    >>> res_ca.fit(children)
+    >>> # Prediction on supplementary rows
+    >>> from scientisttools import predictCA
+    >>> predict = predictCA(res_ca, X=row_sup)
+    ```
     """
     # Check if self is an object of class CA
     if self.model_ != "ca":
@@ -716,30 +738,36 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
     -----------
     Performns the coordinates, square cosinus and square distance to origin of supplementary columns/variables with Correspondence Analysis (CA)
 
+    Usage
+    -----
+    ```python
+    >>> supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None)   
+    ```
+
     Parameters
     ----------
-    self : an object of class CA
+    `self` : an object of class CA
 
-    X_col_sup : pandas/polars dataframe of supplementary columns
+    `X_col_sup` : pandas/polars dataframe of supplementary columns
 
-    X_quanti_sup : pandas/polars dataframe of supplementary quantitatives columns
+    `X_quanti_sup` : pandas/polars dataframe of supplementary quantitatives columns
 
-    X_quali_sup : pandas/polars dataframe of supplementary qualitatives columns
+    `X_quali_sup` : pandas/polars dataframe of supplementary qualitatives columns
 
-    Return
-    ------
-    a dictionary including : 
+    Returns
+    -------
+    dictionary including : 
 
-    col : a dictionary containing the results of the supplementary columns variables:
+    `col` : dictionary containing the results of the supplementary columns variables:
         * coord : factor coordinates (scores) of the supplementary columns
         * cos2 : square cosinus of the supplementary columns
         * dist : distance to origin of the supplementary columns
 
-    quanti : a dictionary containing the results of the supplementary quantitatives variables:
+    `quanti` : dictionary containing the results of the supplementary quantitatives variables:
         * coord : factor coordinates (scores) of the supplementary quantitativaes variables
         * cos2 : square cosinus of the supplementary quantitatives variables
     
-    quali : a dictionary containing the results of the supplementary qualitatives/categories variables :
+    `quali` : dictionary containing the results of the supplementary qualitatives/categories variables :
         * coord : factor coordinates (scores) of the supplementary categories
         * cos2 : square cosinus of the supplementary categories
         * vtest : value-test of the supplementary categories
@@ -749,6 +777,32 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load children dataset
+    >>> from scientisttools import load_children
+    >>> children = load_children()
+    >>> # Add qualitatives variables
+    >>> children["group"] = ["A"]*4 + ["B"]*5 + ["C"]*5 +["D"]*4
+    >>> # Supplementary columns
+    >>> X_col_sup = children.iloc[:14,5:8]
+    >>> # Supplementary qualitatives variables
+    >>> X_quali_sup = children.iloc[:14,8]
+    >>> from scientisttools import CA
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> # Supplementary columns/variables projections
+    >>> from scientisttools import supvarCA
+    >>> supvar = supvarCA(res_ca,X_col_sup=X_col_sup,X_quanti_sup=X_col_sup,X_quali_sup=X_quali_sup)
+    >>> # Extract supplementary columns results
+    >>> supvarcol = supvar["col"]
+    >>> # Extract supplementary quantitatives variables results
+    >>> supvarquanti = supvar["quanti"]
+    >>> # Extract supplementary qualitatives variables results
+    >>> supvarquali = supvar["quali"]
+    ```
     """
     # Check if self is and object of class CA
     if self.model_ != "ca":

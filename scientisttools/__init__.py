@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-# Principal Components Analysis
+# Principal Component Analysis (PCA)
 from .pca import PCA, predictPCA, supvarPCA
 from .get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
 from .fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot,fviz_pca3d_ind,fviz_pca
+
+# Partial Principal Component Analysis (PartialPCA)
+from .partialpca import PartialPCA, predictPartialPCA, supvarPartialPCA
+from .get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
+from .fviz_partialpca import fviz_partialpca_ind, fviz_partialpca_var, fviz_partialpca_biplot, fviz_partialpca3d_ind, fviz_partialpca
 
 # Correspondence Analysis (CA)
 from .ca import CA, predictCA, supvarCA
@@ -33,11 +38,6 @@ from .fviz_pcamix import fviz_pcamix_ind, fviz_pcamix_col, fviz_pcamix_mod, fviz
 from .mpca import MPCA
 from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
 from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_var, fviz_mpca
-
-# Partial PCA
-from .partialpca import PartialPCA
-from .get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
-from .fviz_partialpca import fviz_partialpca_ind, fviz_partialpca_var, fviz_partialpca
 
 # Exploratory Factor Analysis (EFA)
 from .efa import EFA
@@ -107,7 +107,7 @@ from .fviz_hcpc import fviz_varhcpc_cluster
 
 ## Load all datasets
 # PCA datasets
-from .datasets import load_decathlon, load_decathlon2, load_autos, load_temperature
+from .datasets import load_cars2006, load_decathlon, load_decathlon2, load_autos, load_temperature, load_body
 # CA datasets
 from .datasets import load_children, load_housetasks, load_women_work, load_femmes_travail
 # MCA datasets

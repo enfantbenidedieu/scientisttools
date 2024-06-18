@@ -24,6 +24,10 @@ head(res.mca$var$coord)
 unique(poison$Sick)
 unique(poison$Sex)
 
+library(FactoMineR)
+data(decathlon)
+res.pca <- PCA(decathlon, quanti.sup = 11:12, quali.sup=13,graph = F)
+
 
 data(geomorphology)
 res <- FAMD(geomorphology,graph = FALSE)

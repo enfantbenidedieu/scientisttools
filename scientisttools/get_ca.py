@@ -23,7 +23,7 @@ def get_ca_row(self)-> dict:
 
     Return
     -------
-    a dictionary of dataframes containing the results for the active rows including : 
+    dictionary of dataframes containing the results for the active rows including : 
 
     `coord` : factor coordinates (scores) of the rows
 
@@ -46,7 +46,8 @@ def get_ca_row(self)-> dict:
     >>> from scientisttools import CA, get_ca_row
     >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
     >>> res_ca.fit(children)
-    >>> row = get_ca_row(res_ca) # Extract the results of rows
+    >>> # Extract the results of rows
+    >>> row = get_ca_row(res_ca)
     ```
     """
     # Check if self is an object of class CA
@@ -61,7 +62,7 @@ def get_ca_col(self)-> dict:
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus, relative contributions) of the active column variables from Correspondence Analysis (CA) outputs.
+    Extract all the results (factor coordinates, square cosinus, relative contributions) of the active columns variables from Correspondence Analysis (CA) outputs.
 
     Usage
     -----
@@ -75,13 +76,13 @@ def get_ca_col(self)-> dict:
 
     Returns
     -------
-    a dictionary of dataframes containing the results for the columns including : 
+    dictionary of dataframes containing the results for the columns including : 
 
     `coord` : factor coordinates of the columns
 
     `cos2` : square cosinus of the columns
 
-    `contrib` : relatve contributions of the columns
+    `contrib` : relative contributions of the columns
     
     `infos` : additionals informations (margin, square distance to origin and inertia) of the columns
     
@@ -98,7 +99,8 @@ def get_ca_col(self)-> dict:
     >>> from scientisttools import CA, get_ca_col
     >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
     >>> res_ca.fit(children)
-    >>> col = get_ca_col(res_ca) # Extract the results of columns
+    >>> # Extract the results of columns
+    >>> col = get_ca_col(res_ca)
     ```
     """
     # Check if self is an object of class CA
@@ -132,12 +134,12 @@ def get_ca(self,choice = "row")-> dict:
     `self` : an object of class CA
 
     `choice` : the element to subset from the output. Possible values are : 
-        * "row" for rows
-        * "col" for columns
+        * "row" for active rows
+        * "col" for active columns
 
     Return
     ------
-    a dictionary of dataframes containing the results for the active rows/columns including :
+    dictionary of dataframes containing the results for the active rows/columns including :
 
     `coord` : factor coordinates for the rows/columns
 
@@ -158,8 +160,10 @@ def get_ca(self,choice = "row")-> dict:
     >>> from scientisttools import CA, get_ca
     >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
     >>> res_ca.fit(children)
-    >>> row = get_ca(res_ca, choice = "row") # Extract the results of rows
-    >>> col = get_ca(res_ca, choice = "col") # Extract the results of columns
+    >>> # Extract the results of rows
+    >>> row = get_ca(res_ca, choice = "row")
+    >>> # Extract the results of columns
+    >>> col = get_ca(res_ca, choice = "col")
     ```
     """
     # Check if self is an obkect of class CA
@@ -310,7 +314,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         print(col_infos)
     
     # Add supplementary columns informations
-    if self.col_sup is not None:
+    if hasattr(self,"col_sup_"):
         col_sup = self.col_sup_
         if col_sup["coord"].shape[0]> nb_element:
             print(f"\nSupplementary columns (the {nb_element} first)\n")
@@ -329,7 +333,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
             print(col_sup_infos)
     
     # Add supplementary quantitatives informations
-    if self.quanti_sup is not None:
+    if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
         if quanti_sup["coord"].shape[0]> nb_element:
             print(f"\nSupplementary quantitatives columns (the {nb_element})\n")
@@ -348,7 +352,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
             print(quanti_sup_infos)
     
     # Add supplementary qualitatives informations
-    if self.quali_sup is not None:
+    if hasattr(self,"quali_sup_"):
         quali_sup = self.quali_sup_
         if quali_sup["coord"].shape[0] > nb_element:
             print(f"\nSupplementary categories (the {nb_element} first)\n")

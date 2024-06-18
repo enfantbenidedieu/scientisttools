@@ -13,43 +13,42 @@ def get_pca_ind(self) -> dict:
 
     Usage
     -----
-    > get_pca_ind(res_pca)
+    ```python
+    >>> get_pca_ind(res_pca)
+    ```
 
-    Parameters:
-    -----------
-    self : an object of class PCA
+    Parameters
+    ----------
+    `self` : an object of class PCA
 
-    Return
-    ------
-    a dictionary including :
+    Returns
+    -------
+    dictionary of dataframes containing all the results for the active individuals including:
 
-    coord : factor coordinates (sores) of the individuals
+    `coord` : factor coordinates (scores) of the individuals
 
-    cos2 : square cosine of the individuals
+    `cos2` : square cosinus of the individuals
 
-    contrib : relative contributions of the individuals
+    `contrib` : relative contributions of the individuals
 
-    infos : additionals informations (weight, squared distance to origin and inertia) of the individuals
+    `infos` : additionals informations (weight, squared distance to origin and inertia) of the individuals
 
     Author(s)
-    --------
+    ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
 
     Examples
     --------
-    > # load decathlon2 dataset
-
-    > from scientisttools import load_decathlon2
-
-    > X = decathlon2()
-
-    > from scientisttools import PCA, get_pca_ind
-
-    > res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-
-    > res_pca.fit(X)
-
-    > ind = get_pca_ind(res_pca) # Extract the results for individuals
+    ```python
+    >>> # load decathlon2 dataset
+    >>> from scientisttools import load_decathlon2
+    >>> X = decathlon2()
+    >>> from scientisttools import PCA, get_pca_ind
+    >>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+    >>> res_pca.fit(X)
+    >>> # Extract the results for individuals
+    >>> ind = get_pca_ind(res_pca) 
+    ```
     """
     # Check if self is an object of class PCA
     if self.model_ != "pca":
@@ -67,43 +66,42 @@ def get_pca_var(self) -> dict:
 
     Usage
     -----
-    > get_pca_var(res_pca)
+    ```python
+    >>> get_pca_var(self)
+    ```
 
     Parameters
     ----------
-    self : an object of class PCA
+    `self` : an object of class PCA
 
-    Return
-    ------
-    a dictionary containing the results for the variables
+    Returns
+    -------
+    dictionary of dataframes containing all the results for the active variables including:
 
-    coord : factor coordinates (scores) of the variables
+    `coord` : factor coordinates (scores) of the variables
 
-    cor : correlation between variables and axes of the variables
+    `cor` : correlation between variables and axes of the variables
 
-    contrib : relative contributions of the variables
+    `contrib` : relative contributions of the variables
 
-    cos2 : square cosine of the variables
+    `cos2` : square cosinus of the variables
     
     Author(s)
-    --------
+    ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
 
     Examples
     --------
-    > # load decathlon2 dataset
-
-    > from scientisttools import load_decathlon2
-
-    > X = decathlon2()
-
-    > from scientisttools import PCA
-
-    > res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-
-    > res_pca.fit(X)
-
-    > get_pca_var(res_pca) # Extract the results for variables
+    ```python
+    >>> # load decathlon2 dataset
+    >>> from scientisttools import load_decathlon2
+    >>> X = decathlon2()
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+    >>> res_pca.fit(X)
+    >>> # Extract the results for variables
+    >>> var = get_pca_var(res_pca)
+    ```
     """
     # Check if self is an object of class PCA
     if self.model_ != "pca":
@@ -125,29 +123,27 @@ def get_pca(self,choice="ind")-> dict:
 
     Usage
     -----
-    > get_pca(res_pca,choice=("ind","var"))
-
-    > get_pca_ind(res_pca)
-
-    > get_pca_var(res_pca)
+    ```python
+    >>> get_pca(self,choice=("ind","var"))
+    ```
 
     Parameters
     ----------
-    self : an object of class PCA
+    `self` : an object of class PCA
 
-    choice : the element to subset from the output. Allowed values are :
+    `choice` : the element to subset from the output. Allowed values are :
         * "ind" for individuals
         * "var" for variables
                 
     Returns
     -------
-    a dictionary of dataframes containing all the results for the active individuals/variables including:
+    dictionary of dataframes containing all the results for the active individuals/variables including:
 
-    coord : factor coordinates (scores) of the individuals/variables
+    `coord` : factor coordinates (scores) of the individuals/variables
     
-    cos2: square cosine of the individuals/variables
+    `cos2` : square cosinus of the individuals/variables
     
-    contrib : relative contributions of the individuals/variables
+    `contrib` : relative contributions of the individuals/variables
 
     Author(s)
     ---------
@@ -155,21 +151,18 @@ def get_pca(self,choice="ind")-> dict:
 
     Examples
     --------
-    > # load decathlon2 dataset
-
-    > from scientisttools import load_decathlon2
-
-    > X = decathlon2()
-
-    > from scientisttools import PCA, get_pca
-
-    > res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-
-    > res_pca.fit(X)
-
-    > get_pca(res_pca,choice = "ind") # Extract the results for individuals
-
-    > get_pca(res_pca,choice = "var") # Extract the results for variables
+    ```python
+    >>> # load decathlon2 dataset
+    >>> from scientisttools import load_decathlon2
+    >>> X = decathlon2()
+    >>> from scientisttools import PCA, get_pca
+    >>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+    >>> res_pca.fit(X)
+    >>> # Extract the results for individuals
+    >>> ind = get_pca(res_pca,choice = "ind")
+    >>> # Extract the results for variables
+    >>> var = get_pca(res_pca,choice = "var") 
+    ```
     """
     # Check if self is an object of class PCA
     if self.model_ != "pca":
@@ -194,23 +187,25 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     Usage
     -----
-    > summaryPCA(res_pca,**kwargs)
+    ```python
+    >>> summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs)
+    ```
 
     Parameters
     ----------
-    self : an obect of class PCA
+    `self` : an object of class PCA
 
-    digits : int, default=3. Number of decimal printed
+    `digits` : int, default=3. Number of decimal printed
 
-    nb_element : int, default = 10. Number of element
+    `nb_element` : int, default = 10. Number of element
 
-    ncp : int, default = 3. Number of componennts
+    `ncp` : int, default = 3. Number of componennts
 
-    to_markdown : Print DataFrame in Markdown-friendly format.
+    `to_markdown` : Print DataFrame in Markdown-friendly format.
 
-    tablefmt : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
     
-    **kwargs : These parameters will be passed to tabulate.
+    `**kwargs` : These parameters will be passed to tabulate.
 
     Author(s)
     ---------
@@ -218,19 +213,15 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     Examples
     --------
-    > # Load decathlon2 dataset
-
-    > from scientisttools import load_decatlon2
-
-    > X = load_decathlon2()
-
-    > from scientisttools import PCA
-
-    > res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-
-    > res_pca.fit(X)
-
-    > summaryPCA(res_pca)
+    ```python
+    >>> # Load decathlon2 dataset
+    >>> from scientisttools import load_decatlon2
+    >>> X = load_decathlon2()
+    >>> from scientisttools import PCA, summaryPCA
+    >>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+    >>> res_pca.fit(X)
+    >>> summaryPCA(res_pca)
+    ```
     """
     # Check if self is an object of class PCA
     if self.model_ != "pca":
@@ -281,7 +272,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(ind_infos)
 
     # Add supplementary individuals
-    if self.ind_sup is not None:
+    if hasattr(self,"ind_sup_"):
         ind_sup = self.ind_sup_
         if ind_sup["coord"].shape[0] > nb_element:
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
@@ -320,7 +311,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(var_infos)
     
     # Add supplementary continuous variables informations
-    if self.quanti_sup is not None:
+    if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
         if quanti_sup["coord"].shape[0] > nb_element:
             print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
@@ -339,7 +330,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(quanti_sup_infos)
     
     # Add Supplementary categories – Variable illustrative qualitative
-    if self.quali_sup is not None:
+    if hasattr(self,"quali_sup_"):
         quali_sup = self.quali_sup_
         if quali_sup["coord"].shape[0] > nb_element:
             print(f"\nSupplementary categories (the {nb_element} first)\n")

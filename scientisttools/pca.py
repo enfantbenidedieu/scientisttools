@@ -18,65 +18,65 @@ class PCA(BaseEstimator,TransformerMixin):
     """
     Principal Component Analysis (PCA)
     ----------------------------------
-
     This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
-
     Performs Principal Component Analysis (PCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables. Missing values are replaced by the column mean.
 
     Usage
     -----
-    > PCA(standardize = True, n_components = 5, ind_weights = None, var_weights = None, ind_sup = None, quanti_sup = None, quali_sup = None, parallelize=False)
+    ```python
+    >>> PCA(standardize = True, n_components = 5, ind_weights = None, var_weights = None, ind_sup = None, quanti_sup = None, quali_sup = None, parallelize=False)
+    ```
     
     Parameters
     ----------
-    standardize : a boolean, default = True
+    `standardize` : a boolean, default = True
         * If True : the data are scaled to unit variance.
         * If False : the data are not scaled to unit variance.
 
-    n_components : number of dimensions kept in the results (by default 5)
+    `n_components` : number of dimensions kept in the results (by default 5)
 
-    ind_weights : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform individuals weights), the weights are given only for active individuals.
+    `ind_weights` : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform individuals weights), the weights are given only for active individuals.
     
-    var_weights : an optional variables weights (by default, a list/tuple of 1 for uniform variables weights), the weights are given only for the active variables
+    `var_weights` : an optional variables weights (by default, a list/tuple of 1 for uniform variables weights), the weights are given only for the active variables
     
-    ind_sup : an integer or a list/tuple indicating the indexes of the supplementary individuals
+    `ind_sup` : an integer or a list/tuple indicating the indexes of the supplementary individuals
 
-    quanti_sup : an integer or a list/tuple indicating the indexes of the quantitative supplementary variables
+    `quanti_sup` : an integer or a list/tuple indicating the indexes of the quantitative supplementary variables
 
-    quali_sup : an integer or a list/tuple indicating the indexes of the categorical supplementary variables
+    `quali_sup` : an integer or a list/tuple indicating the indexes of the categorical supplementary variables
 
-    parallelize : boolean, default = False. If model should be parallelize
-        * If True : parallelize using mapply
-        * If False : parallelize using apply
+    `parallelize` : boolean, default = False. If model should be parallelize
+        * If `True` : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
+        * If `False` : parallelize using pandas apply
 
-    Return
-    ------
-    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+    Attributes
+    ----------
+    `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    var_ : a dictionary of pandas dataframe containing all the results for the active variables (coordinates, correlation between variables and axes, square cosine, contributions)
+    `var_` : dictionary of pandas dataframes containing all the results for the active variables (coordinates, correlation between variables and axes, square cosinus, contributions)
 
-    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine, contributions)
+    `ind_` : dictionary of pandas dataframes containing all the results for the active individuals (coordinates, square cosinus, contributions)
 
-    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
+    `ind_sup_` : dictionary of pandas dataframes containing all the results for the supplementary individuals (coordinates, square cosinus)
 
-    quanti_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates, correlation between variables and axes, square cosine)
+    `quanti_sup_` : dictionary of pandas dataframes containing all the results for the supplementary quantitative variables (coordinates, correlation between variables and axes, square cosinus)
 
-    quali_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of each categories of each variables, vtest which is a criterion with a Normal distribution, and eta2 which is the square correlation coefficient between a qualitative variable and a dimension)
+    `quali_sup_` : dictionary of pandas dataframes containing all the results for the supplementary categorical variables (coordinates of each categories of each variables, vtest which is a criterion with a Normal distribution, and eta2 which is the square correlation coefficient between a qualitative variable and a dimension)
     
-    summary_quanti_ : a summary statistics for quantitative variables (actives and supplementary)
+    `summary_quanti_` : summary statistics for quantitative variables (actives and supplementary)
 
-    summary_quali_ : a summary statistics for supplementary qualitative variables if quali_sup is not None
+    `summary_quali_` : summary statistics for supplementary qualitative variables if quali_sup is not None
 
-    chi2_test_ : chi-squared test. If supplementary qualitative are greater than 2. 
+    `chi2_test_` : chi-squared test. If supplementary qualitative are greater than 2. 
     
-    call_ : a dictionary with some statistics
+    `call_` : dictionary with some statistics
 
-    others_ : others statistics (Bartlett's test of Spericity, Kaiser threshold, ...)
+    `others_` : others statistics (Bartlett's test of Spericity, Kaiser threshold, ...)
 
-    model_ : string. The model fitted = 'pca'
+    `model_` : string specifying the model fitted = 'pca'
 
     Author(s)
     ---------
@@ -84,7 +84,9 @@ class PCA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    Escofier B, Pagès J. (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+
+    Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
 
     Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
 
@@ -92,27 +94,24 @@ class PCA(BaseEstimator,TransformerMixin):
 
     Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
 
-    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+    Rakotomalala, R. (2020). Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2. Version 1.0
 
+    Tenenhaus, M. (2006). Statistique : Méthodes pour décrire, expliquer et prévoir. Dunod.
+    
     See Also
     --------
     get_pca_ind, get_pca_var, get_pca, summaryPCA, dimdesc, reconstruct, predictPCA, supvarPCA, fviz_pca_ind, fviz_pca_var, fviz_pca_biplot
 
     Examples
     --------
-    > # Load decathlon2 dataset
-
-    > from scientisttools import load_decatlon2
-
-    > X = load_decathlon2()
-
-    > from scientisttools import PCA
-
-    > res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-
-    > res_pca.fit(X)
-
-    > summaryPCA(res_pca)
+    ```python
+    >>> # Load decathlon2 dataset
+    >>> from scientisttools import load_decatlon2
+    >>> X = load_decathlon2()
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+    >>> res_pca.fit(X)
+    ```
     """
     def __init__(self,
                  standardize = True,
@@ -139,15 +138,16 @@ class PCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
+        `X` : pandas/polars DataFrame of shape (n_samples, n_columns)
+            Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
-        y : None
+        `y` : None
             y is ignored
 
         Returns:
         --------
-        self : object
-                Returns the instance itself
+        `self` : object
+            Returns the instance itself
         """
         # Check if sparse matrix
         if issparse(X):
@@ -374,10 +374,7 @@ class PCA(BaseEstimator,TransformerMixin):
         bartlett_stats = -(n_rows-1-(2*n_cols+5)/6)*np.sum(np.log(eigen_values))
         bs_dof = n_cols*(n_cols-1)/2
         bs_pvalue = 1-sp.stats.chi2.cdf(bartlett_stats,df=bs_dof)
-        bartlett_sphericity_test = pd.DataFrame({
-            "Statistics" : ["|CORR.MATRIX|","statistic","dof","p-value"],
-            "value" : [np.sum(np.log(eigen_values)),bartlett_stats,bs_dof,bs_pvalue]
-        })
+        bartlett_sphericity_test = pd.DataFrame([np.sum(np.log(eigen_values)),bartlett_stats,bs_dof,bs_pvalue],index=["|CORR.MATRIX|","statistic","dof","p-value"],columns=["value"])
     
         kaiser_threshold = np.mean(eigen_values)
         kaiser_proportion_threshold = 100/np.sum(var_inertia)
@@ -407,6 +404,7 @@ class PCA(BaseEstimator,TransformerMixin):
             # Supplementary individuals squared distance to origin
             ind_sup_dist2 = mapply(Z_ind_sup,lambda  x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
             ind_sup_dist2.name = "Sq. Dist."
+            ind_sup_dist2.index.name = None
 
             # Supplementary individuals square cosine
             ind_sup_cos2 = mapply(ind_sup_coord,lambda x : (x**2)/ind_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
@@ -523,31 +521,46 @@ class PCA(BaseEstimator,TransformerMixin):
         self.model_ = "pca"
 
         return self
+    
+    def fit_transform(self,X,y=None):
+        """
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
 
-    def transform(self,X,y=None):
+        Parameters
+        ----------
+        `X` : pandas/polars dataframe of shape (n_samples, n_columns)
+            Training data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
+        
+        `y` : None
+            y is ignored.
+        
+        Returns
+        -------
+        `X_new` : pandas dataframe of shape (n_samples, n_components)
+            Transformed values.
+        """
+        self.fit(X)
+        return self.ind_["coord"]
+
+    def transform(self,X):
         """
         Apply the dimensionality reduction on X
         ---------------------------------------
 
-        X is projected on the first axes previous extracted from a training set.
+        Description
+        -----------
+        X is projected on the principal components previously extracted from a training set.
 
         Parameters
         ----------
-        X : DataFrame of float, shape (n_rows_sup, n_columns)
-            New data, where n_row_sup is the number of supplementary
-            row points and n_columns is the number of columns
-            X rows correspond to supplementary row points that are
-            projected on the axes
-            X is a table containing numeric values
-
-        y : None
-            y is ignored
+        X : pandas/polars dataframe of shape (n_samples, n_columns)
+            New data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
 
         Returns
         -------
-        X_new : DataFrame of float, shape (n_rows_sup, n_components_)
-                X_new : coordinates of the projections of the supplementary
-                row points on the axes.
+        `X_new` : pandas dataframe of shape (n_samples, n_components)
+            Projection of X in the principal components where `n_samples` is the number of samples and `n_components` is the number of the components.
         """
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
@@ -585,54 +598,58 @@ class PCA(BaseEstimator,TransformerMixin):
         ###### Multiply by columns weight & Apply transition relation
         coord = mapply(Z,lambda x : x*var_weigths,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"])
         coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+        coord.index = X.index.tolist()
         return coord
-
-    def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X
-        ----------------------------------------------------------------
-
-        Parameters
-        ----------
-        X : pd.DataFrame, shape (n_samples, n_features)
-            New data, where n_samples in the number of samples
-            and n_features is the number of features.
-
-        Returns
-        -------
-        X_new : array-like, shape (n_samples, n_components)
-        """
-        self.fit(X)
-        return self.ind_["coord"]
     
-def predictPCA(self,X):
+def predictPCA(self,X=None):
     """
     Predict projection for new individuals with Principal Component Analysis (PCA)
     ------------------------------------------------------------------------------
 
     Description
     -----------
-    Performs the coordinates, squared cosinus and distance to origin of new individuals with Principal Component Analysis (PCA)
+    Performs the coordinates, squared cosinus and square distance to origin of new individuals with Principal Component Analysis (PCA)
+
+    Usage
+    -----
+    ```python
+    >>> predictPCA(self,X)
+    ```
 
     Parameters
     ----------
-    self : an object of class PCA
+    `self` : an object of class PCA
 
-    X : a pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
+    `X` : pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
     
     Return
     ------
-    a dictionary including : 
+    dictionary of dataframes containing all the results for the new individuals including:
     
-    coord : factor coordinates of the new individuals
+    `coord` : factor coordinates of the new individuals
 
-    cos2 : square cosine of the new individuals
+    `cos2` : square cosinus of the new individuals
 
-    dist : square distance to origin for new individuals
+    `dist` : square distance to origin for new individuals
     
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load cars2006 dataset
+    >>> from scientisttools import load_cars2006
+    >>> D = load_cars2006(which="actif")
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(n_components=5)
+    >>> res_pca.fit(D)
+    >>> # Load supplementary individuals
+    >>> ind_sup = load_cars2006(which="indsup")
+    >>> from scientisttools import predictPCA
+    >>> predict = predictPCA(res_pca,X=ind_sup)
+    ```
     """
     # Check if self is an object of class PCA
     if self.model_ != "pca":
@@ -678,6 +695,7 @@ def predictPCA(self,X):
     #  New data square distance to origin
     dist2 = mapply(Z,lambda  x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
     dist2.name = "Sq. Dist."
+    dist2.index.name = None
 
     # New data square cosinus
     cos2 = mapply(coord,lambda x : (x**2)/dist2,axis=0,progressbar=False,n_workers=n_workers)
@@ -695,23 +713,29 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
     -----------
     Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables with Principal Components Analysis (PCA)
 
+    Usage
+    -----
+    ```python
+    >>> supvarPCA(self,X_quanti_sup=None, X_quali_sup=None)
+    ```
+
     Parameters
     ----------
-    self : an object of class PCA
+    `self` : an object of class PCA
 
-    X_quanti_sup : a pandas/polars dataframe of supplementary quantitatives variables
+    `X_quanti_sup` : pandas/polars dataframe of supplementary quantitatives variables (default = None)
 
-    X_quali_sup : a pandas/polars dataframe of supplementary qualitatives variables
+    `X_quali_sup` : pandas/polars dataframe of supplementary qualitatives variables (default = None)
 
-    Return
-    ------
-    a dictionary including : 
+    Returns
+    -------
+    dictionary of dictionary containing the results for supplementary variables including : 
 
-    quanti : a dictionary containing the results of the supplementary quantitatives variables:
-        * coord : factor coordinates of the supplementary quantitativaes variables
+    `quanti` : dictionary containing the results of the supplementary quantitatives variables including :
+        * coord : factor coordinates of the supplementary quantitatives variables
         * cos2 : square cosinus of the supplementary quantitatives variables
     
-    quali : a dictionary containing the results of the supplementary qualitatives/categories variables :
+    `quali` : dictionary containing the results of the supplementary qualitatives/categories variables including :
         * coord : factor coordinates of the supplementary categories
         * cos2 : square cosinus of the supplementary categories
         * vtest : value-test of the supplementary categories
@@ -721,6 +745,23 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load cars2006 dataset
+    >>> from scientisttools import load_cars2006
+    >>> D = load_cars2006(which="actif")
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(n_components=5)
+    >>> res_pca.fit(D)
+    >>> # Supplementary quantitatives variables
+    >>> X_quanti_sup = load_cars2006(which="varquantsup")
+    >>> # Supplementary qualitatives variables
+    >>> X_quali_sup = load_cars2006(which="varqualsup")
+    >>> from scientisttools import supvarPCA
+    >>> sup_var_predict = supvarPCA(res_pca,X_quanti_sup=X_quanti_sup,X_quali_sup=X_quali_sup)
+    ```
     """
     # Check if self is and object of class PCA
     if self.model_ != "pca":
@@ -841,7 +882,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
         
         # Supplementary qualitatives squared distance
         bary = (barycentre - means.reshape(1,-1))/std.reshape(1,-1)
-        quali_sup_dist2  = mapply(bary, lambda x : x**2*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+        quali_sup_dist2  = mapply(bary, lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
         quali_sup_dist2.name = "Sq. Dist."
 
         # Supplementary qualitatives coordinates

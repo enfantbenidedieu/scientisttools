@@ -55,10 +55,45 @@ def fviz_ca_row(self,
     Usage
     -----
     ```python
-    >>> fviz_ca_row(self,axis=[0,1],x_lim=None,y_lim=None,x_label = None,y_label = None,title =None,color ="black",geom = ["point","text"],gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),point_size = 1.5,
-                    text_size = 8,text_type = "text",marker = "o",add_grid =True,row_sup=True,color_sup = "blue",marker_sup = "^",quali_sup = True,color_quali_sup = "red",marker_quali_sup = ">",add_hline = True,
-                    add_vline=True,legend_title = None,habillage=None,add_ellipses=False, ellipse_type = "t",confint_level = 0.95,geom_ellipse = "polygon",ha="center",va="center",hline_color="black",
-                    hline_style="dashed",vline_color="black",vline_style ="dashed",lim_cos2 = None,lim_contrib = None,repel=False,ggtheme=pn.theme_minimal())
+    >>> fviz_ca_row(self,
+                    axis=[0,1],
+                    x_lim=None,
+                    y_lim=None,
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    color ="black",
+                    geom = ["point","text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    point_size = 1.5,
+                    text_size = 8,
+                    text_type = "text",
+                    marker = "o",
+                    add_grid =True,
+                    row_sup=True,
+                    color_sup = "blue",
+                    marker_sup = "^",
+                    quali_sup = True,
+                    color_quali_sup = "red",
+                    marker_quali_sup = ">",
+                    add_hline = True,
+                    add_vline=True,
+                    legend_title = None,
+                    habillage=None,
+                    add_ellipses=False, 
+                    ellipse_type = "t",
+                    confint_level = 0.95,
+                    geom_ellipse = "polygon",
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    lim_cos2 = None,
+                    lim_contrib = None,
+                    repel=False,
+                    ggtheme=pn.theme_minimal())
     ```
 
     Parameters
@@ -141,8 +176,8 @@ def fviz_ca_row(self,
 
     `ggtheme`: function, plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes : theme_gray(), theme_bw(), theme_classic(), theme_void(),...
 
-    Return
-    ------
+    Returns
+    -------
     a plotnine
 
     Author(s)
@@ -158,6 +193,7 @@ def fviz_ca_row(self,
     >>> from scientisttools import CA, fviz_ca_row
     >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
     >>> res_ca.fit(children)
+    >>> # Graph of row variables
     >>> p = fviz_ca_row(res_ca)
     >>> print(p)
     ```
@@ -203,10 +239,7 @@ def fviz_ca_row(self,
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = (self.row_["cos2"].iloc[:,axis]
-                        .sum(axis=1).to_frame("cosinus")
-                        .sort_values(by="cosinus",ascending=False)
-                        .query("cosinus > @lim_cos2"))
+            cos2 = self.row_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -216,10 +249,7 @@ def fviz_ca_row(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = (self.row_["contrib"].iloc[:,axis]
-                           .sum(axis=1).to_frame("contrib")
-                           .sort_values(by="contrib",ascending=False)
-                           .query("contrib > @lim_contrib"))
+            contrib = self.row_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -267,8 +297,7 @@ def fviz_ca_row(self,
                     legend_title = "Cluster"
                 #####################################
                 if "point" in geom:
-                    p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
-                            pn.guides(color=pn.guide_legend(title=legend_title)))
+                    p = p + pn.geom_point(pn.aes(color=c),size=point_size)+pn.guides(color=pn.guide_legend(title=legend_title))
                 if "text" in geom:
                     if repel :
                         p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
@@ -285,7 +314,7 @@ def fviz_ca_row(self,
     else:
         if self.quali_sup is not None:
             if habillage not in coord.columns.tolist():
-                raise ValueError(f"Error : {habillage} not in DataFrame")
+                raise ValueError(f"{habillage} not in DataFrame")
             if "point" in geom:
                 p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size)
             if "text" in geom:
@@ -293,6 +322,8 @@ def fviz_ca_row(self,
                     p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
                     p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha)
+            
+            # Add ellipse
             if add_ellipses:
                 p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
         
@@ -403,19 +434,91 @@ def fviz_ca_col(self,
     ----------
     `self` : an object of class CA
 
-    axis : a numeric list or vector of length 2 specifying the dimensions to be plotted, default = [0,1]
+    `axis` : a numeric list or vector of length 2 specifying the dimensions to be plotted, default = [0,1]
+
+    `x_lim` : a numeric list of length 2 specifying the range of the plotted 'x' values (by default = None).
+
+    `y_lim` : a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
+
+    `x_label` : a string specifying the label text of x (by default = None and a x_label is chosen).
+
+    `y_label` : a string specifying the label text of y (by default = None and a x_label is chosen).
+
+    `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
+
+    `color` : a color for the active rows points (by default = "black")
+
+    `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
+    
+    `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+    
+    `text_type` :  a string specifying either `geom_text` or `geom_label` (by default = "text"). Allowed values are : "text" or "label".
+
+    `marker` : the marker style (by default = "o").
+    
+    `point_size` : a numeric value specifying the marker size (by default = 1.5).
+    
+    `text_size` : a numeric value specifying the label size (by default = 8).
+
+    `add_grid` : a boolean to either add or not a grid customization (by default = True).
+
+    `legend_title` : a string corresponding to the title of the legend (by default = None).
+
+    `col_sup` : a boolean to either add or not supplementary columns points (by default = True).
+
+    `color_sup` : a color for the supplementary columns points (by default = "blue").
+
+    `marker_sup` :  a marker style for the supplementary columns points (by default = "^").
+
+    `add_hline` : a boolean to either add or not a horizontal ligne (by default = True).
+
+    `add_vline` : a boolean to either add or not a vertical ligne (by default = True).
+
+    `ha` : horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
+
+    `va` : vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
+
+    `hline_color` : a string specifying the horizontal ligne color (by default = "black").
+
+    `hline_style` : a string specifying the horizontal ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+
+    `vline_color` : a string specifying the vertical ligne color (by default = "black").
+
+    `vline_style` : a string specifying the vertical ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+
+    `lim_cos2` : a numeric specifying the square cosinus limit (by default = None).
+
+    `lim_contrib` : a numeric specifying the relative contribution limit (by default = None),
+
+    `repel` : a boolean, whether to avoid overplotting text labels or not (by default == False)
+
+    `ggtheme`: function, plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes : theme_gray(), theme_bw(), theme_classic(), theme_void(),...
 
     Return
     ------
-    a plotnine graph
+    a plotnine
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, fviz_ca_col
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> # Columns factor map
+    >>> p = fviz_ca_col(res_ca)
+    >>> print(p)
+    ```
     """
-    
+    # Check if self is an object of class CA
     if self.model_ != "ca":
-        raise TypeError("'self' must be an object of class CA.")
+        raise TypeError("'self' must be an object of class CA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -430,10 +533,7 @@ def fviz_ca_col(self,
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = (self.col_["cos2"].iloc[:,axis]
-                        .sum(axis=1).to_frame("cosinus")
-                        .sort_values(by="cosinus",ascending=False)
-                        .query("cosinus > @lim_cos2"))
+            cos2 = self.col_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -585,21 +685,33 @@ def fviz_ca_biplot(self,
 
     Parameters
     ----------
-    self : an object of class CA
-
-    axis : a numeric list or vector of length 2 specifying the dimensions to be plotted, default = [0,1]
+    see fviz_ca_row, fviz_ca,col
     
-    Return
-    ------
-    a plotnine graph
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
 
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, fviz_ca_biplot
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> # Biplot
+    >>> p = fviz_ca_biplot(res_ca)
+    >>> print(p)
+    ```
+    """
+    # Check if self is an object of class CA
     if self.model_ != "ca":
-        raise ValueError("'self' must be an object of class CA.")
+        raise ValueError("'self' must be an object of class CA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -707,26 +819,52 @@ def fviz_ca(self,
     -----------
     Draw the Correspondence Analysis (CA) graphs.
 
+    Usage
+    -----
+    ```python
+    >>> fviz_ca(self,choice=("row","col","biplot"),**kwargs)
+    ```
+
     Parameters
     ----------
-    self : an object of class CA
+    `self` : an object of class CA
 
-    choice : the graph to plot
-                - 'row' for the row points factor map
-                - 'col' for the columns points factor map
-                - 'biplot' for biplot of row and columns factor map
+    `choice` : the graph to plot
+        * 'row' for the row points factor map
+        * 'col' for the columns points factor map
+        * 'biplot' for biplot of row and columns factor map
 
-    **kwargs : 	further arguments passed to or from other methods
+    `**kwargs` : 	further arguments passed to or from other methods
 
     Return
     ------
-    a plotnine graph
+    a plotnine
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
 
+    Examples
+    --------
+    ```python
+    >>> # load children dataset
+    >>> from scientisttools import load_children
+    >>> children  = load_children()
+    >>> from scientisttools import CA, fviz_ca
+    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca.fit(children)
+    >>> # Rows factor map
+    >>> p1 = fviz_ca(res_ca,choice="row")
+    >>> print(p1)
+    >>> # Columns factor map
+    >>> p2 = fviz_ca(res_ca,choice="col")
+    >>> print(p2)
+    >>> # Biplot
+    >>> p3 = fviz_ca(res_ca,choice="biplot")
+    >>> print(p3)
+    ```
+    """
+    # Check if self is an object of class CA
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
     

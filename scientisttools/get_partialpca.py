@@ -3,80 +3,171 @@ import numpy as np
 import pandas as pd
 
 def get_partialpca_ind(self) -> dict:
-
     """
-    self : an object of class PPCA
+    Extract the results for individuals - PartialPCA
+    ------------------------------------------------
+
+    Description
+    ------------
+    Extract all the results (factor coordinates, square cosinus, relative contributions) of the active individuals from Partial Principal Component Analysis (PartialPCA) outputs.
+
+    Usage
+    -----
+    ```
+    >>> get_partialpca_ind(self)
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class PartialPCA
 
     Returns
     -------
-    Partial Principal Component Analysis - Results for individuals
-    ===============================================================
-        Names       Description
-    1   "coord"     "coordinates for the individuals"
-    2   "cos2"      "cos2 for the individuals"
-    3   "contrib"   "contributions of the individuals"
-    4   "infos"     "additionnal informations for the individuals :"
-                        - distance between individuals and inertia
-                        - weight for the individuals
-                        - inertia for the individuals
+    dictionry of dataframes containing all the results for the active individuals including:
+
+    `coord` : factor coordinates (scores) of the individuals
+
+    `cos2` : square cosine of the individuals
+
+    `contrib` : relative contributions of the individuals
+
+    `infos` : additionals informations (weight, squared distance to origin and inertia) of the individuals
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load cars2006 dataset
+    >>> from scientisttools import load_cars2006
+    >>> D = load_cars2006(which="actif")
+    >>> from scientisttools import PartialPCA, get_partialpca_ind
+    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=["CYL"],parallelize=False)
+    >>> res_partialpca.fit(D)
+    >>> # Results for individuals
+    >>> ind = get_partialpca_ind(res_partialpca)
+    ```
     """
+    # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA.")
     return self.ind_
 
 def get_partialpca_var(self) -> dict:
-
     """
-    self : an instance of class PPCA
+    Extract the results for variables - PartialPCA
+    ----------------------------------------------
+
+    Description
+    -----------
+    Extract all the results (factor coordinates, square cosinus, contributions) for the active variables from Partial Principal Component Analysis (PartialPCA) outputs
+
+    Usage
+    -----
+    ```python
+    >>> get_partialpca_var(self)
+    ```
+
+    Parameters
+    ----------
+    `self` : an instance of class PartialPCA
 
     Returns
     -------
-    Partial Principal Component Analysis - Results for variables
-    ==============================================================
-        Names       Description
-    1   "coord"     "coordinates for the variables"
-    2   "cos2"      "cos2 for the variables"
-    3   "contrib"   "contributions of the variables"
-    4   "cor"       "correlations between variables and dimensions"
+    dictionary of dataframes containing all the results for the active variables including:
+
+    `coord` : factor coordinates (scores) of the variables
+
+    `cor` : correlation between variables and axes of the variables
+
+    `contrib` : relative contributions of the variables
+
+    `cos2` : square cosinus of the variables
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load cars2006 dataset
+    >>> from scientisttools import load_cars2006
+    >>> D = load_cars2006(which="actif")
+    >>> from scientisttools import PartialPCA, get_partialpca_var
+    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=["CYL"],parallelize=False)
+    >>> res_partialpca.fit(D)
+    >>> # Results for variables
+    >>> var = get_partialpca_var(res_partialpca)
+    ```
     """
+    # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
-    
-    # Store informations
     return self.var_
 
 def get_partialpca(self,choice = "ind")-> dict:
-
     """
-    self : an object of class PPCA
+    Extract the results for individuals/variables - PartialPCA
+    ----------------------------------------------------------
 
-    choice : {"ind", "var"}, default= "ind"
+    Description
+    -----------
+    Extract all the results (factor coordinates, square cosinus, relative contributions) for the active individuals/variables from Partial Principal Component Analysis (PartialPCA) outputs.
 
+    *   get_partialpca() : Extract the results for variables and individuals
+    *   get_partialpca_ind() : Extract the results for individuals only
+    *   get_partialpca_var() : Extract the results for variables only
+
+    Usage
+    -----
+     ```python
+    >>> get_partialpca(self,choice=("ind","var"))
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class PartialPCA
+
+    `choice` : the element to subset from the output. Allowed values are :
+        * "ind" for individuals 
+        * "var" for variables
+    
     Returns
     -------
-    if choice == "ind":
-        Partial Principal Component Analysis - Results for individuals
-        ===================================================
-            Names       Description
-        1   "coord"     "coordinates for the individuals"
-        2   "cos2"      "cos2 for the individuals"
-        3   "contrib"   "contributions of the individuals"
-        4   "infos"     "additionnal informations for the individuals :"
-                            - distance between individuals and inertia
-                            - weight for the individuals
-                            - inertia for the individuals
+    dictionary of dataframes containing all the results for the active individuals/variables including:
+
+    `coord` : factor coordinates (scores) of the individuals/variables
     
-    if choice == "var":
-        Partial rincipal Component Analysis - Results for variables
-        ===================================================
-            Names       Description
-        1   "coord"     "coordinates for the variables"
-        2   "cos2"      "cos2 for the variables"
-        3   "contrib"   "contributions of the variables"
-        4   "cor"       "correlations between variables and dimensions"
+    `cos2` : square cosinus of the individuals/variables
+    
+    `contrib` : relative contributions of the individuals/variables
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load cars2006 dataset
+    >>> from scientisttools import load_cars2006
+    >>> D = load_cars2006(which="actif")
+    >>> from scientisttools import PartialPCA, get_partialpca
+    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=["CYL"],parallelize=False)
+    >>> res_partialpca.fit(D)
+    >>> # Results for individuals
+    >>> ind = get_partialpca(res_partialpca, choice = "ind")
+    >>> # Results for variables
+    >>> var = get_partialpca(res_partialpca, choice = "var")
+    ```
     """
+    # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
+    
     if choice not in ["ind","var"]:
         raise ValueError("'choice' should be one of 'ind', 'var'")
     
@@ -85,39 +176,60 @@ def get_partialpca(self,choice = "ind")-> dict:
     elif choice == "var":
         return get_partialpca_var(self)
 
-########## Partial PCA
-
 def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
     Printing summaries of Partial Principal Component Analysis model
     ----------------------------------------------------------------
 
+    Description
+    -----------
+    Printing summaries of partial principal component analysis (PartialPCA) objects
+
+    Usage
+    -----
+    ```python
+    >>> summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs)
+    ```
+
     Parameters
     ----------
-    self        :   an obect of class PartialPCA
+    `self` : an object of class PartialPCA
 
-    digits      :   int, default=3. Number of decimal printed
+    `digits` : int, default=3. Number of decimal printed
 
-    nb_element  :   int, default = 10. Number of element
+    `nb_element` :   int, default = 10. Number of element
 
-    ncp         :   int, default = 3. Number of componennts
+    ``ncp` :   int, default = 3. Number of componennts
 
-    to_markdown :   Print DataFrame in Markdown-friendly format
+    `to_markdown` : Print DataFrame in Markdown-friendly format
 
-    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
 
-    **kwargs    :   These parameters will be passed to tabulate.
+    `**kwargs` : These parameters will be passed to tabulate.
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
 
+    Examples
+    --------
+    ```python
+    >>> # load cars2006 dataset
+    >>> from scientisttools import load_cars2006
+    >>> D = load_cars2006(which="actif")
+    >>> from scientisttools import PartialPCA, summaryPartialPCA
+    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=["CYL"],parallelize=False)
+    >>> res_partialpca.fit(D)
+    >>> summaryPartialPCA(res_partialpca)
+    ```
+    """
+    # Check if self is and object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
 
+    # Define number of components
     ncp = min(ncp,self.call_["n_components"])
-    nb_element = min(nb_element,self.call_["resid"].shape[0])
+    nb_element = min(nb_element,self.call_["X"].shape[0])
 
     # Partial Principal Components Analysis Results
     print("                     Partial Principal Component Analysis - Results                     \n")
@@ -132,10 +244,13 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
         print(eig)
     
     # Add individuals informations
-    print(f"\nIndividuals (the {nb_element} first)\n")
     ind = self.ind_
+    if ind["coord"].shape[0] > nb_element:
+        print(f"\nIndividuals (the {nb_element} first)\n")
+    else:
+        print("\nIndividuals\n")
     ind_infos = ind["infos"]
-    for i in np.arange(0,ncp,1):
+    for i in np.arange(ncp):
         ind_coord = ind["coord"].iloc[:,i]
         ind_cos2 = ind["cos2"].iloc[:,i]
         ind_cos2.name = "cos2"
@@ -148,11 +263,33 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
     else:
         print(ind_infos)
     
+    # Add supplementary individuals
+    if hasattr(self,"ind_sup_"):
+        ind_sup = self.ind_sup_
+        if ind_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary individuals (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary individuals\n")
+        ind_sup_infos = ind_sup["dist"]
+        for i in np.arange(ncp):
+            ind_sup_coord = ind_sup["coord"].iloc[:,i]
+            ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
+            ind_sup_cos2.name = "cos2"
+            ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
+        ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        if to_markdown:
+            print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(ind_sup_infos)
+    
     # Add variables informations
-    print(f"\nContinues variables\n")
     var = self.var_
-    var_infos = var["infos"]
-    for i in np.arange(0,ncp,1):
+    if var["coord"].shape[0]>nb_element:
+        print(f"\nVariables (the {nb_element} first)\n")
+    else:
+         print("\nVariables\n")
+    var_infos = pd.DataFrame().astype("float")
+    for i in np.arange(ncp):
         var_coord = var["coord"].iloc[:,i]
         var_cos2 = var["cos2"].iloc[:,i]
         var_cos2.name = "cos2"
@@ -164,3 +301,54 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(var_infos)
+    
+    # Add supplementary continuous variables informations
+    if hasattr(self,"quanti_sup_"):
+        quanti_sup = self.quanti_sup_
+        if quanti_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary continuous variables\n")
+        quanti_sup_infos = pd.DataFrame().astype("float")
+        for i in np.arange(ncp):
+            quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
+            quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
+            quanti_sup_cos2.name = "cos2"
+            quanti_sup_infos =pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
+        quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        if to_markdown:
+            print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quanti_sup_infos)
+    
+    # Add Supplementary categories – Variable illustrative qualitative
+    if hasattr(self,"quali_sup_"):
+        quali_sup = self.quali_sup_
+        if quali_sup["coord"].shape[0] > nb_element:
+            print(f"\nSupplementary categories (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary categories\n")
+        quali_sup_infos = quali_sup["dist"]
+        for i in np.arange(ncp):
+            quali_sup_coord = quali_sup["coord"].iloc[:,i]
+            quali_sup_cos2 = quali_sup["cos2"].iloc[:,i]
+            quali_sup_cos2.name = "cos2"
+            quali_sup_vtest = quali_sup["vtest"].iloc[:,i]
+            quali_sup_vtest.name = "v.test"
+            quali_sup_infos = pd.concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
+        quali_sup_infos = quali_sup_infos.round(decimals=digits)
+        if to_markdown:
+            print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+        else:
+            print(quali_sup_infos)
+        
+        # Add supplementary qualitatives - correlation ratio
+        if quali_sup["eta2"].shape[0] > nb_element:
+            print(f"\nSupplementary categorical variable (eta2) (the {nb_element} first)\n")
+        else:
+            print("\nSupplementary categorical variable (eta2)\n")
+        quali_sup_eta2 = quali_sup["eta2"].iloc[:nb_element,:ncp].round(decimals=digits)
+        if to_markdown:
+            print(quali_sup_eta2.to_markdown(tablefmt=tablefmt))
+        else:
+            print(quali_sup_eta2) 
