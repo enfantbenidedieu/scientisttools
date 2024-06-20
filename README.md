@@ -2,9 +2,6 @@
     <img src="./figures/scientisttools.svg" alt="centered image" height="50%"/>
 </center>
 
-<br>
-<br>
-
 [![Downloads](https://static.pepy.tech/badge/scientisttools)](https://pepy.tech/project/scientisttools)
 
 
@@ -15,16 +12,18 @@ scientisttools is a python package dedicated to multivariate Exploratory Data An
 
 ## Why use scientisttools?
 
-* It performs classical principal component methods : 
-    * Principal Components Analysis (PCA)
-    * Principal Components Analysis with partial correlation matrix (PartialPCA)
+scientisttools provides functions for :
+
+1. **Generalized Factor Analysis (GFA) :** 
+    * Principal Component Analysis (PCA)
+    * Principal Component Analysis with partial correlation matrix (PartialPCA)
     * Exploratory Factor Analysis (EFA)
     * Correspondence Analysis (CA)
     * Multiple Correspondence Analysis (MCA)
     * Specific Multiple Correspondence Analysis (SpecificMCA)
-    * Factor Analysis of Mixed Data (FAMD) (Pagès J., 2004)
-    * Mixed Principal Components Analysis (MPCA) ()
-    * Principal Components Analysis of Mixed Data (PCAMIX) (Marie Chavent)
+    * Factor Analysis of Mixed Data (FAMD)
+    * Mixed Principal Component Analysis (MPCA)
+    * Principal Component Analysis of Mixed Data (PCAMIX)
     * Canonical Correlation Analysis (CCA)
     * Multiple Factor Analysis (MFA)
     * Multiple Factor Analysis for qualitatives/categoricals variables (MFAQUAL)
@@ -32,20 +31,20 @@ scientisttools is a python package dedicated to multivariate Exploratory Data An
     * Multiple Factor Analysis of Mixed group (MFAMIX)
     * Multiple Factor Analysis of Contingence Tables (MFACT)
 
-* It also performs clustering analysis:
-    * Hierarchical Clustering on Principal Components (HCPC)
+2. **Classification - clustering :**
+    * Hierarchical Clustering on Principal Component (HCPC)
     * Variables Hierarchical Clustering Analysis (VARHCA)
     * Variables Hierarchical Clustering Analysis on Principal Components (VARHCPC)
     * Categorical Variables Hierarchical Clustering Analysis (CATVARHCA)
 
-* And Multidimensional scaling:
+3. **Multidimensional scaling :**
     * Scaling by MAjorizing a COmplicated Function (SMACOF)
     * Classical Multidimensional Scaling (CMDSCALE)
     * Metric and Non - Metric Multidimensional Scaling (MDS)
 
-* In some methods, it allowed to add supplementary informations such as supplementary individuals and/or variables.
-* It provides a geometrical point of view, a lot of graphical outputs.
-* It provides efficient implementations, using a scikit-learn API.
+4. In some methods, it allowed to add supplementary informations such as supplementary individuals and/or variables.
+5. It provides a geometrical point of view, a lot of graphical outputs.
+6. It provides efficient implementations, using a scikit-learn API.
 
 Those statistical methods can be used in two ways :
 * as descriptive methods ("datamining approach")
@@ -59,7 +58,7 @@ Notebooks are availabled.
 
 scientisttools requires 
 
-```
+```python
 Python >=3.10
 numpy >=1.26.4
 matplotlib >=3.8.4
@@ -74,13 +73,13 @@ scientistmetrics >=0.0.4
 
 ### User installation
 
-You can install scientisttools using `pip` :
+You can install scientisttools using pip :
 
-```
+```python
 pip install scientisttools
 ```
 
-Tutorial are available
+Tutorials are available
 
 ## Author(s)
 
