@@ -22,7 +22,9 @@ class PCA(BaseEstimator,TransformerMixin):
 
     Description
     -----------
-    Performs Principal Component Analysis (PCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables. Missing values are replaced by the column mean.
+    Performs Principal Component Analysis (PCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables. 
+    
+    Missing values are replaced by the column mean.
 
     Usage
     -----
@@ -49,8 +51,8 @@ class PCA(BaseEstimator,TransformerMixin):
     `quali_sup` : an integer or a list/tuple indicating the indexes of the categorical supplementary variables
 
     `parallelize` : boolean, default = False. If model should be parallelize
-        * If `True` : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
-        * If `False` : parallelize using pandas apply
+        * If True : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
+        * If False : parallelize using pandas apply
 
     Attributes
     ----------
@@ -80,11 +82,15 @@ class PCA(BaseEstimator,TransformerMixin):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     References
     ----------
-    Escofier B, Pagès J. (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    Bry X. (1996), Analyses factorielles multiple, Economica
+
+    Bry X. (1999), Analyses factorielles simples, Economica
+
+    Escofier B., Pagès J. (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
 
     Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
 
@@ -100,7 +106,7 @@ class PCA(BaseEstimator,TransformerMixin):
     
     See Also
     --------
-    get_pca_ind, get_pca_var, get_pca, summaryPCA, dimdesc, reconstruct, predictPCA, supvarPCA, fviz_pca_ind, fviz_pca_var, fviz_pca_biplot
+    get_pca_ind, get_pca_var, get_pca, summaryPCA, dimdesc, reconstruct, predictPCA, supvarPCA, fviz_pca_ind, fviz_pca_var, fviz_pca_biplot, fviz_pca3d_ind
 
     Examples
     --------
@@ -144,8 +150,8 @@ class PCA(BaseEstimator,TransformerMixin):
         `y` : None
             y is ignored
 
-        Returns:
-        --------
+        Returns
+        -------
         `self` : object
             Returns the instance itself
         """
@@ -163,6 +169,9 @@ class PCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+
+        # Set index name as None
+        X.index.name = None
 
         # set parallelize
         if self.parallelize:
@@ -295,7 +304,7 @@ class PCA(BaseEstimator,TransformerMixin):
         self.call_ = {"Xtot":Xtot,
                       "X" : X,
                       "Z" : Z,
-                      "ind_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
+                      "ind_weights" : pd.Series(ind_weights,index=X.index,name="weight"),
                       "var_weights" : pd.Series(var_weights,index=X.columns,name="weight"),
                       "means" : pd.Series(means,index=X.columns,name="average"),
                       "std" : pd.Series(std,index=X.columns,name="scale"),
@@ -313,7 +322,7 @@ class PCA(BaseEstimator,TransformerMixin):
         ind_inertia.name = "inertia"
         # Store all informations
         ind_infos = np.c_[ind_weights,ind_dist2,ind_inertia]
-        ind_infos = pd.DataFrame(ind_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.index.tolist())
+        ind_infos = pd.DataFrame(ind_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.index)
 
         ## Variables informations : Squared distance to origin, weights and Inertia
         # Variables square distance to origin
@@ -342,7 +351,7 @@ class PCA(BaseEstimator,TransformerMixin):
         ## Individuals informations : coordinates, contributions and squared Cosinus
         # Individuals coordinates
         ind_coord = svd["U"].dot(np.diag(svd["vs"][:n_components]))
-        ind_coord = pd.DataFrame(ind_coord,index=X.index.tolist(),columns=["Dim."+str(x+1) for x in range(n_components)])
+        ind_coord = pd.DataFrame(ind_coord,index=X.index,columns=["Dim."+str(x+1) for x in range(n_components)])
 
         # Individuals contributions
         ind_contrib = mapply(ind_coord,lambda x : 100*(x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
@@ -373,7 +382,7 @@ class PCA(BaseEstimator,TransformerMixin):
         # Bartlett - statistics
         bartlett_stats = -(n_rows-1-(2*n_cols+5)/6)*np.sum(np.log(eigen_values))
         bs_dof = n_cols*(n_cols-1)/2
-        bs_pvalue = 1-sp.stats.chi2.cdf(bartlett_stats,df=bs_dof)
+        bs_pvalue = 1 - sp.stats.chi2.cdf(bartlett_stats,df=bs_dof)
         bartlett_sphericity_test = pd.DataFrame([np.sum(np.log(eigen_values)),bartlett_stats,bs_dof,bs_pvalue],index=["|CORR.MATRIX|","statistic","dof","p-value"],columns=["value"])
     
         kaiser_threshold = np.mean(eigen_values)
@@ -399,12 +408,10 @@ class PCA(BaseEstimator,TransformerMixin):
             # Supplementary individuals coordinates
             ind_sup_coord = mapply(Z_ind_sup,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(svd["V"][:,:n_components])
             ind_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
-            ind_sup_coord.index = X_ind_sup.index.tolist()
 
             # Supplementary individuals squared distance to origin
             ind_sup_dist2 = mapply(Z_ind_sup,lambda  x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
             ind_sup_dist2.name = "Sq. Dist."
-            ind_sup_dist2.index.name = None
 
             # Supplementary individuals square cosine
             ind_sup_cos2 = mapply(ind_sup_coord,lambda x : (x**2)/ind_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
@@ -429,21 +436,22 @@ class PCA(BaseEstimator,TransformerMixin):
             summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
             summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
             summary_quanti_sup.insert(0,"group","sup")
+
             # Concatenate
             self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
 
             # Compute weighted average and standard deviation
-            d1 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
+            d2 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
 
             # Initializations - scale data
-            means_sup = d1.mean.reshape(1,-1)
+            means_sup = d2.mean
             if self.standardize:
-                std_sup = d1.std.reshape(1,-1)
+                std_sup = d2.std
             else:
-                std_sup = np.ones(X_quanti_sup.shape[1]).reshape(1,-1)
+                std_sup = np.ones(X_quanti_sup.shape[1])
             
             # Standardization
-            Z_quanti_sup = (X_quanti_sup - means_sup)/std_sup
+            Z_quanti_sup = (X_quanti_sup - means_sup.reshape(1,-1))/std_sup.reshape(1,-1)
 
             # Supplementary quantitatives variables coordinates
             var_sup_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers).T.dot(svd["U"][:,:n_components])
@@ -582,7 +590,10 @@ class PCA(BaseEstimator,TransformerMixin):
         # Transform to float
         X = X.astype("float")
 
-        ######### check if X.shape[1] = ncols
+        # Set index name as None
+        X.index.name = None
+
+        # check if X.shape[1] = ncols
         if X.shape[1] != self.call_["X"].shape[1]:
             raise ValueError("'columns' aren't aligned")
 
@@ -596,9 +607,8 @@ class PCA(BaseEstimator,TransformerMixin):
         Z = (X - means.reshape(1,-1))/std.reshape(1,-1)
 
         ###### Multiply by columns weight & Apply transition relation
-        coord = mapply(Z,lambda x : x*var_weigths,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"])
+        coord = mapply(Z,lambda x : x*var_weigths,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
         coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
-        coord.index = X.index.tolist()
         return coord
     
 def predictPCA(self,X=None):
@@ -613,7 +623,7 @@ def predictPCA(self,X=None):
     Usage
     -----
     ```python
-    >>> predictPCA(self,X)
+    >>> predictPCA(self,X=None)
     ```
 
     Parameters
@@ -634,7 +644,7 @@ def predictPCA(self,X=None):
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -685,17 +695,19 @@ def predictPCA(self,X=None):
     # Convert to float
     X = X.astype("float")
 
+    # Set index name as None
+    X.index.name = None
+
     # Standardize data
     Z = (X - means.reshape(1,-1))/std.reshape(1,-1)
 
     # New data coordinates
     coord = mapply(Z,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
-    coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
+    coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
     
     #  New data square distance to origin
     dist2 = mapply(Z,lambda  x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
     dist2.name = "Sq. Dist."
-    dist2.index.name = None
 
     # New data square cosinus
     cos2 = mapply(coord,lambda x : (x**2)/dist2,axis=0,progressbar=False,n_workers=n_workers)
@@ -800,6 +812,9 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
         # Transform to float
         X_quanti_sup = X_quanti_sup.astype("float")
 
+        # Set index name as None
+        X_quanti_sup.index.name = None
+
         # Recode variables
         X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
 
@@ -854,6 +869,9 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
         
         # Transform to object
         X_quali_sup = X_quali_sup.astype("object")
+
+        # Set index name as None
+        X_quali_sup.index.name = None
 
         # Check if two columns have the same categories
         X_quali_sup = revaluate_cat_variable(X_quali_sup)

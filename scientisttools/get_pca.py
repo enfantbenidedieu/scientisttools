@@ -35,7 +35,7 @@ def get_pca_ind(self) -> dict:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -88,7 +88,7 @@ def get_pca_var(self) -> dict:
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -147,7 +147,7 @@ def get_pca(self,choice="ind")-> dict:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -209,7 +209,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------

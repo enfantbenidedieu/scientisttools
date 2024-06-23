@@ -114,7 +114,7 @@ def fviz_pca_ind(self,
 
     `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
 
-    `color` : a color for the active rows points (by default = "black").
+    `color` : a color for the active individuals points (by default = "black").
 
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
@@ -176,7 +176,7 @@ def fviz_pca_ind(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -464,7 +464,7 @@ def fviz_pca_var(self,
 
     `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
 
-    `color` : a color for the active rows points (by default = "black").
+    `color` : a color for the active variables (by default = "black").
 
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
@@ -522,7 +522,7 @@ def fviz_pca_var(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -759,7 +759,7 @@ def fviz_pca_biplot(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     ```python
     >>> # Load decathlon2 dataset
@@ -1009,7 +1009,7 @@ def fviz_pca3d_ind(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
      ```python
     >>> # Load decathlon2 dataset
@@ -1027,7 +1027,6 @@ def fviz_pca3d_ind(self,
     if self.model_ != "pca":
         raise TypeError("'self' must be an object of class PCA")
     
-
     if ((len(axis) !=3) or 
         (axis[0] < 0) or 
         (axis[2] > self.call_["n_components"]-1)  or
@@ -1228,10 +1227,10 @@ def fviz_pca(self,choice="biplot",**kwargs)->pn:
     -----------
     Plot the graphs for a Principal Component Analysis (PCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
 
-    * fviz_pca_ind() : Graph of individuals
-    * fviz_pca_var() : Graph of variables (Correlation circle)
-    * fviz_pca_biplot() : Biplot of individuals and variables
-    * fviz_pca3d_ind() : 3d Graph of individuals
+        * fviz_pca_ind() : Graph of individuals
+        * fviz_pca_var() : Graph of variables (Correlation circle)
+        * fviz_pca_biplot() : Biplot of individuals and variables
+        * fviz_pca3d_ind() : 3D Graph of individuals
 
     Usage
     -----
@@ -1257,7 +1256,7 @@ def fviz_pca(self,choice="biplot",**kwargs)->pn:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     # Check if self is an object of class PCA
     if self.model_ != "pca":
