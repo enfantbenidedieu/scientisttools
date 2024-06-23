@@ -35,7 +35,7 @@ def get_ca_row(self)-> dict:
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -88,7 +88,7 @@ def get_ca_col(self)-> dict:
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -117,9 +117,9 @@ def get_ca(self,choice = "row")-> dict:
     -----------
     Extract all the results (factor coordinates, square cosinus, relative contributions) for the active row/column variables from Correspondence Analysis (CA) outputs.
 
-    * get_ca() : Extract the results for rows and columns
-    * get_ca_row() : Extract the results for rows only
-    * get_ca_col() : Extract the results for columns only
+        * get_ca() : Extract the results for rows and columns
+        * get_ca_row() : Extract the results for rows only
+        * get_ca_col() : Extract the results for columns only
 
     Usage
     -----
@@ -149,7 +149,7 @@ def get_ca(self,choice = "row")-> dict:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -211,7 +211,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------

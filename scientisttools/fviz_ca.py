@@ -182,7 +182,7 @@ def fviz_ca_row(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -424,10 +424,37 @@ def fviz_ca_col(self,
     Usage
     -----
     ```python
-    >>> fviz_ca_col(self, axis=[0,1], x_lim= None, y_lim=None, x_label = None, y_label = None, title =None, color ="black", geom = ["point","text"], gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                    text_type = "text", marker = "o", point_size = 1.5, text_size = 8, add_grid =True, legend_title = None, col_sup=True, color_sup = "blue", marker_sup = "^", add_hline = True,
-                    add_vline = True, ha="center", va="center", hline_color="black", hline_style="dashed", vline_color="black", vline_style ="dashed", lim_cos2 = None, lim_contrib = None, repel=False,
-                    ggtheme=pn.theme_minimal())
+    >>> fviz_ca_col(self,
+                 axis=[0,1],
+                 x_lim= None,
+                 y_lim=None,
+                 x_label = None,
+                 y_label = None,
+                 title =None,
+                 color ="black",
+                 geom = ["point","text"],
+                 gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                 text_type = "text",
+                 marker = "o",
+                 point_size = 1.5,
+                 text_size = 8,
+                 add_grid =True,
+                 legend_title = None,
+                 col_sup=True,
+                 color_sup = "blue",
+                 marker_sup = "^",
+                 add_hline = True,
+                 add_vline = True,
+                 ha="center",
+                 va="center",
+                 hline_color="black",
+                 hline_style="dashed",
+                 vline_color="black",
+                 vline_style ="dashed",
+                 lim_cos2 = None,
+                 lim_contrib = None,
+                 repel=False,
+                 ggtheme=pn.theme_minimal())
     ```
 
     Parameters
@@ -446,7 +473,7 @@ def fviz_ca_col(self,
 
     `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
 
-    `color` : a color for the active rows points (by default = "black")
+    `color` : a color for the active columns points (by default = "black")
 
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
@@ -500,7 +527,7 @@ def fviz_ca_col(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -693,7 +720,7 @@ def fviz_ca_biplot(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -808,9 +835,7 @@ def fviz_ca_biplot(self,
 
     return p
 
-def fviz_ca(self,
-            choice="biplot",
-            **kwargs)->pn:
+def fviz_ca(self,choice="biplot",**kwargs)->pn:
     """
     Draw the Correspondence Analysis (CA) graphs
     --------------------------------------------
@@ -842,7 +867,7 @@ def fviz_ca(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
