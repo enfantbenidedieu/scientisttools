@@ -74,7 +74,7 @@ class CA(BaseEstimator,TransformerMixin):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     References
     ----------
@@ -661,7 +661,7 @@ def predictCA(self,X):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -776,7 +776,7 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------

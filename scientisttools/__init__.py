@@ -11,6 +11,11 @@ from .partialpca import PartialPCA, predictPartialPCA, supvarPartialPCA
 from .get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
 from .fviz_partialpca import fviz_partialpca_ind, fviz_partialpca_var, fviz_partialpca_biplot, fviz_partialpca3d_ind, fviz_partialpca
 
+# Exploratory Factor Analysis (EFA)
+from .efa import EFA
+from .get_efa import get_efa_ind, get_efa_var, get_efa, summaryEFA
+from .fviz_efa import fviz_efa_ind, fviz_efa_var, fviz_efa_biplot, fviz_efa
+
 # Correspondence Analysis (CA)
 from .ca import CA, predictCA, supvarCA
 from .get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
@@ -38,11 +43,6 @@ from .fviz_pcamix import fviz_pcamix_ind, fviz_pcamix_col, fviz_pcamix_mod, fviz
 from .mpca import MPCA
 from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
 from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_var, fviz_mpca
-
-# Exploratory Factor Analysis (EFA)
-from .efa import EFA
-from .get_efa import get_efa_ind, get_efa_var, get_efa, summaryEFA
-from .fviz_efa import fviz_efa_ind, fviz_efa_var, fviz_efa
 
 # Multiple Factor Analysis (MFA)
 from .mfa import MFA

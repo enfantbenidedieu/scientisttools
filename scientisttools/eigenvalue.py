@@ -29,7 +29,7 @@ def get_eig(self) -> pd.DataFrame:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -57,7 +57,7 @@ def get_eigenvalue(self) -> pd.DataFrame:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     return get_eig(self)
 
@@ -89,8 +89,23 @@ def fviz_screeplot(self,
     Usage
     -----
     ```python
-    >>> fviz_screeplot(self, choice="proportion", geom_type=["bar","line"], y_lim=None, bar_fill = "steelblue", bar_color="steelblue",line_color="black",line_type="solid",
-                        bar_width=None, ncp=10, add_labels=False, ha = "center", va = "bottom", title=None, x_label=None, y_label=None, ggtheme=pn.theme_minimal())
+    >>> fviz_screeplot(self,
+                        choice = "proportion",
+                        geom_type =["bar","line"],
+                        y_lim = None,
+                        bar_fill = "steelblue",
+                        bar_color = "steelblue",
+                        line_color = "black",
+                        line_type = "solid",
+                        bar_width = None,
+                        ncp = 10,
+                        add_labels = False,
+                        ha = "center",
+                        va = "bottom",
+                        title = None,
+                        x_label = None,
+                        y_label = None,
+                        ggtheme = pn.theme_minimal())
     ```
     
     Parameters
@@ -135,7 +150,7 @@ def fviz_screeplot(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -150,8 +165,8 @@ def fviz_screeplot(self,
     >>> print(p)
     ```
     """
-    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","pcamix","partialpca","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
-        raise ValueError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, PartialPCA, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
+    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
+        raise ValueError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
 
     eig = get_eigenvalue(self)
     eig = eig.iloc[:min(ncp,self.call_["n_components"]),:]
@@ -199,7 +214,7 @@ def fviz_screeplot(self,
     if x_label is None:
         x_label = "Dimensions"
     if y_label is None:
-        y_label = "Percentage of explained variances"
+        y_label = "% of explained variances"
     
     if y_lim is not None:
         p = p + pn.ylim(y_lim)
@@ -217,6 +232,6 @@ def fviz_eig(self,**kwargs) -> pn:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     return fviz_screeplot(self,**kwargs)
