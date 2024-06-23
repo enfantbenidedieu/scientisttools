@@ -114,7 +114,7 @@ def fviz_partialpca_ind(self,
 
     `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
 
-    `color` : a color for the active rows points (by default = "black").
+    `color` : a color for the active individuals points(by default = "black").
 
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
@@ -176,7 +176,7 @@ def fviz_partialpca_ind(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -463,7 +463,7 @@ def fviz_partialpca_var(self,
 
     `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
 
-    `color` : a color for the active rows points (by default = "black").
+    `color` : a color for the active variables (by default = "black").
 
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
@@ -521,7 +521,7 @@ def fviz_partialpca_var(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -676,7 +676,7 @@ def fviz_partialpca_biplot(self,
                             ellipse_type = "t",
                             confint_level = 0.95,
                             geom_ellipse = "polygon",
-                            title = "PCA - Biplot",
+                            title = "PartialPCA - Biplot",
                             arrow_angle=10,
                             arrow_length =0.1,
                             add_hline = True,
@@ -733,7 +733,7 @@ def fviz_partialpca_biplot(self,
                                 ellipse_type = "t",
                                 confint_level = 0.95,
                                 geom_ellipse = "polygon",
-                                title = "PCA - Biplot",
+                                title = "PartialPCA - Biplot",
                                 arrow_angle=10,
                                 arrow_length =0.1,
                                 add_hline = True,
@@ -758,7 +758,7 @@ def fviz_partialpca_biplot(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     ```python
     >>> # load cars2006 dataset
@@ -1008,7 +1008,7 @@ def fviz_partialpca3d_ind(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -1028,7 +1028,6 @@ def fviz_partialpca3d_ind(self,
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
     
-
     if ((len(axis) !=3) or 
         (axis[0] < 0) or 
         (axis[2] > self.call_["n_components"]-1)  or
@@ -1088,7 +1087,7 @@ def fviz_partialpca3d_ind(self,
                 legend_title = "Contrib"
         elif color in coord.columns.tolist():
             if not np.issubdtype(coord[color].dtype, np.number):
-                raise ValueError("Error : 'color' must me a numeric variable.")
+                raise ValueError("'color' must me a numeric variable.")
             c = coord[color].values
             if legend_title is None:
                 legend_title = color
@@ -1229,10 +1228,10 @@ def fviz_partialpca(self,choice="biplot",**kwargs)->pn:
     -----------
     Plot the graphs for a Partial Principal Component Analysis (PartialPCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
 
-    * fviz_partialpca_ind() : Graph of individuals
-    * fviz_partialpca_var() : Graph of variables (Correlation circle)
-    * fviz_partialpca_biplot() : Biplot of individuals and variables
-    * fviz_partialpca3d_ind() : 3d Graph of individuals
+        * fviz_partialpca_ind() : Graph of individuals
+        * fviz_partialpca_var() : Graph of variables (Correlation circle)
+        * fviz_partialpca_biplot() : Biplot of individuals and variables
+        * fviz_partialpca3d_ind() : 3D Graph of individuals
 
     Usage
     -----
@@ -1258,7 +1257,7 @@ def fviz_partialpca(self,choice="biplot",**kwargs)->pn:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":

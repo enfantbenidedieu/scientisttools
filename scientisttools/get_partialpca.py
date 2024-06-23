@@ -35,7 +35,7 @@ def get_partialpca_ind(self) -> dict:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -88,7 +88,7 @@ def get_partialpca_var(self) -> dict:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -117,9 +117,9 @@ def get_partialpca(self,choice = "ind")-> dict:
     -----------
     Extract all the results (factor coordinates, square cosinus, relative contributions) for the active individuals/variables from Partial Principal Component Analysis (PartialPCA) outputs.
 
-    *   get_partialpca() : Extract the results for variables and individuals
-    *   get_partialpca_ind() : Extract the results for individuals only
-    *   get_partialpca_var() : Extract the results for variables only
+        * get_partialpca() : Extract the results for variables and individuals
+        * get_partialpca_ind() : Extract the results for individuals only
+        * get_partialpca_var() : Extract the results for variables only
 
     Usage
     -----
@@ -147,7 +147,7 @@ def get_partialpca(self,choice = "ind")-> dict:
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -209,7 +209,7 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------

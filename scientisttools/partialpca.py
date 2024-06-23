@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import polars as pl
 import pingouin as pg
-import statsmodels.formula.api as smf
 import statsmodels.api as sm
 
 from mapply.mapply import mapply
@@ -13,7 +11,6 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import mean_squared_error
 
 from .pca import PCA
-from .weightedcorrcoef import weightedcorrcoef
 from .kmo import global_kmo_index, per_item_kmo_index
 from .revaluate_cat_variable import revaluate_cat_variable
 from .function_eta2 import function_eta2
@@ -40,7 +37,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
     `n_components` : number of dimensions kept in the results (by default 5)
 
-    `partiel` : name of the partial variables
+    `partiel` : a list of string specifying the name of the partial variables
 
     `ind_weights` : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform row weights); the weights are given only for the active individuals
     
@@ -70,7 +67,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     References
     ----------
@@ -486,7 +483,7 @@ def predictPartialPCA(self,X=None):
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -598,7 +595,7 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
