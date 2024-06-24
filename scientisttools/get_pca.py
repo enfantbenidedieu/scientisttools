@@ -117,9 +117,9 @@ def get_pca(self,choice="ind")-> dict:
     -----------
     Extract all the results (factor coordinates, square cosinus, relative contributions) for the active individuals/variables from Principal Component Analysis (PCA) outputs.
 
-    *   get_pca() : Extract the results for variables and individuals
-    *   get_pca_ind() : Extract the results for individuals only
-    *   get_pca_var() : Extract the results for variables only
+        * get_pca() : Extract the results for variables and individuals
+        * get_pca_ind() : Extract the results for individuals only
+        * get_pca_var() : Extract the results for variables only
 
     Usage
     -----

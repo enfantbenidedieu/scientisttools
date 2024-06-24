@@ -581,6 +581,9 @@ class PCA(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        # Set index name as None
+        X.index.name = None
+        
         # set parallelize
         if self.parallelize:
             n_workers = -1
@@ -589,9 +592,6 @@ class PCA(BaseEstimator,TransformerMixin):
 
         # Transform to float
         X = X.astype("float")
-
-        # Set index name as None
-        X.index.name = None
 
         # check if X.shape[1] = ncols
         if X.shape[1] != self.call_["X"].shape[1]:
@@ -679,6 +679,9 @@ def predictPCA(self,X=None):
         f"{type(X)} is not supported. Please convert to a DataFrame with "
         "pd.DataFrame. For more information see: "
         "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    
+    # Set index name as None
+    X.index.name = None
 
     # set parallelize
     if self.parallelize:
@@ -694,9 +697,6 @@ def predictPCA(self,X=None):
     
     # Convert to float
     X = X.astype("float")
-
-    # Set index name as None
-    X.index.name = None
 
     # Standardize data
     Z = (X - means.reshape(1,-1))/std.reshape(1,-1)

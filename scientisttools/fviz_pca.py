@@ -1242,7 +1242,7 @@ def fviz_pca(self,choice="biplot",**kwargs)->pn:
     ----------
     `self` : an object of class PCA
 
-    `choice` : the elements to subset
+    `choice` : the element to subset. Possible value are : 
         * 'ind' for the individuals graphs
         * 'var' for the variables graphs (correlation circle)
         * 'biplot' for biplot of individuals and variables
