@@ -4,8 +4,8 @@ import numpy as np
 
 def get_mca_ind(self) -> dict:
     """
-    Extract the results for individuals - (MCA/SpecificMCA)
-    -------------------------------------------------------
+    Extract the results for individuals - MCA/SpecificMCA
+    -----------------------------------------------------
 
     Description
     -----------
@@ -13,44 +13,45 @@ def get_mca_ind(self) -> dict:
 
     Usage
     -----
-    > get_mca_ind(res_mca)
+    ```python
+    >>> get_mca_ind(self)
+    ```
 
     Parameters
     ----------
-    self : an object of class MCA, SpecificMCA
+    `self` : an object of class MCA, SpecificMCA
 
-    Return
-    ------
-    a dictionary including : 
+    Returns
+    -------
+    dictionary containing the results of the cative individuals including : 
 
-    coord : factor coordinates (scores) of the individuals
+    `coord` : factor coordinates (scores) of the individuals
 
-    cos2 : square cosinus of the individuals
+    `cos2` : square cosinus of the individuals
 
-    contrib : contributions of the individuals
+    `contrib` : relative contributions of the individuals
 
-    infos : additionnal informations (weight, square distance to origin, inertia) of the individuals.
+    `infos` : additionnal informations (weight, square distance to origin, inertia) of the individuals.
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
-    > # load poison dataset
-
-    > from scientisttools import load_poison
-
-    > poison = load_poison()
-
-    > from scientisttools import MCA, get_mca_ind
-
-    > res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1])
-    
-    > res_mca.fit(poison)
-
-    > ind = get_mca_ind(res_mca) # Extract results for the individuals
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca.fit(poison)
+    >>> from scientistools import get_mca_ind
+    >>> # Extract results for the individuals
+    >>> ind = get_mca_ind(res_mca) 
+    ```
     """
+    # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     return self.ind_
@@ -66,51 +67,51 @@ def get_mca_var(self) -> dict:
 
     Usage
     -----
-    > get_mca_var(res_mca)
+    ```python
+    >>> get_mca_var(self)
+    ```
 
     Parameters
     ----------
-    self : an object of class MCA, SpecificMCA
+    `self` : an object of class MCA, SpecificMCA
 
     Returns
     -------
-    a dictionary of dataframes containing the results for the active variable categories including :
+    dictionary of dataframes containing the results for the active variable categories including :
 
-    coord : factor coordinates (scores) for the variables categories
+    `coord` : factor coordinates (scores) for the variables categories
 
-    corrected_coord : corrected factor coordinates for the variables categories
+    `corrected_coord` : corrected factor coordinates for the variables categories
 
-    cos2 : square cosinus for the variables categories
+    `cos2` : square cosinus for the variables categories
 
-    contrib  : relative contributions of the variables categories
+    `contrib`  : relative contributions of the variables categories
 
-    vtest : v-test for the variables categories
+    `vtest` : v-test for the variables categories
 
-    eta2 : squared correlation ratio for the variables
+    `eta2` : squared correlation ratio for the variables
 
-    var_contrib : contributions of the variables
+    `var_contrib` : contributions of the variables
 
-    infos : additionnal informations (weight, square distance to oriigin, inertia) for the variables categories :
+    `infos` : additionnal informations (weight, square distance to oriigin, inertia) for the variables categories :
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
-    > # load poison dataset
-
-    > from scientisttools import load_poison
-
-    > poison = load_poison()
-
-    > from scientisttools import MCA, get_mca_var
-
-    > res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1])
-    
-    > res_mca.fit(poison)
-
-    > var = get_mca_var(res_mca) # Extract results for the categories
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca.fit(poison)
+    >>> from scientistools import get_mca_var
+    >>> # Extract results for the variables
+    >>> var = get_mca_var(res_mca) 
+    ```
     """
     # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
@@ -126,55 +127,54 @@ def get_mca(self,choice="ind") -> dict:
     -----------
     Extract all the results (factor coordinates, squared cosine and contributions) for the active individuals/variable categories from (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) outputs.
 
-    * get_mca()     : Extract the results for vriables and individuals
-    * get_mca_ind() : Extract the results for individuals only
-    * get_mca_var() : Extract the results for variables/categories only
+        * get_mca() : Extract the results for vriables and individuals
+        * get_mca_ind() : Extract the results for individuals only
+        * get_mca_var() : Extract the results for variables/categories only
+    
+    Usage
+    -----
+    ```python
+    >>> get_mca(self,choice=c("ind","var"))
+    ```
 
     Parameters
     ----------
-    self : an object of class MCA, SpecificMCA
+    `self` : an object of class MCA, SpecificMCA
 
-    choice : the element to subset from the output. Possible values are :
+    `choice` : the element to subset from the output. Possible values are :
         * "ind" for individuals, 
         * "var" for variables/categories
     
-    Return
-    ------
-    a dictionary of dataframes containing the results for the active individuals/variable categories including :
+    Returns
+    -------
+    dictionary of dataframes containing the results for the active individuals/variable categories including :
 
-    coord : factor coordinates (scores) for the individuals/variable categories
+    `coord` : factor coordinates (scores) for the individuals/variable categories
 
-    cos2 : square cosinus of the individuals/variable categories
+    `cos2` : square cosinus of the individuals/variable categories
 
-    contrib	: contributions of the individuals/variable categories
+    `contrib` : relative contributions of the individuals/variable categories
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-
-    ```python
-    from scientisttools import get_mca
-
-    ```
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
-    > # load poison dataset
-
-    > from scientisttools import load_poison
-
-    > poison = load_poison()
-
-    > from scientisttools import MCA, get_mca
-
-    > res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1])
-    
-    > res_mca.fit(poison)
-
-    > ind = get_mca(res_mca, choice = "ind") # Extract results for the individuals
-
-    > var = get_mca(res_mca, choice = "var") # Extract results for the categories
+    ```python
+    >>> # load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA, get_mca
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1])
+    >>> res_mca.fit(poison)
+    >>> # Extract results for the individuals
+    >>> ind = get_mca(res_mca, choice = "ind")
+    >>> # Extract results for the categories
+    >>> var = get_mca(res_mca, choice = "var")
+    ```
     """
+    # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
@@ -188,30 +188,52 @@ def get_mca(self,choice="ind") -> dict:
     
 def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
-    Printing summaries of (specific) Multiple Correspondence Analysis model
+    Printing summaries of (Specific) Multiple Correspondence Analysis model
     -----------------------------------------------------------------------
+
+    Description
+    -----------
+    Printing summaries of multiple correspondence analysis (MCA) objects
+
+    Usage
+    -----
+    ```python
+    >>> summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs)
+    ```
 
     Parameters
     ----------
-    self        :   an object of class MCA, SpecificMCA
+    `self` : an object of class MCA, SpecificMCA
 
-    digits      :   int, default=3. Number of decimal printed
+    `digits` : int, default=3. Number of decimal printed
 
-    nb_element  :   int, default = 10. Number of element
+    `nb_element` : int, default = 10. Number of element
 
-    ncp         :   int, default = 3. Number of componennts
+    `ncp` : int, default = 3. Number of componennts
 
-    to_markdown :   Print DataFrame in Markdown-friendly format.
+    `to_markdown` : Print DataFrame in Markdown-friendly format.
 
-    tablefmt    :   Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
     
-    **kwargs    :   These parameters will be passed to tabulate.
+    `**kwargs` : These parameters will be passed to tabulate.
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
+    Examples
+    --------
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA, summaryMCA
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca.fit(poison)
+    >>> summaryMCA(res_mca)
+    ```
+    """
+    # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
         raise ValueError("'self' must be an object of class MCA or SpecificMCA")
 
@@ -254,12 +276,12 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(ind_infos)
 
     # Add supplementary individuals
-    if self.ind_sup is not None:
+    if hasattr(self,"ind_sup_"):
         ind_sup = self.ind_sup_
         if ind_sup["coord"].shape[0] > nb_element:
-            print(f"\nSupplementary Individuals (the {nb_element} first)\n")
+            print(f"\nSupplementary individuals (the {nb_element} first)\n")
         else:
-            print("\nSupplementary Individuals\n")
+            print("\nSupplementary individuals\n")
         ind_sup_infos = ind_sup["dist"]
         for i in np.arange(0,ncp,1):
             ind_sup_coord = ind_sup["coord"].iloc[:,i]
@@ -313,7 +335,7 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(quali_var_infos)
 
     # Add Supplementary categories – Variable illustrative qualitative
-    if self.quali_sup is not None:
+    if hasattr(self,"quali_sup_"):
         var_sup = self.quali_sup_
         if var_sup["coord"].shape[0] > nb_element:
             print(f"\nSupplementary categories (the {nb_element} first)\n")
@@ -344,7 +366,7 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(quali_var_sup_infos)
 
     # Add supplementary continuous variables informations
-    if self.quanti_sup is not None:
+    if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
         if quanti_sup["coord"].shape[0] > nb_element:
             print(f"\nSupplementary continuous variables (the {nb_element} first)\n")

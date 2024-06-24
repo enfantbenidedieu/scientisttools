@@ -44,22 +44,82 @@ def fviz_mca_ind(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) individuals graphs
-    -----------------------------------------------------------------------------------------
+    Visualize (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) - Graph of individuals
+    ----------------------------------------------------------------------------------------------
+
+    Description
+    -----------
+    Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. fviz_mca_ind() provides plotnine based elegant visualization of MCA/SpecificMCA outputs for individuals.
+
+    Usage
+    -----
+    ```python
+    >>> fviz_mca_ind(self,
+                    axis = [0,1],
+                    x_lim = None,
+                    y_lim = None,
+                    title = None,
+                    x_label = None,
+                    y_label = None,
+                    color = "black",
+                    geom = ["point","text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    point_size = 1.5,
+                    text_size = 8,
+                    text_type = "text",
+                    marker = "o",
+                    legend_title = None,
+                    add_grid = True,
+                    ind_sup = True,
+                    color_sup = "blue",
+                    marker_sup = "^",
+                    add_ellipses = False, 
+                    ellipse_type = "t",
+                    confint_level = 0.95,
+                    geom_ellipse = "polygon",
+                    habillage = None,
+                    add_hline = True,
+                    add_vline = True,
+                    ha = "center",
+                    va = "center",
+                    hline_color = "black",
+                    hline_style = "dashed",
+                    vline_color = "black",
+                    vline_style = "dashed",
+                    repel=False,
+                    lim_cos2 = None,
+                    lim_contrib = None,
+                    ggtheme=pn.theme_minimal())
+    ```
 
     Parameters
     ----------
-    self : an object of class MCA or SpecificMCA
+    `self` : an object of class MCA or SpecificMCA
 
-    Return
-    ------
-    a plotnine graph
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA, fviz_mca_ind
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca.fit(poison)
+    >>> p = fviz_mca_ind(res_mca)
+    >>> print(p)
+    ```
     """
-    
+    # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
         raise ValueError("'self' must be an object of class MCA or SpecificMCA")
     
@@ -93,10 +153,7 @@ def fviz_mca_ind(self,
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = (self.ind_["cos2"].iloc[:,axis]
-                        .sum(axis=1).to_frame("cosinus")
-                        .sort_values(by="cosinus",ascending=False)
-                        .query("cosinus > @lim_cos2"))
+            cos2 = self.ind_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -106,10 +163,7 @@ def fviz_mca_ind(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = (self.ind_["contrib"].iloc[:,axis]
-                           .sum(axis=1).to_frame("contrib")
-                           .sort_values(by="contrib",ascending=False)
-                           .query(f"contrib > @lim_contrib"))
+            contrib = self.ind_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query(f"contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -175,7 +229,7 @@ def fviz_mca_ind(self,
                     p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     else:
         if habillage not in coord.columns:
-            raise ValueError(f"Error : {habillage} not in DataFrame.")
+            raise ValueError(f"{habillage} not in DataFrame.")
         if "point" in geom:
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size)
         if "text" in geom:
@@ -215,7 +269,7 @@ def fviz_mca_ind(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Individuals factor map - MCA"
+        title = "Individuals factor map - "+self.model_.upper()
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
     if y_lim is not None:
@@ -269,25 +323,78 @@ def fviz_mca_mod(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) categorical graphs
-    ------------------------------------------------------------------------------------
+    Visualize (Specific) Multiple Correspondence Analysis (MCA/SpecificMCA) - Graph of categories
+    ---------------------------------------------------------------------------------------------
 
     Description
     -----------
+    Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. fviz_mca_mod() provides plotnine based elegant visualization of MCA/SpecificMCA outputs for categories.
+
+    Usage
+    -----
+    ```python
+    >>> fviz_mca_mod(self,
+                    axis=[0,1],
+                    x_lim=None,
+                    y_lim=None,
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    color ="black",
+                    geom = ["point","text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    point_size = 1.5,
+                    text_size = 8,
+                    text_type = "text",
+                    legend_title=None,
+                    marker = "o",
+                    add_grid =True,
+                    quali_sup = True,
+                    color_sup = "blue",
+                    marker_sup = "^",
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color = "black",
+                    hline_style = "dashed",
+                    vline_color = "black",
+                    vline_style ="dashed",
+                    corrected = False,
+                    repel=False,
+                    lim_cos2 = None,
+                    lim_contrib = None,
+                    ggtheme=pn.theme_minimal())
+    ```
 
     Parameters
     ----------
-    self : an object of class MCA or SpecificMCA
+    `self` : an object of class MCA or SpecificMCA
 
-    Return
-    ------
-    a plotnine graph
+    see fviz_pca_ind()
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA, fviz_mca_mod
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca.fit(poison)
+    >>> p = fviz_mca_mod(res_mca)
+    >>> print(p)
+    ```
     """
-    
+    # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
@@ -296,8 +403,6 @@ def fviz_mca_mod(self,
         (axis[1] > self.call_["n_components"]-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
-    
-    # Categories labels
     
     # Corrected 
     if corrected:
@@ -309,10 +414,7 @@ def fviz_mca_mod(self,
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = (self.var_["cos2"].iloc[:,axis]
-                        .sum(axis=1).to_frame("cosinus")
-                        .sort_values(by="cosinus",ascending=False)
-                        .query("cosinus > @lim_cos2"))
+            cos2 = self.var_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -322,10 +424,7 @@ def fviz_mca_mod(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = (self.var_["contrib"].iloc[:,axis]
-                           .sum(axis=1).to_frame("contrib")
-                           .sort_values(by="contrib",ascending=False)
-                           .query("contrib > @lim_contrib"))
+            contrib = self.var_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -427,7 +526,6 @@ def fviz_mca_mod(self,
     
     return p
 
-#------------------------------------------------------------------------
 def fviz_mca_var(self,
                  axis=[0,1],
                  x_lim=None,
@@ -461,22 +559,78 @@ def fviz_mca_var(self,
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) variables graphs
-    ---------------------------------------------------------------------------------------
+    Visualize (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) - Graph of variables
+    --------------------------------------------------------------------------------------------
+
+    Description
+    -----------
+    Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. fviz_mca_var() provides plotnine based elegant visualization of MCA/SpecificMCA outputs for variables.
+
+    Usage
+    -----
+    ```python
+    >>> fviz_mca_var(self,
+                    axis=[0,1],
+                    x_lim=None,
+                    y_lim=None,
+                    x_label = None,
+                    y_label = None,
+                    title=None,
+                    color="black",
+                    color_sup = "blue",
+                    color_quanti_sup = "red",
+                    geom = ["point","text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    point_size = 1.5,
+                    text_size = 8,
+                    marker="o",
+                    marker_sup = "^",
+                    marker_quanti_sup = ">",
+                    legend_title = None,
+                    text_type="text",
+                    add_quali_sup=True,
+                    add_quanti_sup = True,
+                    add_grid =True,
+                    add_hline = True,
+                    add_vline =True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    repel=False,
+                    ggtheme=pn.theme_minimal()) 
+    ```
 
     Parameters
     ----------
-    self : an object of class MCA or SpecificMCA
+    `self` : an object of class MCA or SpecificMCA
 
-    Return
-    ------
-    a plotnine graph
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA, fviz_mca_var
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca.fit(poison)
+    >>> p = fviz_mca_var(res_mca)
+    >>> print(p)
+    ```
     """
-    
+    # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
@@ -619,21 +773,39 @@ def fviz_mca_biplot(self,
                     repel=False,
                     ggtheme=pn.theme_minimal())->pn:
     """
-    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) biplot graphs
-    ------------------------------------------------------------------------------------
+    Visualize (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) - Biplot of individuals and categories
+    --------------------------------------------------------------------------------------------------------------
+
+    Description
+    -----------
+    Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. fviz_mca_biplot() provides plotnine based elegant visualization of MCA/SpecificMCA outputs for individuals and categories.
 
     Parameters
     ----------
-    self : an object of class MCA or SpecificMCA
+    `self` : an object of class MCA or SpecificMCA
 
-    Return
-    ------
-    a plotnine graph
+    see fviz_pca_biplot()
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA, fviz_mca_biplot
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca.fit(poison)
+    >>> p = fviz_mca_biplot(res_mca)
+    >>> print(p)
+    ```
     """
+    # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
@@ -756,7 +928,7 @@ def fviz_mca_biplot(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "MCA - Biplot"
+        title = self.model_.upper()+" - Biplot"
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
     if y_lim is not None:
@@ -775,44 +947,53 @@ def fviz_mca_biplot(self,
 
     return p
 
-def fviz_mca(self,
-             choice="biplot",
-             **kwargs)->pn:
+def fviz_mca(self,choice="biplot",**kwargs)->pn:
     """
-    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) graphs
-    -----------------------------------------------------------------------------
+    Visualize (specific) Multiple Correspondence Analysis (MCA/SpecificMCA)
+    -----------------------------------------------------------------------
 
     Description
     -----------
-    Draw the (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) graphs.
+    Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. fviz_mca() provides plotnine-based elegant visualization of MCA/SpecificMCA outputs.
+
+        * fviz_mca_ind(): Graph of individuals
+        * fviz_mca_mod(): Graph of categories
+        * fviz_mca_var(): Graph of variables
+        * fviz_mca_biplot(): Biplot of individuals and categories
+    
+    Usage
+    -----
+    ```
+    >>> fviz_mca(self,choice = ("ind","mod","var","quanti_sup","biplot"))
+    ```
 
     Parameters
     ----------
-    self : an object of class MCA, SpecificMCA
+    `self` : an object of class MCA, SpecificMCA
 
-    choice : the graph to plot
-                - "ind" for the individuals graphs
-                - "mod" for the categories graphs
-                - "var" for the variables graphs
-                - "quanti_sup" for the supplementary quantitatives variables.
-                - "biplot" for both individuals and categories graphs
+    `choice` : The element to subset. Possible values are :
+        * "ind" for the individuals graphs
+        * "mod" for the categories graphs
+        * "var" for the variables graphs
+        * "quanti_sup" for the supplementary quantitatives variables.
+        * "biplot" for both individuals and categories graphs
 
     **kwargs : 	further arguments passed to or from other methods
 
     Return
     ------
-    a plotnine graph
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-
+    # Check if self is an object of class MCA/SpecificMCA
     if self.model_ not in ["mca","specificmca"]:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
     if choice not in ["ind","mod","var","quanti_sup","biplot"]:
-        raise ValueError("'choice' values allowed are : 'ind', 'mod', 'var' and 'quanti_sup', 'biplot'")
+        raise ValueError("'choice' should be one of 'ind', 'mod', 'var', 'quanti_sup', 'biplot'")
     
     if choice == "ind":
         return fviz_mca_ind(self,**kwargs)

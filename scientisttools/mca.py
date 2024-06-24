@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -16,64 +15,68 @@ from .recodecont import recodecont
 class MCA(BaseEstimator,TransformerMixin):
     """
     Multiple Correspondence Analysis (MCA)
-    ---------------------------------------
+    --------------------------------------
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
+    Performs Multiple Correspondence Analysis (MCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
 
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
-
-    Performs Multiple Correspondence Analysis (MCA) with supplementary
-    individuals, supplementary quantitative variables and supplementary
-    categorical variables.
+    Usage
+    -----
+    ```python
+    >>> MCA(n_components = 5, ind_weights = None,var_weights = None,benzecri=True,greenacre=True,ind_sup = None,quali_sup = None,quanti_sup = None,parallelize = False)
+    ```
 
     Parameters
     ----------
-    n_components : number of dimensions kept in the results (by default 5)
+    `n_components` : number of dimensions kept in the results (by default 5)
 
-    ind_weights : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform row weights); 
-                    the weights are given only for the active individuals
+    `ind_weights` : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform row weights); the weights are given only for the active individuals
     
-    var_weights : an optional variables weights (by default, a list/tuple of 1/(number of active variables) for uniform row weights); 
-                    the weights are given only for the active variables
+    `var_weights` : an optional variables weights (by default, a list/tuple of 1/(number of active variables) for uniform row weights); the weights are given only for the active variables
     
-    benzecri : boolean, if True benzecri correction is applied
+    `benzecri` : boolean, if True benzecri correction is applied
 
-    greenacre : boolean, if True greenacre correction is applied
+    `greenacre` : boolean, if True greenacre correction is applied
 
-    ind_sup : a list/tuple indicating the indexes of the supplementary individuals
+    `ind_sup` : an integer or a list/tuple indicating the indexes of the supplementary individuals
 
-    quali_sup : a list/tuple indicating the indexes of the categorical supplementary variables
+    `quali_sup` : an integer or a list/tuple indicating the indexes of the categorical supplementary variables
 
-    quanti_sup : a list/tuple indicating the indexes of the quantitative supplementary variables
+    `quanti_sup` : an integer or a list/tuple indicating the indexes of the quantitative supplementary variables
 
-    parallelize : boolean, default = False
-        If model should be parallelize
-            - If True : parallelize using mapply
-            - If False : parallelize using apply
+    `parallelize` : boolean, default = False. If model should be parallelize
+        * If True : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
+        * If False : parallelize using pandas apply
 
-    Return
-    ------
-    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+    Atttributes
+    -----------
+    `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    var_ : a dictionary of pandas dataframe containing all the results for the active variables (coordinates, correlation between variables and axes, square cosine, contributions)
+    `var_` : dictionary of pandas dataframe containing all the results for the active variables (coordinates, correlation between variables and axes, square cosine, contributions)
 
-    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine, contributions)
+    `ind_` : dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine, contributions)
 
-    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
+    `ind_sup_` : dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
 
-    quanti_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates, correlation between variables and axes)
+    `quanti_sup_` : dictionary of pandas dataframe containing all the results for the supplementary quantitative variables (coordinates, correlation between variables and axes)
 
-    quali_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of each categories of each variables, v.test which is a 
-                 criterion with a Normal distribution, and eta2 which is the square correlation corefficient between a qualitative variable and a dimension)
+    `quali_sup_` : dictionary of pandas dataframe containing all the results for the supplementary categorical variables (coordinates of each categories of each variables, v.test which is a criterion with a Normal distribution, and eta2 which is the square correlation corefficient between a qualitative variable and a dimension)
     
-    call_ : a dictionary with some statistics
+    `summary_quali_` : summary statistics for supplementary qualitative variables
 
-    model_ : string. The model fitted = 'mca'
+    `chi2_test_` : chi-squared test.
+
+    `summary_quanti_` : summary statistics for quantitative variables if quanti_sup is not None
+    
+    `call_` : dictionary with some statistics
+
+    `model_` : string specifying the model fitted = 'mca'
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     References
     ----------
@@ -85,17 +88,18 @@ class MCA(BaseEstimator,TransformerMixin):
 
     See Also
     --------
-    get_mca_ind, get_mca_var, get_mca, summaryMCA, dimdesc
+    get_mca_ind, get_mca_var, get_mca, summaryMCA, dimdesc, predictMCA, supvarMCA, fviz_mca_ind, fviz_mca_mod, fviz_mca_var, fviz_mca
 
     Examples
     --------
-    > X = poison # from FactoMineR R package
-
-    > res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
-
-    > res_mca.fit(X)
-
-    > summaryMCA(res_mca)
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca.fit(poison)
+    ```
     """
     def __init__(self,
                  n_components = 5,
@@ -124,15 +128,16 @@ class MCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
+        `X` : pandas/polars DataFrame of shape (n_samples, n_columns)
+            Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
-        y : None
+        `y` : None
             y is ignored
 
-        Returns:
-        --------
-        self : object
-                Returns the instance itself
+        Returns
+        -------
+        `self` : object
+            Returns the instance itself
         """
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
@@ -143,6 +148,9 @@ class MCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set index name as None
+        X.index.name = None
 
         # Set parallelize
         if self.parallelize:
@@ -150,9 +158,7 @@ class MCA(BaseEstimator,TransformerMixin):
         else:
             n_workers = 1
         
-        ###############################################################################################################"
         # Drop level if ndim greater than 1 and reset columns name
-        ###############################################################################################################
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
         
@@ -162,7 +168,6 @@ class MCA(BaseEstimator,TransformerMixin):
             for col in is_quanti.columns.tolist():
                 X[col] = X[col].astype("float")
         
-        ############################
         # Check is quali sup
         if self.quali_sup is not None:
             if (isinstance(self.quali_sup,int) or isinstance(self.quali_sup,float)):
@@ -218,7 +223,7 @@ class MCA(BaseEstimator,TransformerMixin):
         #########################################################################################################
         # Compute statistiques
         summary_quali = pd.DataFrame()
-        for col in X.columns.tolist():
+        for col in X.columns:
             eff = X[col].value_counts().to_frame("count").reset_index().rename(columns={col : "categorie"})
             eff.insert(0,"variable",col)
             summary_quali = pd.concat([summary_quali,eff],axis=0,ignore_index=True)
@@ -232,8 +237,8 @@ class MCA(BaseEstimator,TransformerMixin):
             for j in np.arange(i+1,X.shape[1]):
                 tab = pd.crosstab(X.iloc[:,i],X.iloc[:,j])
                 chi = sp.stats.chi2_contingency(tab,correction=False)
-                row_chi2 = pd.DataFrame({"variable1" : X.columns.tolist()[i],
-                                         "variable2" : X.columns.tolist()[j],
+                row_chi2 = pd.DataFrame({"variable1" : X.columns[i],
+                                         "variable2" : X.columns[j],
                                          "statistic" : chi.statistic,
                                          "dof"       : chi.dof,
                                          "pvalue"    : chi.pvalue},index=[idx])
@@ -244,7 +249,7 @@ class MCA(BaseEstimator,TransformerMixin):
         self.chi2_test_ = chi2_test
 
         ############################################### Dummies tables ############################################
-        dummies = pd.concat((pd.get_dummies(X[col],dtype=int) for col in X.columns.tolist()),axis=1)
+        dummies = pd.concat((pd.get_dummies(X[col],dtype=int) for col in X.columns),axis=1)
         
         ###################################### Set number of components ########################################## 
         if self.n_components is None:
@@ -282,11 +287,11 @@ class MCA(BaseEstimator,TransformerMixin):
         I_k = dummies.sum(axis=0)
         # Prorportion par modalité
         p_k = dummies.mean(axis=0)
-        Z = pd.concat((dummies.loc[:,k]*(1/p_k[k])-1 for k  in dummies.columns.tolist()),axis=1)
+        Z = pd.concat((dummies.loc[:,k]*(1/p_k[k])-1 for k  in dummies.columns),axis=1)
 
         ###### Define mod weights
         mod_weights = pd.Series(name="weight").astype("float")
-        for col in X.columns.tolist():
+        for col in X.columns:
             data = pd.get_dummies(X[col],dtype=int)
             weights = data.mean(axis=0)*var_weights[col]
             mod_weights = pd.concat((mod_weights,weights),axis=0)
@@ -295,7 +300,7 @@ class MCA(BaseEstimator,TransformerMixin):
                       "X" : X, 
                       "dummies" : dummies,
                       "Z" : Z , 
-                      "ind_weights" : pd.Series(ind_weights,index=X.index.tolist(),name="weight"),
+                      "ind_weights" : pd.Series(ind_weights,index=X.index,name="weight"),
                       "mod_weights" : mod_weights,
                       "var_weights" : var_weights,
                       "n_components" : n_components,
@@ -312,7 +317,7 @@ class MCA(BaseEstimator,TransformerMixin):
         ind_inertia.name = "inertia"
         # Store all informations
         ind_infos = np.c_[ind_weights,ind_dist2,ind_inertia]
-        ind_infos = pd.DataFrame(ind_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.index.tolist())
+        ind_infos = pd.DataFrame(ind_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.index)
 
         ## Variables/categories infomations : Weights, Squared distance to origin and Inertia
         # Variables squared distance to origin
@@ -405,7 +410,7 @@ class MCA(BaseEstimator,TransformerMixin):
         
         # Contribution des variables
         quali_var_contrib = pd.DataFrame().astype("float")
-        for col in X.columns.tolist():
+        for col in X.columns:
             modalite = np.unique(X[col]).tolist()
             contrib = var_contrib.loc[modalite,:].sum(axis=0).to_frame(col).T
             quali_var_contrib = pd.concat((quali_var_contrib,contrib),axis=0)
@@ -443,7 +448,7 @@ class MCA(BaseEstimator,TransformerMixin):
                 for j in np.arange(dummies.shape[1]):
                     if dummies.columns[j] in values:
                         Y[i,j] = 1
-            Y = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup.index.tolist())
+            Y = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup.index)
 
             # Standardization
             Z_sup = pd.concat((Y.loc[:,k]*(1/p_k[k])-1 for k  in dummies.columns),axis=1)
@@ -601,34 +606,47 @@ class MCA(BaseEstimator,TransformerMixin):
         self.model_ = "mca"
 
         return self
-
-    def transform(self,X,y=None):
+    
+    def fit_transform(self,X,y=None):
         """
-        Apply the dimensionality reduction on X
-        ---------------------------------------
-        
-        X is projected on
-        the first axes previous extracted from a training set.
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
 
         Parameters
         ----------
-        X : array of string, int or float, shape (n_rows_sup, n_vars)
-            New data, where n_rows_sup is the number of supplementary
-            row points and n_vars is the number of variables.
-            X is a data table containing a category in each cell.
-            Categories can be coded by strings or numeric values.
-            X rows correspond to supplementary row points that are
-            projected onto the axes.
-
-        y : None
+        `X` : pandas/polars dataframe of shape (n_samples, n_columns)
+            Training data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
+        
+        `y` : None
             y is ignored.
+        
         Returns
         -------
-        X_new : array of float, shape (n_rows_sup, n_components_)
-            X_new : coordinates of the projections of the supplementary
-            row points onto the axes.
+        `X_new` : pandas dataframe of shape (n_samples, n_components)
+            Transformed values.
         """
+        self.fit(X)
+        return self.ind_["coord"]   
 
+    def transform(self,X):
+        """
+        Apply the dimensionality reduction on X
+        ---------------------------------------
+
+        Description
+        -----------
+        X is projected on the principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : pandas/polars dataframe of shape (n_samples, n_columns)
+            New data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
+
+        Returns
+        -------
+        `X_new` : pandas dataframe of shape (n_samples, n_components)
+            Projection of X in the principal components where `n_samples` is the number of samples and `n_components` is the number of the components.
+        """
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
             X = X.to_pandas()
@@ -639,6 +657,9 @@ class MCA(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set index name as None
+        X.index.name = None
         
         # Set parallelize option
         if self.parallelize:
@@ -671,27 +692,6 @@ class MCA(BaseEstimator,TransformerMixin):
         coord.columns = ["Dim."+str(x+1) for x in range(n_components)] 
         return coord
 
-    def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X
-        ----------------------------------------------------------------
-
-        Parameters
-        ----------
-        X : pd.DataFrame, shape (n_samples, n_features)
-            New data, where n_samples in the number of samples
-            and n_features is the number of features.
-
-        y : None
-            y is ignored
-
-        Returns
-        -------
-        X_new : array-like, shape (n_samples, n_components)
-        """
-        self.fit(X)
-        return self.ind_["coord"]   
-
 def predictMCA(self,X):
     """
     Predict projection for new individuals with Multiple Correspondence Analysis (MCA)
@@ -701,25 +701,37 @@ def predictMCA(self,X):
     -----------
     Performs the coordinates, squared cosinus and squared distance to origin of new individuals with Multiple Correspondence Analysis (MCA)
 
+    Usage
+    -----
+    ```python
+    >>> predictMCA(self,X)
+    ```
+
     Parameters
     ----------
-    self : an object of class MCA
+    `self` : an object of class MCA
 
-    X : a pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
+    `X` : a pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
     
-    Return
-    ------
-    a dictionary including : 
+    Returns
+    -------
+    dictionary of dataframes containing all the results for the new individuals including:
     
-    coord : factor coordinates of the new individuals
+    `coord` : factor coordinates of the new individuals
 
-    cos2 : squared cosines of the new individuals
+    `cos2` : squared cosines of the new individuals
 
-    dist : distance to origin for new individuals
+    `dist` : distance to origin for new individuals
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>>
+    ```
     """
     # Check if self is an object of class PCA
     if self.model_ != "mca":
@@ -739,6 +751,9 @@ def predictMCA(self,X):
         f"{type(X)} is not supported. Please convert to a DataFrame with "
         "pd.DataFrame. For more information see: "
         "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    
+    # Set index name as None
+    X.index.name = None
 
     # set parallelize
     if self.parallelize:
@@ -793,32 +808,44 @@ def supvarMCA(self,X_quanti_sup=None,X_quali_sup=None):
     -----------
     Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables with Multiple Correspondence Analysis (MCA)
 
+    Usage
+    -----
+    ```python
+    >>> supvarMCA(self,X_quanti_sup=None,X_quali_sup=None)
+    ```
+
     Parameters
     ----------
-    self : an object of class MCA
+    `self` : an object of class MCA
 
-    X_quanti_sup : a pandas/polars dataframe of supplementary quantitatives variables
+    `X_quanti_sup` : pandas/polars dataframe of supplementary quantitatives variables
 
-    X_quali_sup : a pandas/polars dataframe of supplementary qualitatives variables
+    `X_quali_sup` : pandas/polars dataframe of supplementary qualitatives variables
 
-    Return
-    ------
-    a dictionary including : 
+    Returns
+    -------
+    dictionary of dictionary containing the results for supplementary variables including : 
 
-    quanti : a dictionary containing the results of the supplementary quantitatives variables:
-        * coord : factor coordinates of the supplementary quantitativaes variables
-        * cos2 : squared cosinus of the supplementary quantitatives variables
+    `quanti` : dictionary containing the results of the supplementary quantitatives variables including :
+        * coord : factor coordinates of the supplementary quantitatives variables
+        * cos2 : square cosinus of the supplementary quantitatives variables
     
-    quali : a dictionary containing the results of the supplementary qualitatives/categories variables :
+    `quali` : dictionary containing the results of the supplementary qualitatives/categories variables including :
         * coord : factor coordinates of the supplementary categories
-        * cos2 : squared cosinus of the supplementary categories
+        * cos2 : square cosinus of the supplementary categories
         * vtest : value-test of the supplementary categories
-        * dist : distance to origin of the supplementary categories
-        * eta2 : squared correlation ratio of the supplementary qualitatives variables
+        * dist : square distance to origin of the supplementary categories
+        * eta2 : square correlation ratio of the supplementary qualitatives variables
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>>
+    ```
     """
     # Check if self is and object of class MCA
     if self.model_ != "mca":
