@@ -81,15 +81,82 @@ pip install scientisttools
 
 Tutorials are available
 
-## Examples : PCA with decathlon2 dataset
+## Examples : Principal component analysis
+
+1. **Loading data**
 
 ```python
->>> # Load decathlon2 dataset
->>> from scientisttools import load_decatlon2
->>> X = load_decathlon2()
+# Load wine dataset
+>>> from scientisttools import load_wine
+>>> wine = load_wine()
+>>> wine.info()
+```
+```
+<class 'pandas.core.frame.DataFrame'>
+Index: 21 entries, 2EL  to T2  
+Data columns (total 31 columns):
+ #   Column                         Non-Null Count  Dtype   
+---  ------                         --------------  -----   
+ 0   Label                          21 non-null     category
+ 1   Soil                           21 non-null     category
+ 2   Odor.Intensity.before.shaking  21 non-null     float64 
+ 3   Aroma.quality.before.shaking   21 non-null     float64 
+ 4   Fruity.before.shaking          21 non-null     float64 
+ 5   Flower.before.shaking          21 non-null     float64 
+ 6   Spice.before.shaking           21 non-null     float64 
+ 7   Visual.intensity               21 non-null     float64 
+ 8   Nuance                         21 non-null     float64 
+ 9   Surface.feeling                21 non-null     float64 
+ 10  Odor.Intensity                 21 non-null     float64 
+ 11  Quality.of.odour               21 non-null     float64 
+ 12  Fruity                         21 non-null     float64 
+ 13  Flower                         21 non-null     float64 
+ 14  Spice                          21 non-null     float64 
+ 15  Plante                         21 non-null     float64 
+ 16  Phenolic                       21 non-null     float64 
+ 17  Aroma.intensity                21 non-null     float64 
+ 18  Aroma.persistency              21 non-null     float64 
+ 19  Aroma.quality                  21 non-null     float64 
+ 20  Attack.intensity               21 non-null     float64 
+ 21  Acidity                        21 non-null     float64 
+ 22  Astringency                    21 non-null     float64 
+ 23  Alcohol                        21 non-null     float64 
+ 24  Balance                        21 non-null     float64 
+ 25  Smooth                         21 non-null     float64 
+ 26  Bitterness                     21 non-null     float64 
+ 27  Intensity                      21 non-null     float64 
+ 28  Harmony                        21 non-null     float64 
+ 29  Overall.quality                21 non-null     float64 
+ 30  Typical                        21 non-null     float64 
+dtypes: category(2), float64(29)
+memory usage: 5.3+ KB
+```
+
+
+2. **Principal component analysis**
+
+```python
 >>> from scientisttools import PCA
->>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
->>> res_pca.fit(X)
+>>> res_pca = PCA(standardize=True,n_components=5,ind_sup=list(range(15,21)),quanti_sup=[29,30],quali_sup=[0,1],parallelize=True)
+>>> res_pca.fit(wine)
+```
+
+3. **Extract and visualize eigenvalues/varainces:**
+
+```python
+>>> from scientisttools import get_eig
+eig = get_eig(res_pca)
+eig.head(6)
+```
+
+```
+	eigenvalue	difference	proportion	cumulative
+Dim.1	14.740851	11.804968	54.595746	54.595746
+Dim.2	2.935884	0.644286	10.873643	65.469389
+Dim.3	2.291597	0.569027	8.487397	73.956786
+Dim.4	1.722570	0.178368	6.379889	80.336675
+Dim.5	1.544202	0.439988	5.719266	86.055941
+Dim.6	1.104214	0.355298	4.089681	90.145621
 ```
 
 ## Author(s)
