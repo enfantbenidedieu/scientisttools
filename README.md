@@ -81,6 +81,17 @@ pip install scientisttools
 
 Tutorials are available
 
+## Examples : PCA with decathlon2 dataset
+
+```python
+>>> # Load decathlon2 dataset
+>>> from scientisttools import load_decatlon2
+>>> X = load_decathlon2()
+>>> from scientisttools import PCA
+>>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+>>> res_pca.fit(X)
+```
+
 ## Author(s)
 
 Duvérier DJIFACK ZEBAZE ([duverierdjifack@gmail.com](duverierdjifack@gmail.com))
