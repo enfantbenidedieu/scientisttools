@@ -145,8 +145,8 @@ memory usage: 5.3+ KB
 
 ```python
 >>> from scientisttools import get_eig
-eig = get_eig(res_pca)
-eig.head(6)
+>>> eig = get_eig(res_pca)
+>>> eig.head(6)
 ```
 
 ```
