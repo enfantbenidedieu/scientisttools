@@ -178,8 +178,8 @@ def get_pca(self,choice="ind")-> dict:
 
 def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
-    Printing summaries of Principal Components Analysis objects
-    -----------------------------------------------------------
+    Printing summaries of Principal Component Analysis objects
+    ----------------------------------------------------------
 
     Description
     -----------

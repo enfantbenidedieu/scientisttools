@@ -316,7 +316,7 @@ class PCA(BaseEstimator,TransformerMixin):
         ## Individuals informations : Squared distance to origin, weights and Inertia
         # Individuals square distance to origin
         ind_dist2 = mapply(Z,lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-        ind_dist2.name = "dist"
+        ind_dist2.name = "Sq. Dist."
         # Individuals inertia
         ind_inertia = ind_dist2*ind_weights
         ind_inertia.name = "inertia"
@@ -376,7 +376,7 @@ class PCA(BaseEstimator,TransformerMixin):
         var_cos2 = mapply(var_coord,  lambda x : (x**2)/var_dist2,axis=0,progressbar=False,n_workers=n_workers)
 
         # Store all informations
-        self.var_ = {"coord":var_coord, "cor":var_coord, "cos2":var_cos2, "contrib":var_contrib}
+        self.var_ = {"coord": var_coord, "cor":var_coord, "cos2":var_cos2, "contrib":var_contrib, "infos" : var_infos}
 
         ####################################################################################################
         # Bartlett - statistics
@@ -756,7 +756,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     Examples
     --------
@@ -867,11 +867,11 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Transform to object
-        X_quali_sup = X_quali_sup.astype("object")
-
         # Set index name as None
         X_quali_sup.index.name = None
+        
+        # Transform to object
+        X_quali_sup = X_quali_sup.astype("object")
 
         # Check if two columns have the same categories
         X_quali_sup = revaluate_cat_variable(X_quali_sup)
