@@ -49,21 +49,86 @@ def fviz_famd_ind(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the Factor Analysis of Mixed Data (FAMD) individuals graphs
-    ----------------------------------------------------------------
+    Visualize FAMD/PCAMIX/MPCA - Graph of individuals
+    -------------------------------------------------
 
+    Description
+    -----------
+    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_ind() provides plotnine-based elegant visualization of FAMD/PCAMIX/MPCA outputs for individuals.
 
-    Return
-    ------
+    Usage
+    -----
+    ```python
+    >>> fviz_famd_ind(self,
+                        axis=[0,1],
+                        x_lim=None,
+                        y_lim=None,
+                        x_label=None,
+                        y_label=None,
+                        title =None,
+                        color ="black",
+                        geom = ["point","text"],
+                        gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                        point_size = 1.5,
+                        text_size = 8,
+                        text_type = "text",
+                        marker = "o",
+                        legend_title = None,
+                        add_grid =True,
+                        color_quali_var = "blue",
+                        marker_quali_var = "v",
+                        ind_sup=True,
+                        color_sup = "darkblue",
+                        marker_sup = "^",
+                        quali_sup = True,
+                        color_quali_sup = "red",
+                        marker_quali_sup = ">",
+                        add_ellipses=False, 
+                        ellipse_type = "t",
+                        confint_level = 0.95,
+                        geom_ellipse = "polygon",
+                        habillage = None,
+                        add_hline = True,
+                        add_vline=True,
+                        ha="center",
+                        va="center",
+                        hline_color="black",
+                        hline_style="dashed",
+                        vline_color="black",
+                        vline_style ="dashed",
+                        lim_cos2 = None,
+                        lim_contrib = None,
+                        repel=False,
+                        ggtheme=pn.theme_minimal())
+    ```
+
+    Parameters
+    ----------
+    see fviz_pca_ind
+
+    Returns
+    -------
     a plotnine
 
-    Author
-    ------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load gironde dataset
+    >>> from scientisttools import load_gironde
+    >>> gironde = load_gironde()
+    >>> from scientisttools import FAMD, fviz_famd_ind
+    >>> res_famd = FAMD().fit(gironde)
+    >>> p = fviz_famd_ind(res_famd)
+    >>> print(p)
+    ```
     """
-    
-    if self.model_ != "famd":
-        raise TypeError("'self' must be an object of class FAMD")
+    # Check if self is an object of class FAMD/PCAMIX/MPCA   
+    if self.model_ not in ["famd","pcamix","mpca"]:
+        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -95,10 +160,7 @@ def fviz_famd_ind(self,
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = (self.ind_["cos2"].iloc[:,axis]
-                        .sum(axis=1).to_frame("cosinus")
-                        .sort_values(by="cosinus",ascending=False)
-                        .query("cosinus > @lim_cos2"))
+            cos2 = self.ind_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -108,10 +170,7 @@ def fviz_famd_ind(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = (self.ind_["contrib"].iloc[:,axis]
-                           .sum(axis=1).to_frame("contrib")
-                           .sort_values(by="contrib",ascending=False)
-                           .query(f"contrib > @lim_contrib"))
+            contrib = self.ind_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query(f"contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -189,20 +248,21 @@ def fviz_famd_ind(self,
             p = p + pn.geom_point(pn.aes(color = habillage))
             p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
     
-    ############################## Add qualitatives variables
-    quali_coord = self.quali_var_["coord"]
-    if "point" in geom:
-        p = p + pn.geom_point(quali_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
-                              color = color_quali_var,shape = marker_quali_var,size=point_size)
-    if "text" in geom:
-        if repel:
-            p = p + text_label(text_type,data=quali_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
-                                color=color_quali_var,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
-        else:
-            p = p + text_label(text_type,data=quali_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
-                               color = color_quali_var,size=text_size,va=va,ha=ha)
+    # Add qualitatives variables
+    if hasattr(self,"quali_var_"):
+        quali_coord = self.quali_var_["coord"]
+        if "point" in geom:
+            p = p + pn.geom_point(quali_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
+                                color = color_quali_var,shape = marker_quali_var,size=point_size)
+        if "text" in geom:
+            if repel:
+                p = p + text_label(text_type,data=quali_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
+                                    color=color_quali_var,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+            else:
+                p = p + text_label(text_type,data=quali_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
+                                color = color_quali_var,size=text_size,va=va,ha=ha)
 
-    ############################## Add supplementary individuals informations
+    # Add supplementary individuals informations
     if ind_sup:
         if hasattr(self, "ind_sup_"):
             sup_coord = self.ind_sup_["coord"]
@@ -218,7 +278,7 @@ def fviz_famd_ind(self,
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                         color = color_sup,size=text_size,va=va,ha=ha)
     
-    ############## Add supplementary qualitatives
+    # Add supplementary qualitatives
     if quali_sup:
         if hasattr(self, "quali_sup_"):
             quali_sup_coord = self.quali_sup_["coord"]
@@ -240,7 +300,7 @@ def fviz_famd_ind(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Individuals factor map - FAMD"
+        title = "Individuals factor map - "+self.model_.upper()
     
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
@@ -295,16 +355,75 @@ def fviz_famd_col(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the Factor Analysis for Mixed Data (FAMD) correlation circle graphs
-    ------------------------------------------------------------------------
+    Visualize FAMD/PCAMIX/MPCA - Graph of quantitative variables
+    ------------------------------------------------------------
 
-    Author
-    ------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Description
+    -----------
+    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_col() provides plotnine-based elegant visualization of FAMD/PCAMIX/MPCA outputs for quantitative variables.
+
+    Usage
+    -----
+    ```python
+    >>> fviz_famd_col(self,
+                    axis=[0,1],
+                    title =None,
+                    color ="black",
+                    x_label= None,
+                    y_label = None,
+                    geom = ["arrow", "text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    text_type = "text",
+                    text_size = 8,
+                    legend_title=None,
+                    add_grid =True,
+                    quanti_sup=True,
+                    color_sup = "blue",
+                    linestyle_sup="dashed",
+                    add_hline = True,
+                    add_vline=True,
+                    arrow_length=0.1,
+                    arrow_angle=10,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    lim_cos2 = None,
+                    lim_contrib = None,
+                    add_circle = True,
+                    color_circle = "gray",
+                    ggtheme=pn.theme_minimal())
+    ```
+
+    Parameters
+    ----------
+    see fviz_pca_var
+
+    Returns
+    -------
+    a plotnine
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load gironde dataset
+    >>> from scientisttools import load_gironde
+    >>> gironde = load_gironde()
+    >>> from scientisttools import FAMD, fviz_famd_col
+    >>> res_famd = FAMD().fit(gironde)
+    >>> p = fviz_famd_col(res_famd)
+    >>> print(p)
+    ```
     """
-    
-    if self.model_ != "famd":
-        raise TypeError("'self' must be an object of class FAMD")
+    # Check if self is an object of class FAMD/PCAMIX:MPCA
+    if self.model_ not in ["famd","pcamix","mpca"]:
+        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -318,10 +437,7 @@ def fviz_famd_col(self,
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = (self.quanti_var_["cos2"].iloc[:,axis]
-                        .sum(axis=1).to_frame("cosinus")
-                        .sort_values(by="cosinus",ascending=False)
-                        .query("cosinus > @lim_cos2"))
+            cos2 = self.quanti_var_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -331,10 +447,7 @@ def fviz_famd_col(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = (self.quanti_var_["contrib"].iloc[:,axis]
-                           .sum(axis=1).to_frame("contrib")
-                           .sort_values(by="contrib",ascending=False)
-                           .query("contrib > @lim_contrib"))
+            contrib = self.quanti_var_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -403,7 +516,7 @@ def fviz_famd_col(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Continuous variables factor map - FAMD"
+        title = "Continuous variables factor map - "+self.model_.upper()
     
     p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+ pn.labs(title=title,x=x_label,y=y_label)
 
@@ -453,16 +566,76 @@ def fviz_famd_mod(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Draw the Factor Analysis for Mixed Data (FAMD) variables/categories graphs
-    --------------------------------------------------------------------------
+    Visualize FAMD/PCAMIX/MPCA - Graph of categories
+    ------------------------------------------------
 
-    Author
-    ------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Description
+    -----------
+    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_mod() provides plotnine-based elegant visualization of FAMD/PCAMIX/MPCA outputs for categories.
+
+    Usage
+    -----
+    ```python
+    >>> fviz_famd_mod(self,
+                        axis=[0,1],
+                        x_lim=None,
+                        y_lim=None,
+                        x_label = None,
+                        y_label = None,
+                        title =None,
+                        color ="black",
+                        geom = ["point","text"],
+                        gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                        point_size = 1.5,
+                        text_size = 8,
+                        text_type = "text",
+                        marker = "o",
+                        legend_title=None,
+                        add_grid =True,
+                        quali_sup = True,
+                        color_sup = "blue",
+                        marker_sup = "^",
+                        add_hline = True,
+                        add_vline=True,
+                        ha="center",
+                        va="center",
+                        hline_color="black",
+                        hline_style="dashed",
+                        vline_color="black",
+                        vline_style ="dashed",
+                        lim_cos2 = None,
+                        lim_contrib = None,
+                        repel=False,
+                        ggtheme=pn.theme_minimal())
+    ```
+
+    Parameters
+    ----------
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load gironde dataset
+    >>> from scientisttools import load_gironde
+    >>> gironde = load_gironde()
+    >>> from scientisttools import FAMD, fviz_famd_mod
+    >>> res_famd = FAMD().fit(gironde)
+    >>> p = fviz_famd_mod(res_famd)
+    >>> print(p)
+    ```
     """
-    
-    if self.model_ != "famd":
-        raise TypeError("'self' must be an object of class FAMD")
+    # Check if self is an object of class FAMD, PCAMIX, MPCA
+    if self.model_ not in ["famd","pcamix","mpca"]:
+        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -477,10 +650,7 @@ def fviz_famd_mod(self,
     if lim_cos2 is not None:
         if isinstance(lim_cos2,float) or isinstance(lim_cos2,int):
             lim_cos2 = float(lim_cos2)
-            cos2 = (self.quali_var_["cos2"].iloc[:,axis]
-                        .sum(axis=1).to_frame("cosinus")
-                        .sort_values(by="cosinus",ascending=False)
-                        .query("cosinus > @lim_cos2"))
+            cos2 = self.quali_var_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -490,10 +660,7 @@ def fviz_famd_mod(self,
     if lim_contrib is not None:
         if isinstance(lim_contrib,float) or isinstance(lim_contrib,int):
             lim_contrib = float(lim_contrib)
-            contrib = (self.quali_var_["contrib"].iloc[:,axis]
-                           .sum(axis=1).to_frame("contrib")
-                           .sort_values(by="contrib",ascending=False)
-                           .query("contrib > @lim_contrib"))
+            contrib = self.quali_var_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -575,7 +742,7 @@ def fviz_famd_mod(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Qualitatives variables categories - FAMD"
+        title = "Qualitatives variables categories - "+self.model_.upper()
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
     if y_lim is not None:
@@ -628,21 +795,77 @@ def fviz_famd_var(self,
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Draw the Factor Analysis for Mixed Data (FAMD) variables graphs
-    ---------------------------------------------------------------
+    Visualize FAMD/PCAMIX/MPCA - Graph of variables
+    -----------------------------------------------
 
+    Description
+    -----------
+    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_var() provides plotnine-based elegant visualization of FAMD/PCAMIX/MPCA outputs for both quantitatives and qualitatives variables.
 
-    Return
-    ------
+    Usage
+    -----
+    ```python
+    >>> fviz_famd_var(self,
+                    axis=[0,1],
+                    x_lim=None,
+                    y_lim=None,
+                    title=None,
+                    x_label = None,
+                    y_label = None,
+                    geom = ["point","text"],
+                    color_quanti ="black",
+                    color_quali = "blue",
+                    color_quali_sup = "green",
+                    color_quanti_sup = "red",
+                    point_size = 1.5,
+                    text_size = 8,
+                    add_quali_sup = True,
+                    add_quanti_sup =True,
+                    marker_quanti ="o",
+                    marker_quali ="^",
+                    marker_quanti_sup = "v",
+                    marker_quali_sup = "<",
+                    text_type="text",
+                    add_grid =True,
+                    add_hline = True,
+                    add_vline =True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    repel=False,
+                    ggtheme=pn.theme_minimal())
+    ```
+
+    Parameters
+    ----------
+    see fviz_pca_ind
+
+    Returns
+    -------
     a plotnine
 
-    Author
-    ------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Author(s)
+    --------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load gironde dataset
+    >>> from scientisttools import load_gironde
+    >>> gironde = load_gironde()
+    >>> from scientisttools import FAMD, fviz_famd_var
+    >>> res_famd = FAMD().fit(gironde)
+    >>> p = fviz_famd_var(res_famd)
+    >>> print(p)
+    ```
     """
-    
-    if self.model_ != "famd":
-        raise TypeError("'self' must be an object of class FAMD")
+    # Check if self is an object of class FAMD, PCAMIX or MPCA
+    if self.model_ not in ["famd","pcamix","mpca"]:
+        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -652,7 +875,7 @@ def fviz_famd_var(self,
 
     # Initialize
     quanti_var_cos2 = self.quanti_var_["cos2"]
-    quali_var_eta2 = self.var_["coord"].loc[self.call_["quali"],:]
+    quali_var_eta2 = self.var_["coord"].drop(index=quanti_var_cos2.index)
     
     # Initialize
     p = pn.ggplot(data=quanti_var_cos2,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_var_cos2.index))
@@ -721,7 +944,7 @@ def fviz_famd_var(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Graphe of variables - FAMD"
+        title = "Graphe of variables - "+self.model_.upper()
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
     if y_lim:
@@ -742,39 +965,54 @@ def fviz_famd_var(self,
 
 def fviz_famd(self,choice="ind",**kwargs) -> pn:
     """
-    Draw the Factor Analysis for Mixed Data (FAMD) graphs
-    -----------------------------------------------------
+    Visualize FAMD/PCAMIX/MPCA
+    --------------------------
     
     Description
     -----------
-    It provides the graphical outputs associated with the principal component method for mixed data: FAMD.
+    Plot the graphs for Factor Analysis of Mixed Data (FAMD), Principal Component Analysis of Mixed variables (PCAMIX), Mixed Principal Component Analysis (MPCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
+
+        * fviz_famd_ind() : Graph of individuals
+        * fviz_famd_col() : Graph of quantitative variables (Correlation circle)
+        * fviz_famd_mod() : Graph of categories
+        * fviz_famd_var() : Graph of variables 
+
+    Usage
+    -----
+    ```python
+    >>> fviz_famd(self,choice="ind",**kwargs)
+    ```
 
     Parameters
     ----------
-    self : an object of class FAMD
+    `self` : an object of class FAMD, PCAMIX, MPCA
 
-    choice : a string corresponding to the graph that you want to do.
-                - "ind" for the individual graphs
-                - "quanti_var" for the correlation circle
-                - "quali_var" for the categorical variables graphs
-                - "var" for all the variables (quantitatives and categorical)
+    `choice` : the element to plot from the output. Possible values are :
+        * "ind" for the individual graphs
+        * "quanti_var" for the correlation circle
+        * "quali_var" for the categorical variables graphs
+        * "var" for all the variables (quantitatives and categorical)
     
-    **kwargs : 	further arguments passed to or from other methods
+    `**kwargs` : further arguments passed to or from other methods
 
-    Return
-    ------
-    figure : The individuals factor map and the variables factor map.
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
-    if self.model_ != "famd":
-        raise TypeError("'self' must be an object of class FAMD")
+    Examples
+    --------
+    see fviz_famd_ind, fviz_famd_col, fviz_famd_mod, fviz_famd_var
+    """
+    # Check if self is an object of class FAMD, PCAMIX, MPCA
+    if self.model_ not in ["famd","pcamix","mpca"]:
+        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
     
     if choice not in ["ind","quanti_var","quali_var","var"]:
-        raise ValueError("'choice' should be one of 'ind','quanti_var','quali_var' and 'var'.")
+        raise ValueError("'choice' should be one of 'ind','quanti_var','quali_var', 'var'.")
     
     if choice == "ind":
         return fviz_famd_ind(self,**kwargs)

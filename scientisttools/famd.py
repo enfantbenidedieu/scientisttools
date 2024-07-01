@@ -17,12 +17,10 @@ class FAMD(BaseEstimator,TransformerMixin):
     """
     Factor Analysis of Mixed Data (FAMD)
     ------------------------------------
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
-
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
-
     Performs Factor Analysis of Mixed Data (FAMD) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
 
     FAMD is a principal component method dedicated to explore data with both continuous and categorical variables. 
@@ -36,7 +34,6 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     Details
     -------
-
     FAMD includes standard Principal Component Analysis (PCA) and Multiple Correspondence Analysis (MCA) as special cases. If all variables are quantitative, standard PCA is performed.
     if all variables are qualitative, then standard MCA is performed.
 
@@ -46,65 +43,61 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     Usage
     -----
-
-    FAMD(n_components = 5,ind_weights = None,quanti_weights = None,quali_weights = None,ind_sup=None,quanti_sup=None,quali_sup=None,parallelize = False).fit(X)
+    ```python
+    >>> FAMD(n_components = 5,ind_weights = None,quanti_weights = None,quali_weights = None,ind_sup=None,quanti_sup=None,quali_sup=None,parallelize = False)
+    ```
 
     Parameters
     ----------
+    `n_components` : number of dimensions kept in the results (by default 5)
 
-    n_components : number of dimensions kept in the results (by default 5)
-
-    ind_weights : an optional individuals weights (by default, 1/(number of active individuals) for uniform individuals weights); the weights are given only for the active individuals
+    `ind_weights` : an optional individuals weights (by default, 1/(number of active individuals) for uniform individuals weights); the weights are given only for the active individuals
     
-    quanti_weights : an optional quantitatives variables weights (by default, a list/tuple of 1 for uniform quantitative variables weights), the weights are given only for the active quantitative variables
+    `quanti_weights` : an optional quantitatives variables weights (by default, a list/tuple of 1 for uniform quantitative variables weights), the weights are given only for the active quantitative variables
     
-    quali_weights : an optional qualitatives variables weights (by default, a list/tuple of 1 for uniform qualitative variables weights), the weights are given only for the active qualitative variables
+    `quali_weights` : an optional qualitatives variables weights (by default, a list/tuple of 1 for uniform qualitative variables weights), the weights are given only for the active qualitative variables
     
-    ind_sup : a list/tuple indicating the indexes of the supplementary individuals
+    `ind_sup` : an integer or a list/tuple indicating the indexes of the supplementary individuals
 
-    quanti_sup : a list/tuple indicating the indexes of the quantitative supplementary variables
+    `quanti_sup` : an integer or a list/tuple indicating the indexes of the quantitative supplementary variables
 
-    quali_sup : a list/tuple indicating the indexes of the categorical supplementary variables
+    `quali_sup` : an integer or a list/tuple indicating the indexes of the categorical supplementary variables
 
-    parallelize : boolean, default = False
-        If model should be parallelize
-            - If True : parallelize using mapply
+    `parallelize` : boolean, default = False. If model should be parallelize
+        * If True : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
+        * If False : parallelize using pandas apply
 
-            - If False : parallelize using apply
+    Attributes
+    ----------
+    `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    Return
-    ------
-    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+    `var_`  : dictionary of pandas dataframe containing all the results for the variables considered as group (coordinates, square cosine, contributions)
 
-    var_  : a dictionary of pandas dataframe containing all the results for the variables considered as group (coordinates, square cosine, contributions)
+    `ind_` : dictionary of pandas dataframe with all the results for the individuals (coordinates, square cosine, contributions)
 
-    var_sup_  : a dictionary of pandas dataframe containing all the results for the supplementary variables considered as group (coordinates, square cosine)
+    `ind_sup_` : dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
+
+    `quali_var_` : dictionary of pandas dataframe with all the results for the categorical variables (coordinates, square cosine, contributions, v.test)
+
+    `quali_sup_` : dictionary of pandas dataframe with all the results for the supplementary categorical variables (coordinates, square cosine, v.test)
     
-    ind_ : a dictionary of pandas dataframe with all the results for the individuals (coordinates, square cosine, contributions)
+    `quanti_var_` : dictionary of pandas dataframe with all the results for the quantitative variables (coordinates, correlation, square cosine, contributions)
 
-    ind_sup_ : a dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
+    `quanti_sup_` : dictionary of pandas dataframe with all the results for the supplementary quantitative variables (coordinates, correlation, square cosine)
 
-    quali_var_ : a dictionary of pandas dataframe with all the results for the categorical variables (coordinates, square cosine, contributions, v.test)
+    `call_` : dictionary with some statistics
 
-    quali_sup_ : a dictionary of pandas dataframe with all the results for the supplementary categorical variables (coordinates, square cosine, v.test)
-    
-    quanti_var_ : a dictionary of pandas dataframe with all the results for the quantitative variables (coordinates, correlation, square cosine, contributions)
+    `summary_quanti_` : descriptive statistics of quantitatives variables
 
-    quanti_sup_ : a dictionary of pandas dataframe with all the results for the supplementary quantitative variables (coordinates, correlation, square cosine)
+    `summary_quali_` : statistics of categories variables
 
-    call_ : a dictionary with some statistics
+    `chi2_test_` : chi2 statistics test
 
-    summary_quanti_ : descriptive statistics of quantitatives variables
-
-    summary_quali_ : statistics of categories variables
-
-    chi2_test_ : chi2 statistics test
-
-    model_ : string. The model fitted = 'famd'
+    `model_` : string specifying the model fitted = 'famd'
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     References
     ----------
@@ -122,43 +115,30 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. edp sciences
 
-    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2, Version 1.0
 
     See Also
     --------
-    get_famd_ind, get_famd_var, get_famd, summaryFAMD, dimdesc
+    get_famd_ind, get_famd_var, get_famd, summaryFAMD, dimdesc, predictFAMD, supvarFAMD, fviz_famd_ind
 
     Examples
     --------
-    > # Load gironde dataset
-
-    > from scientisttools import load_gironde
-
-    > gironde = load_gironde()
-
-    > # Split data
-
-    > from scientisttools import splitmix
-
-    > X_quant = splitmix(gironde)["quanti"]
-
-    > X_qual = splitmix(gironde)["quali"]
-
-    > from scientisttools import FAMD
-
-    > # PCA with FAMD function
-
-    > res_pca = FAMD().fit(X_quant)
-
-    > # MCA with FAMD function
-
-    > res_mca = FAMD().fit(X_qual)
-
-    > # FAMD with FAMD function
-
-    > res_famd = FAMD().fit(gironde)
-
-    > summaryFAMD(res_famd)
+    ```python
+    >>> # Load gironde dataset
+    >>> from scientisttools import load_gironde
+    >>> gironde = load_gironde()
+    >>> # Split data
+    >>> from scientisttools import splitmix
+    >>> X_quant = splitmix(gironde)["quanti"]
+    >>> X_qual = splitmix(gironde)["quali"]
+    >>> from scientisttools import FAMD
+    >>> # PCA with FAMD function
+    >>> res_pca = FAMD().fit(X_quant)
+    >>> # MCA with FAMD function
+    >>> res_mca = FAMD().fit(X_qual)
+    >>> # FAMD with FAMD function
+    >>> res_famd = FAMD().fit(gironde)
+    ```
     """
     def __init__(self,
                  n_components = 5,
@@ -185,15 +165,16 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        X : pandas/polars DataFrame of float, shape (n_rows, n_columns)
+        `X` : pandas/polars DataFrame of shape (n_samples, n_columns)
+            Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
-        y : None
+        `y` : None
             y is ignored
 
-        Returns:
-        --------
-        self : object
-                Returns the instance itself
+        Returns
+        -------
+        `self` : object
+            Returns the instance itself
         """
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
@@ -205,6 +186,9 @@ class FAMD(BaseEstimator,TransformerMixin):
             f"{type(X)} is not supported. Please convert to a DataFrame with "
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set index name as None
+        X.index.name = None
 
         # Set parallelize option
         if self.parallelize:
@@ -212,13 +196,10 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             n_workers = 1
         
-        ###############################################################################################################"
         # Drop level if ndim greater than 1 and reset columns name
-        ###############################################################################################################
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
         
-        ##########################################################################################
         # Set supplementary qualitative variables labels
         if self.quali_sup is not None:
             if (isinstance(self.quali_sup,int) or isinstance(self.quali_sup,float)):
@@ -229,7 +210,6 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             quali_sup_label = None
 
-        ############################################################################################
         #  Set supplementary qualitative variables labels
         if self.quanti_sup is not None:
             if (isinstance(self.quanti_sup,int) or isinstance(self.quanti_sup,float)):
@@ -240,7 +220,6 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             quanti_sup_label = None
         
-        ###################################################################################################
         # Set supplementary individuals labels
         if self.ind_sup is not None:
             if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
@@ -251,25 +230,24 @@ class FAMD(BaseEstimator,TransformerMixin):
         else:
             ind_sup_label = None
         
-        ####################################### Save the base in a new variables
         # Store data
         Xtot = X.copy()
 
-        ####################################### Drop supplementary qualitative columns ########################################
+        # Drop supplementary qualitative columns
         if self.quali_sup is not None:
             X = X.drop(columns=quali_sup_label)
         
-        ######################################## Drop supplementary quantitatives columns #######################################
+        # Drop supplementary quantitatives columns
         if self.quanti_sup is not None:
             X = X.drop(columns=quanti_sup_label)
         
-        ######################################## Drop supplementary individuls  ##############################################
+        # Drop supplementary individuls
         if self.ind_sup is not None:
             # Extract supplementary individuals
             X_ind_sup = X.loc[ind_sup_label,:]
             X = X.drop(index=ind_sup_label)
 
-        ###################################### Factor Analysis of Mixed Data ######################################################
+        # Factor Analysis of Mixed Data
         rec = recodevarfamd(X)
 
         # Extract elements
@@ -492,6 +470,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             
             # Concatenate
             Z_ind_sup = pd.concat((Z,Z_ind_sup),axis=0)
+
             # Update PCA
             global_pca = PCA(standardize=False,n_components=int(max_components),ind_sup=ind_sup).fit(Z_ind_sup)
             
@@ -499,6 +478,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             ind_sup_coord = global_pca.ind_sup_["coord"].iloc[:,:n_components]
             ind_sup_cos2 = global_pca.ind_sup_["cos2"].iloc[:,:n_components]
             ind_sup_dist = global_pca.ind_sup_["dist"]
+
             # Store all informations
             self.ind_sup_ = {"coord" : ind_sup_coord, "cos2" : ind_sup_cos2, "dist" : ind_sup_dist}
         
@@ -623,6 +603,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             quali_sup_vtest = global_pca.quali_sup_["vtest"].iloc[:,:n_components]
             quali_sup_eta2 = global_pca.quali_sup_["eta2"].iloc[:,:n_components]
             quali_sup_dist = global_pca.quali_sup_["dist"]
+
             # Store all informations
             self.quali_sup_ = {"coord" : quali_sup_coord, "cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : quali_sup_dist,"eta2" : quali_sup_eta2}
 
@@ -677,30 +658,45 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         return self
 
+    def fit_transform(self,X,y=None):
+        """
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
+
+        Parameters
+        ----------
+        `X` : pandas/polars dataframe of shape (n_samples, n_columns)
+            Training data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
+        
+        `y` : None
+            y is ignored.
+        
+        Returns
+        -------
+        `X_new` : pandas dataframe of shape (n_samples, n_components)
+            Transformed values.
+        """
+        self.fit(X)
+        return self.ind_["coord"]
+    
     def transform(self,X,y=None):
         """
         Apply the dimensionality reduction on X
         ---------------------------------------
 
-        X is projected on the first axes previous extracted from a training set.
+        Description
+        -----------
+        X is projected on the principal components previously extracted from a training set.
 
         Parameters
         ----------
-        X : DataFrame, shape (n_rows_sup, n_columns)
-            New data, where n_row_sup is the number of supplementary
-            row points and n_columns is the number of columns
-            X rows correspond to supplementary row points that are
-            projected on the axes
-            X is a table containing numeric values
-
-        y : None
-            y is ignored
+        X : pandas/polars dataframe of shape (n_samples, n_columns)
+            New data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
 
         Returns
         -------
-        X_new : DataFrame of float, shape (n_rows_sup, n_components_)
-                X_new : coordinates of the projections of the supplementary
-                row points on the axes.
+        `X_new` : pandas dataframe of shape (n_samples, n_components)
+            Projection of X in the principal components where `n_samples` is the number of samples and `n_components` is the number of the components.
         """
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
@@ -713,13 +709,15 @@ class FAMD(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        # Set index name as None
+        X.index.name = None
+
         # Recode
         rec2 = recodevarfamd(X=X)
         X_quanti = rec2["quanti"]
         X_quali = rec2["quali"]
         n_cont2 = rec2["k1"]
         n_cat2 = rec2["k2"]
-
 
         ####
         rec = self.call_["rec"]
@@ -753,7 +751,7 @@ class FAMD(BaseEstimator,TransformerMixin):
                 for j in np.arange(dummies.shape[1]):
                     if dummies.columns[j] in values:
                         Y[i,j] = 1
-            Y = pd.DataFrame(Y,index=X.index.tolist(),columns=dummies.columns)
+            Y = pd.DataFrame(Y,index=X.index,columns=dummies.columns)
             # New normalized data
             Z2 = (Y - self.call_["means"].values[n_cont:].reshape(1,-1))/self.call_["std"].values[n_cont:].reshape(1,-1)
             # Concatenate
@@ -761,39 +759,5 @@ class FAMD(BaseEstimator,TransformerMixin):
         
         # Supplementary individuals coordinates
         coord = Z.dot(self.svd_["V"][:,:n_components])
-        coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
+        coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
         return  coord
-
-    def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X.
-        ----------------------------------------------------------------
-
-        Parameters
-        ----------
-        X : pd.DataFrame, shape (n_samples, n_features)
-            New data, where n_samples in the number of samples
-            and n_features is the number of features.
-
-        y : None
-            y is ignored
-
-        Returns
-        -------
-        X_new : array-like, shape (n_samples, n_components)
-        """
-
-        self.fit(X)
-        return self.ind_["coord"]
-    
-
-def predictFAMD(self,X):
-    """
-    """
-    pass
-
-def supvarFAMD(self,X_quanti_sup=None,X_quali_sup=None):
-    """
-    
-    """
-    pass
