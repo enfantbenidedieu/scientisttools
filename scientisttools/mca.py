@@ -80,11 +80,13 @@ class MCA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    Escofier B, Pagès J (2008), Analyses Factorielles Simples et Multiples.4ed, Dunod
+    Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
 
     Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
 
-    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+    Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
+
+    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2, Version 1.0
 
     See Also
     --------
@@ -311,7 +313,7 @@ class MCA(BaseEstimator,TransformerMixin):
         # Individuals informations : Weights, Squared distance to origin and Inertia
         # Individuals squared distance to origin
         ind_dist2 = mapply(Z,lambda x : (x**2)*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-        ind_dist2.name = "dist"
+        ind_dist2.name = "Sq. Dist."
         # individuals Inertia
         ind_inertia = ind_dist2*ind_weights
         ind_inertia.name = "inertia"
@@ -322,7 +324,7 @@ class MCA(BaseEstimator,TransformerMixin):
         ## Variables/categories infomations : Weights, Squared distance to origin and Inertia
         # Variables squared distance to origin
         var_dist2 = mapply(Z,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
-        var_dist2.name = "dist"
+        var_dist2.name = "Sq. Dist."
         # Variables inertia
         var_inertia = var_dist2*mod_weights
         var_inertia.name = "inertia"
@@ -451,7 +453,7 @@ class MCA(BaseEstimator,TransformerMixin):
             Y = pd.DataFrame(Y,columns=dummies.columns,index=X_ind_sup.index)
 
             # Standardization
-            Z_sup = pd.concat((Y.loc[:,k]*(1/p_k[k])-1 for k  in dummies.columns),axis=1)
+            Z_sup = pd.concat((Y.loc[:,k]*(1/p_k[k])-1 for k in Y.columns),axis=1)
 
             # Supplementary individuals Coordinates
             ind_sup_coord = mapply(Z_sup,lambda x : x*mod_weights,axis=1,progressbar=False,n_workers=n_workers).dot(svd["V"][:,:n_components])
@@ -784,15 +786,15 @@ def predictMCA(self,X):
     # Standardization
     Z = pd.concat((Y.loc[:,k]*(1/p_k[k])-1 for k  in dummies.columns),axis=1)
 
-    # Supplementary individuals Coordinates
+    # Coordinates
     coord = mapply(Z,lambda x : x*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
     coord.columns = ["Dim."+str(x+1) for x in range(n_components)] 
     
-    # Supplementary individuals squared distance to origin
+    # Squared distance to origin
     dist2 = mapply(Z,lambda x : (x**2)*mod_weights.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
     dist2.name = "Sq. Dist."
 
-    # Supplementary individuals squared cosinus (Cos2)
+    # Squared cosinus (Cos2)
     cos2 = mapply(coord,lambda x : (x**2)/dist2.values,axis=0,progressbar=False,n_workers=n_workers)
     
     # Store all informations
