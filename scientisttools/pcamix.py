@@ -813,8 +813,7 @@ def predictPCAMIX(self,X=None):
     ```python
     >>> from scientisttools import PCAMIX, predictPCAMIX, load_gironde
     >>> gironde = load_gironde()
-    >>> res_pcamix = PCAMIX()
-    >>> res_pcamix.fit(gironde)
+    >>> res_pcamix = PCAMIX().fit(gironde)
     >>> predict = predictPCAMIX(res_pcamix,X=gironde)
     ```
     """
