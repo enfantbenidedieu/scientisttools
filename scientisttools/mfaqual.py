@@ -371,7 +371,7 @@ class MFAQUAL(BaseEstimator,TransformerMixin):
                     else:
                         raise TypeError("For mixed group 'group_type' should be 'm'")
                 model[grp] = fa.fit(X_group_sup[cols])
-
+  
         ##################### Compute group disto
         group_dist2 = [np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_active_dict.keys())]
         group_dist2 = pd.Series(group_dist2,index=list(group_active_dict.keys()),name="dist2")

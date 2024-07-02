@@ -377,6 +377,6 @@ class MFAMIX(BaseEstimator,TransformerMixin):
 
 
 
-        self.model_ = "pcamix"
+        self.model_ = "mfamix"
 
         return self

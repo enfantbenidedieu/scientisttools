@@ -24,15 +24,11 @@ class MFA(BaseEstimator,TransformerMixin):
     """
     Mutiple Factor Analysis (MFA)
     -----------------------------
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
-
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
-
-    Performs Multiple Factor Analysis in the sense of Escofier-Pages with supplementary individuals 
-    and supplementary groups of variables. Active groups of variables must be quantitative. Supplementary groups 
-    can be quantitative or categorical
+    Performs Multiple Factor Analysis in the sense of Escofier-Pages with supplementary individuals and supplementary groups of variables. Active groups of variables must be quantitative. Supplementary groups can be quantitative or categorical
 
     Parameters
     ----------
@@ -51,11 +47,9 @@ class MFA(BaseEstimator,TransformerMixin):
 
     ind_sup : an integer, a list or a tuple of the supplementary individuals
 
-    ind_weights : an optional individuals weights (by default, a list of 1/(number of individuals) for uniform weights), the weights 
-                    are given only for the active individuals
+    ind_weights : an optional individuals weights (by default, a list of 1/(number of individuals) for uniform weights), the weights are given only for the active individuals
     
-    var_weights_mfa : an optional quantitatives variables weights (by default, a list of 1 for uniform weights), the weights
-                        are given only for active quantitatives variables
+    var_weights_mfa : an optional quantitatives variables weights (by default, a list of 1 for uniform weights), the weights are given only for active quantitatives variables
     
     Parallelize : bool, default = False. Adding multi-core methods to PandasObject.
 
