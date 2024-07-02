@@ -27,20 +27,20 @@ from .get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
 from .fviz_mca import fviz_mca_ind, fviz_mca_mod, fviz_mca_var, fviz_mca_biplot, fviz_mca
 
 # Specific MCA
-from .specificmca import SpecificMCA
+from .specificmca import SpecificMCA, predictSpecificMCA, supvarSpecificMCA
 
 # Factor Analysis of Mixed Data (FAMD)
-from .famd import FAMD
+from .famd import FAMD, predictFAMD, supvarFAMD
 from .get_famd import get_famd_ind, get_famd_var, get_famd, summaryFAMD
 from .fviz_famd import fviz_famd_ind, fviz_famd_col, fviz_famd_mod, fviz_famd_var, fviz_famd
 
 # Principal Components Analysis of Mixed Data (PCAMIX)
-from .pcamix import PCAMIX
+from .pcamix import PCAMIX, predictPCAMIX, supvarPCAMIX
 from .get_pcamix import get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX
 from .fviz_pcamix import fviz_pcamix_ind, fviz_pcamix_col, fviz_pcamix_mod, fviz_pcamix_var, fviz_pcamix
 
 # Mixed Principal Components Analysis (MPCA)
-from .mpca import MPCA
+from .mpca import MPCA, predictMPCA, supvarMPCA
 from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
 from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_var, fviz_mpca
 
@@ -113,7 +113,7 @@ from .datasets import load_children, load_housetasks, load_women_work, load_femm
 # MCA datasets
 from .datasets import load_tea, load_poison, load_races_canines, load_mushroom, load_music
 # FAMD datasets
-from .datasets import load_autos2, load_tennis
+from .datasets import load_gironde, load_autos2, load_tennis
 # MPCA dataset
 from .datasets import load_cars
 # MFA datasets

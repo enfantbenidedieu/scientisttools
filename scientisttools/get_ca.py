@@ -201,7 +201,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
 
     `nb_element` : int, default = 10. Number of element
 
-    `ncp` : int, default = 3. Number of componennts
+    `ncp` : int, default = 3. Number of components
 
     `to_markdown` : Print DataFrame in Markdown-friendly format.
 

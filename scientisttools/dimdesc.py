@@ -5,6 +5,9 @@ import scipy as sp
 from .eta2 import eta2
 import statsmodels.formula.api as smf
 
+from .splitmix import splitmix
+from .recodecont import recodecont
+
 
 def dimdesc(self,axis=None,proba=0.05):
     """
@@ -15,25 +18,31 @@ def dimdesc(self,axis=None,proba=0.05):
     -----------
     This function is designed to point out the variables and the categories that are the most characteristic according to each dimension obtained by a Factor Analysis.
 
+    Usage
+    -----
+    ```
+    >>> dimdesc(self,axis=None,proba=0.05)
+    ```
+
     Parameters
     ----------
-    self : an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, MFA, MFAQUAL, MFAMIX
+    `self` : an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MPCA, MFA, MFAQUAL, MFAMIX
 
-    axis : int or list. default axis= 0
+    `axis` : an integer or a list/tuple specifying the axis (by default = None)
 
-    proba : the significance threshold considered to characterized the dimension (by default 0.05)
+    `axis` : the significance threshold considered to characterized the dimension (by default 0.05)
 
-    Return
-    ------
-    Returns a dictionary including
+    Returns
+    -------
+    dictionary of dataframes including :
 
-    quanti	: the description of the dimensions by the quantitative variables. The variables are sorted.
+    `quanti` :  the description of the dimensions by the quantitative variables. The variables are sorted.
     
-    quali	: the description of the dimensions by the categorical variables
+    `quali`	: the description of the dimensions by the categorical variables
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     References
     ----------
@@ -64,8 +73,11 @@ def dimdesc(self,axis=None,proba=0.05):
 
         Author(s)
         ---------
-        Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+        Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
         """
+        # Fill NA with mean
+        data = recodecont(data)["Xcod"]
+
         # For continuous variables
         value = pd.DataFrame(index=data.columns,columns=["correlation","pvalue"]).astype("float")
         for col in data.columns:
@@ -100,7 +112,7 @@ def dimdesc(self,axis=None,proba=0.05):
 
         Author(s)
         ---------
-        Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+        Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
         """
         # Correlation ratio
         value = pd.DataFrame(columns=['Sum. Intra','Sum. Inter','Eta2','F-stats','pvalue'])
@@ -216,7 +228,7 @@ def dimdesc(self,axis=None,proba=0.05):
                 if quanti.shape[0]!=0:
                     res["quanti"] = quanti
             corrdim[idx] = res
-    elif self.model_ in ["famd","mpca"]:
+    elif self.model_ in ["famd","pcamix","mpca"]:
         # Extract row coord
         ind_coord = self.ind_["coord"]
         # Select axis
@@ -224,9 +236,25 @@ def dimdesc(self,axis=None,proba=0.05):
             ind_coord = ind_coord.iloc[:,axis]
             if isinstance(ind_coord,pd.Series):
                 ind_coord = ind_coord.to_frame()
+            
+        # Extract active data
+        X = self.call_["X"]
+        # Split data
+        X_quanti = splitmix(X)["quanti"]
+        X_quali = splitmix(X)["quali"]
+
+        # Create quanti dataset
+        if X_quanti is None:
+            quanti_data = pd.DataFrame().astype("float")
+        else:
+            quanti_data = X_quanti
         
-        # Select continuous active data
-        quanti_data = self.call_["X"][self.call_["quanti"]]
+        # Create quali dataset
+        if X_quali is None:
+            quali_data = pd.DataFrame().astype("object")
+        else:
+            quali_data = X_quali
+
         # Add supplementary continuous variables
         if self.quanti_sup is not None:
             X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
@@ -234,8 +262,6 @@ def dimdesc(self,axis=None,proba=0.05):
                 X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
             quanti_data = pd.concat([quanti_data,X_quanti_sup],axis=1)
 
-        # Select categorical active variables
-        quali_data = self.call_["X"][self.call_["quali"]]
         # Add supplementary categorical variables
         if self.quali_sup is not None:
             X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
@@ -247,16 +273,18 @@ def dimdesc(self,axis=None,proba=0.05):
         corrdim = {}
         for idx in ind_coord.columns:
             res =  {}
-            quanti = contdesc(data=quanti_data,coord=ind_coord[idx],proba=proba)
-            quali, category = catdesc(data=quali_data,coord=ind_coord[idx],proba=proba)
+            if quanti_data.shape[1] > 0:
+                quanti = contdesc(data=quanti_data,coord=ind_coord[idx],proba=proba)
+                if quanti.shape[0] != 0:
+                    res["quanti"] = quanti
+            
+            if quali_data.shape[1] > 0:
+                quali, category = catdesc(data=quali_data,coord=ind_coord[idx],proba=proba)
+                if quali.shape[0] != 0:
+                    res["quali"] = quali
+                if category.shape[0] != 0:
+                    res["category"] = category
 
-            if quanti.shape[0] != 0:
-                res["quanti"] = quanti
-            if quali.shape[0] != 0:
-                res["quali"] = quali
-            if category.shape[0] != 0:
-                res["category"] = category
-              
             corrdim[idx] = res
     elif self.model_ == "mfa":
         # Select data

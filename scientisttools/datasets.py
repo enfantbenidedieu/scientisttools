@@ -10,7 +10,99 @@ import pathlib
 
 DATASETS_DIR = pathlib.Path(__file__).parent / "datasets"
 
-############################################################## Principal Components Analysis ############################
+def load_cars():
+    """
+    Cars
+    ----
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_cars
+    >>> cars = load_cars()
+    ```
+
+    Format
+    ------
+    a data frame with 27 individuals and 9 variables
+
+    Examples
+    --------
+    ```python
+    >>> # Load cars dataset
+    >>> from scientisttools import load_cars
+    >>> cars = load_cars() 
+    >>> from scientisttools import MPCA
+    >>> res_mpca = MPCA()
+    >>> res_mpca.fit(cars)
+    ```
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    """
+    data = pd.read_csv(DATASETS_DIR/'acpm_cars.txt', delimiter = " ",header=0,index_col=0)
+    return data
+
+def load_autos():
+    """
+    Autos 2005 - Données sur 40 voitures
+    -------------------------------------
+
+    Usage
+    -----
+    > from scientisttools import load_autos
+    > autos = load_autos()
+
+    Examples
+    --------
+    > # Load autos dataset
+    > from scientisttools import load_autos
+    > autos = load_autos()
+    >
+    > # Example of PCA
+    > res_pca = PCA(quanti_sup=[10,11],quali_sup = [12,13,14])
+    > res_pca.fit(autos)
+    >
+    > # Example of FAMD
+    > res_afdm = FAMD(quanti_sup=[10,11],quali_sup=14,parallelize=False)
+    > res_afdm.fit(autos)
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    """
+    data = pd.read_excel(DATASETS_DIR/"autos2005.xls",header=0,index_col=0)
+    data.name = "autos2005"
+    return data
+
+def load_autos2():
+    """
+    FAMD Data - Données sur 45 voitures
+    -----------------------------------
+
+    Usage
+    -----
+    > from scientisttools import load_autos2005
+    > auto2 = laod_autos2()
+
+    Examples
+    --------
+    > # Load dataset
+    > from scientisttools import load_autos2
+    > autos2 = load_autos2()
+    > 
+    > from scientisttools import FAMD
+    > res_famd = FAMD(ind_sup=list(range(38,autos2.shape[0])),quanti_sup=[12,13,14],quali_sup=15)
+    > res_famd.fit(autos2)
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    """
+    data = pd.read_excel(DATASETS_DIR/"autos2005_afdm.xlsx",header=0,index_col=0)
+    data.name = "autos_2005"
+    return data
 
 def load_cars2006(which="actif"):
     """
@@ -100,7 +192,7 @@ def load_decathlon():
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     data = pyreadr.read_r(DATASETS_DIR/"decathlon.rda")["decathlon"]
     data.name = "decathlon"
@@ -140,42 +232,10 @@ def load_decathlon2():
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     data = pyreadr.read_r(DATASETS_DIR/"decathlon2.rda")["decathlon2"]
     data.name = "decathlon2"
-    return data
-
-def load_autos():
-    """
-    Autos 2005 - Données sur 40 voitures
-    -------------------------------------
-
-    Usage
-    -----
-    > from scientisttools import load_autos
-    > autos = load_autos()
-
-    Examples
-    --------
-    > # Load autos dataset
-    > from scientisttools import load_autos
-    > autos = load_autos()
-    >
-    > # Example of PCA
-    > res_pca = PCA(quanti_sup=[10,11],quali_sup = [12,13,14])
-    > res_pca.fit(autos)
-    >
-    > # Example of FAMD
-    > res_afdm = FAMD(quanti_sup=[10,11],quali_sup=14,parallelize=False)
-    > res_afdm.fit(autos)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pd.read_excel(DATASETS_DIR/"autos2005.xls",header=0,index_col=0)
-    data.name = "autos2005"
     return data
 
 def load_temperature():
@@ -186,22 +246,25 @@ def load_temperature():
 
     Usage
     -----
-    > from scientisttools import load_temperature
-    > temperature = load_temperature()
+    ```python
+    >>> from scientisttools import load_temperature
+    >>> temperature = load_temperature()
+    ```
 
     Examples
     --------
-    > # Load temperature dataset
-    > from scientisttools import load_temperature
-    > temperature = load_temperature()
-    > 
-    > from scientisttools import PCA
-    > res_pca = PCA(ind_sup=list(range(15,temperatuer.shape[0])),quanti_sup=list(range(12,16)),quali_sup=16)
-    > res_pca.fit(temperature)
+    ```python
+    >>> # Load temperature dataset
+    >>> from scientisttools import load_temperature
+    >>> temperature = load_temperature()
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(ind_sup=list(range(15,temperatuer.shape[0])),quanti_sup=list(range(12,16)),quali_sup=16)
+    >>> res_pca.fit(temperature)
+    ```
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     data = pd.read_excel(DATASETS_DIR/"temperature.xlsx",header=0,index_col=0)
     data.name = "temperature"
@@ -398,8 +461,6 @@ def load_children():
     data.name = "children"
     return data
 
-###################################### Multiple Correspondance Analysis #########################################
-
 def load_races_canines():
     """
     Races canines
@@ -569,7 +630,7 @@ def load_music():
     Examples
     --------
     > # Load music dataset
-    > from scientisttools import load_music
+    > from scientisttools import load_music, SpecificMCA
     > music = load_music()
     >
     > excl = {"FrenchPop" : "NA", "Rap" : "NA" , "Rock" : "NA", "Jazz" : "NA","Classical" : "NA"}
@@ -584,35 +645,32 @@ def load_music():
     data.name = "Music"
     return data
 
-################################## Factor Analysis of Mixed Data #####################################"
-
-def load_autos2():
+def load_gironde():
     """
-    FAMD Data - Données sur 45 voitures
-    -----------------------------------
+    gironde
+    -------
 
-    Usage
-    -----
-    > from scientisttools import load_autos2005
-    > auto2 = laod_autos2()
+    Description
+    -----------
+    a dataset with 542 individuals and 27 columns
 
     Examples
     --------
-    > # Load dataset
-    > from scientisttools import load_autos2
-    > autos2 = load_autos2()
-    > 
-    > from scientisttools import FAMD
-    > res_famd = FAMD(ind_sup=list(range(38,autos2.shape[0])),quanti_sup=[12,13,14],quali_sup=15)
-    > res_famd.fit(autos2)
+    ```python
+    >>> from scientisttools import load_gironde, PCAMIX
+    >>> gironde = load_gironde()
+    >>> res_pcamix = PCAMIX()
+    >>> res_pcamix.fit(gironde)
+    ```
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    data = pd.read_excel(DATASETS_DIR/"autos2005_afdm.xlsx",header=0,index_col=0)
-    data.name = "autos_2005"
-    return data
+    gironde = pyreadr.read_r(DATASETS_DIR/"gironde.rda")["gironde"]
+    return gironde
+
+
 
 def load_tennis():
     """
@@ -641,37 +699,7 @@ def load_tennis():
     data = pd.read_excel(DATASETS_DIR/"tennisplayers.xlsx",index_col=0)
     return data
 
-# MPCA datasets
-def load_cars():
-    """
-    Cars
-    ----
 
-    Usage
-    ----
-    > from scientisttools import load_cars
-    > cars = load_cars()
-
-    Format
-    ------
-    a data frame with 27 individuals and 9 variables
-
-    Examples
-    --------
-    > # Load cars dataset
-    > from scientisttools import load_cars
-    > cars = load_cars()
-    > 
-    > from scientisttools import MPCA
-    > res_mpca = MPCA()
-    > res_mpca.fit(cars)
-    
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pd.read_csv(DATASETS_DIR/'acpm_cars.txt', delimiter = " ",header=0,index_col=0)
-    return data
 
 ################################## Multiple Fcator Analysis (MFA) ########################################
 
@@ -778,6 +806,7 @@ def load_qtevie():
     """
     data = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
     return data
+
 
 ########################################## MFACT
 def load_mortality():
