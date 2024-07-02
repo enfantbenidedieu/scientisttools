@@ -12,6 +12,7 @@ from .pca import PCA
 from .revaluate_cat_variable import revaluate_cat_variable
 from .recodecont import recodecont
 from .recodevarfamd import recodevarfamd
+from .function_eta2 import function_eta2
 
 class FAMD(BaseEstimator,TransformerMixin):
     """
@@ -119,7 +120,7 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     See Also
     --------
-    get_famd_ind, get_famd_var, get_famd, summaryFAMD, dimdesc, predictFAMD, supvarFAMD, fviz_famd_ind
+    get_famd_ind, get_famd_var, get_famd, summaryFAMD, dimdesc, predictFAMD, supvarFAMD, fviz_famd_ind, fviz_famd_col, fviz_famd_mod, fviz_famd_var
 
     Examples
     --------
@@ -237,11 +238,11 @@ class FAMD(BaseEstimator,TransformerMixin):
         if self.quali_sup is not None:
             X = X.drop(columns=quali_sup_label)
         
-        # Drop supplementary quantitatives columns
+        # Drop supplementary quantitative columns
         if self.quanti_sup is not None:
             X = X.drop(columns=quanti_sup_label)
         
-        # Drop supplementary individuls
+        # Drop supplementary individuals
         if self.ind_sup is not None:
             # Extract supplementary individuals
             X_ind_sup = X.loc[ind_sup_label,:]
@@ -402,7 +403,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         
         #########################################################################################
         #Global PCA without supplementary elememnts
-        global_pca = PCA(standardize=False,n_components=int(max_components)).fit(Z)
+        global_pca = PCA(standardize=False,n_components=int(max_components),ind_weights=self.ind_weights).fit(Z)
 
         if n_cat > 0:
             D = pd.concat((Z,X_quali),axis=1)
@@ -472,7 +473,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             Z_ind_sup = pd.concat((Z,Z_ind_sup),axis=0)
 
             # Update PCA
-            global_pca = PCA(standardize=False,n_components=int(max_components),ind_sup=ind_sup).fit(Z_ind_sup)
+            global_pca = PCA(standardize=False,n_components=int(max_components),ind_weights=self.ind_weights,ind_sup=ind_sup).fit(Z_ind_sup)
             
             # Extract elements
             ind_sup_coord = global_pca.ind_sup_["coord"].iloc[:,:n_components]
@@ -513,7 +514,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             # Find supplementary quantitatives columns index
             index = [Z_quanti_sup.columns.tolist().index(x) for x in X_quanti_sup.columns]
             # Update PCA
-            global_pca = PCA(standardize=False,n_components=int(max_components),ind_sup=None,quanti_sup=index).fit(Z_quanti_sup)
+            global_pca = PCA(standardize=False,n_components=int(max_components),ind_weights=self.ind_weights,ind_sup=None,quanti_sup=index).fit(Z_quanti_sup)
             
             # Extract elements
             quanti_sup_coord = global_pca.quanti_sup_["coord"].iloc[:,:n_components]
@@ -595,7 +596,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             # Find supplementary quantitatives columns index
             index = [Z_quali_sup.columns.tolist().index(x) for x in X_quali_sup.columns]
             # Update PCA
-            global_pca = PCA(standardize=False,n_components=int(max_components),ind_sup=None,quali_sup=index).fit(Z_quali_sup)
+            global_pca = PCA(standardize=False,n_components=int(max_components),ind_weights=self.ind_weights,ind_sup=None,quali_sup=index).fit(Z_quali_sup)
             
             # Extract elements
             quali_sup_coord = global_pca.quali_sup_["coord"].iloc[:,:n_components]
@@ -679,7 +680,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         self.fit(X)
         return self.ind_["coord"]
     
-    def transform(self,X,y=None):
+    def transform(self,X):
         """
         Apply the dimensionality reduction on X
         ---------------------------------------
@@ -719,45 +720,359 @@ class FAMD(BaseEstimator,TransformerMixin):
         n_cont2 = rec2["k1"]
         n_cat2 = rec2["k2"]
 
-        ####
+        # Extract elements
         rec = self.call_["rec"]
         n_components = self.call_["n_components"]
         n_cont = rec["k1"]
         n_cat = rec["k2"]
         dummies = rec["dummies"]
 
-        # Initialize coord
-        #coord = pd.DataFrame(np.zeros((X.shape[0],n_components)),index=X.index,columns=["Dim."+str(x+1) for x in range(n_components)])
-
-        Z = pd.DataFrame().astype("float")
+        D = pd.DataFrame().astype("float")
         if n_cont2 > 0:
             if n_cont != n_cont2:
                 raise TypeError("The number of continuous columns must be the same")
-            
-            # Standardscaler numerical variable
-            Z1 = (X_quanti - self.call_["means"].values[:n_cont].reshape(1,-1))/self.call_["std"].values[:n_cont].reshape(1,-1)
             # Concatenate
-            Z = pd.concat((Z,Z1),axis=1)
+            D = pd.concat((D,X_quanti),axis=1)
         
         if n_cat2 > 0:
             if n_cat != n_cat2:
                 raise TypeError("The number of qualitatives columns must be the same")
             X_quali = revaluate_cat_variable(X_quali)
         
-            # Standardscaler categorical Variable
-            Y = np.zeros((X.shape[0],dummies.shape[1]))
-            for i in np.arange(0,X.shape[0],1):
-                values = [str(X_quali.iloc[i,k]) for k in np.arange(0,rec["quali"].shape[1])]
+            # dummies encoding
+            Y = pd.DataFrame(np.zeros((X.shape[0],dummies.shape[1])),index=X.index,columns=dummies.columns)
+            for i in np.arange(X.shape[0]):
+                values = [str(X_quali.iloc[i,k]) for k in np.arange(rec["quali"].shape[1])]
                 for j in np.arange(dummies.shape[1]):
                     if dummies.columns[j] in values:
-                        Y[i,j] = 1
-            Y = pd.DataFrame(Y,index=X.index,columns=dummies.columns)
-            # New normalized data
-            Z2 = (Y - self.call_["means"].values[n_cont:].reshape(1,-1))/self.call_["std"].values[n_cont:].reshape(1,-1)
+                        Y.iloc[i,j] = 1
+            
             # Concatenate
-            Z = pd.concat((Z,Z2),axis=1)
+            D = pd.concat((D,Y),axis=1)
+        
+        # Standardize the data
+        Z = (D - self.call_["means"].values.reshape(1,-1))/self.call_["std"].values.reshape(1,-1)
         
         # Supplementary individuals coordinates
         coord = Z.dot(self.svd_["V"][:,:n_components])
         coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
         return  coord
+
+def predictFAMD(self,X=None):
+    """
+    Predict projection for new individuals with Factor Analysis of Mixed Data (FAMD)
+    --------------------------------------------------------------------------------
+
+    Description
+    -----------
+    Performs the coordinates, squared cosinus and square distance to origin of new individuals with Factor Analysis of Mixed Data (FAMD)
+
+    Usage
+    -----
+    ```python
+    >>> predictFAMD(self,X=None)
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class FAMD
+
+    `X` : pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
+    
+    Return
+    ------
+    dictionary of dataframes containing all the results for the new individuals including:
+    
+    `coord` : factor coordinates of the new individuals
+
+    `cos2` : square cosinus of the new individuals
+
+    `dist` : square distance to origin for new individuals
+    
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> from scientisttools import FAMD, predictFAMD, load_gironde
+    >>> gironde = load_gironde()
+    >>> res_famd = FAMD().fit(gironde)
+    >>> predict = predictFAMD(res_famd,X=gironde)
+    ```
+    """
+    # Check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise TypeError("'self' must be an object of class FAMD")
+    
+    # check if X is an instance of polars dataframe
+    if isinstance(X,pl.DataFrame):
+        X = X.to_pandas()
+
+    # check if X is a pandas DataFrame
+    if not isinstance(X,pd.DataFrame):
+        raise TypeError(
+        f"{type(X)} is not supported. Please convert to a DataFrame with "
+        "pd.DataFrame. For more information see: "
+        "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    
+    # Set index name as None
+    X.index.name = None
+
+    # set parallelize
+    if self.parallelize:
+        n_workers = -1
+    else:
+        n_workers = 1
+
+    # Recode
+    rec2 = recodevarfamd(X=X)
+    X_quanti = rec2["quanti"]
+    X_quali = rec2["quali"]
+    n_cont2 = rec2["k1"]
+    n_cat2 = rec2["k2"]
+
+    ####
+    rec = self.call_["rec"]
+    n_components = self.call_["n_components"]
+    n_cont = rec["k1"]
+    n_cat = rec["k2"]
+    dummies = rec["dummies"]
+
+    D = pd.DataFrame().astype("float")
+    if n_cont2 > 0:
+        if n_cont != n_cont2:
+            raise TypeError("The number of continuous columns must be the same")
+        # Concatenate
+        D = pd.concat((D,X_quanti),axis=1)
+    
+    if n_cat2 > 0:
+        if n_cat != n_cat2:
+            raise TypeError("The number of qualitatives columns must be the same")
+        X_quali = revaluate_cat_variable(X_quali)
+    
+        # Standardscaler categorical Variable
+        Y = pd.DataFrame(np.zeros((X.shape[0],dummies.shape[1])),index=X.index,columns=dummies.columns)
+        for i in np.arange(X.shape[0]):
+            values = [str(X_quali.iloc[i,k]) for k in np.arange(rec["quali"].shape[1])]
+            for j in np.arange(dummies.shape[1]):
+                if dummies.columns[j] in values:
+                    Y.iloc[i,j] = 1
+        
+        # Concatenate
+        D = pd.concat((D,Y),axis=1)
+    
+    # Standardize the data
+    Z = (D - self.call_["means"].values.reshape(1,-1))/self.call_["std"].values.reshape(1,-1)
+    
+    # Coordinates
+    coord = Z.dot(self.svd_["V"][:,:n_components])
+    coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+
+    #  New data square distance to origin
+    dist2 = mapply(Z,lambda  x : (x**2),axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+    dist2.name = "Sq. Dist."
+
+    # New data square cosinus
+    cos2 = mapply(coord,lambda x : (x**2)/dist2,axis=0,progressbar=False,n_workers=n_workers)
+
+    # Store all informations
+    res = {"coord" : coord, "cos2" : cos2, "dist" : dist2}
+    return res
+
+def supvarFAMD(self,X_quanti_sup=None, X_quali_sup=None):
+    """
+    Supplementary variables in Factor Analysis of Mixed Data (FAMD)
+    ---------------------------------------------------------------
+
+    Description
+    -----------
+    Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables with Factor Analysis of Mixed Data (FAMD)
+
+    Usage
+    -----
+    ```python
+    >>> supvarFAMD(self,X_quanti_sup=None, X_quali_sup=None)
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class FAMD
+
+    `X_quanti_sup` : pandas/polars dataframe of supplementary quantitatives variables (default = None)
+
+    `X_quali_sup` : pandas/polars dataframe of supplementary qualitatives variables (default = None)
+
+    Returns
+    -------
+    dictionary of dictionary containing the results for supplementary variables including : 
+
+    `quanti` : dictionary containing the results of the supplementary quantitatives variables including :
+        * coord : factor coordinates of the supplementary quantitatives variables
+        * cos2 : square cosinus of the supplementary quantitatives variables
+    
+    `quali` : dictionary containing the results of the supplementary qualitatives/categories variables including :
+        * coord : factor coordinates of the supplementary categories
+        * cos2 : square cosinus of the supplementary categories
+        * vtest : value-test of the supplementary categories
+        * dist : square distance to origin of the supplementary categories
+        * eta2 : square correlation ratio of the supplementary qualitatives variables
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> from scientisttools import FAMD, supvarFAMD, load_gironde, splitmix
+    >>> gironde = load_gironde()
+    >>> res_famd = FAMD().fit(gironde)
+    >>> X_quant = splitmix(gironde)["quanti"]
+    >>> X_qual = splitmix(gironde)["quali"]
+    >>> supvar_famd = supvaFAMD(res_famd, X_quali_sup=X_qual, X_quanti_sup=X_quant)
+    ```
+    """
+    # Check if self is and object of class FAMD
+    if self.model_ != "famd":
+        raise TypeError("'self' must be an object of class FAMD")
+    
+    # set parallelize
+    if self.parallelize:
+        n_workers = -1
+    else:
+        n_workers = 1
+    
+    # Extract elements
+    ind_weights = self.call_["ind_weights"].values
+    n_components = self.call_["n_components"]
+
+    ########################################################################################################################
+    #                                          For supplementary quantitatives variables
+    #########################################################################################################################
+    # Supplementary quantitatives variables statistics
+    if X_quanti_sup is not None:
+        # check if X_quanti_sup is an instance of polars dataframe
+        if isinstance(X_quanti_sup,pl.DataFrame):
+            X_quanti_sup = X_quanti_sup.to_pandas()
+        
+        # If pandas series, transform to pandas dataframe
+        if isinstance(X_quanti_sup,pd.Series):
+            X_quanti_sup = X_quanti_sup.to_frame()
+        
+        # Check if X_quanti_sup is an instance of pd.DataFrame class
+        if not isinstance(X_quanti_sup,pd.DataFrame):
+            raise TypeError(
+            f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Transform to float
+        X_quanti_sup = X_quanti_sup.astype("float")
+
+        # Set index name as None
+        X_quanti_sup.index.name = None
+
+        # Recode variables
+        X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
+
+        # Compute weighted average and standard deviation
+        d1 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
+
+        # Standardization
+        Z_quanti_sup = (X_quanti_sup - d1.mean.reshape(1,-1))/d1.std.reshape(1,-1)
+
+        # Coordinates
+        quanti_coord = mapply(Z_quanti_sup,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers).T.dot(self.svd_["U"][:,:n_components])
+        quanti_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+
+        # Square distance to origin
+        quanti_sup_cor = mapply(Z_quanti_sup,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
+        quanti_dist2 = np.dot(np.ones(X_quanti_sup.shape[0]),quanti_sup_cor)
+
+        # Square cosinus
+        quanti_cos2 = mapply(quanti_coord,lambda x : (x**2)/np.sqrt(quanti_dist2),axis=0,progressbar=False,n_workers=n_workers)       
+
+        # Store supplementary quantitatives informations
+        quanti_sup =  {"coord":quanti_coord, "cor" : quanti_coord, "cos2" : quanti_cos2}
+    else:
+        quanti_sup = None
+    
+    ###########################################################################################################################
+    #                                                   For supplementary qualitatives variables
+    ###########################################################################################################################
+    # Supplementary qualitatives statistics
+    if X_quali_sup is not None:
+        # check if X_quali_sup is an instance of polars dataframe
+        if isinstance(X_quali_sup,pl.DataFrame):
+            X_quali_sup = X_quali_sup.to_pandas()
+        
+        # If pandas series, transform to pandas dataframe
+        if isinstance(X_quali_sup,pd.Series):
+            X_quali_sup = X_quali_sup.to_frame()
+        
+        # Check if X_quali_sup is an instance of pd.DataFrame class
+        if not isinstance(X_quali_sup,pd.DataFrame):
+            raise TypeError(
+            f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
+            "pd.DataFrame. For more information see: "
+            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set index name as None
+        X_quali_sup.index.name = None
+        
+        # Transform to object
+        X_quali_sup = X_quali_sup.astype("object")
+
+        # Check if two columns have the same categories
+        X_quali_sup = revaluate_cat_variable(X_quali_sup)
+        n_rows = X_quali_sup.shape[0]
+
+        # Variables weights
+        var_weights = np.ones(self.call_["Z"].shape[1])
+        means = self.call_["Z"].mean(axis=0).values
+        std = np.ones(self.call_["Z"].shape[1])
+
+        # Square correlation ratio
+        quali_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=self.ind_["coord"].values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
+
+        # Barycenter
+        barycentre = pd.DataFrame().astype("float")
+        n_k = pd.Series().astype("float")
+        for col in X_quali_sup.columns:
+            vsQual = X_quali_sup[col]
+            modalite, counts = np.unique(vsQual, return_counts=True)
+            n_k = pd.concat([n_k,pd.Series(counts,index=modalite)],axis=0)
+            bary = pd.DataFrame(index=modalite,columns=self.call_["Z"].columns)
+            for mod in modalite:
+                idx = [elt for elt, cat in enumerate(vsQual) if  cat == mod]
+                bary.loc[mod,:] = np.average(self.call_["Z"].iloc[idx,:],axis=0,weights=ind_weights[idx])
+            barycentre = pd.concat((barycentre,bary),axis=0)
+        
+        # Standardization
+        bary = (barycentre - means.reshape(1,-1))/std.reshape(1,-1)
+
+        # Square distance
+        quali_dist2  = mapply(bary, lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+        quali_dist2.name = "Sq. Dist."
+
+        # Coordinates
+        quali_coord = mapply(bary, lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
+        quali_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+
+        # Square cosine
+        quali_cos2 = mapply(quali_coord, lambda x : (x**2)/quali_dist2,axis=0,progressbar=False,n_workers=n_workers)
+        
+        # Value - test
+        quali_vtest = mapply(quali_coord,lambda x : x/self.svd_["vs"][:n_components],axis=1,progressbar=False,n_workers=n_workers)
+        quali_vtest = pd.concat(((quali_vtest.loc[k,:]/np.sqrt((n_rows-n_k[k])/((n_rows-1)*n_k[k]))).to_frame().T for k in n_k.index),axis=0)
+
+        # Store all informations
+        quali_sup = {"coord" : quali_coord,"cos2" : quali_cos2,"vtest" : quali_vtest,"dist" : quali_dist2,"eta2" : quali_eta2}
+    else:
+        quali_sup = None
+    
+    # Store all informations
+    res = {"quanti" : quanti_sup, "quali" : quali_sup}
+    return res

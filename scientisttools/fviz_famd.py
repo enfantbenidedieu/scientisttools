@@ -24,7 +24,7 @@ def fviz_famd_ind(self,
                  add_grid =True,
                  color_quali_var = "blue",
                  marker_quali_var = "v",
-                 ind_sup=True,
+                 ind_sup = True,
                  color_sup = "darkblue",
                  marker_sup = "^",
                  quali_sup = True,
@@ -49,12 +49,12 @@ def fviz_famd_ind(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Visualize FAMD/PCAMIX/MPCA - Graph of individuals
-    -------------------------------------------------
+    Visualize Factor Analysis of Mixed Data - Graph of individuals
+    --------------------------------------------------------------
 
     Description
     -----------
-    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_ind() provides plotnine-based elegant visualization of FAMD/PCAMIX/MPCA outputs for individuals.
+    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_ind() provides plotnine-based elegant visualization of FAMD outputs for individuals.
 
     Usage
     -----
@@ -104,6 +104,8 @@ def fviz_famd_ind(self,
 
     Parameters
     ----------
+    `self` : an object of class FAMD
+
     see fviz_pca_ind
 
     Returns
@@ -126,9 +128,9 @@ def fviz_famd_ind(self,
     >>> print(p)
     ```
     """
-    # Check if self is an object of class FAMD/PCAMIX/MPCA   
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
+    # Check if self is an object of class FAMD  
+    if self.model_ != "famd":
+        raise TypeError("'self' must be an object of class FAMD")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -142,14 +144,14 @@ def fviz_famd_ind(self,
     # Add Categorical supplementary Variables
     coord = pd.concat([coord, self.call_["X"]],axis=1)
     
-      ################ Add supplementary quantitatives columns
+    # Add supplementary quantitatives columns
     if self.quanti_sup is not None:
         X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
         if self.ind_sup is not None:
             X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
         coord = pd.concat([coord,X_quanti_sup],axis=1)
     
-    ################ Add supplementary qualitatives columns
+    # Add supplementary qualitatives columns
     if self.quali_sup is not None:
         X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
         if self.ind_sup is not None:
@@ -215,12 +217,10 @@ def fviz_famd_ind(self,
             if legend_title is None:
                 legend_title = "Cluster"
             if "point" in geom:
-                p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
-                        pn.guides(color=pn.guide_legend(title=legend_title)))
+                p = p + pn.geom_point(pn.aes(color=c),size=point_size)+pn.guides(color=pn.guide_legend(title=legend_title))
             if "text" in geom:
                 if repel :
-                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         else:
@@ -239,8 +239,7 @@ def fviz_famd_ind(self,
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size)
         if "text":
             if repel:
-                p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha)
         
@@ -260,7 +259,7 @@ def fviz_famd_ind(self,
                                     color=color_quali_var,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
                 p = p + text_label(text_type,data=quali_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_coord.index.tolist()),
-                                color = color_quali_var,size=text_size,va=va,ha=ha)
+                                   color = color_quali_var,size=text_size,va=va,ha=ha)
 
     # Add supplementary individuals informations
     if ind_sup:
@@ -272,8 +271,7 @@ def fviz_famd_ind(self,
             if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
-                                        color=color_sup,size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
                                         color = color_sup,size=text_size,va=va,ha=ha)
@@ -300,7 +298,7 @@ def fviz_famd_ind(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Individuals factor map - "+self.model_.upper()
+        title = "Individuals factor map - FAMD"
     
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
@@ -355,12 +353,12 @@ def fviz_famd_col(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Visualize FAMD/PCAMIX/MPCA - Graph of quantitative variables
-    ------------------------------------------------------------
+    Visualize Factor Analysis of Mixed Data - Graph of quantitative variables
+    -------------------------------------------------------------------------
 
     Description
     -----------
-    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_col() provides plotnine-based elegant visualization of FAMD/PCAMIX/MPCA outputs for quantitative variables.
+    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_col() provides plotnine-based elegant visualization of FAMD outputs for quantitative variables.
 
     Usage
     -----
@@ -399,6 +397,8 @@ def fviz_famd_col(self,
 
     Parameters
     ----------
+    `self` : an object of class FAMD
+
     see fviz_pca_var
 
     Returns
@@ -421,9 +421,9 @@ def fviz_famd_col(self,
     >>> print(p)
     ```
     """
-    # Check if self is an object of class FAMD/PCAMIX:MPCA
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
+    # Check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise TypeError("'self' must be an object of class FAMD")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -473,8 +473,7 @@ def fviz_famd_col(self,
     if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         if "arrow" in geom:
-            p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
-                                     arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+ 
+            p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+ 
                     pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
         if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
@@ -483,15 +482,13 @@ def fviz_famd_col(self,
         if legend_title is None:
             legend_title = "Cluster"
         if "arrow" in geom:
-            p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
-                                    arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
+            p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
                     pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
         if "arrow" in geom:
-            p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
-                                    arrow = pn.arrow(angle=arrow_angle,length=arrow_length),color=color)
+            p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), arrow = pn.arrow(angle=arrow_angle,length=arrow_length),color=color)
         if "text" in geom:
             p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     
@@ -516,7 +513,7 @@ def fviz_famd_col(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Continuous variables factor map - "+self.model_.upper()
+        title = "Continuous variables factor map - FAMD"
     
     p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+ pn.labs(title=title,x=x_label,y=y_label)
 
@@ -532,7 +529,6 @@ def fviz_famd_col(self,
 
     return p
 
-# Graph for categories
 def fviz_famd_mod(self,
                  axis=[0,1],
                  x_lim=None,
@@ -566,23 +562,23 @@ def fviz_famd_mod(self,
                  ggtheme=pn.theme_minimal()) -> pn:
     
     """
-    Visualize FAMD/PCAMIX/MPCA - Graph of categories
-    ------------------------------------------------
+    Visualize Factor Analysis of Mixed Data - Graph of categories
+    -------------------------------------------------------------
 
     Description
     -----------
-    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_mod() provides plotnine-based elegant visualization of FAMD/PCAMIX/MPCA outputs for categories.
+    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_mod() provides plotnine-based elegant visualization of FAMD outputs for categories.
 
     Usage
     -----
     ```python
     >>> fviz_famd_mod(self,
-                        axis=[0,1],
-                        x_lim=None,
-                        y_lim=None,
+                        axis = [0,1],
+                        x_lim = None,
+                        y_lim = None,
                         x_label = None,
                         y_label = None,
-                        title =None,
+                        title = None,
                         color ="black",
                         geom = ["point","text"],
                         gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
@@ -590,27 +586,29 @@ def fviz_famd_mod(self,
                         text_size = 8,
                         text_type = "text",
                         marker = "o",
-                        legend_title=None,
-                        add_grid =True,
+                        legend_title = None,
+                        add_grid = True,
                         quali_sup = True,
                         color_sup = "blue",
                         marker_sup = "^",
                         add_hline = True,
-                        add_vline=True,
-                        ha="center",
-                        va="center",
-                        hline_color="black",
-                        hline_style="dashed",
-                        vline_color="black",
-                        vline_style ="dashed",
+                        add_vline = True,
+                        ha = "center",
+                        va = "center",
+                        hline_color = "black",
+                        hline_style = "dashed",
+                        vline_color = "black",
+                        vline_style = "dashed",
                         lim_cos2 = None,
                         lim_contrib = None,
-                        repel=False,
-                        ggtheme=pn.theme_minimal())
+                        repel = False,
+                        ggtheme = pn.theme_minimal())
     ```
 
     Parameters
     ----------
+    `self` : an object of class FAMD
+
     see fviz_pca_ind
 
     Returns
@@ -633,9 +631,9 @@ def fviz_famd_mod(self,
     >>> print(p)
     ```
     """
-    # Check if self is an object of class FAMD, PCAMIX, MPCA
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
+    # Check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise TypeError("'self' must be an object of class FAMD")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -691,8 +689,7 @@ def fviz_famd_mod(self,
                     pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
         if "text" in geom:
             if repel :
-                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     elif hasattr(color, "labels_"):
@@ -700,12 +697,10 @@ def fviz_famd_mod(self,
         if legend_title is None:
             legend_title = "Cluster"
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
-                        pn.guides(color=pn.guide_legend(title=legend_title)))
+            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :
-                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
@@ -713,8 +708,7 @@ def fviz_famd_mod(self,
             p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
         if "text" in geom:
             if repel :
-                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
         
@@ -730,8 +724,7 @@ def fviz_famd_mod(self,
                     p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
-                    p = p + text_label(text_type,data=quali_sup_coord,
-                                       mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
+                    p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
                                        color=color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
@@ -742,7 +735,7 @@ def fviz_famd_mod(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Qualitatives variables categories - "+self.model_.upper()
+        title = "Qualitatives variables categories - FAMD"
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
     if y_lim is not None:
@@ -764,9 +757,9 @@ def fviz_famd_mod(self,
     
 def fviz_famd_var(self,
                  axis=[0,1],
-                 x_lim=None,
-                 y_lim=None,
-                 title=None,
+                 x_lim = None,
+                 y_lim = None,
+                 title = None,
                  x_label = None,
                  y_label = None,
                  geom = ["point","text"],
@@ -795,12 +788,12 @@ def fviz_famd_var(self,
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Visualize FAMD/PCAMIX/MPCA - Graph of variables
-    -----------------------------------------------
+    Visualize Factor Analysis of Mixed Data - Graph of variables
+    ------------------------------------------------------------
 
     Description
     -----------
-    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_var() provides plotnine-based elegant visualization of FAMD/PCAMIX/MPCA outputs for both quantitatives and qualitatives variables.
+    Factor analysis of mixed data (FAMD) is used to analyze a data set containing both quantitative and qualitative variables. fviz_famd_var() provides plotnine-based elegant visualization of FAMD outputs for both quantitatives and qualitatives variables.
 
     Usage
     -----
@@ -841,6 +834,8 @@ def fviz_famd_var(self,
 
     Parameters
     ----------
+    `self` : an object of class FAMD
+
     see fviz_pca_ind
 
     Returns
@@ -863,9 +858,9 @@ def fviz_famd_var(self,
     >>> print(p)
     ```
     """
-    # Check if self is an object of class FAMD, PCAMIX or MPCA
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
+    # Check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise TypeError("'self' must be an object of class FAMD")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -884,8 +879,7 @@ def fviz_famd_var(self,
     
     if "text" in geom:
         if repel :
-            p = p + text_label(text_type,color=color_quanti,size=text_size,va=va,ha=ha,
-                                adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+            p = p + text_label(text_type,color=color_quanti,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
         else:
             p = p + text_label(text_type,color=color_quanti,size=text_size,va=va,ha=ha)
     
@@ -896,12 +890,10 @@ def fviz_famd_var(self,
     if "text" in geom:
         if repel:
             p = p + text_label(text_type,data=quali_var_eta2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_eta2.index.tolist()),
-                                color=color_quali,size=text_size,va=va,ha=ha,
-                                adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                               color=color_quali,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
         else:
-            p = p + text_label(text_type,data=quali_var_eta2,
-                                mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_eta2.index),
-                                color=color_quali,size=text_size,va=va,ha=ha)
+            p = p + text_label(text_type,data=quali_var_eta2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_eta2.index),
+                               color=color_quali,size=text_size,va=va,ha=ha)
     
     # Add supplementary continuous variables
     if add_quanti_sup:
@@ -912,13 +904,10 @@ def fviz_famd_var(self,
                                     color=color_quanti_sup,size=point_size,shape=marker_quanti_sup)
             if "text" in geom:
                 if repel:
-                    p = p + text_label(text_type,data=quanti_sup_cos2,
-                                       mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_sup_cos2.index),
-                                       color=color_quanti_sup,size=text_size,va=va,ha=ha,
-                                       adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                    p = p + text_label(text_type,data=quanti_sup_cos2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_sup_cos2.index),
+                                       color=color_quanti_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
                 else:
-                    p = p + text_label(text_type,data=quanti_sup_cos2,
-                                       mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_sup_cos2.index),
+                    p = p + text_label(text_type,data=quanti_sup_cos2,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_sup_cos2.index),
                                        color=color_quanti_sup,size=text_size,va=va,ha=ha)
     
     # Add supplementary categoricals variables
@@ -944,7 +933,7 @@ def fviz_famd_var(self,
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
 
     if title is None:
-        title = "Graphe of variables - "+self.model_.upper()
+        title = "Graphe of variables - FAMD"
     if x_lim is not None:
         p = p + pn.xlim(x_lim)
     if y_lim:
@@ -965,12 +954,12 @@ def fviz_famd_var(self,
 
 def fviz_famd(self,choice="ind",**kwargs) -> pn:
     """
-    Visualize FAMD/PCAMIX/MPCA
-    --------------------------
+    Visualize Factor Analysis of Mixed Data
+    ---------------------------------------
     
     Description
     -----------
-    Plot the graphs for Factor Analysis of Mixed Data (FAMD), Principal Component Analysis of Mixed variables (PCAMIX), Mixed Principal Component Analysis (MPCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
+    Plot the graphs for Factor Analysis of Mixed Data (FAMD) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
 
         * fviz_famd_ind() : Graph of individuals
         * fviz_famd_col() : Graph of quantitative variables (Correlation circle)
@@ -985,7 +974,7 @@ def fviz_famd(self,choice="ind",**kwargs) -> pn:
 
     Parameters
     ----------
-    `self` : an object of class FAMD, PCAMIX, MPCA
+    `self` : an object of class FAMD
 
     `choice` : the element to plot from the output. Possible values are :
         * "ind" for the individual graphs
@@ -1007,9 +996,9 @@ def fviz_famd(self,choice="ind",**kwargs) -> pn:
     --------
     see fviz_famd_ind, fviz_famd_col, fviz_famd_mod, fviz_famd_var
     """
-    # Check if self is an object of class FAMD, PCAMIX, MPCA
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise TypeError("'self' must be an object of class FAMD, PCAMIX, MPCA")
+    # Check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise TypeError("'self' must be an object of class FAMD")
     
     if choice not in ["ind","quanti_var","quali_var","var"]:
         raise ValueError("'choice' should be one of 'ind','quanti_var','quali_var', 'var'.")

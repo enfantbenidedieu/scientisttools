@@ -4,12 +4,12 @@ import pandas as pd
 
 def get_famd_ind(self) -> dict:
     """
-    Extract the results for individuals - FAMD/PCAMIX/MPCA
-    ------------------------------------------------------
+    Extract the results for individuals - FAMD
+    ------------------------------------------
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosinus and relative contributions) for the individuals from Factor Analysis of Mixed Data (FAMD), Principal Component Analysis of Mixed variables (PCAMIX) or Mixed Principal Component Analysis (MPCA) outputs.
+    Extract all the results (coordinates, squared cosinus and relative contributions) for the individuals from Factor Analysis of Mixed Data (FAMD) outputs.
 
     Usage
     -----
@@ -19,7 +19,7 @@ def get_famd_ind(self) -> dict:
 
     Parameters
     ----------
-    `self` : an object of class FAMD, PCAMIX or MPCA
+    `self` : an object of class FAMD
 
     Returns
     -------
@@ -49,19 +49,19 @@ def get_famd_ind(self) -> dict:
     >>> ind = get_famd_ind(res_famd)
     ```
     """
-    # Check if self is an object of class FAMD, PCAMIX or MPCA
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise ValueError("'self' must be an object of class FAMD, PCAMIX or MPCA")
+    # Check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise ValueError("'self' must be an object of class FAMD")
     return self.ind_
     
 def get_famd_var(self, choice="var") -> dict:
     """
-    Extract the results for variables - FAMD/PCAMIX/MPCA
-    ----------------------------------------------------
+    Extract the results for variables - FAMD
+    ----------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosinus and relative contributions) for quantitative and qualitative variables from Factor Analysis of Mixed Data (FAMD), Principal Component Analysis of Mixed variables (PCAMIX) or Mixed Principal Component Analysis (MPCA) outputs.
+    Extract all the results (factor coordinates, squared cosinus and relative contributions) for quantitative and qualitative variables from Factor Analysis of Mixed Data (FAMD) outputs.
 
     Usage
     -----
@@ -71,7 +71,7 @@ def get_famd_var(self, choice="var") -> dict:
 
     Parameters
     ----------
-    `self` : an object of class FAMD, PCAMIX, MPCA
+    `self` : an object of class FAMD
 
     `choice` : the element to subset from the output. Possible values are :
         * "var" for active variables
@@ -108,9 +108,9 @@ def get_famd_var(self, choice="var") -> dict:
     >>> var = get_famd_var(res_famd, choice = "var")
     ```
     """
-    # Check if self is an object of class FAMD, PCAMIX or MPCA
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise ValueError("'self' must be an object of class FAMD, PCAMIX, MPCA")
+    # Check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise ValueError("'self' must be an object of class FAMD")
     
     if choice not in ["quanti_var","quali_var","var"]:
         raise ValueError("'choice' should be one of 'quanti_var', 'quali_var', 'var'")
@@ -132,12 +132,12 @@ def get_famd_var(self, choice="var") -> dict:
 
 def get_famd(self,choice = "ind")-> dict:
     """
-    Extract the results for individuals and variables - FAMD/PCAMIX/MPCA
-    --------------------------------------------------------------------
+    Extract the results for individuals and variables - FAMD
+    --------------------------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosine and relative contributions) for the individuals and variables from Factor Analysis of Mixed Data (FAMD), Principal Component Analysis of Mixed variables (PCAMIX) or Mixed Principal Component Analysis (MPCA) outputs.
+    Extract all the results (factor coordinates, squared cosine and relative contributions) for the individuals and variables from Factor Analysis of Mixed Data (FAMD) outputs.
 
     Usage
     -----
@@ -147,7 +147,7 @@ def get_famd(self,choice = "ind")-> dict:
 
     Parameters
     ----------
-    `self` : an object of class FAMD, PCAMIX, MPCA
+    `self` : an object of class FAMD
 
     `choice` : the element to subset from the output. Possibles values are :
         * "ind" for individuals
@@ -187,9 +187,9 @@ def get_famd(self,choice = "ind")-> dict:
     >>> var = get_famd(res_famd, choice = "var")
     ```
     """
-    # Check if self is an object of class FAMD, PCAMIX, MPCA
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise ValueError("'self' must be an object of class FAMD, PCAMIX, MPCA")
+    # Check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise ValueError("'self' must be an object of class FAMD")
     
     if choice not in ["ind","quanti_var","quali_var","var"]:
         raise ValueError("'choice' should be one of 'ind', 'ind_sup', 'quanti_var', 'quali_var', 'var'")
@@ -201,12 +201,12 @@ def get_famd(self,choice = "ind")-> dict:
 
 def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
-    Printing summaries of FAMD/PCAMIX/MPCA model
-    --------------------------------------------
+    Printing summaries of Factor Analysis of Mixed Data model
+    ---------------------------------------------------------
 
     Description
     -----------
-    Printing summaries of factor analysis of mixed data (FAMD), principal component analysis of mixed variables (PCAMIX), mixed principal component analysis (MPCA) objects
+    Printing summaries of factor analysis of mixed data (FAMD) objects
 
     Usage
     -----
@@ -216,13 +216,13 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
 
     Parameters
     ----------
-    `self` : an obect of class FAMD, PCAMIX, MPCA
+    `self` : an object of class FAMD
 
     `digits` : int, default=3. Number of decimal printed
 
     `nb_element` : int, default = 10. Number of element
 
-    `ncp` : int, default = 3. Number of componennts
+    `ncp` : int, default = 3. Number of components
 
     `to_markdown` : Print DataFrame in Markdown-friendly format
 
@@ -245,24 +245,15 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     >>> summaryFAMD(res_famd)
     ```
     """
-    # check if self is an object of class FAMD, PCAMIX or MPCA
-    if self.model_ not in ["famd","pcamix","mpca"]:
-        raise ValueError("'self' must be an object of class FAMD, PCAMIX, MPCA")
+    # check if self is an object of class FAMD
+    if self.model_ != "famd":
+        raise ValueError("'self' must be an object of class FAMD")
 
     ncp = min(ncp,self.call_["n_components"])
     nb_element = min(nb_element,self.call_["X"].shape[0])
 
-    # Title if FAMD
-    if self.model_ == "famd":
-        print("                     Factor Analysis of Mixed Data - Results                     \n")
-
-    # Title if PCAMIX
-    if self.model_ == "pcamix":
-        print("                Principal Component Analysis of Mixed variables - Results                 \n")
-    
-    # Title if MPCA
-    if self.model_ == "mpca":
-        print("                Mixed Principal Component Analysis - Results                   \n")
+    # Title
+    print("                     Factor Analysis of Mixed Data - Results                     \n")
 
     # Add eigenvalues informations
     print("Importance of components")
