@@ -222,15 +222,12 @@ class PCA(BaseEstimator,TransformerMixin):
         # Check if missing values in quantitatives variables
         if X.isnull().any().any():
             if self.quali_sup is None:
-                for col in X.columns:
-                    if X.loc[:,col].isnull().any():
-                        X.loc[:,col] = X.loc[:,col].fillna(X.loc[:,col].mean())
+                X = recodecont(X=X)["Xcod"]
             else:
                 col_list = [x for x in list(range(X.shape[1])) if x not in quali_sup]
                 for i in col_list:
                     if X.iloc[:,i].isnull().any():
                         X.iloc[:,i] = X.iloc[:,i].fillna(X.iloc[:,i].mean())
-            print("Missing values are imputed by the mean of the variable.")
 
         # Make a copy of the data
         Xtot = X.copy()
@@ -606,7 +603,7 @@ class PCA(BaseEstimator,TransformerMixin):
         # Standardize
         Z = (X - means.reshape(1,-1))/std.reshape(1,-1)
 
-        ###### Multiply by columns weight & Apply transition relation
+        # Multiply by columns weight & Apply transition relation
         coord = mapply(Z,lambda x : x*var_weigths,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_["V"][:,:n_components])
         coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
         return coord

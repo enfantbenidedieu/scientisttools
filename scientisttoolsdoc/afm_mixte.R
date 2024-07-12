@@ -8,13 +8,11 @@ library(FactoMineR)
 
 Biometrie2=read.table("donnee/Biometrie2.csv",header=TRUE,sep=";",dec=".",row.names=1)
 
-colnames(Biometrie2)
-
 # L'AFM est réalisée sur les seules six premières colonnes avec toutes les options par défaut
 
 res=MFA(Biometrie2,group=c(3,3,3,3),
         type=c("n","s","n","s"),
-        #num.group.sup = c(3,4),
+        num.group.sup = c(3,4),
         graph = FALSE)
 
 DimDesc <- dimdesc(res)
@@ -27,6 +25,8 @@ fviz_contrib(res,choice = "quanti.var")
 fviz_mfa_ind(res)
 fviz_mfa_var(res)
 fviz_mfa_axes(res)
+
+res$separate.analyses$Gr1$call$marge.row
 
 ####################################################
 # Eigenvalues informations
@@ -52,6 +52,10 @@ quanti_var$cor
 quanti_var$cos2
 quanti_var$contrib
 
+quanti_var_sup <- res$quanti.var.sup
+quanti_var_sup$coord
+quanti_var_sup$cos2
+
 ###############################################################
 # Qualitatives informations
 ###############################################################
@@ -61,8 +65,10 @@ quali_var$cos2
 quali_var$contrib
 quali_var$v.test
 quali_var$coord.partiel
-quali_var$within.inertia
-quali_var$within.partial.inertia
+
+
+quali_var$within.inertia # A implémenter
+quali_var$within.partial.inertia # A implémenter
 
 #############################################################
 # Group informations
@@ -82,14 +88,17 @@ res$group$coord.sup
 res$group$cos2.sup
 res$group$dist2.sup
 
+# Inertia ratio
+res$inertia.ratio
+
 #############################################################
 # Partial axes
 ##############################################################
 partial_axes <- get_mfa_partial_axes(res)
-partial_axes$coord
-partial_axes$cor
-partial_axes$contrib
-partial_axes$cor.between
+head(partial_axes$coord)
+head(partial_axes$cor)
+head(partial_axes$contrib)
+head(partial_axes$cor.between)
 
 
 library(PCAmixdata)

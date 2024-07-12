@@ -1244,7 +1244,7 @@ def fviz_pca(self,choice="biplot",**kwargs)->pn:
 
     `choice` : the element to plot from the output. Possible value are : 
         * 'ind' for the individuals graphs
-        * 'var' for the variables graphs (correlation circle)
+        * 'var' for the variables graphs (= Correlation circle)
         * 'biplot' for biplot of individuals and variables
         * '3D' for 3D graph of individuals
     

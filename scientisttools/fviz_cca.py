@@ -31,16 +31,68 @@ def fviz_cca_ind(self,
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Draw the Canonical Correlation Analysis (CCA) individuals graphs
-    ----------------------------------------------------------------
+    Visualize Canonical Correlation Analysis (CCA) - Graph of individuals
+    ---------------------------------------------------------------------
+
+    Description
+    -----------
+    Performs Canonical Correlation Analysis (CCA) to highlight correlations between two dataframes. fviz_cca_ind provides plotnine based elegant visualization of CCA outputs for individuals.
+
+    Usage
+    -----
+    ```python 
+    >>> fviz_cca_ind(self,
+                    axis=[0,1],
+                    which = "X",
+                    x_lim=None,
+                    y_lim=None,
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    color ="black",
+                    geom = ["point","text"],
+                    point_size = 1.5,
+                    text_size = 8,
+                    text_type = "text",
+                    marker = "o",
+                    add_grid =True,
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    repel=False,
+                    ggtheme=pn.theme_minimal()) 
+    ```
 
     Parameters
     ----------
-    self : an object of class CCA
+    `self` : an object of class CCA
+
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load lifecyclesavings dataset
+    >>> from scientisttools import load_lifecyclesavings
+    >>> lifecyclesavings = load_lifecyclesavings()
+    >>> from scientisttools import CCA, fviz_cca_ind
+    >>> res_cca = CCA(lifecyclesavings,vars=[1,2])
+    >>> p = fviz_cca_ind(res_cca)
+    >>> print(p)
+    ```
     """
     if self.model_ != "cca":
         raise TypeError("'self' must be an object of class CCA")
@@ -101,7 +153,6 @@ def fviz_cca_ind(self,
     
     return p
 
-# Variables Factor Map
 def fviz_cca_var(self,
                  axis=[0,1],
                  which = "X",
@@ -129,16 +180,69 @@ def fviz_cca_var(self,
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Draw the Canonical Correlation Analysis (CCA) variables graphs
-    --------------------------------------------------------------
+    Visualize Canonical Correlation Analysis (CCA) - Graph of variables
+    -------------------------------------------------------------------
+
+    Description
+    -----------
+    Performs Canonical Correlation Analysis (CCA) to highlight correlations between two dataframes. fviz_cca_var provides plotnine based elegant visualization of CCA outputs for variables.
+
+    Usage
+    -----
+    ```python 
+    >>> fviz_cca_var(self,
+                    axis=[0,1],
+                    which = "X",
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    xcolor = "black",
+                    ycolor = "blue",
+                    xmarker = "o",
+                    ymarker = "^",
+                    geom = ["point","text"],
+                    text_type = "text",
+                    text_size = 8,
+                    add_grid =True,
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    add_circle = True,
+                    color_circle="gray",
+                    repel=False,
+                    ggtheme=pn.theme_minimal())
+    ```
 
     Parameters
     ----------
-    self : an object of class CCA
+    `self` : an object of class CCA
+
+    see fviz_pca_var
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load lifecyclesavings dataset
+    >>> from scientisttools import load_lifecyclesavings
+    >>> lifecyclesavings = load_lifecyclesavings()
+    >>> from scientisttools import CCA, fviz_cca_var
+    >>> res_cca = CCA(lifecyclesavings,vars=[1,2])
+    >>> p = fviz_cca_var(res_cca)
+    >>> print(p)
+    ```
     """
     if self.model_ != "cca":
         raise ValueError("'self' must be an object of class CCA")
@@ -241,16 +345,59 @@ def fviz_cca_scatterplot(self,
                          repel=False,
                          ggtheme=pn.theme_minimal()) -> pn:
     """
-    Draw the Canonical Correlation Analysis (CCA) scatter plots
-    -----------------------------------------------------------
+    Visualize Canonical Correlation Analysis (CCA) - Scatter plot
+    -------------------------------------------------------------
+
+    Usage
+    -----
+    ```python
+    >>> fviz_cca_scatterplot(self,
+                            which=0,
+                            x_lim = None,
+                            y_lim = None,
+                            x_label = None,
+                            y_label = None,
+                            title = None,
+                            geom = ["point","text"],
+                            text_type = "text",
+                            text_size = 8,
+                            color = "black",
+                            marker = "o",
+                            smooth = False,
+                            smooth_color = "green",
+                            abline = True,
+                            abline_color = "red",
+                            add_ellipse = False,
+                            ellipse_color = "blue",
+                            ha="center",
+                            va="center",
+                            repel=False,
+                            ggtheme=pn.theme_minimal()) 
+    ```
 
     Parameters
     ----------
-    self : an object of class CCA
+    `self` : an object of class CCA
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load lifecyclesavings dataset
+    >>> from scientisttools import load_lifecyclesavings
+    >>> lifecyclesavings = load_lifecyclesavings()
+    >>> from scientisttools import CCA, fviz_cca_scatterplot
+    >>> res_cca = CCA(lifecyclesavings,vars=[1,2])
+    >>> p = fviz_cca_scatterplot(res_cca)
+    >>> print(p)
+    ```
     """
     if self.model_ != "cca":
         raise TypeError("'self' must be an object of class CCA")
@@ -312,33 +459,43 @@ def fviz_cca_scatterplot(self,
     
 def fviz_cca(self,choice="ind",**kwargs)->pn:
     """
-    Draw the Canonical Correlation Analysis (CCA) graphs
-    ----------------------------------------------------
+    Visualize Canonical Correlation Analysis (CCA)
+    ----------------------------------------------
 
     Description
     -----------
-    Plot the graphs for a Canonical Correlation Analysis (CCA)
+    Plot the graphs for a Canonical Correlation Analysis (CCA).
+
+        * fviz_cca_ind() : Graph of individuals
+        * fviz_cca_var() : Graph of variables (Correlation circle)
+        * fviz_cca_scatterplot() : Scatter plot
+
+    Usage
+    -----
+    ```python
+    >>> fviz_cca(self, choice = ("ind", "var", "scatter"))
+    ```
 
     Parameters
     ----------
-    self : an object of class CCA
+    `self` : an object of class CCA
 
-    choice : the graph to plot
-                - 'ind' for the individuals graphs
-                - 'var' for the variables graphs
-                - 'scatter' for scatter plot
+    `choice` : the element to plot from the output. Possible value are : 
+        * 'ind' for the individuals graphs
+        * 'var' for the variables graphs
+        * 'scatter' for scatter plot
 
-    **kwargs : 	further arguments passed to or from other methods
+    `**kwargs` : further arguments passed to or from other methods
 
-    Return
+    Returns
     ------
-    figure : The individuals factor map and the variables factor map
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-
+    # Check if self is an object of class CCA
     if self.model_ != "cca":
         raise TypeError("'self' must be an instance of class CCA")
     

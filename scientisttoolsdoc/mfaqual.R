@@ -62,11 +62,12 @@ head(quali_var$within.partial.inertia) # A compléter
 group <- get_mfa_var(res2.mfa,"group")
 head(group$coord)
 head(group$contrib)
+head(group$cos2)
 head(group$correlation)
 head(group$Lg)
 head(group$RV)
-head(group$dist2) 
-head(group$cos2)
+head(group$dist2)
+
 
 ###### Supplementary group infos
 head(group$coord.sup)
@@ -113,14 +114,13 @@ head(quanti_var_sup$cor)
 res2.mfa$summary.quali
 res2.mfa$summary.quanti
 
-fviz_mfa_ind(res2.mfa)
-fviz_mfa_var(res2.mfa,choice = "quali.var")
-fviz_mfa_group(res2.mfa)
-grp <- as.factor(poison[, "Vomiting"])
-fviz_mfa_quali_biplot(res2.mfa, repel = FALSE, col.var = "#E7B800",
-                      habillage = grp, addEllipses = TRUE, ellipse.level = 0.95)
 
-fviz_mfa_axes(res2.mfa)
-
-quanti_var <- get_mfa_var(res2.mfa,"quanti.var")
-
+# Description
+DimDesc <- dimdesc(res2.mfa)
+DimDesc$Dim.1$quanti
+DimDesc$Dim.1$category
+DimDesc$Dim.1$quali
+DimDesc$Dim.2$quanti
+DimDesc$Dim.2$quali
+DimDesc$Dim.2$category
+DimDesc$Dim.3$quanti

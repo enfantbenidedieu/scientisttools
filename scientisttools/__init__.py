@@ -45,25 +45,20 @@ from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
 from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_var, fviz_mpca
 
 # Multiple Factor Analysis (MFA)
-from .mfa import MFA
+from .mfa import MFA, predictMFA
 from .get_mfa import get_mfa_ind, get_mfa_var, get_mfa_partial_axes, get_mfa, summaryMFA
-from .fviz_mfa import fviz_mfa_ind, fviz_mfa_var, fviz_mfa_axes,fviz_mfa_group
+from .fviz_mfa import fviz_mfa_ind, fviz_mfa_var, fviz_mfa_axes,fviz_mfa_group, fviz_mfa
 
 # Multiple Factor Analysis for qualitative/categorical variables (MFAQUAL)
 from .mfaqual import MFAQUAL
-from .get_mfa import summaryMFAQUAL
 from .fviz_mfa import fviz_mfa_mod
 
-# Multiple Factor Analysis of Mixed Data (MFAMD)
-from .mfamd import MFAMD
-from .get_mfa import summaryMFAMIX
-
+# Multiple Factor Analysis of Mixed Data (MFAMIX)
 from .mfamix import MFAMIX
 
 # Multiple Factor Analysis of contingence table
 from .mfact import MFACT
 from .fviz_mfa import fviz_mfa_freq
-from .get_mfa import summaryMFACT
 
 # Multidimensional Scaling
 from .smacof import SMACOF
@@ -117,9 +112,9 @@ from .datasets import load_gironde, load_autos2, load_tennis
 # MPCA dataset
 from .datasets import load_cars
 # MFA datasets
-from .datasets import load_wine, load_qtevie
+from .datasets import load_wine, load_qtevie, load_mortality
 # CCA datasets
-from .datasets import load_lifecyclesavings
+from .datasets import load_lifecyclesavings, load_usarrests
 # Sparse PCA datasets
 from .datasets import load_protein
 # CATVARHCA dataset
@@ -128,4 +123,4 @@ from .datasets import load_vote
 __version__ = '0.1.5'
 __name__ = "scientisttools"
 __author__ = 'Duverier DJIFACK ZEBAZE'
-__email__ = 'duverierdjifack@gmail.com'
+__email__ = 'djifacklab@gmail.com'

@@ -49,15 +49,87 @@ def fviz_mfa_ind(self,
     Visulize Multiple Factor Analysis (MFA) - Graph of individuals
     --------------------------------------------------------------
 
+    Description
+    -----------
+    Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (quantitative and/or qualitative) structured into groups. fviz_mfa_ind() provides plotnine-based elegant visualization of MFA individuals outputs.
 
+    Usage
+    -----
+    ```python
+    >>> fviz_mfa_ind(self,
+                    axis=[0,1],
+                    x_lim=None,
+                    y_lim=None,
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    color ="black",
+                    geom = ["point","text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    point_size = 1.5,
+                    text_size = 8,
+                    text_type = "text",
+                    marker = "o",
+                    add_grid =True,
+                    ind_sup=True,
+                    color_sup = "blue",
+                    marker_sup = "^",
+                    legend_title=None,
+                    add_ellipse=False, 
+                    ellipse_type = "t",
+                    confint_level = 0.95,
+                    geom_ellipse = "polygon",
+                    habillage = None,
+                    palette = None,
+                    quali_sup = True,
+                    color_quali_sup = "red",
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    repel=False,
+                    lim_cos2 = None,
+                    lim_contrib = None,
+                    ggtheme=pn.theme_minimal()) 
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class MFA, MFAQUAL, MFAMIX, MFACT
+
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
     
     Author(s)
     --------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE duverierlab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load wine dataset
+    >>> from scientisttools import load_wine
+    >>> wine = load_wine()
+    >>> group_name = ["origin","odor","visual","odor.after.shaking","taste","overall"]
+    >>> group = [2,5,3,10,9,2]
+    >>> num_group_sup = [0,5]
+    >>> from scientisttools import MFA, fviz_mfa_ind
+    >>> res_mfa = MFA(n_components=5,group=group,group_type=["n"]+["s"]*5,var_weights_mfa=None,name_group = group_name,num_group_sup=[0,5],parallelize=True)
+    >>> res_mfa.fit(wine)
+    >>> p = fviz_mfa_ind(res_mfa)
+    >>> print(p)
+    ```
     """
-    
+    # Check if self is an object of class MFA, MFAQUAL, MFAMIX, MFACT
     if self.model_ not in ["mfa","mfaqual","mfamix","mfact"]:
-        raise ValueError("Error : 'self' must be an object of class MFA, MFAQUAL, MFAMIX, MFACT")
+        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMIX, MFACT")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -215,7 +287,7 @@ def fviz_mfa_ind(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Individuals factor map - "+self.model_.upper()
+        title = "Individuals factor map - MFA"
     p = p + pn.labs(title=title,x=x_label,y=y_label)
     
     if x_lim is not None:
@@ -272,11 +344,78 @@ def fviz_mfa_var(self,
     Visualize Multiple Factor Analysis (MFA) - Graph of variables
     -------------------------------------------------------------
 
+    Description
+    -----------
+    Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (quantitative and/or qualitative) structured into groups. fviz_mfa_var() provides plotnine-based elegant visualization of MFA quantitative variables outputs.
+
+    Usage
+    -----
+    ```
+    >>> fviz_mfa_var(self,
+                    axis=[0,1],
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    color ="group",
+                    geom = ["arrow","text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    marker = "^",
+                    point_size=1.5,
+                    text_type = "text",
+                    text_size = 8,
+                    add_grid =True,
+                    quanti_sup=True,
+                    color_sup = "red",
+                    linestyle_sup="dashed",
+                    legend_title = None,
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    add_circle = True,
+                    arrow_angle=10,
+                    arrow_length =0.1,
+                    lim_cos2 = None,
+                    lim_contrib = None,
+                    legend = "bottom",
+                    ggtheme=pn.theme_minimal()) 
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class MFA, MFAMIX
+
+    see fviz_pca_var
+
+    Returns
+    -------
+    a plotnine
+
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load wine dataset
+    >>> from scientisttools import load_wine
+    >>> wine = load_wine()
+    >>> group_name = ["origin","odor","visual","odor.after.shaking","taste","overall"]
+    >>> group = [2,5,3,10,9,2]
+    >>> num_group_sup = [0,5]
+    >>> from scientisttools import MFA, fviz_mfa_var
+    >>> res_mfa = MFA(n_components=5,group=group,group_type=["n"]+["s"]*5,var_weights_mfa=None,name_group = group_name,num_group_sup=[0,5],parallelize=True)
+    >>> res_mfa.fit(wine)
+    >>> p = fviz_mfa_var(res_mfa)
+    >>> print(p)
+    ```
     """
-    
+    # Check if self is an object of class MFA, MFAMIX
     if self.model_ not in ["mfa","mfamix"]:
         raise TypeError("'self' must be an instance of class MFA")
     
@@ -408,7 +547,7 @@ def fviz_mfa_var(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Quantitatives variables - "+self.model_.upper()
+        title = "Quantitatives variables - MFA"
     
     p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+ pn.labs(title=title,x = x_label, y = y_label)
     
@@ -460,14 +599,79 @@ def fviz_mfa_group(self,
     Visualize Multiple Factor Analysis (MFA) - Graph of variables groups
     --------------------------------------------------------------------
 
+    Description
+    -----------
+    Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (quantitative and/or qualitative) structured into groups. fviz_mfa_group() provides plotnine-based elegant visualization of MFA groups outputs.
+
+    Usage
+    -----
+    ```python
+    >>> fviz_mfa_group(self,
+                        axis=[0,1],
+                        x_label = None,
+                        y_label = None,
+                        x_lim=None,
+                        y_lim=None,
+                        title =None,
+                        color ="red",
+                        geom = ["point","text"],
+                        gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                        point_size = 1.5,
+                        text_size = 8,
+                        text_type = "text",
+                        marker = "o",
+                        add_grid =True,
+                        group_sup=True,
+                        color_sup = "green",
+                        marker_sup = "^",
+                        legend_title=None,
+                        add_hline = True,
+                        add_vline=True,
+                        ha="center",
+                        va="center",
+                        hline_color="black",
+                        hline_style="dashed",
+                        vline_color="black",
+                        vline_style ="dashed",
+                        repel=True,
+                        lim_cos2 = None,
+                        lim_contrib = None,
+                        ggtheme=pn.theme_minimal())
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class MFA, MFAQUAL, MFAMIX, MFACT
+
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load wine dataset
+    >>> from scientisttools import load_wine
+    >>> wine = load_wine()
+    >>> group_name = ["origin","odor","visual","odor.after.shaking","taste","overall"]
+    >>> group = [2,5,3,10,9,2]
+    >>> num_group_sup = [0,5]
+    >>> from scientisttools import MFA, fviz_mfa_group
+    >>> res_mfa = MFA(n_components=5,group=group,group_type=["n"]+["s"]*5,var_weights_mfa=None,name_group = group_name,num_group_sup=[0,5],parallelize=True)
+    >>> res_mfa.fit(wine)
+    >>> p = fviz_mfa_group(res_mfa)
+    >>> print(p)
+    ```
     """
-    
+    # Check if self is an object of class MFA, MFAQUAL, MFAMIX, MFACT
     if self.model_ not in ["mfa","mfaqual","mfamix"]:
-        raise TypeError("'self' must be an instance of class MFA, MFAQUAL, MFAMIX")
+        raise TypeError("'self' must be an instance of class MFA, MFAQUAL, MFAMIX, MFACT")
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
@@ -573,7 +777,7 @@ def fviz_mfa_group(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Variable groups - "+self.model_.upper()
+        title = "Variable groups - MFA"
     p = p + pn.labs(title = title, x = x_label, y = y_label)
     
     if x_lim is not None:
@@ -624,11 +828,70 @@ def fviz_mfa_axes(self,
     Visualize Multiple Factor Analysis (MFA) - Grpah of partial axes
     ----------------------------------------------------------------
 
+    Description
+    -----------
+    Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (quantitative and/or qualitative) structured into groups. fviz_mfa_axes() provides plotnine-based elegant visualization of MFA partial axes outputs.
+
+    Usage
+    -----
+    ```python
+    >>> fviz_mfa_axes(self,
+                    axis=[0,1],
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    color="group",
+                    color_circle = "lightgray",
+                    geom = ["arrow","text"],
+                    text_type = "text",
+                    text_size = 8,
+                    add_grid =True,
+                    legend_title = None,
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    add_circle = True,
+                    arrow_angle=10,
+                    arrow_length =0.1,
+                    ggtheme=pn.theme_minimal())
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class MFA, MFAQUAL, MFAMIX, MFACT
+
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
+
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load wine dataset
+    >>> from scientisttools import load_wine
+    >>> wine = load_wine()
+    >>> group_name = ["origin","odor","visual","odor.after.shaking","taste","overall"]
+    >>> group = [2,5,3,10,9,2]
+    >>> num_group_sup = [0,5]
+    >>> from scientisttools import MFA, fviz_mfa_axes
+    >>> res_mfa = MFA(n_components=5,group=group,group_type=["n"]+["s"]*5,var_weights_mfa=None,name_group = group_name,num_group_sup=[0,5],parallelize=True)
+    >>> res_mfa.fit(wine)
+    >>> p = fviz_mfa_axes(res_mfa)
+    >>> print(p)
+    ```
     """
-    
+    # Check if self is an object of class MFA, MFAQUAL, MFAMIX, MFACT
     if self.model_ not in ["mfa","mfaqual","mfamix","mfact"]:
         raise TypeError("'self' must be an instance of class MFA, MFAQUAL, MFAMIX, MFACT")
     
@@ -676,7 +939,7 @@ def fviz_mfa_axes(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Partial axes - "+self.model_.upper()
+        title = "Partial axes - MFA"
     
     p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+ pn.labs(title=title,x=x_label,y=y_label)
 
@@ -724,16 +987,80 @@ def fviz_mfa_mod(self,
                  lim_contrib = None,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Visualize Multiple Factor Analysis - Graph of qualitative variable categories
+    Visualize Multiple Factor Analysis (MFA) - Graph of qualitative variable categories
     -----------------------------------------------------------------------------
 
+    Description
+    -----------
+    Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (quantitative and/or qualitative) structured into groups. fviz_mfa_mod() provides plotnine-based elegant visualization of MFA qualitative variables outputs.
 
+    Usage
+    -----
+    ```python
+    >>> fviz_mfa_mod(self,
+                    axis=[0,1],
+                    x_lim=None,
+                    y_lim=None,
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    color ="black",
+                    geom = ["point","text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    point_size = 1.5,
+                    text_size = 8,
+                    text_type = "text",
+                    marker = "o",
+                    add_grid =True,
+                    quali_sup=True,
+                    color_sup = "blue",
+                    marker_sup = "^",
+                    legend_title=None,
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    repel=False,
+                    lim_cos2 = None,
+                    lim_contrib = None,
+                    ggtheme=pn.theme_minimal())
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class MFAQUAL, MFAMIX
+
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
     
     Author(s)
     --------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE duverierlab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> group_name = ["desc","desc2","symptom","eat"]
+    >>> group = [2,2,5,6]
+    >>> group_type = ["s"]+["n"]*3
+    >>> num_group_sup = [0,1]
+    >>> from scientisttools import MFAQUAL, fviz_mfa_mod
+    >>> res_mfaqual = MFAQUAL(group=group,name_group=group_name,group_type=group_type,var_weights_mfa=None,num_group_sup=[0,1],parallelize=True)
+    >>> res_mfaqual.fit(poison)
+    >>> p = fviz_mfa_mod(res_mfaqual)
+    ```
     """
-    
+    # Check if self is an object of class MFAQUAL, MFAMIX
     if self.model_ not in ["mfaqual","mfamix"]:
         raise TypeError("'self' must be an object of class MFAQUAL, MFAMIX")
     
@@ -837,7 +1164,7 @@ def fviz_mfa_mod(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Qualitative variable categories - MFAQUAL"
+        title = "Qualitative variable categories - MFA"
     p = p + pn.labs(title=title,x=x_label,y=y_label)
     
     if x_lim is not None:
@@ -889,16 +1216,64 @@ def fviz_mfa_freq(self,
                  lim_contrib = None,
                  ggtheme=pn.theme_minimal()) -> pn:
     """
-    Visualize Multiple Factor Analysis - Graph of frequences
-    --------------------------------------------------------
+    Visualize Multiple Factor Analysis (MFA) - Graph of frequences
+    --------------------------------------------------------------
 
+    Description
+    -----------
+    Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (quantitative and/or qualitative) structured into groups. fviz_mfa_freq() provides plotnine-based elegant visualization of MFA frequences outputs.
 
+    Usage
+    -----
+    ```python
+    >>> fviz_mfa_freq(self,
+                    axis=[0,1],
+                    x_lim=None,
+                    y_lim=None,
+                    x_label = None,
+                    y_label = None,
+                    title =None,
+                    color ="black",
+                    geom = ["point","text"],
+                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    point_size = 1.5,
+                    text_size = 8,
+                    text_type = "text",
+                    marker = "o",
+                    add_grid =True,
+                    freq_sup=False,
+                    color_sup = "blue",
+                    marker_sup = "^",
+                    legend_title=None,
+                    add_hline = True,
+                    add_vline=True,
+                    ha="center",
+                    va="center",
+                    hline_color="black",
+                    hline_style="dashed",
+                    vline_color="black",
+                    vline_style ="dashed",
+                    repel=False,
+                    lim_cos2 = None,
+                    lim_contrib = None,
+                    ggtheme=pn.theme_minimal())
+    ```
+
+    Parameters
+    ----------
+    `self` : an object of class MFACT
+
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
     
     Author(s)
-    --------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-    
+    # Check if self is an object of class MFACT
     if self.model_ != "mfact":
         raise TypeError("'self' must be an object of class MFACT")
     
@@ -1024,7 +1399,7 @@ def fviz_mfa_freq(self,
     if y_label is None:
         y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
     if title is None:
-        title = "Contingency tables - MFACT"
+        title = "Contingency tables - MFA"
     p = p + pn.labs(title=title,x=x_label,y=y_label)
     
     if x_lim is not None:
@@ -1043,3 +1418,71 @@ def fviz_mfa_freq(self,
     p = p + ggtheme
     
     return p
+
+def fviz_mfa(self,choice="ind",**kwargs):
+    """
+    Visualize Multiple Factor Analysis (MFA)
+    ----------------------------------------
+
+    Description
+    -----------
+    Plot the graphs for a Multiple Factor Analysis (MFA) with supplementary individuals and supplementary groups.
+
+        * fviz_mfa_ind() : Graph of individuals
+        * fviz_mfa_var() : Graph of quantitative variables (= Correlation circle)
+        * fviz_mfa_mod() : Graph of qualitative variables
+        * fviz_mfa_freq() : Graph of frequences
+        * fviz_mfa_group() : Graph of groups
+        * fviz_mfa_axes() : Graph of axes
+
+    Usage
+    -----
+    ```
+    >>> fviz_mfa(self,choice=("ind","quanti_var","quali_var","freq","axes","group"),**kwargs)
+    ```
+
+    Parameters
+    ----------
+    'self' : an object of class MFA, MFAQUAL, MFAMIX, MFACT
+
+    `choice` : the element to plot from the output. Possible value are : 
+        * 'ind' for the individuals graphs
+        * 'quanti_var' for the quantitative variables graphs (= Correlation circle)
+        * 'quali_var' for the qualitative variables graphs
+        * 'freq' for frequences  graphs
+        * 'group' for groups graphs
+        * 'axes' for partial axes graphs
+    
+    `**kwargs` : further arguments passed to or from other methods
+
+    Returns
+    ------
+    a plotnine
+
+    Author(s)
+    ---------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    see fviz_mfa_ind, fviz_mfa_var, fviz_mfa_mod, fviz_mfa_freq, fviz_mfa_group, fviz_mfa_axes
+    """
+    # Check if self is an object of class
+    if self.model_ not in ["mfa","mfaqual","mfamix","mfact"]:
+        raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMIX, MFACT ")
+    
+    if choice not in ["ind","quanti_var","quali_var","freq","group","axes"]:
+        raise ValueError("'choice' should be one of 'ind', 'quanti_var', 'quali_var', 'freq', 'group', 'axes'")
+
+    if choice == "ind":
+        return fviz_mfa_ind(self,**kwargs)
+    elif choice == "quanti_var":
+        return fviz_mfa_var(self,**kwargs)
+    elif choice == "quali_var":
+        return fviz_mfa_mod(self,**kwargs)
+    elif choice == "freq":
+        return fviz_mfa_freq(self,**kwargs)
+    elif choice == "group":
+        return fviz_mfa_group(self,**kwargs)
+    elif choice == "axes":
+        return fviz_mfa_axes(self,**kwargs)

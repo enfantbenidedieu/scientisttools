@@ -645,7 +645,7 @@ def load_music():
     data.name = "Music"
     return data
 
-def load_gironde():
+def load_gironde(which="all"):
     """
     gironde
     -------
@@ -665,12 +665,22 @@ def load_gironde():
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-    gironde = pyreadr.read_r(DATASETS_DIR/"gironde.rda")["gironde"]
+    if which not in ["employment","housing","services","environment","all"]:
+        raise ValueError("'which' should be one of 'employment', 'housing', 'services', 'environment', 'all'")
+    
+    if which == "employment":
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_employment.rda")["gironde_employment"]
+    elif which == "housing":
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_housing.rda")["gironde_housing"]
+    elif which == "services":
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_services.rda")["gironde_services"]
+    elif which == "environment":
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_employment.rda")["gironde_employment"]
+    else:
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde.rda")["gironde"]
     return gironde
-
-
 
 def load_tennis():
     """
@@ -841,8 +851,8 @@ def load_mortality():
     > res_mfact = MFACT()
 
     """
-    data = pyreadr.read_r(DATASETS_DIR/"mortality.rda")["wine"]
-    data.name = "wine"
+    data = pyreadr.read_r(DATASETS_DIR/"mortality.rda")["mortality"]
+    data.name = "mortality"
     return data
 
 def load_lifecyclesavings():
@@ -946,7 +956,50 @@ def load_vote():
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     data = pd.read_excel(DATASETS_DIR/"congressvotingrecords.xlsx")
     return data
+
+
+def load_usarrests():
+    """
+    Violent Crime Rates by US State
+    -------------------------------
+
+    Description
+    -----------
+    This data set contains statistics, in arrests per 100,000 residents for assault, murder, and rape in each of the 50 US states in 1973. Also given is the percent of the population living in urban areas.
+
+    Usage
+    -----
+    ```
+    >>> from scientisttools import load_usarrests
+    >>> usarrests = load_usarrests()
+    ```
+    
+    Format
+    ------
+    dataframe with 50 observations on 4 variables.
+
+    `Murder` :	numeric	Murder arrests (per 100,000)
+    
+    `Assault`: 	numeric	Assault arrests (per 100,000)
+    
+    `UrbanPop` : numeric Percent urban population
+    
+    `Rape` : numeric Rape arrests (per 100,000)
+
+    Source
+    ------
+    World Almanac and Book of facts 1975. (Crime rates).
+
+    Statistical Abstracts of the United States 1975, p.20, (Urban rates), possibly available as https://books.google.ch/books?id=zl9qAAAAMAAJ&pg=PA20.
+
+    References
+    ----------
+    McNeil, D. R. (1977) Interactive Data Analysis. New York: Wiley.
+    """
+    usarrests = pd.read_excel(DATASETS_DIR/"usarrests.xlsx",index_col=0,header=0)
+    usarrests.index.name = None
+    return usarrests

@@ -374,6 +374,8 @@ class PCAMIX(BaseEstimator,TransformerMixin):
                       "Z" : rec["Z"],
                       "W" : rec["X"],
                       "ind_weights" : pd.Series(ind_weights,index=X.index,name="Weight"),
+                      "means" : rec["means"],
+                      "std" : rec["std"],
                       "ind_sup" : ind_sup_label,
                       "quanti_sup" : quanti_sup_label,
                       "quali_sup" : quali_sup_label,

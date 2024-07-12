@@ -6,78 +6,62 @@ import scipy as sp
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 
-# https://stats.oarc.ucla.edu/r/dae/canonical-correlation-analysis/
-# https://stats.oarc.ucla.edu/sas/dae/canonical-correlation-analysis/
-# https://support.sas.com/documentation/cdl/en/statug/63347/HTML/default/viewer.htm#cancorr_toc.htm
-# https://scikit-learn.org/stable/modules/generated/sklearn.cross_decomposition.CCA.html
-# https://cmdlinetips.com/2020/12/canonical-correlation-analysis-in-python/
-# https://cmdlinetips.com/2020/12/canonical-correlation-analysis-in-r/
-# https://www.geeksforgeeks.org/canonical-correlation-analysis-cca-using-sklearn/
-# https://medium.com/@pozdrawiamzuzanna/canonical-correlation-analysis-simple-explanation-and-python-example-a5b8e97648d2
-# https://stackoverflow.com/questions/26298847/canonical-correlation-analysis-in-python-with-sklearn
-# https://fr.wikipedia.org/wiki/Analyse_canonique_des_corr%C3%A9lations
-# https://www.cabannes.org/#4
-# https://lemakistatheux.wordpress.com/2017/01/20/lanalyse-canonique-des-correlations-a-venir/
-# https://numpy.org/doc/stable/reference/generated/numpy.linalg.qr.html
-# https://github.com/cran/CCP/blob/master/R/CCP.R
-# https://github.com/cran/CCP
-# https://github.com/friendly/candisc/tree/master
-# https://davetang.github.io/muse/cca.html
-
+from .recodecont import recodecont
 class CCA(BaseEstimator,TransformerMixin):
     """
     Canonical Correlation Analysis (CCA)
     ------------------------------------
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
-
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
-
-    Performs Canonical Correlation Analysis (CCA)
-
+    Performs Canonical Correlation Analysis (CCA) to highlight correlations between two dataframes.
+    
     Missing values are replaced by the column mean.
+
+    Usage
+    -----
+    ```python
+    >>> CCA(X = None,standardize=False,n_components=2,vars = None, vars_with = None)
+    ```
 
     Parameters
     ----------
-    X : pandas/polars dataframe
+    `X` : pandas/polars dataframe of shape (n_samples, n_columns)
 
-    standardize : a boolean, default = True
-        - If True : the data are scaled to unit variance.
-        - If False : the data are not scaled to unit variance.
+    `standardize` : a boolean, default = True
+        * If True : the data are scaled to unit variance.
+        * If False : the data are not scaled to unit variance.
     
-    n_components : number of dimensions kept in the results (by default None)
+    `n_components` : number of dimensions kept in the results (by default None)
 
-    vars : The vars statement lists the variables in the first of the two sets of variables to be analyzed.
-            The variables must be numeric. If you omit the vars statement, all numeric variables not mentioned in other statements
-            make up the first set of variables.
+    `vars` : The vars statement lists the variables in the first of the two sets of variables to be analyzed. The variables must be numeric. If you omit the vars statement, all numeric variables not mentioned in other statements make up the first set of variables.
     
-    vars_with : The vars_with statement lists the variables in the second set of variables to be analyzed. 
-                The variables must be numeric. The vars_with statement is required.
+    `vars_with` : The vars_with statement lists the variables in the second set of variables to be analyzed. The variables must be numeric. The vars_with statement is required.
     
-    Return
-    ------
-    eig_  : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+    Attributes
+    ----------
+    `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    call_ : a dictionary with some statistics
+    `call_` : dictionary with some statistics
 
-    cov_ : a dictionary of covariance matrix (unbiased and biased)
+    `cov_` : dictionary of covariance matrix (unbiased and biased)
 
-    corr_ : a dictionary of Pearson correlation matrix
+    `corr_` : dictionary of Pearson correlation matrix
 
-    standardized_coef_ : standardized canonical coefficients
+    `standardized_coef_` : standardized canonical coefficients
 
-    coef_ : dictionary of raws canonical coefficients
+    `coef_` : dictionary of raws canonical coefficients
 
-    can_coef_ : canonical coefficients
+    `can_coef_` : canonical coefficients
 
-    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates for first group, coordinates for second group)
+    `ind_` : dictionary of pandas dataframe containing all the results for the active individuals (coordinates for first group, coordinates for second group)
 
-    var_ : a dictionary of pandas dataframe containing all the results for the active variables (canonical loadings)
+    `var_` : dictionary of pandas dataframe containing all the results for the active variables (canonical loadings)
 
-    tstat_ : tests of canonical dimensions
+    `tstat_` : tests of canonical dimensions
 
-    model_ : string. The model fitted = 'cca'
+    `model_` : string specifying the model fitted = 'cca'
 
     References
     ----------
@@ -87,11 +71,57 @@ class CCA(BaseEstimator,TransformerMixin):
 
     Afifi, A, Clark, V and May, S. 2004. Computer-Aided Multivariate Analysis. 4th ed. Boca Raton, Fl: Chapman & Hall/CRC.
 
+    Links
+    -----
     https://stats.oarc.ucla.edu/r/dae/canonical-correlation-analysis/
+
+    https://stats.oarc.ucla.edu/r/dae/canonical-correlation-analysis/
+    
+    https://stats.oarc.ucla.edu/sas/dae/canonical-correlation-analysis/
+
+    https://support.sas.com/documentation/cdl/en/statug/63347/HTML/default/viewer.htm#cancorr_toc.htm
+    
+    https://scikit-learn.org/stable/modules/generated/sklearn.cross_decomposition.CCA.html
+    
+    https://cmdlinetips.com/2020/12/canonical-correlation-analysis-in-python/
+    
+    https://cmdlinetips.com/2020/12/canonical-correlation-analysis-in-r/
+    
+    https://www.geeksforgeeks.org/canonical-correlation-analysis-cca-using-sklearn/
+    
+    https://medium.com/@pozdrawiamzuzanna/canonical-correlation-analysis-simple-explanation-and-python-example-a5b8e97648d2
+    
+    https://stackoverflow.com/questions/26298847/canonical-correlation-analysis-in-python-with-sklearn
+    
+    https://fr.wikipedia.org/wiki/Analyse_canonique_des_corr%C3%A9lations
+    
+    https://www.cabannes.org/#4
+    
+    https://lemakistatheux.wordpress.com/2017/01/20/lanalyse-canonique-des-correlations-a-venir/
+    
+    https://numpy.org/doc/stable/reference/generated/numpy.linalg.qr.html
+    
+    https://github.com/cran/CCP/blob/master/R/CCP.R
+    
+    https://github.com/cran/CCP
+    
+    https://github.com/friendly/candisc/tree/master
+    
+    https://davetang.github.io/muse/cca.html
     
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```python
+    >>> # load lifecyclesavings dataset
+    >>> from scientisttools import load_lifecyclesavings
+    >>> lifecyclesavings = load_lifecyclesavings()
+    >>> from scientisttools import CCA
+    >>> res_cca = CCA(lifecyclesavings,vars=[1,2])
+    ```
     """
     def __init__(self,
                  X = None,
@@ -346,26 +376,19 @@ class CCA(BaseEstimator,TransformerMixin):
             elif ((isinstance(vars_with,list) or isinstance(vars_with,tuple))  and len(vars_with)>=1):
                 vars_with_idx = [int(x) for x in vars_with]
 
-        ###############################################################################################################"
         # Drop level if ndim greater than 1 and reset columns name
-        ###############################################################################################################
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
         
-        ####################################### Check if missing values
-        if X.isnull().any().any():
-            for i in range(X.shape[1]):
-                if X.iloc[:,i].isnull().any():
-                    X.iloc[:,i] = X.iloc[:,i].fillna(X.iloc[:,i].mean())
-            print("Missing values are imputed by the mean of the variable.")
-        
-        ####################################### Save the base in a new variables
-        # Store data
-        Xtot = X.copy()
-
         # Check if all columns are numerics
         if not all(pd.api.types.is_numeric_dtype(X[col]) for col in X.columns):
             raise TypeError("All columns in X must be numeric")
+        
+        # Check if missing values
+        X = recodecont(X)["Xcod"]
+        
+        # Store data
+        Xtot = X.copy()
         
         if vars is None and vars_with is not None:
             X2 = X.iloc[:,vars_with_idx]

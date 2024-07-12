@@ -21,7 +21,7 @@ def get_eig(self) -> pd.DataFrame:
 
     Parameters:
     -----------
-    `self` : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMD, MFAMIX, MFACT, CMDSCALE
+    `self` : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE
 
     Returns
     -------
@@ -44,8 +44,8 @@ def get_eig(self) -> pd.DataFrame:
     >>> print(eig)
     ```
     """
-    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamd","mfamix","mfact","cmdscale"]:
-        raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMD, MFAMIX, MFACT, CMDSCALE")
+    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
+        raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
     return self.eig_
 
 def get_eigenvalue(self) -> pd.DataFrame:

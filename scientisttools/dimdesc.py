@@ -357,21 +357,23 @@ def dimdesc(self,axis=None,proba=0.05):
                     res["quanti"] = quanti
             corrdim[idx] = res
     elif self.model_ == "mfamix":
-        quali_data = self.call_["X"].select_dtypes(include = ["object"])
-        quanti_data = self.call_["X"].select_dtypes(exclude =["object"])
+        quali_data = splitmix(self.call_["X"])["quali"]
+        quanti_data = splitmix(self.call_["X"])["quanti"]
 
         ind_coord = self.ind_["coord"]
 
+        # Add supplementary quantitative variables
         if hasattr(self,"quanti_var_sup_"):
             X_quanti_sup = self.call_["Xtot"].loc[:,self.quanti_var_sup_["coord"].index].astype("float")
             if hasattr(self,"ind_sup_"):
-                X_quanti_sup = X_quanti_sup.drop(index=self.ind_sup_["coord"].index)
+                X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
             quanti_data = pd.concat((quanti_data,X_quanti_sup),axis=1)
         
+        # Add supplementary qualitatives variables
         if hasattr(self,"quali_var_sup_"):
             X_quali_sup = self.call_["Xtot"].loc[:,self.quali_var_sup_["eta2"].index].astype("object")
             if hasattr(self,"ind_sup_"):
-                X_quali_sup = X_quali_sup.drop(index=self.ind_sup_["coord"].index)
+                X_quali_sup = X_quali_sup.drop(index=self.call_["ind_sup"])
             quali_data = pd.concat((quali_data,X_quali_sup),axis=1)
         
         corrdim = {}

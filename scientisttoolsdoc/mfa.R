@@ -25,17 +25,6 @@ res.mfa$global.pca$svd$vs
 res.mfa$global.pca$svd$U[c(1:5),]
 res.mfa$global.pca$svd$V[c(1:5),]
 
-fviz_contrib(res.mfa,choice ="partial.axes")
-fviz_cos2(res.mfa,choice = "partial.axes")
-
-DimDesc <- dimdesc(res.mfa)
-DimDesc$Dim.1$quanti
-DimDesc$Dim.1$category
-DimDesc$Dim.2$quanti
-DimDesc$Dim.2$quali
-DimDesc$Dim.2$category
-DimDesc$Dim.3$quanti
-
 ###############################################################
 # Eigenvalues
 #############################################################
@@ -80,6 +69,17 @@ res.mfa$quanti.var.sup$coord
 res.mfa$quanti.var.sup$cor
 res.mfa$quanti.var.sup$cos2
 
+################################################################
+# Supplementary qualitatives variables
+################################################################
+quali_var_sup <- get_mfa_var(res.mfa,"quali.var")
+quali_var_sup$coord
+quali_var_sup$cos2
+quali_var_sup$v.test
+quali_var_sup$coord.partiel
+
+head(quali_var_sup$within.inertia) # A implémnter
+head(quali_var_sup$within.partial.inertia) # A implémenter
 
 ###############################################################################
 # Group informations
@@ -89,16 +89,22 @@ res.mfa$quanti.var.sup$cos2
 group <- get_mfa_var(res.mfa, "group")
 head(group$coord)
 head(group$contrib)
+group$cos2
+head(group$correlation)
 round(group$Lg,4)
 group$RV
-head(group$correlation)
-group$dist2  
-group$cos2   
+
+group$dist2
 
 ###### Supplementary group infos
 head(group$coord.sup)
 group$dist2.sup
 head(group$cos2.sup)
+
+################################################################
+# Inertia Informations
+################################################################
+res.mfa$inertia.ratio
 
 #############################################################
 # Partial axes
@@ -109,40 +115,20 @@ head(partial_axes$cor)
 head(partial_axes$contrib)
 head(partial_axes$cor.between)
 
-################################################################
-# Inertia Informations
-################################################################
-res.mfa$inertia.ratio
-
-################################################################
-# Supplementary qualitatives variables
-################################################################
-quali_var_sup <- get_mfa_var(res.mfa,"quali.var")
-quali_var_sup$coord
-quali_var_sup$cos2
-quali_var_sup$v.test
-quali_var_sup$coord.partiel
-head(quali_var_sup$within.inertia) # A implémnter
-head(quali_var_sup$within.partial.inertia) # A implémenter
-
 #################################################################
+res.mfa$summary.quanti
+res.mfa$summary.quali
 
+# Description
+DimDesc <- dimdesc(res.mfa)
+DimDesc$Dim.1$quanti
+DimDesc$Dim.1$category
+DimDesc$Dim.2$quanti
+DimDesc$Dim.2$quali
+DimDesc$Dim.2$category
+DimDesc$Dim.3$quanti
 
-fviz_mfa_ind(res.mfa)
-plot.MFA(res.mfa)
-
-fviz_mfa_var(res.mfa,col.var = "black")
-
-fviz_mfa_group(res.mfa)
-fviz_mfa_axes(res.mfa)
-
-quanti_var <- get_mfa_var(res.mfa,"quanti.var")
-quali_var <- get_mfa_var(res.mfa,"quali.var")
-groups <- get_mfa_var(res.mfa,"group")
-
-
-
-
+library(PCAmixdata)
 data("gironde")
 gironde <- 
   cbind.data.frame(
@@ -152,3 +138,13 @@ gironde <-
     gironde$environment
   )
 save(gironde,file = "./donnee/gironde.rda")
+
+employment <- gironde$employment
+housing <- gironde$housing
+services <- gironde$services
+environment <- gironde$environment
+save(employment,file = "./donnee/gironde_employment.rda")
+save(housing,file = "./donnee/gironde_housing.rda")
+save(services,file = "./donnee/gironde_services.rda")
+save(environment,file = "./donnee/gironde_environment.rda")
+

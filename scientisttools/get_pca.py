@@ -14,7 +14,7 @@ def get_pca_ind(self) -> dict:
     Usage
     -----
     ```python
-    >>> get_pca_ind(res_pca)
+    >>> get_pca_ind(self)
     ```
 
     Parameters

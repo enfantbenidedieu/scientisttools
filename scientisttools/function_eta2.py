@@ -32,6 +32,10 @@ def function_eta2(X,lab,x,weights,n_workers):
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
+    # Set weight if None
+    if weights is None:
+        weights = np.ones(X.shape[0])/X.shape[0]
+
     def fct_eta2(idx):
         tt = pd.get_dummies(X[lab],dtype=int)
         ni  = mapply(tt, lambda k : k*weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
