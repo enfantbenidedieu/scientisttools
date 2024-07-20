@@ -185,14 +185,15 @@ def fviz_contrib(self,
             contrib = pd.merge(contrib,self.group_label_,on=["variable"]).rename(columns={"variable" : "name"})
             
             if sort_contrib == "desc":
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group",fill="group"),
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group name",fill="group name"),
                                     width=bar_width,stat="identity")
             elif sort_contrib == "asc":
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group",fill="group"),
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group name",fill="group name"),
                                     width=bar_width,stat="identity")
             else:
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group",fill="group"),
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group name",fill="group name"),
                                     width=bar_width,stat="identity")
+            p = p + pn.labs(fill='Groups', color="Groups")
         else:
             if sort_contrib == "desc":
                 p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),
@@ -211,16 +212,15 @@ def fviz_contrib(self,
         contrib = pd.merge(contrib,self.group_label_,on=["variable"]).rename(columns={"variable" : "name"})
         
         if sort_contrib == "desc":
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group",fill="group"),
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group name",fill="group name"),
                                 width=bar_width,stat="identity")
         elif sort_contrib == "asc":
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group",fill="group"),
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group name",fill="group name"),
                                 width=bar_width,stat="identity")
         else:
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group",fill="group"),
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group name",fill="group name"),
                                 width=bar_width,stat="identity")
-           
-
+        p = p + pn.labs(fill='Groups', color="Groups")
     else:
         if sort_contrib == "desc":
             p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),

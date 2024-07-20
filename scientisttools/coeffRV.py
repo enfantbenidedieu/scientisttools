@@ -39,8 +39,6 @@ def coeffRV(X=None,Y=None,first_eigen_X=None,first_eigen_Y=None):
     """
 
     if Y is None:
-        if X.shape[0]!= X.shape[1]:
-            raise TypeError('X must be a squared matrix')
         Lg = X
     else:
         Lg = pd.DataFrame(coeffLg(X=X,Y=Y,first_eigen_X=first_eigen_X,first_eigen_Y=first_eigen_Y))

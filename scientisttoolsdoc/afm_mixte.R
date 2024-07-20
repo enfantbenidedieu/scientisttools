@@ -15,19 +15,6 @@ res=MFA(Biometrie2,group=c(3,3,3,3),
         num.group.sup = c(3,4),
         graph = FALSE)
 
-DimDesc <- dimdesc(res)
-DimDesc$Dim.1$quanti
-DimDesc$Dim.1$quali
-DimDesc$Dim.1$category
-
-fviz_contrib(res,choice = "quanti.var")
-
-fviz_mfa_ind(res)
-fviz_mfa_var(res)
-fviz_mfa_axes(res)
-
-res$separate.analyses$Gr1$call$marge.row
-
 ####################################################
 # Eigenvalues informations
 ########################################################
@@ -49,9 +36,11 @@ res$ind$within.partial.inertia
 quanti_var <- get_mfa_var(res,"quanti.var")
 quanti_var$coord
 quanti_var$cor
-quanti_var$cos2
 quanti_var$contrib
+quanti_var$cos2
 
+
+# For supplementary quantitatives variables
 quanti_var_sup <- res$quanti.var.sup
 quanti_var_sup$coord
 quanti_var_sup$cos2
@@ -70,17 +59,24 @@ quali_var$coord.partiel
 quali_var$within.inertia # A implémenter
 quali_var$within.partial.inertia # A implémenter
 
+# Supplementary qualitative
+res$quali.var.sup$coord
+res$quali.var.sup$cos2
+res$quali.var.sup$v.test
+res$quali.var.sup$coord.partiel
+
 #############################################################
 # Group informations
 ###############################################################
 group <- get_mfa_var(res,"group")
 head(group$coord)
+head(group$cos2)
 head(group$contrib)
 head(group$correlation)
 head(group$Lg)
 head(group$RV)
 head(group$dist2) 
-head(group$cos2)
+
 
 x <- group$Lg[c(1,2),c(1,2)]
 

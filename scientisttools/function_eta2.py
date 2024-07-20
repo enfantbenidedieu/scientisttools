@@ -14,13 +14,13 @@ def function_eta2(X,lab,x,weights,n_workers):
 
     Parameters
     ----------
-    X : pandas dataframe of shape (n_rows, n_columns), dataframe containing categoricals variables
+    `X` : pandas dataframe of shape (n_rows, n_columns), dataframe containing categoricals variables
 
-    lab : name of a columns in X
+    `lab` : name of a columns in X
 
     x : pandas dataframe of individuals coordinates of shape (n_rows, n_components)
 
-    weights : array with the weights of each row
+    `weights` : array with the weights of each row
 
     n_workers : Maximum amount of workers (processes) to spawn.
 
@@ -30,7 +30,7 @@ def function_eta2(X,lab,x,weights,n_workers):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     # Set weight if None
     if weights is None:

@@ -8,7 +8,7 @@ index <- c(rep(1,9),rep(2,5),rep(3,9),rep(4,4))
 names <- c("employment","housing","services","environment") 
 active <- dat[c(1:500),]
 res.mfamix<-MFAmix(data=active,groups=index,
-                   name.groups=names,ndim=3,rename.level=TRUE,graph=FALSE)
+                   name.groups=names,ndim=5,rename.level=TRUE,graph=FALSE)
 
 # Eigenvalues
 res.mfamix$eig
@@ -41,10 +41,29 @@ head(res.mfamix$groups$RV)
 head(res.mfamix$groups$contrib.pct)
 res.mfamix$inertia.ratio
 
+# Partial axes
+res.mfamix$partial.axes$employment
+res.mfamix$partial.axes$housing
+res.mfamix$partial.axes$services
+res.mfamix$partial.axes$environment
+
+# 
+res.mfamix$
+
 ind.sup <- dat[c(501:542),]
 
 predict_ind <- predict(res.mfamix,ind.sup)
-head(predict_ind)
+names2 <- c("employment2","housing2","services2","environment2")
+supvar.mfamix <- supvar(res.mfamix,data.sup = active,
+                        groups.sup = index,
+                        name.groups.sup = names2,
+                        rename.level = TRUE)
+
+supvar.mfamix$group.sup
+supvar.mfamix$partial.axes.sup
+supvar.mfamix$quanti.sup
+supvar.mfamix$levels.sup
+supvar.mfamix$sqload.sup
 
 # Cas 2
 dat2 <- cbind(gironde$employment,gironde$housing,gironde$services)
@@ -89,4 +108,12 @@ supvarpred <- supvar(obj = res.mfamix1,
 
 
 
+# Employment - Environnement
+data("gironde")
+dat4 <- cbind(gironde$employment,gironde$environment) 
+index4 <- c(rep(1,9),rep(2,4)) 
+names4 <- c("employment","environment") 
+res.mfamix4 <- MFAmix(data=dat4,groups=index4,name.groups=names4,ndim=3,rename.level=TRUE,graph=FALSE)
+
+head(res.mfamix4$eig)
 

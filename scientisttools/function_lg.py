@@ -37,6 +37,14 @@ def function_lg(X,Y,X_weights=None,Y_weights=None,ind_weights=None):
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
+    # Check if X is an instance of pandas series
+    if isinstance(X,pd.Series):
+        X = X.to_frame()
+    
+    # Check if Y is an instance of pandas series
+    if isinstance(Y,pd.Series):
+        Y = Y.to_frame()
+
     # Check if X is an instance of pandas DataFrame
     if not isinstance(X,pd.DataFrame):
         raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "

@@ -45,7 +45,7 @@ from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
 from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_var, fviz_mpca
 
 # Multiple Factor Analysis (MFA)
-from .mfa import MFA, predictMFA
+from .mfa import MFA, predictMFA, supvarMFA
 from .get_mfa import get_mfa_ind, get_mfa_var, get_mfa_partial_axes, get_mfa, summaryMFA
 from .fviz_mfa import fviz_mfa_ind, fviz_mfa_var, fviz_mfa_axes,fviz_mfa_group, fviz_mfa
 
@@ -56,8 +56,8 @@ from .fviz_mfa import fviz_mfa_mod
 # Multiple Factor Analysis of Mixed Data (MFAMIX)
 from .mfamix import MFAMIX
 
-# Multiple Factor Analysis of contingence table
-from .mfact import MFACT
+# Multiple Factor Analysis for contingence table (MFACT)
+from .mfact import MFACT, predictMFACT
 from .fviz_mfa import fviz_mfa_freq
 
 # Multidimensional Scaling

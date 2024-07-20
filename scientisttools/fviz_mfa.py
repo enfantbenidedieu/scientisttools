@@ -147,8 +147,9 @@ def fviz_mfa_ind(self,
     if self.num_group_sup is not None:
         not_in = [x for x in self.call_["Xtot"].columns if x not in self.call_["X"].columns]
         X_group_sup = self.call_["Xtot"][not_in]
-        if self.ind_sup is not None:
-            X_group_sup = X_group_sup.drop(index=[name for i, name in enumerate(self.call_["Xtot"].index.tolist()) if i in self.ind_sup_["coord"].index.toliost()])
+        if hasattr(self,"ind_sup"):
+            if self.ind_sup is not None:
+                X_group_sup = X_group_sup.drop(index=self.call_["ind_sup"])
         coord = pd.concat((coord,X_group_sup),axis=1)
 
     # Using lim cos2
@@ -199,7 +200,7 @@ def fviz_mfa_ind(self,
         if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns.tolist()]) or isinstance(color,np.ndarray):
             # Add gradients colors
             if "point" in geom:
-                p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
+                p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size)+ 
                         pn.scale_color_gradient2(midpoint=np.mean(c),low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
             if "text" in geom:
                 if repel :
@@ -220,7 +221,7 @@ def fviz_mfa_ind(self,
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         else:
             if "point" in geom:
-                p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
+                p = p + pn.geom_point(color=color,shape=marker,size=point_size)
             if "text" in geom:
                 if repel :
                     p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
@@ -479,7 +480,7 @@ def fviz_mfa_var(self,
             legend_title = "Cluster"
         # Point
         if "point" in geom:
-            p = p + pn.geom_point(color=c,shape=marker,size=point_size)
+            p = p + pn.geom_point(color=c,size=point_size)
         # Add arrow
         if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), 
@@ -500,16 +501,16 @@ def fviz_mfa_var(self,
         # Reset and merge
         coord = coord.reset_index().rename(columns={"index" : "variable"})
         coord = pd.merge(coord,self.group_label_,on=["variable"]).set_index("variable")
-                
+
         p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
         if "point" in geom:
-            p = p + pn.geom_point(pn.aes(color="group"),shape=marker,size=point_size)
+            p = p + pn.geom_point(pn.aes(color="group name"),size=point_size)
         if "arrow" in geom:
-            p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color="group"), 
+            p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color="group name"), 
                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
                     pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
-            p = p + text_label(text_type,mapping=pn.aes(color="group"),size=text_size,va=va,ha=ha)
+            p = p + text_label(text_type,mapping=pn.aes(color="group name"),size=text_size,va=va,ha=ha)
         # Set label position
         p = p + pn.theme(legend_position=legend)
     else:
@@ -670,7 +671,7 @@ def fviz_mfa_group(self,
     ```
     """
     # Check if self is an object of class MFA, MFAQUAL, MFAMIX, MFACT
-    if self.model_ not in ["mfa","mfaqual","mfamix"]:
+    if self.model_ not in ["mfa","mfaqual","mfamix","mfact"]:
         raise TypeError("'self' must be an instance of class MFA, MFAQUAL, MFAMIX, MFACT")
     
     if ((len(axis) !=2) or 
@@ -723,8 +724,8 @@ def fviz_mfa_group(self,
     if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
-                        pn.scale_color_gradient2(midpoint=np.mean(c),low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
+            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size)+ 
+                        pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
         if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
@@ -745,7 +746,7 @@ def fviz_mfa_group(self,
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
     else:
         if "point" in geom:
-            p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
+            p = p + pn.geom_point(color=color,shape=marker,size=point_size)
         if "text" in geom:
             if repel :
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color,'lw':1.0}})
@@ -915,6 +916,8 @@ def fviz_mfa_axes(self,
     if color == "group":
         if legend_title is None:
             legend_title = "Groups"
+        if "point" in geom:
+            p = p + pn.geom_point(pn.aes(color="group"))
         if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color="group"), 
                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
@@ -922,6 +925,8 @@ def fviz_mfa_axes(self,
         if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color="group"),size=text_size,va=va,ha=ha)
     else:
+        if "point" in geom:
+            p = p + pn.geom_point()
         if "arrow" in geom:
             p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color)
@@ -1113,8 +1118,8 @@ def fviz_mfa_mod(self,
     if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
-                    pn.scale_color_gradient2(midpoint=np.mean(c),low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
+            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size)+ 
+                    pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
         if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
@@ -1132,9 +1137,34 @@ def fviz_mfa_mod(self,
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+    elif color == "group":
+        if legend_title is None:
+            legend_title = "Groups"
+        ###### Add group sup
+        if quali_sup:
+            if hasattr(self, "quali_var_sup_"):
+                sup_coord = self.quali_var_sup_["coord"]
+                coord = pd.concat([coord,sup_coord],axis=0)
+        
+        # Merge between summary quali and group_label
+        groups = pd.merge(self.summary_quali_[["categorie","group name"]],self.group_label_,on=["group name"])[["categorie","group name"]]
+        
+        # Reset index and merge
+        coord = coord.reset_index().rename(columns={"index" : "categorie"})
+        coord = pd.merge(coord,groups,on=["categorie"]).set_index("categorie")
+                
+        p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
+        if "point" in geom:
+           p = (p + pn.geom_point(pn.aes(color="group name"),shape=marker,size=point_size)+
+                    pn.guides(color=pn.guide_legend(title=legend_title)))
+        if "text" in geom:
+            if repel :
+                p = p + text_label(text_type,mapping=pn.aes(color="group name"),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+            else:
+                p = p + text_label(text_type,mapping=pn.aes(color="group name"),size=text_size,va=va,ha=ha)
     else:
         if "point" in geom:
-            p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
+            p = p + pn.geom_point(color=color,shape=marker,size=point_size)
         if "text" in geom:
             if repel :
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
@@ -1147,14 +1177,14 @@ def fviz_mfa_mod(self,
             raise ValueError("No supplementary qualitatives variables")
         quali_var_sup_coord = self.quali_var_sup_["coord"]
         if "point" in geom:
-            p = p + pn.geom_point(quali_var_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_sup_coord.index.tolist()),
+            p = p + pn.geom_point(quali_var_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_sup_coord.index),
                                     color=color_sup,size=point_size,shape=marker_sup)
         if "text" in geom:
             if repel:
-                p = p + text_label(text_type,data=quali_var_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_sup_coord.index.tolist()),
+                p = p + text_label(text_type,data=quali_var_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_sup_coord.index),
                                     color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
-                p = p + text_label(text_type,data=quali_var_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_sup_coord.index.tolist()),
+                p = p + text_label(text_type,data=quali_var_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_var_sup_coord.index),
                                     color = color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        
@@ -1326,8 +1356,8 @@ def fviz_mfa_freq(self,
     if (isinstance(color,str) and color in ["cos2","contrib"]) or isinstance(color,np.ndarray):
         # Add gradients colors
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
-                    pn.scale_color_gradient2(midpoint=np.mean(c),low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
+            p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+ 
+                    pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
         if "text" in geom:
             if repel :
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
@@ -1338,7 +1368,7 @@ def fviz_mfa_freq(self,
         if legend_title is None:
             legend_title = "Cluster"
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
+            p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size)+
                     pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :
@@ -1360,13 +1390,13 @@ def fviz_mfa_freq(self,
                 
         p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
         if "point" in geom:
-           p = (p + pn.geom_point(pn.aes(color="group"),shape=marker,size=point_size,show_legend=False)+
+           p = (p + pn.geom_point(pn.aes(color="group name"),shape=marker,size=point_size)+
                     pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             if repel :
-                p = p + text_label(text_type,mapping=pn.aes(color="group"),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+                p = p + text_label(text_type,mapping=pn.aes(color="group name"),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
-                p = p + text_label(text_type,mapping=pn.aes(color="group"),size=text_size,va=va,ha=ha)
+                p = p + text_label(text_type,mapping=pn.aes(color="group name"),size=text_size,va=va,ha=ha)
     else:
         if "point" in geom:
             p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
@@ -1382,14 +1412,14 @@ def fviz_mfa_freq(self,
             raise ValueError("No supplementary frequences")
         freq_sup_coord = self.freq_sup_["coord"]
         if "point" in geom:
-            p = p + pn.geom_point(freq_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=freq_sup_coord.index.tolist()),
+            p = p + pn.geom_point(freq_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=freq_sup_coord.index),
                                     color=color_sup,size=point_size,shape=marker_sup)
         if "text" in geom:
             if repel:
-                p = p + text_label(text_type,data=freq_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=freq_sup_coord.index.tolist()),
+                p = p + text_label(text_type,data=freq_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=freq_sup_coord.index),
                                     color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
-                p = p + text_label(text_type,data=freq_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=freq_sup_coord.index.tolist()),
+                p = p + text_label(text_type,data=freq_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=freq_sup_coord.index),
                                     color = color_sup,size=text_size,va=va,ha=ha)
 
     # Add additionnal        

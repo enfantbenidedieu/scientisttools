@@ -13,6 +13,7 @@ from .function_eta2 import function_eta2
 from .revaluate_cat_variable import revaluate_cat_variable
 from .svd_triplet import svd_triplet
 from .recodecont import recodecont
+from .conditional_average import conditional_average
 
 class PCA(BaseEstimator,TransformerMixin):
     """
@@ -254,16 +255,6 @@ class PCA(BaseEstimator,TransformerMixin):
         summary_quanti["count"] = summary_quanti["count"].astype("int")
         self.summary_quanti_ = summary_quanti
 
-        # Set number of components
-        if self.n_components is None:
-            n_components = min(n_rows-1,n_cols)
-        elif not isinstance(self.n_components,int):
-            raise ValueError("'n_components' must be an integer.")
-        elif self.n_components < 1:
-            raise ValueError("'n_components' must be equal or greater than 1.")
-        else:
-            n_components = min(self.n_components,n_rows-1,n_cols)
-        
         # Set individuals weights
         if self.ind_weights is None:
             ind_weights = np.ones(n_rows)/n_rows
@@ -294,8 +285,22 @@ class PCA(BaseEstimator,TransformerMixin):
         else:
             std = np.ones(X.shape[1])
         
-        # Standardization
+        # Standardization : Z = (X - mu)/sigma
         Z = (X - means.reshape(1,-1))/std.reshape(1,-1)
+
+        # QR decomposition (to set maximum number of components)
+        Q, R = np.linalg.qr(Z)
+        max_components = min(np.linalg.matrix_rank(Q),np.linalg.matrix_rank(R))
+
+        # Set number of components
+        if self.n_components is None:
+            n_components = int(max_components)
+        elif not isinstance(self.n_components,int):
+            raise ValueError("'n_components' must be an integer.")
+        elif self.n_components < 1:
+            raise ValueError("'n_components' must be equal or greater than 1.")
+        else:
+            n_components = int(min(self.n_components,max_components))
         
         #Store call informations  : X = Z, M = diag(col_weight), D = diag(row_weight) : t(X)DXM
         self.call_ = {"Xtot":Xtot,
@@ -313,42 +318,34 @@ class PCA(BaseEstimator,TransformerMixin):
         ## Individuals informations : Squared distance to origin, weights and Inertia
         # Individuals square distance to origin
         ind_dist2 = mapply(Z,lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-        ind_dist2.name = "Sq. Dist."
         # Individuals inertia
         ind_inertia = ind_dist2*ind_weights
-        ind_inertia.name = "inertia"
         # Store all informations
-        ind_infos = np.c_[ind_weights,ind_dist2,ind_inertia]
-        ind_infos = pd.DataFrame(ind_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.index)
+        ind_infos = pd.DataFrame(np.c_[ind_weights,ind_dist2,ind_inertia],columns=["Weight","Sq. Dist.","Inertia"],index=X.index)
 
         ## Variables informations : Squared distance to origin, weights and Inertia
         # Variables square distance to origin
         var_dist2 = mapply(Z,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
-        var_dist2.name = "dist"
         # Variables inertia
         var_inertia = var_dist2*var_weights
-        var_inertia.name = "inertia"
-        # Variables/categoires
-        var_infos = np.c_[var_weights, var_dist2,var_inertia]
-        var_infos = pd.DataFrame(var_infos,columns=["Weight","Sq. Dist.","Inertia"],index=X.columns)
+        # Store all informations
+        var_infos = pd.DataFrame(np.c_[var_weights,var_dist2,var_inertia],columns=["Weight","Sq. Dist.","Inertia"],index=X.columns)
         
         # Generalized Singular Value Decomposition (GSVD)
         svd = svd_triplet(X=Z,row_weights=ind_weights,col_weights=var_weights,n_components=n_components)
         self.svd_ = svd
 
         # Eigen - values
-        eigen_values = svd["vs"][:min(X.shape[0]-1,X.shape[1])]**2
+        eigen_values = svd["vs"][:max_components]**2
         difference = np.insert(-np.diff(eigen_values),len(eigen_values)-1,np.nan)
         proportion = 100*eigen_values/np.sum(eigen_values)
         cumulative = np.cumsum(proportion)
-        # store in 
-        eig = np.c_[eigen_values,difference,proportion,cumulative]
-        self.eig_ = pd.DataFrame(eig,columns=["eigenvalue","difference","proportion","cumulative"],index = ["Dim."+str(x+1) for x in range(eig.shape[0])])
+        # store all informations
+        self.eig_ = pd.DataFrame(np.c_[eigen_values,difference,proportion,cumulative],columns=["eigenvalue","difference","proportion","cumulative"],index = ["Dim."+str(x+1) for x in range(len(eigen_values))])
 
         ## Individuals informations : coordinates, contributions and squared Cosinus
         # Individuals coordinates
-        ind_coord = svd["U"].dot(np.diag(svd["vs"][:n_components]))
-        ind_coord = pd.DataFrame(ind_coord,index=X.index,columns=["Dim."+str(x+1) for x in range(n_components)])
+        ind_coord = pd.DataFrame(svd["U"].dot(np.diag(svd["vs"][:n_components])),index=X.index,columns=["Dim."+str(x+1) for x in range(n_components)])
 
         # Individuals contributions
         ind_contrib = mapply(ind_coord,lambda x : 100*(x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers)
@@ -362,8 +359,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         ## Variables informations : coordinates, contributions and squared cosinus
         # Variables coordinates
-        var_coord = svd["V"].dot(np.diag(svd["vs"][:n_components]))
-        var_coord = pd.DataFrame(var_coord,index=X.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
+        var_coord = pd.DataFrame(svd["V"].dot(np.diag(svd["vs"][:n_components])),index=X.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
 
         # Variables contributions
         var_contrib = mapply(var_coord,lambda x : 100*(x**2)*var_weights,axis=0,progressbar=False,n_workers=n_workers)
@@ -375,13 +371,12 @@ class PCA(BaseEstimator,TransformerMixin):
         # Store all informations
         self.var_ = {"coord": var_coord, "cor":var_coord, "cos2":var_cos2, "contrib":var_contrib, "infos" : var_infos}
 
-        ####################################################################################################
         # Bartlett - statistics
         bartlett_stats = -(n_rows-1-(2*n_cols+5)/6)*np.sum(np.log(eigen_values))
         bs_dof = n_cols*(n_cols-1)/2
         bs_pvalue = 1 - sp.stats.chi2.cdf(bartlett_stats,df=bs_dof)
         bartlett_sphericity_test = pd.DataFrame([np.sum(np.log(eigen_values)),bartlett_stats,bs_dof,bs_pvalue],index=["|CORR.MATRIX|","statistic","dof","p-value"],columns=["value"])
-    
+        # Kaiser threshold
         kaiser_threshold = np.mean(eigen_values)
         kaiser_proportion_threshold = 100/np.sum(var_inertia)
         # Karlis - Saporta - Spinaki threshold
@@ -389,11 +384,9 @@ class PCA(BaseEstimator,TransformerMixin):
         # Broken stick threshold
         broken_stick_threshold = np.flip(np.cumsum(1/np.arange(n_cols,0,-1)))[:n_components]
 
+        # Store all informations
         self.others_ = {"bartlett" : bartlett_sphericity_test,"kaiser" : kaiser_threshold, "kaiser_proportion" : kaiser_proportion_threshold,"kss" : kss_threshold,"bst" : broken_stick_threshold}
         
-        ##############################################################################################################################################
-        #                                        Compute supplementrary individuals statistics
-        ###############################################################################################################################################
         # Statistics for supplementary individuals
         if self.ind_sup is not None:
             # Transform to float
@@ -416,9 +409,6 @@ class PCA(BaseEstimator,TransformerMixin):
             # Store all informations
             self.ind_sup_ = {"coord" : ind_sup_coord,"cos2" : ind_sup_cos2,"dist" : ind_sup_dist2}
 
-        ###############################################################################################################################
-        #                               Compute supplementary quantitatives variables statistics
-        ###############################################################################################################################
         # Statistics for supplementary quantitatives variables
         if self.quanti_sup is not None:
             X_quanti_sup = Xtot.loc[:,quanti_sup_label]
@@ -427,6 +417,9 @@ class PCA(BaseEstimator,TransformerMixin):
             
             # Transform to float
             X_quanti_sup = X_quanti_sup.astype("float")
+
+            # Fill missing with mean
+            X_quanti_sup = recodecont(X=X_quanti_sup)["Xcod"]
 
             # Summary statistics
             self.summary_quanti_.insert(0,"group","active")
@@ -459,14 +452,11 @@ class PCA(BaseEstimator,TransformerMixin):
             var_sup_dist2 = np.dot(np.ones(X_quanti_sup.shape[0]),var_sup_cor)
 
             # Supplementary quantitatives variables square cosine
-            var_sup_cos2 = mapply(var_sup_coord,lambda x : (x**2)/np.sqrt(var_sup_dist2),axis=0,progressbar=False,n_workers=n_workers)    
+            var_sup_cos2 = mapply(var_sup_coord,lambda x : (x**2)/var_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)    
 
             # Store supplementary quantitatives informations
             self.quanti_sup_ =  {"coord":var_sup_coord,"cor" : var_sup_coord,"cos2" : var_sup_cos2}
 
-        ##############################################################################################################################################
-        # Compute supplementary qualitatives variables statistics
-        ###############################################################################################################################################
         # Statistics for supplementary qualitatives variables
         if self.quali_sup is not None:
             X_quali_sup = Xtot.loc[:,quali_sup_label]
@@ -482,24 +472,17 @@ class PCA(BaseEstimator,TransformerMixin):
             # Square correlation ratio
             quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=ind_coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
 
-            # Barycenter of original data
-            barycentre = pd.DataFrame().astype("float")
-            n_k = pd.Series().astype("float")
-            for col in X_quali_sup.columns:
-                vsQual = X_quali_sup[col]
-                modalite, counts = np.unique(vsQual, return_counts=True)
-                n_k = pd.concat([n_k,pd.Series(counts,index=modalite)],axis=0)
-                bary = pd.DataFrame(index=modalite,columns=X.columns)
-                for mod in modalite:
-                    idx = [elt for elt, cat in enumerate(vsQual) if  cat == mod]
-                    bary.loc[mod,:] = np.average(X.iloc[idx,:],axis=0,weights=ind_weights[idx])
-                barycentre = pd.concat((barycentre,bary),axis=0)
-            
+            # Conditional mean - Barycenter of original data
+            barycentre = conditional_average(X=X,Y=X_quali_sup,weights=ind_weights)
+            n_k = pd.concat((X_quali_sup[col].value_counts() for col in X_quali_sup.columns),axis=0)
+
             # Standardize the barycenter
             bary = (barycentre - means)/std
+
+            # Square distance to origin
             quali_sup_dist2  = mapply(bary, lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
             quali_sup_dist2.name = "Sq. Dist."
-
+           
             # Supplementary categories coordinates
             quali_sup_coord = mapply(bary, lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(svd["V"][:,:n_components])
             quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
@@ -520,7 +503,7 @@ class PCA(BaseEstimator,TransformerMixin):
             summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
 
             # Supplementary categories informations
-            self.quali_sup_ = {"coord" : quali_sup_coord, "cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : quali_sup_dist2,"eta2" : quali_sup_eta2}
+            self.quali_sup_ = {"barycentre" : barycentre,"coord" : quali_sup_coord, "cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : quali_sup_dist2,"eta2" : quali_sup_eta2}
             self.summary_quali_ = summary_quali_sup
             
         self.model_ = "pca"
@@ -786,9 +769,6 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
     ind_weights = self.call_["ind_weights"].values
     n_components = self.call_["n_components"]
 
-    ########################################################################################################################
-    #                                          For supplementary quantitatives variables
-    #########################################################################################################################
     # Supplementary quantitatives variables statistics
     if X_quanti_sup is not None:
         # check if X_quanti_sup is an instance of polars dataframe
@@ -844,10 +824,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
     else:
         quanti_sup = None
     
-    ###########################################################################################################################
-    #                                                   For supplementary qualitatives variables
-    ###########################################################################################################################
-    # Supplementary qualitatives statistics
+    # Supplementary qualitative statistics
     if X_quali_sup is not None:
         # check if X_quali_sup is an instance of polars dataframe
         if isinstance(X_quali_sup,pl.DataFrame):
@@ -912,7 +889,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None):
         quali_sup_vtest = pd.concat(((quali_sup_vtest.loc[k,:]/np.sqrt((n_rows-n_k[k])/((n_rows-1)*n_k[k]))).to_frame().T for k in n_k.index),axis=0)
 
         # Supplementary categories informations
-        quali_sup = {"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : quali_sup_dist2,"eta2" : quali_sup_eta2}
+        quali_sup = {"barycentre":barycentre,"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"dist" : quali_sup_dist2,"eta2" : quali_sup_eta2}
     else:
         quali_sup = None
     

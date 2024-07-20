@@ -671,13 +671,13 @@ def load_gironde(which="all"):
         raise ValueError("'which' should be one of 'employment', 'housing', 'services', 'environment', 'all'")
     
     if which == "employment":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_employment.rda")["gironde_employment"]
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_employment.rda")["employment"]
     elif which == "housing":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_housing.rda")["gironde_housing"]
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_housing.rda")["housing"]
     elif which == "services":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_services.rda")["gironde_services"]
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_services.rda")["services"]
     elif which == "environment":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_employment.rda")["gironde_employment"]
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_environment.rda")["environment"]
     else:
         gironde = pyreadr.read_r(DATASETS_DIR/"gironde.rda")["gironde"]
     return gironde
@@ -709,10 +709,7 @@ def load_tennis():
     data = pd.read_excel(DATASETS_DIR/"tennisplayers.xlsx",index_col=0)
     return data
 
-
-
 ################################## Multiple Fcator Analysis (MFA) ########################################
-
 def load_burgundy_wines():
     """
     Burgundy wines dataset
@@ -816,7 +813,6 @@ def load_qtevie():
     """
     data = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
     return data
-
 
 ########################################## MFACT
 def load_mortality():
@@ -960,7 +956,6 @@ def load_vote():
     """
     data = pd.read_excel(DATASETS_DIR/"congressvotingrecords.xlsx")
     return data
-
 
 def load_usarrests():
     """

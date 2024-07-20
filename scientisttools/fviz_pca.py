@@ -269,7 +269,7 @@ def fviz_pca_ind(self,
         if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
             if "point" in geom:
-                p = (p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ 
+                p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+ 
                          pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
             if "text" in geom:
                 if repel :

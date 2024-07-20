@@ -114,7 +114,7 @@ def get_mfa_var(self,choice = "group"):
     ```
     """
     # Check if self is an object of class MFA, MFAQUAL, MFAMIX, MFAMIX, MFACT
-    if self.model_ not in ["mfa","mfaqual","mfamd","mfact"]:
+    if self.model_ not in ["mfa","mfaqual","mfamix","mfact"]:
         raise TypeError("'self' must be an object of class MFA, MFAQUAL, MFAMIX, MFACT")
     
     if choice not in ["group","quanti_var","quali_var","freq"]:
@@ -382,13 +382,16 @@ def summaryMFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         else:
             print("\nSupplementary individuals\n")
         ind_sup = self.ind_sup_
-        ind_sup_infos = ind_sup["dist"]
+        if self.model_ != "mfact":
+            ind_sup_infos = ind_sup["dist"]
+        else:
+            ind_sup_infos = pd.DataFrame().astype("float")
         for i in range(ncp):
             ind_sup_coord = ind_sup["coord"].iloc[:,i]
             ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
             ind_sup_cos2.name = "cos2"
             ind_sup_infos = pd.concat((ind_sup_infos,ind_sup_coord,ind_sup_cos2),axis=1)
-        ind_sup_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
+        ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:

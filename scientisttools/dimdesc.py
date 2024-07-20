@@ -7,6 +7,7 @@ import statsmodels.formula.api as smf
 
 from .splitmix import splitmix
 from .recodecont import recodecont
+from .weightedcorrtest import weightedcorrtest
 
 
 def dimdesc(self,axis=None,proba=0.05):
@@ -388,4 +389,26 @@ def dimdesc(self,axis=None,proba=0.05):
             if category.shape[0]:
                 res["category"] = category
             corrdim[idx] = res
+    else:
+        raise TypeError("Factor method not allowed")
+    # elif self.model_ == "mfact":
+    #     quanti_data = self.call_["X"]
+    #     ind_coord = self.ind_["coord"]
+    #     ind_weights = self.call_["ind_weights"]
+
+    #     if hasattr(self,"freq_sup_"):
+    #         X_quanti_sup = self.call_["Xtot"].loc[:,self.freq_sup_["coord"].index].astype("float")
+    #         if hasattr(self,"ind_sup_"):
+    #             X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
+    #         quanti_data = pd.concat((quanti_data,X_quanti_sup),axis=1)
+        
+    #     corrdim = {}
+    #     for idx in ind_coord.columns:
+    #         quanti = pd.DataFrame(index=quanti_data.columns,columns=["correlation","pvalue"]).astype("float")
+    #         for col in quanti_data.columns:
+    #             res = weightedcorrtest(x=quanti_data[col],y=ind_coord[idx],weights=ind_weights)
+    #             quanti.loc[col,:] = [res["statistic"],res["pvalue"]]
+    #         #quanti = contdesc(data=quanti_data,coord=ind_coord[idx],proba=proba)
+    #         print(quanti)
+    #         corrdim[idx] = quanti
     return corrdim

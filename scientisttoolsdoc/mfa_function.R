@@ -23,7 +23,6 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     for (i in 1:ncol(x)){
       Lg <- Lg+sum(crossprod(x[,i],y)^2)
     }
-    print(Lg)
     Lg
   }
   if (!is.null(excl) & "m"%in%type) stop("Excluding categories is not allowed when some groups are mixed")
@@ -135,10 +134,17 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     ##		ind.actif <- !((1:nrow(base))%in%intersect(ind.sup,(1:nrow(base))))
     for (i in grfrec){
       if ((type[i]=="f2")||(type[i]=="f3")||(i%in%num.group.sup)){
-        if (i==1) base[,1:group[1]]<- base[,1:group[1]]/sum(base[1:nb.actif,1:group[1]])
-        else base[,(sum(group[1:(i-1)])+1):sum(group[1:i])]<-base[,(sum(group[1:(i-1)])+1):sum(group[1:i])]/sum(base[1:nb.actif,(sum(group[1:(i-1)])+1):sum(group[1:i])])
+        if (i==1) {
+          base[,1:group[1]]<- base[,1:group[1]]/sum(base[1:nb.actif,1:group[1]])
+          
+          }
+        else {
+          base[,(sum(group[1:(i-1)])+1):sum(group[1:i])]<-base[,(sum(group[1:(i-1)])+1):sum(group[1:i])]/sum(base[1:nb.actif,(sum(group[1:(i-1)])+1):sum(group[1:i])])
+        }
       }
     }
+    # print(head(base[ind.sup,,drop=FALSE]))
+    
     type.var=="f"
     if(!any(type.var=="f")) sumT <-1
     else sumT <- sum(base[1:nb.actif,as.logical((type.var=="f")+(type.var=="f2")+(type.var=="f3"))])
@@ -164,7 +170,6 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     
     F..t<-numeric()
     for (j in grfrec)	F..t[j]<-sum(Fi.t[[j]][1:nb.actif])
-    
     for (t in grfrec){
       if (t==1) {
         base[,1:group[t]]<-sweep(base[,1:group[t]],2,F.jt[[t]],FUN="/")
@@ -179,7 +184,7 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     }
     row.w <- row.w[1:nb.actif]
   }		
-  
+  # print(head(base[ind.sup,,drop=FALSE]))
   if (!is.null(ind.sup))  row.w.moy.ec <- c(row.w,rep(0,length(ind.sup)))
   else row.w.moy.ec <- row.w
   
@@ -256,14 +261,10 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
       }
       ###  End handle missing values
       centre.tmp <- apply(tmp, 2, moy.p, row.w.moy.ec)
-      print(centre.tmp)
-      print(row.w.moy.ec)
       centre.tmp <- centre.tmp/sum(row.w.moy.ec)
-      print(centre.tmp)
       tmp2 <- tmp*(row.w.moy.ec/sum(row.w.moy.ec))
       poids.bary <- c(poids.bary,colSums(tmp2))
       poids.tmp <- 1-apply(tmp2, 2, sum)
-      print(poids.tmp)
       if(!is.null(excl[[g]])) poids.tmp[excl[[g]]] <- 0
       ponderation[(ind.grpe.mod + 1):(ind.grpe.mod + group.mod[g])] <- poids.tmp/(res.separe[[g]]$eig[1,1] * group[g])
       tmp <- tmp/sum(row.w.moy.ec)
@@ -274,7 +275,6 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
       ### End pb if the disjunctive table doesn't have only 0 and 1
       ecart.type.tmp[ecart.type.tmp <= 1e-08] <- 1
       tmp <- t(t(as.matrix(tmp))/ecart.type.tmp)
-      print(tmp)
       data <- cbind.data.frame(data, as.data.frame(tmp))
     }
     if (type[g] == "m") {
@@ -350,7 +350,6 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
       nb.of.var <- nb.of.var + group.mod[i]
     }
     colnames(data.group.sup) <- colnames.data.group.sup
-    print(data.group.sup)
     ponderation <- ponderation.tot[-c(supp.quanti,supp.quali)]
     data <- data[,-c(supp.quanti,supp.quali)]
     data.group.sup.indice <- (ncol(data)+1):(ncol(data)+ncol(data.group.sup))
@@ -382,9 +381,7 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     data.pca <- data.pca[,-aux_quali_sup_indice]
     aux_quali_sup_indice <- NULL
   }
-  
-  # print(data.pca)
-  # print(ponderation)
+  # print(tail(data.pca))
   ###  End handle missing values
   res.globale <- PCA(data.pca, scale.unit = FALSE, col.w = ponderation, row.w=row.w,ncp = ncp, ind.sup = ind.sup, quali.sup = aux_quali_sup_indice, quanti.sup = data.group.sup.indice, graph = FALSE)
   ###  Begin handle missing values
@@ -434,6 +431,8 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     coord.group.sup <- matrix(NA, length(num.group.sup), ncp)
     dimnames(coord.group.sup) <- list(name.group[num.group.sup], paste("Dim", c(1:ncp), sep = "."))
     ind.gc <- 0
+    print(head(ponderation.group.sup))
+    print(row.w)
     for (gc in 1:length(num.group.sup)) {
       for (k in 1:ncp){
         if (is.null(ind.sup)) coord.group.sup[gc,k] <- funcLg(res.globale$ind$coord[,k,drop=FALSE],data.group.sup[,(ind.gc+1):(ind.gc+group.mod[num.group.sup[gc]]),drop=FALSE],ponderation.x=1/res.globale$eig[k,1],ponderation.y=ponderation.group.sup[(ind.gc+1):(ind.gc+group.mod[num.group.sup[gc]])],wt=row.w/sum(row.w))
@@ -455,7 +454,6 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
           } 
           else Lg[gl, gc] <- Lg[gc, gl] <- funcLg(x=data[-ind.sup,ind.gl + (1:group.mod[gl]),drop=FALSE],y=data[-ind.sup,ind.gc + (1:group.mod[gc]),drop=FALSE],ponderation.x=ponderation[ind.gl + (1:group.mod[gl])],ponderation.y=ponderation[ind.gc + (1:group.mod[gc])],wt=row.w/sum(row.w))
         } else {
-          print(ponderation.group.sup)
           if (is.null(ind.sup)) Lg[gl, gc] <- Lg[gc, gl] <- funcLg(x=cbind.data.frame(data,data.group.sup)[,ind.gl + (1:group.mod[gl]),drop=FALSE],y=cbind.data.frame(data,data.group.sup)[,ind.gc + (1:group.mod[gc]),drop=FALSE],ponderation.x=c(ponderation,ponderation.group.sup)[ind.gl + (1:group.mod[gl])],ponderation.y=c(ponderation,ponderation.group.sup)[ind.gc + (1:group.mod[gc])],wt=row.w/sum(row.w))
           else Lg[gl, gc] <- Lg[gc, gl] <- funcLg(x=cbind.data.frame(data,data.group.sup)[-ind.sup,ind.gl +(1:group.mod[gl]),drop=FALSE],y=cbind.data.frame(data,data.group.sup)[-ind.sup,ind.gc + (1:group.mod[gc]),drop=FALSE],ponderation.x=c(ponderation,ponderation.group.sup)[ind.gl +(1:group.mod[gl])],ponderation.y=c(ponderation,ponderation.group.sup)[ind.gc + (1:group.mod[gc])],wt=row.w/sum(row.w))
         }
@@ -685,6 +683,7 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     commun <- intersect(rownames(res.globale$var$contrib),rownames(contrib.quali))
     if (!is.null(commun)) contrib.quali[commun,] <- res.globale$var$contrib[commun,1:ncp,drop=FALSE]
     barycentre <- res.globale$call$quali.sup$barycentre
+    print(barycentre)
     coord.quali.partiel <- matrix(NA, (nrow(barycentre) * length(group.actif)), ncp)
     nom.ligne.bary <- NULL
     for (q in 1:nrow(barycentre)) {
@@ -869,18 +868,34 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
 }
 
 # rm(list = ls())
-# library(FactoMineR)
-library(factoextra)
-data(wine)
-data(poison)
-res.mfa <- MFA2(wine,
-               ncp  = 5,
-               group = c(2, 5, 3, 10, 9, 2),
-               type = c("n", "c", "c", "s", "s", "s"),
-               name.group = c("origin","odor","visual",
-                              "odor.after.shaking", "taste","overall"),
-               num.group.sup = c(1, 6),graph = F)
+library(FactoMineR)
+# library(factoextra)
+# data(wine)
+# data(poison)
+# res.mfa <- MFA2(wine,
+#                ncp  = 5,
+#                group = c(2, 5, 3, 10, 9, 2),
+#                type = c("n", "c", "c", "s", "s", "s"),
+#                name.group = c("origin","odor","visual",
+#                               "odor.after.shaking", "taste","overall"),
+#                num.group.sup = c(1, 6),graph = F)
+mortality2 <- mortality
+colnames(mortality2) <- c(paste0(colnames(mortality2),"-2"))
 
+dat <- cbind.data.frame(mortality,mortality2)
+res2<-MFA2(dat,group=c(rep(9,4)),type=c(rep("f",4)),
+          name.group=c("1979","2006","1979-2","2006-2"),
+          num.group.sup = c(3,4),graph = F)
+
+# mortality3 <- mortality
+# rownames(mortality3) <- c(paste0(rownames(mortality3),"-2"))
+# dat2 <- rbind.data.frame(mortality,mortality3)
+# res3<-MFA2(dat2,group=c(rep(9,2)),type=c(rep("f",2)),
+#            name.group=c("1979","2006"),
+#            ind.sup = c((nrow(mortality)+1):nrow(dat2)),
+#            graph = F)
+
+  
 # res2.mfa <- MFA2(poison, group=c(2,2,5,6), type=c("s","n","n","n"),
 #                 name.group=c("desc","desc2","symptom","eat"),
 #                 num.group.sup=1:2,graph = FALSE)

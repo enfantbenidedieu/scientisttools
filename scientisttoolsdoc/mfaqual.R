@@ -8,19 +8,11 @@ library(factoextra)
 data (poison)
 res2.mfa <- MFA(poison, group=c(2,2,5,6), type=c("s","n","n","n"),
                 name.group=c("desc","desc2","symptom","eat"),
-                num.group.sup=1:2,graph = FALSE)
-
-fviz_contrib(res2.mfa,choice = "partial.axes")
-
-DimDesc = dimdesc(res2.mfa)
-DimDesc$Dim.1$quanti
-DimDesc$Dim.1$quali
-DimDesc$Dim.1$category
+                num.group.sup=1:2,ind.sup = c(51:55),graph = FALSE)
 
 ################################################################
 # Eigenvalues
 ###############################################################
-
 res2.mfa$eig
 
 ###############################################################
@@ -42,6 +34,11 @@ head(ind$contrib)
 head(ind$coord.partiel)
 head(ind$within.inertia)
 head(ind$within.partial.inertia)
+
+# Supplementary individuals informations
+head(res2.mfa$ind.sup$coord)
+head(res2.mfa$ind.sup$cos2)
+head(res2.mfa$ind.sup$coord.partiel)
 
 ##############################################################
 # Qualitatives variables
