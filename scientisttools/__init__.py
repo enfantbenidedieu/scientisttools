@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+# Eigenvalues
+from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
+
 # Principal Component Analysis (PCA)
 from .pca import PCA, predictPCA, supvarPCA
 from .get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
@@ -74,21 +77,7 @@ from .fviz_cmdscale import fviz_cmdscale
 from .cca import CCA
 from .fviz_cca import fviz_cca_ind, fviz_cca_var, fviz_cca_scatterplot, fviz_cca
 
-########
-from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
-from .dimdesc import dimdesc
-from .reconst import reconst
-from .splitmix import splitmix
-from .contdesc import contdesc
-from .catdesc import catdesc
-from .weightedcorrcoef import weightedcorrcoef
-from .weightedcorrtest import weightedcorrtest
-from .recodecont import recodecont
-from .recodecat import recodecat
-from .recodevar import recodevar
-from .covariance_to_correlation import covariance_to_correlation
-from .svd_triplet import svd_triplet
-
+# Others functions of visualization
 from .fviz_contrib import fviz_contrib
 from .fviz_cos2 import fviz_cos2
 from .fviz_corrplot import fviz_corrplot
@@ -103,6 +92,42 @@ from .varhca import VARHCA
 from .catvarhca import CATVARHCA
 from .varhcpc import VARHCPC
 from .fviz_hcpc import fviz_varhcpc_cluster
+
+# Others functions
+from .auto_cut_tree import auto_cut_tree
+from .catdesc import catdesc
+from .coeffLg import coeffLg
+from .coeffRV import coeffRV
+from .conditional_average import conditional_average
+from .contdesc import contdesc
+from .covariance_to_correlation import covariance_to_correlation
+from .dimdesc import dimdesc
+from .eta2 import eta2
+from .function_eta2 import function_eta2
+from .function_lg import function_lg
+from .gg_circle import gg_circle
+from .kmo import global_kmo_index, per_item_kmo_index
+from .quali_var_desc import quali_var_desc
+from .quanti_var_desc import quanti_var_desc
+from .recodecat import recodecat
+from .recodecont import recodecont
+from .recodevar import recodevar
+from .recodevarfamd import recodevarfamd
+from .reconst import reconst
+from .revaluate_cat_variable import revaluate_cat_variable
+from .sim_dist import sim_dist
+from .splitmix import splitmix
+from .svd_triplet import svd_triplet
+from .text_label import text_label, text3d_label
+from .weightedcorrcoef import weightedcorrcoef
+from .weightedcorrtest import weightedcorrtest
+
+
+
+
+
+
+
 
 ## Load all datasets
 # PCA datasets

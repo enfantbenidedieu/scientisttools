@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from mapply.mapply import mapply
 
-def function_eta2(X,lab,x,weights,n_workers):
+def function_eta2(X,lab,x,weights=None,n_workers=1):
     """
     Correlation ratio - Eta2
     ------------------------

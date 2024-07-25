@@ -181,9 +181,15 @@ def load_burgundywines():
     Examples
     --------
     ```python
-    
+    >>> # Load burgundywines
+    >>> from scientisttools import load_burgundywines
+    >>> wines = load_burgundywines()
+    >>> from scientisttools import MFA
+    >>> name = ["Type","Expert1","Expert2","Expert3"] 
+    >>> group_type = ["s","s","s","s"]
+    >>> res_mfa = MFA(n_components=5,group=[1,3,4,3],name_group=name,group_type=group_type,num_group_sup=0)
+    >>> res_mfa.fit(wines)
     ```
-
     """
     wines = pd.DataFrame(
         data=[
@@ -408,7 +414,7 @@ def load_decathlon2():
 
     Usage
     -----
-    ```
+    ```python
     >>> from scientisttools.datasets import load_decathlon2
     >>> decathlon2 = load_decathlon2()
     ```
@@ -620,7 +626,7 @@ def load_madagascar():
 
     Examples
     --------
-    ```
+    ```python
     >>> # Load dataset
     >>> from scientisttools import load_madagascar
     >>> madagascar = load_madagascar()
@@ -681,7 +687,7 @@ def load_mushroom():
 
     Usage
     -----
-    ```
+    ```python
     >>> from scientisttools import load_mushroom
     >>> mushroom = load_mushroom()
     ```

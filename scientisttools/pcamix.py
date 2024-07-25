@@ -619,11 +619,10 @@ class PCAMIX(BaseEstimator,TransformerMixin):
                     chi2_sup_test = pd.concat([chi2_sup_test,chi2_sup_test2],axis=0,ignore_index=True)
                 else:
                     chi2_sup_test = chi2_sup_test2
-                chi2_sup_test["dof"] = chi2_sup_test["dof"].astype("int")
                 self.chi2_test_ = pd.concat((self.chi2_test_,chi2_sup_test),axis=0,ignore_index=True)
             else:
                 if X_quali_sup.shape[1] > 1 :
-                    self.chi2_test_ = chi2_sup_test2
+                    self.chi2_test_ = chi2_sup_test
             
             #################################### Summary quali
             # Compute statistiques
