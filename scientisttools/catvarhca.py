@@ -21,33 +21,41 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
     """
     Hierarchical Clustering Analysis of Categorical Variables (VATVARHCA)
     ---------------------------------------------------------------------
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
-
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
-
     Performs Hierarchical Clustering Analysis of Categoricals Variables (CATVARHCA)
+
+    Usage
+    -----
+    ```
+    >>> CATVARHCA(n_clusters=None,var_sup = None,diss_metric = "cramer",metric="euclidean",method="ward",parallelize=False)
+    ```
 
     Parameters
     ----------
-    n_clusters : an integer.  If a (positive) integer, the tree is cut with nb.cluters clusters.
-                if None, n_clusters is set to 3
+    `n_clusters` : an integer.  If a (positive) integer, the tree is cut with nb.cluters clusters. if None, n_clusters is set to 3
     
-    var_sup : an integer or a list/tuple indicating the indexes of the supplementary individuals
+    `var_sup` : an integer or a list/tuple indicating the indexes of the supplementary individuals
     
-    min_cluster : an integer. The least possible number of clusters suggested.
+    `min_cluster` : an integer. The least possible number of clusters suggested.
 
-    max_cluster : an integer. The higher possible number of clusters suggested; by default the minimum between 10 and the number of individuals divided by 2.
+    `max_cluster` : an integer. The higher possible number of clusters suggested; by default the minimum between 10 and the number of individuals divided by 2.
  
-    diss_metric : {"cramer","dice","bothpos"}
+    `diss_metric` : {"cramer","dice","bothpos"}
 
-    Return
-    ------
+    Attributes
+    ----------
+   `call_` : dictionary with some statistics
+
+   `cluster_` : dictionary with cluster informations
+
+   `model_` : string specifying the model fitted = 'catvarhca'
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     def __init__(self,
                  n_clusters=None,
@@ -107,15 +115,15 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
                 var_sup = [int(self.var_sup)]
             elif ((isinstance(self.var_sup,list) or isinstance(self.var_sup,tuple))  and len(self.var_sup)>=1):
                 var_sup = [int(x) for x in self.var_sup]
+            var_sup_label = X.columns[var_sup]
+        else:
+            var_sup_label = None
             
-        ####################################### Save the base in a new variables
         # Store data
         Xtot = X.copy()
 
         if self.var_sup is not None:
-            X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in var_sup])
-        
-        ########### Compute dissimilarity matrix
+            X = X.drop(columns=var_sup_label)
         
         # Compute Dissimilarity Matrix
         if self.diss_metric == "cramer":
@@ -169,7 +177,7 @@ class CATVARHCA(BaseEstimator,TransformerMixin):
                       "X" : X,
                       "tree" : tree}
 
-        ################################### Informations abouts clusters
+        # Informations abouts clusters
         data_clust = pd.concat((D,cluster),axis=1)
         # Count by cluster
         cluster_count = data_clust.groupby("clust").size()

@@ -67,6 +67,13 @@ head(res$group$coord.sup)
 head(res$group$cos2.sup)
 head(res$group$dist2.sup)
 
+
+dimDesc = dimdesc(res)
+head(dimDesc$Dim.1)
+
+
+plot.MFA(res,choix = "freq")
+
 # Supplementary frequences
 mortality2 <- mortality
 colnames(mortality2) <- c(paste0(colnames(mortality2),"-2"))

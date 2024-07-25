@@ -57,7 +57,7 @@ from .fviz_mfa import fviz_mfa_mod
 from .mfamix import MFAMIX
 
 # Multiple Factor Analysis for contingence table (MFACT)
-from .mfact import MFACT, predictMFACT
+from .mfact import MFACT, predictMFACT, supvarMFACT
 from .fviz_mfa import fviz_mfa_freq
 
 # Multidimensional Scaling
@@ -78,12 +78,16 @@ from .fviz_cca import fviz_cca_ind, fviz_cca_var, fviz_cca_scatterplot, fviz_cca
 from .eigenvalue import get_eig,get_eigenvalue,fviz_eig,fviz_screeplot
 from .dimdesc import dimdesc
 from .reconst import reconst
-
-# Useful for PCAMIX
+from .splitmix import splitmix
+from .contdesc import contdesc
+from .catdesc import catdesc
+from .weightedcorrcoef import weightedcorrcoef
+from .weightedcorrtest import weightedcorrtest
 from .recodecont import recodecont
 from .recodecat import recodecat
 from .recodevar import recodevar
-from .splitmix import splitmix
+from .covariance_to_correlation import covariance_to_correlation
+from .svd_triplet import svd_triplet
 
 from .fviz_contrib import fviz_contrib
 from .fviz_cos2 import fviz_cos2
@@ -102,23 +106,38 @@ from .fviz_hcpc import fviz_varhcpc_cluster
 
 ## Load all datasets
 # PCA datasets
-from .datasets import load_cars2006, load_decathlon, load_decathlon2, load_autos, load_temperature, load_body
-# CA datasets
-from .datasets import load_children, load_housetasks, load_women_work, load_femmes_travail
-# MCA datasets
-from .datasets import load_tea, load_poison, load_races_canines, load_mushroom, load_music
-# FAMD datasets
-from .datasets import load_gironde, load_autos2, load_tennis
-# MPCA dataset
-from .datasets import load_cars
-# MFA datasets
-from .datasets import load_wine, load_qtevie, load_mortality
-# CCA datasets
-from .datasets import load_lifecyclesavings, load_usarrests
-# Sparse PCA datasets
-from .datasets import load_protein
-# CATVARHCA dataset
-from .datasets import load_vote
+from .datasets import (
+    load_autos,
+    load_autos2,
+    load_autosmds,
+    load_body,
+    load_burgundywines,
+    load_cars2006,
+    load_carsacpm,
+    load_children,
+    load_congressvotingrecords,
+    load_decathlon,
+    load_decathlon2,
+    load_femmetravail,
+    load_gironde,
+    load_housetasks,
+    load_jobrate,
+    load_lifecyclesavings,
+    load_madagascar,
+    load_mortality,
+    load_mushroom,
+    load_music,
+    load_poison,
+    load_protein,
+    load_qtevie,
+    load_racescanines,
+    load_tea,
+    load_temperature,
+    load_tennis,
+    load_usarrests,
+    load_wine,
+    load_womenwork
+)
 
 __version__ = '0.1.5'
 __name__ = "scientisttools"

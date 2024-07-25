@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -14,48 +13,42 @@ class VARHCA(BaseEstimator,TransformerMixin):
     """
     Hierarchical Clustering Analysis of Continuous Variables (VARHCA)
     -----------------------------------------------------------------
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
-
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
-
     Performs an agglomerative hierarchical clustering on continuous variables.
 
     Parameters
     ----------
-
-    n_clusters : an integer.  If a (positive) integer, the tree is cut with nb.cluters clusters.
-                if None, n_clusters is set to 3
+    `n_clusters` : an integer.  If a (positive) integer, the tree is cut with nb.cluters clusters. if None, n_clusters is set to 3
     
-    var_sup : an integer or a list/tuple indicating the indexes of the supplementary individuals
+    `var_sup` : an integer or a list/tuple indicating the indexes of the supplementary individuals
     
-    matrix_type : Three choices  
-                    - "completed" for original data
-                    - "correlation" for pearson correlation matrix
-                    - "covariance" for covariance matrix
+    `matrix_type` : Three choices 
+        * "completed" for original data
+        * "correlation" for pearson correlation matrix
+        * "covariance" for covariance matrix
 
-    metric : The metric used to built the tree, default = "euclidean"
+    `metric` : The metric used to built the tree, default = "euclidean"
 
-    method : The method used to built the tree, default = "ward"
+    `method`` : The method used to built the tree, default = "ward"
 
-    parallelize : boolean, default = False
-        If model should be parallelize
-            - If True : parallelize using mapply
-            - If False : parallelize using apply
+    `parallelize` : boolean, default = False. If model should be parallelize
+        * If `True` : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
+        * If `False` : parallelize using pandas apply
     
-    Return
-    ------
+    Attributes
+    ----------
+    `call_` : A list or parameters and internal objects.
 
-    call_ : A list or parameters and internal objects.
+    `cluster_` : a dictionary with clusters informations 
 
-    cluster_ : a dictionary with clusters informations 
-
-    corr_sup_ : conditional mean
+    `corr_sup_` : conditional mean
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     References
     ----------
@@ -82,15 +75,16 @@ class VARHCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        X : pandas/polars DataFrame of float, shape (n_rows, n_columns) or (n_columns, n_columns)
+        `X` : pandas/polars DataFrame of shape (n_samples, n_columns) or (n_columns, n_columns)
+            Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
-        y : None
+        `y` : None
             y is ignored
 
-        Returns:
-        --------
-        self : object
-                Returns the instance itself
+        Returns
+        -------
+        `self` : object
+            Returns the instance itself
         """
 
         # check if X is an instance of polars dataframe
@@ -124,24 +118,24 @@ class VARHCA(BaseEstimator,TransformerMixin):
                 var_sup = [int(self.var_sup)]
             elif ((isinstance(self.var_sup,list) or isinstance(self.var_sup,tuple))  and len(self.var_sup)>=1):
                 var_sup = [int(x) for x in self.var_sup]
+            var_sup_label = X.columns[var_sup]
+        else:
+            var_sup_label = None
             
-        ####################################### Save the base in a new variables
         # Store data
         Xtot = X.copy()
 
-        ####################################### Drop supplementary variables columns ########################################
+        # Drop supplementary variables columns
         if self.var_sup is not None:
             if self.matrix_type == "completed":
-                X = X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in var_sup])
+                X = X.drop(columns=var_sup_label)
             elif self.matrix_type == "correlation":
-                X = (X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in var_sup])
-                      .drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in var_sup]))
+                X = X.drop(columns=var_sup_label).drop(index=var_sup_label)
             elif self.matrix_type == "covariance":
                 X = covariance_to_correlation(X)
-                X = (X.drop(columns=[name for i, name in enumerate(Xtot.columns.tolist()) if i in var_sup])
-                      .drop(index=[name for i, name in enumerate(Xtot.index.tolist()) if i in var_sup]))
+                X = X.drop(columns=var_sup_label).drop(index=var_sup_label)
 
-        ##################################### Compute Pearson correlation matrix ##############################################
+        # Compute Pearson correlation matrix
         if self.matrix_type == "completed":
             corr_matrix = X.corr(method="pearson")
         elif self.matrix_type in ["correlation","covariance"]:
@@ -153,13 +147,13 @@ class VARHCA(BaseEstimator,TransformerMixin):
         else:
             method = self.method
         
-        ########################## metrics
+        # metrics
         if self.metric is None:
             metric = "euclidean"
         else:
             metric = self.metric
         
-        ################## Check numbers of clusters
+        # Check numbers of clusters
         if self.n_clusters is None:
             n_clusters = 3
         elif not isinstance(self.n_clusters,int):
@@ -191,7 +185,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
                       "X" : X,
                       "tree" : tree}
 
-        ################################### Informations abouts clusters
+        # Informations abouts clusters
         data_clust = pd.concat((corr_matrix,cluster),axis=1)
         # Count by cluster
         cluster_count = data_clust.groupby("clust").size()
@@ -200,10 +194,10 @@ class VARHCA(BaseEstimator,TransformerMixin):
         # Store cluster informations
         self.cluster_ = {"cluster" : cluster,"data_clust" : data_clust ,"effectif" : cluster_count}
 
-        ################## 
+        #
         if self.var_sup is not None:
             if self.matrix_type == "completed":
-                X_sup = Xtot.iloc[:,var_sup].astype("float")
+                X_sup = Xtot.loc[:,var_sup_label].astype("float")
                 # Compute correlation between 
                 corr_sup = np.corrcoef(X,X_sup,rowvar=False)[:X.shape[1],X.shape[1]:]
                 corr_sup = pd.DataFrame(corr_sup,index=X.columns.tolist(),columns=X_sup.columns.tolist())
@@ -213,8 +207,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
                 corr_sup = covariance_to_correlation(Xtot).iloc[:X.shape[1],var_sup]
              
             #moyenne des carrés des corrélations avec les groupes
-            corr_mean_sup = mapply(pd.concat([corr_sup,self.cluster_["cluster"]],axis=1).groupby("clust"),
-                                      lambda x : np.mean(x**2,axis=0),progressbar=False,n_workers=n_workers)
+            corr_mean_sup = mapply(pd.concat([corr_sup,self.cluster_["cluster"]],axis=1).groupby("clust"),lambda x : np.mean(x**2,axis=0),progressbar=False,n_workers=n_workers)
             corr_mean_sup.index.name = None
             self.corr_sup_ = corr_mean_sup.T
         # Model name
@@ -222,7 +215,7 @@ class VARHCA(BaseEstimator,TransformerMixin):
 
         return self
         
-    def transform(self,X,y=None):
+    def transform(self,X):
         """
         
         

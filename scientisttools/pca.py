@@ -59,6 +59,8 @@ class PCA(BaseEstimator,TransformerMixin):
     ----------
     `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
+    `svd_` : singular value decomposition
+
     `var_` : dictionary of pandas dataframes containing all the results for the active variables (coordinates, correlation between variables and axes, square cosinus, contributions)
 
     `ind_` : dictionary of pandas dataframes containing all the results for the active individuals (coordinates, square cosinus, contributions)

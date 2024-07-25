@@ -4,7 +4,9 @@ def get_mds(self) -> dict:
     Extract the results for Multidimension Scaling - (MDS & CMDSCALE)
     -----------------------------------------------------------------
 
-    self : an object of class MDS, CMDSCALE
+    Parameters
+    -----------
+    `self` : an object of class MDS, CMDSCALE
 
     Returns
     -------

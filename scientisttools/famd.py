@@ -72,6 +72,8 @@ class FAMD(BaseEstimator,TransformerMixin):
     ----------
     `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
+    `svd_` : dictionary of matrices containing all the results of the singular value decomposition
+
     `var_`  : dictionary of pandas dataframe containing all the results for the variables considered as group (coordinates, square cosine, contributions)
 
     `ind_` : dictionary of pandas dataframe with all the results for the individuals (coordinates, square cosine, contributions)

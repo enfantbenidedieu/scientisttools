@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -14,90 +13,80 @@ class MDS(BaseEstimator,TransformerMixin):
     """
     Metric and Non - Metric Multidimensional Scaling (MDS)
     ------------------------------------------------------
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
+    This is a metric and non - metric multidimensional scaling. Performs metric and non - metric Multidimensional Scaling (MDS) with supplementary rows points.
 
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
-
-    This is a metric and non - metric multidimensional scaling
-
-    Performs metric and non - metric Multidimensional Scaling (MDS) 
-    with supplementary rows points.
+    Usage
+    -----
+    ```python
+    >>> MDS(n_components=2,proximity ='euclidean',metric=True,n_init=4,max_iter=300,verbose=0,eps=1e-3,n_jobs=None,random_state=None,ind_sup = None,normalized_stress=True)
+    ```
 
     Parameters
     ----------
-    n_components : int, default=2
-        Number of dimensions in which to immerse the dissimilarities.
+    `n_components` : Number of dimensions in which to immerse the dissimilarities (by default 2)
     
-    proximity :  {'euclidean','precomputed','similarity'}, default = 'euclidean'
-        Dissmilarity measure to use :
-        - 'euclidean':
-            Pairwise Euclidean distances between points in the dataset
-        
-        - 'precomputed':
-            Pre-computed dissimilarities are passed disrectly to ``fit`` and ``fit_transform``.
-        
-        - `similarity`:
-            Similarity matrix is transform to dissimilarity matrix before passed to ``fit`` and ``fit_transform``.
+    `proximity`:  {'euclidean','precomputed','similarity'}, default = 'euclidean'. Dissmilarity measure to use :
+        - 'euclidean': Pairwise Euclidean distances between points in the dataset
+        - 'precomputed': Pre-computed dissimilarities are passed disrectly to ``fit`` and ``fit_transform``.
+        - `similarity`: Similarity matrix is transform to dissimilarity matrix before passed to ``fit`` and ``fit_transform``.
 
-    metric : bool, default=True
-        If ``True``, perform metric MDS; otherwise, perform nonmetric MDS.
-        When ``False`` (i.e. non-metric MDS), dissimilarities with 0 are considered as
-        missing values.
+    `metric` : bool, default=True. If ``True``, perform metric MDS; otherwise, perform nonmetric MDS. When ``False`` (i.e. non-metric MDS), dissimilarities with 0 are considered as missing values.
 
-    n_init : int, default=4
-        Number of times the SMACOF algorithm will be run with different
-        initializations. The final results will be the best output of the runs,
-        determined by the run with the smallest final stress.
+    `n_init` : int, default=4. Number of times the SMACOF algorithm will be run with different initializations. The final results will be the best output of the runs, determined by the run with the smallest final stress.
 
-    max_iter : int, default=300
-        Maximum number of iterations of the SMACOF algorithm for a single run.
+    `max_iter` : int, default=300. Maximum number of iterations of the SMACOF algorithm for a single run.
 
-    verbose : int, default=0
-        Level of verbosity.
+    `verbose` : int, default=0. Level of verbosity.
 
-    eps : float, default=1e-3
-        Relative tolerance with respect to stress at which to declare
-        convergence. The value of `eps` should be tuned separately depending
-        on whether or not `normalized_stress` is being used.
+    `eps` : float, default=1e-3 .Relative tolerance with respect to stress at which to declare convergence. The value of `eps` should be tuned separately depending on whether or not `normalized_stress` is being used.
 
-    n_jobs : int, default=None
-        The number of jobs to use for the computation. If multiple
-        initializations are used (``n_init``), each run of the algorithm is
-        computed in parallel.
-
+    `n_jobs` : int, default=None. The number of jobs to use for the computation. If multiple initializations are used (``n_init``), each run of the algorithm is computed in parallel.
         ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
         ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
         for more details.
 
-    random_state : int, RandomState instance or None, default=None
-        Determines the random number generator used to initialize the centers.
-        Pass an int for reproducible results across multiple function calls.
-        See :term:`Glossary <random_state>`.
+    `random_state` : int, RandomState instance or None, default=None. Determines the random number generator used to initialize the centers. Pass an int for reproducible results across multiple function calls. See :term:`Glossary <random_state>`.
 
-    var_sup : an integer or a list/tuple indicating the indexes of the supplementary variables
+    `var_sup` : an integer or a list/tuple indicating the indexes of the supplementary variables
 
-    normalized_stress : bool, default=True
+    `normalized_stress` : bool, default=True
         Whether use and return normed stress value (Stress-1) instead of raw
         stress calculated by default.
 
-    Return
-    ------
-    call_ : additional informations
+    Attributes
+    ----------
+    `call_` : additional informations
 
-    result_ : 
-            - 'coord' for the position of the dataset in the embedding space
-            - 'dist' for the Pairwise dissimilarities/distances between the points.
-            - 'res_dist' for the restitue Pairwise dissimilarities/distances between the points
-            - 'stress' for the The final value of the stress/normalized stress
+    `result_` : dictionary containg :
+        * 'coord' for the position of the dataset in the embedding space
+        * 'dist' for the Pairwise dissimilarities/distances between the points.
+        * 'res_dist' for the restitue Pairwise dissimilarities/distances between the points
+        * 'stress' for the The final value of the stress/normalized stress
     
-    model_ : string
-        The model fitted = 'mds'
+    `model_` : a string specifying the model fitted = 'mds'
     
     Author(s)
     --------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    References
+    ----------
+    Rakotomalala, R. (2020). Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2. Version 1.0
+
+    Examples
+    --------
+    ```python
+    >>> # Load madagascar dataset
+    >>> from scientisttools import load_madagascar
+    >>> madagascar = load_madagascar()
+    >>> from scientisttools import MDS
+    >>> my_mds = MDS(n_components=None,proximity ="precomputed",normalized_stress=True)
+    >>> my_mds.fit(madagascar)
+    ```
     """
     def __init__(self,
                 n_components=2,
@@ -150,13 +139,10 @@ class MDS(BaseEstimator,TransformerMixin):
             "pd.DataFrame. For more information see: "
             "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        ###############################################################################################################"
         # Drop level if ndim greater than 1 and reset columns name
-        ###############################################################################################################
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
         
-        ############################
         # Check is supplementary columns
         if self.ind_sup is not None:
             if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
@@ -167,17 +153,16 @@ class MDS(BaseEstimator,TransformerMixin):
         else:
             ind_sup_label = None
         
-        ####################################### Save the base in a new variable
         # Store data
         Xtot = X.copy()
 
-        ####################################### Drop supplementary individuals ########################################
+        # Drop supplementary individuals
         if self.ind_sup is not None:
             # Extract supplementary individuals
             X_ind_sup = X.loc[ind_sup_label,:]
             X = X.drop(index=ind_sup_label)
         
-        #######################################################################################################################
+        # Distance
         if self.proximity == "euclidean":
             dist = squareform(pdist(X,metric="euclidean"))
         elif self.proximity == "precomputed":
@@ -251,15 +236,14 @@ class MDS(BaseEstimator,TransformerMixin):
         
         Parameters
         ----------
-        X : pandas/polars DataFrame, shape (n_samples, n_features)
+        `X` : pandas/polars DataFrame, shape (n_samples, n_features)
             New data, where n_samples in the number of samples
             and n_features is the number of features.
         
         Returns
         -------
-        X_new : array-like, shape (n_samples, n_components)
+        `X_new` : array-like, shape (n_samples, n_components)
         """
-
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
             X = X.to_pandas()
@@ -272,28 +256,24 @@ class MDS(BaseEstimator,TransformerMixin):
         
         return self.result_["coord"]
     
-    def transform(self,X,y=None):
+    def transform(self,X):
         """
         Apply the Multidimensional Scaling reduction on X
         -------------------------------------------------
-
         X is projected on the first axes previous extracted from a training set.
 
         Parameters
         ----------
-        X : DataFrame of float, shape (n_rows_sup, n_columns)
+        `X` : DataFrame of float, shape (n_rows_sup, n_columns)
             New data, where n_row_sup is the number of supplementary
             row points and n_columns is the number of columns
             X rows correspond to supplementary row points that are 
             projected on the axes
             X is a table containing numeric values
         
-        y : None
-            y is ignored
-        
         Returns
         -------
-        X_new : DataFrame of float, shape (n_rows_sup, n_components_)
+        `X_new` : DataFrame of float, shape (n_rows_sup, n_components_)
                 X_new : coordinates of the projections of the supplementary
                 row points on the axes.
         """

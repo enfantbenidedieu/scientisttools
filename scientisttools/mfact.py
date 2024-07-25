@@ -25,44 +25,62 @@ class MFACT(BaseEstimator,TransformerMixin):
 
     Parameters
     ----------
-    n_components : number of dimensions kept in the results (by default 5)
+    `n_components` : number of dimensions kept in the results (by default 5)
 
-    group : a list or a tuple with the number of variables in each group
+    `group` : a list or a tuple with the number of variables in each group
 
-    name_group : a list or a tuple containing the name of the groups (by default, None and the group are named Gr1, Gr2 and so on)
+    `name_group` : a list or a tuple containing the name of the groups (by default, None and the group are named Gr1, Gr2 and so on)
     
-    num_group_sup : the indexes of the illustrative groups (by default, None and no group re illustrative)
+    `num_group_sup` : the indexes of the illustrative groups (by default, None and no group re illustrative)
 
-    ind_sup : an integer, a list or a tuple of the supplementary individuals
+    `ind_sup` : an integer, a list or a tuple of the supplementary individuals
     
-    Parallelize : bool, default = False. Adding multi-core methods to PandasObject.
+    `Parallelize` : bool, default = False. Adding multi-core methods to PandasObject.
 
-    Return
-    ------
-    separate_analyses_ : the results for the separate analyses
+    Attributes
+    ----------
+    `separate_analyses_` : the results for the separate analyses
 
-    svd_ : a dictionary of matrices containing all the results of the singular value decomposition
+    `svd_` : a dictionary of matrices containing all the results of the singular value decomposition
 
-    eig_ : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalues, the percentage of variance and the
-            cumulative percentge of variance
+    `eig_` : a pandas dataframe containing all the eigenvalues, the difference between each eigenvalues, the percentage of variance and the cumulative percentge of variance
 
-    ind_ : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine,
-            contributions)
+    `ind_` : a dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine,contributions)
+
+    `ind_sup_`: dictionary of pandas dataframe containing all the results for supplementary individuals (factor coordinates, square cosinus, partiel coordinates)
     
-    freq_ : a dictionary of pandas dataframe containing all the results for the frequencies variables (coordinates, contribution, cos2)
-    
-    global_pca_ : the results of the analysis when it is considered as a unique weighted PCA
+    `freq_` : a dictionary of pandas dataframe containing all the results for the frequencies variables (coordinates, contribution, cos2)
 
-    model_ : string. The model fitted = 'mfact'
+    `freq_sup_` : dictionary of pandas dataframe containing all the results for the supplementary columns
+    
+    `global_pca_` : the results of the analysis when it is considered as a unique weighted PCA
+
+    `model_` : string. The model fitted = 'mfact'
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
     References
     ----------
     Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
-    Escofier B, Pagès J (1998), Analyses Factorielles Simples et Multiples. Dunod
+
+    Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed Dunod
+
+    Examples
+    --------
+    ```
+    >>> # Load children dataset
+    >>> from scientisttools import load_mortality
+    >>> children = load_mortality()
+    >>> import pandas as pd
+    >>> from scientisttools import MFACT
+    >>> mortality2 = mortality.copy()
+    >>> mortality2.columns = [x + "-2" for x in mortality2.columns]
+    >>> dat = pd.concat((mortality,mortality2),axis=1)
+    >>> res_mfact = MFACT(group=[9]*4,name_group=["1979","2006","1979-2","2006-2"],num_group_sup=[2,3],ind_sup=list(range(50,dat.shape[0])),parallelize=True)
+    >>> res_mfact.fit(dat)
+    ```
     """
     def __init__(self,
                  n_components = 5,

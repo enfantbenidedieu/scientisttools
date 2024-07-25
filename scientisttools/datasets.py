@@ -10,40 +10,6 @@ import pathlib
 
 DATASETS_DIR = pathlib.Path(__file__).parent / "datasets"
 
-def load_cars():
-    """
-    Cars
-    ----
-
-    Usage
-    -----
-    ```python
-    >>> from scientisttools import load_cars
-    >>> cars = load_cars()
-    ```
-
-    Format
-    ------
-    a data frame with 27 individuals and 9 variables
-
-    Examples
-    --------
-    ```python
-    >>> # Load cars dataset
-    >>> from scientisttools import load_cars
-    >>> cars = load_cars() 
-    >>> from scientisttools import MPCA
-    >>> res_mpca = MPCA()
-    >>> res_mpca.fit(cars)
-    ```
-    
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
-    """
-    data = pd.read_csv(DATASETS_DIR/'acpm_cars.txt', delimiter = " ",header=0,index_col=0)
-    return data
-
 def load_autos():
     """
     Autos 2005 - Données sur 40 voitures
@@ -51,58 +17,188 @@ def load_autos():
 
     Usage
     -----
-    > from scientisttools import load_autos
-    > autos = load_autos()
-
+    ```python
+    >>> from scientisttools import load_autos
+    >>> autos = load_autos()
+    ```
+    
     Examples
     --------
-    > # Load autos dataset
-    > from scientisttools import load_autos
-    > autos = load_autos()
-    >
-    > # Example of PCA
-    > res_pca = PCA(quanti_sup=[10,11],quali_sup = [12,13,14])
-    > res_pca.fit(autos)
-    >
-    > # Example of FAMD
-    > res_afdm = FAMD(quanti_sup=[10,11],quali_sup=14,parallelize=False)
-    > res_afdm.fit(autos)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    ```python
+    >>> # Load autos dataset
+    >>> from scientisttools import load_autos
+    >>> autos = load_autos()
+    >>> # Example of PCA
+    >>> res_pca = PCA(quanti_sup=[10,11],quali_sup = [12,13,14])
+    >>> res_pca.fit(autos)
+    >>> # Example of FAMD
+    >>> res_afdm = FAMD(quanti_sup=[10,11],quali_sup=14,parallelize=False)
+    >>> res_afdm.fit(autos)
+    ```
     """
     data = pd.read_excel(DATASETS_DIR/"autos2005.xls",header=0,index_col=0)
-    data.name = "autos2005"
     return data
 
 def load_autos2():
     """
-    FAMD Data - Données sur 45 voitures
+    Autos Data - Données sur 45 voitures
     -----------------------------------
 
     Usage
     -----
-    > from scientisttools import load_autos2005
-    > auto2 = laod_autos2()
+    ```python
+    >>> from scientisttools import load_autos2005
+    >>> auto2 = laod_autos2()
+    ```
 
     Examples
     --------
-    > # Load dataset
-    > from scientisttools import load_autos2
-    > autos2 = load_autos2()
-    > 
-    > from scientisttools import FAMD
-    > res_famd = FAMD(ind_sup=list(range(38,autos2.shape[0])),quanti_sup=[12,13,14],quali_sup=15)
-    > res_famd.fit(autos2)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    ```python
+    >>> # Load dataset
+    >>> from scientisttools import load_autos2
+    >>> autos2 = load_autos2()
+    >>> from scientisttools import FAMD
+    >>> res_famd = FAMD(ind_sup=list(range(38,autos2.shape[0])),quanti_sup=[12,13,14],quali_sup=15)
+    >>> res_famd.fit(autos2)
+    ```
     """
     data = pd.read_excel(DATASETS_DIR/"autos2005_afdm.xlsx",header=0,index_col=0)
-    data.name = "autos_2005"
     return data
+
+def load_autosmds():
+    """
+    Autos Multidimensional Scaling dataset
+    --------------------------------------
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_autosmds
+    >>> autosmds = load_autosmds()
+    ```
+
+    Examples
+    --------
+    ```python
+    >>> # Load autosmds dataset
+    >>> from scientisttools import load_autosmds
+    >>> autosmds = load_autosmds()
+    >>> from scientisttools import CMDSCALE
+    >>> my_cmds = CMDSCALE(n_components=2,ind_sup=[12,13,14],proximity="euclidean",normalized_stress=True,parallelize=False)
+    >>> my_cmds.fit(autosmds)
+    ```
+    """
+    autosmds = pd.read_excel(DATASETS_DIR/"autosmds.xlsx",index_col=0,header=0)
+    autosmds.index.name = None
+    return autosmds
+
+def load_body():
+    """
+    Body dimensions datasets
+    ------------------------
+
+    Description
+    -----------
+    The data give some body dimension measurements as well as age, weight, height, and gender on 507 individuals. The 247 men and 260 women were primarily individuals in their twenties and thirties, with a scattering of older men and women, all exercising serveral hours a week. 
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_body
+    >>> body = load_body()
+    ```
+
+    Returns
+    -------
+    dataframe with 507 observations and 15 variables :
+
+    shoulder.girth : shoulder girth (in cm) -- épaule (fr)
+
+    chest.girth : Chest girth (in cm) -- poitrine (fr)
+
+    waist.girth : Waist girth (in cm) -- taille (fr)
+
+    navel.girth : Navel girth (in cm) -- nombril (fr)
+
+    hip.girth : Hip girth (in cm) -- hanche (fr)
+
+    thigh.girth : Thigh girth (in cm) -- cuisse (fr)
+
+    bicep.girth : Bicep girth (in cm) -- biceps (fr)
+
+    forearm.girth : Forearm girth (in cm) -- avant-bras (fr)
+
+    knee.girth : Knee girth (in cm) -- genou (fr)
+
+    calf.girth : Calf girth (in cm) -- mollet (fr)
+
+    ankle.girth : Ankle girth (in cm) -- cheville (fr)
+
+    wrist.girth : Wrist girth (in cm)  -- poignet (fr)
+
+    weight : Weight (in kg)
+
+    height : Height (in cm)
+
+    gender : Gender ; 1 for males and 0 for females.
+
+    Examples
+    --------
+    ```python
+    >>> # Load dataset
+    >>> from scientisttools import load_body
+    >>> data = load_body()
+    >>> # Drop gender
+    >>> body = data.drop(columns=["gender"])
+    >>> body.columns = [x.replace(".","_") for x in body.columns]
+    >>> # Concatenate
+    >>> import pandas as pd
+    >>> D = pd.concat((body,data.drop(columns=["weight","height"])),axis=1)
+    >>> from scientisttools import PartialPCA
+    >>> res_partialpca = PartialPCA(standardize=True,partial=["weight","height"],quanti_sup=list(range(14,26)),quali_sup=26,parallelize=False)
+    >>> res_partialpca.fit(D)
+    ```
+    """
+    body = pd.read_excel(DATASETS_DIR/"body.xls",sheet_name="body")
+    return body
+
+def load_burgundywines():
+    """
+    Burgundy wines dataset
+    ----------------------
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_burgundywines
+    >>> burgundywines = load_burgundywines()
+    ```
+
+    Source
+    ------ 
+    https://personal.utdallas.edu/~herve/Abdi-MCA2007-pretty.pdf
+
+    Examples
+    --------
+    ```python
+    
+    ```
+
+    """
+    wines = pd.DataFrame(
+        data=[
+            [1, 6, 7, 2, 5, 7, 6, 3, 6, 7],
+            [5, 3, 2, 4, 4, 4, 2, 4, 4, 3],
+            [6, 1, 1, 5, 2, 1, 1, 7, 1, 1],
+            [7, 1, 2, 7, 2, 1, 2, 2, 2, 2],
+            [2, 5, 4, 3, 5, 6, 5, 2, 6, 6],
+            [3, 4, 4, 3, 5, 4, 5, 1, 7, 5],
+        ],
+        columns= ["Fruity.one","Woody.one","Coffee","Red fruit","Roasted","Vanillin","Woody.two","Fruity.three","Butter","Woody.three"],
+        index=[f"Wine {i + 1}" for i in range(6)],
+    )
+    wines.insert(0, "Oak type", [1, 2, 2, 2, 1, 1])
+    return wines
 
 def load_cars2006(which="actif"):
     """
@@ -112,6 +208,13 @@ def load_cars2006(which="actif"):
     Description
     -----------
     18 cars described by 6 quantitatives variables
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_cars2006
+    >>> cars = load_cars2006()
+    ```
 
     Parameters
     ----------
@@ -158,6 +261,104 @@ def load_cars2006(which="actif"):
         cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. qual.",index_col=0,header=0)
     return cars
 
+def load_carsacpm():
+    """
+    Cars
+    ----
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_carsacpm
+    >>> cars = load_carsacpm()
+    ```
+
+    Format
+    ------
+    a data frame with 27 individuals and 9 variables
+
+    Examples
+    --------
+    ```python
+    >>> # Load cars dataset
+    >>> from scientisttools import load_carsacpm
+    >>> cars = load_carsacpm() 
+    >>> from scientisttools import MPCA
+    >>> res_mpca = MPCA()
+    >>> res_mpca.fit(cars)
+    ```
+    """
+    data = pd.read_csv(DATASETS_DIR/'carsacpm.txt', delimiter = " ",header=0,index_col=0)
+    return data
+
+def load_children():
+    """
+    Children dataset
+    ----------------
+
+    Description
+    -----------
+    The data used here is a contingency table that summarizes the answers given by different categories of people to the following question : according to you, what are the reasons that can make hesitate a woman or a couple to have children?
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_children
+    >>> children = load_children()
+    ```
+
+    Format
+    ------
+    A data frame with 18 rows and 8 columns. Rows represent the different reasons mentioned, columns represent the different categories (education, age) people belong to.
+
+    Source
+    ------
+    The children dataset from FactoMineR.
+
+    Examples
+    --------
+    ```python
+    >>> # Load children dataset
+    >>> from scientisttools import load_children
+    >>> children = load_children()
+    >>> res_ca = CA(row_sup=list(range(14,18)),col_sup=list(range(5,8)),parallelize=True)
+    >>> res_ca.fit(children)
+    ```
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"children.rda")["children"]
+    return data
+
+def load_congressvotingrecords():
+    """
+    Congressional Voting Records
+    ----------------------------
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_congressvotingrecords
+    >>> vote = load_congressvotingrecords()
+    ```
+    
+    Source
+    ------
+    The Congressional Voting Records. See https://archive.ics.uci.edu/dataset/105/congressional+voting+records
+    
+    Examples
+    --------
+    ```python
+    >>> # Load vote dataset
+    >>> from scientistools import load_congressvotingrecords
+    >>> vote = load_congressvotingrecords()
+    >>> from scientisttools import CATVARHCA
+    >>> X = vote.iloc[:,1:]
+    >>> res_catvarhca =  CATVARHCA(n_clusters=2,diss_metric="cramer",metric="euclidean",method="ward",parallelize=True)
+    >>> res_catvarhca.fit(X)
+    ```
+    """
+    vote = pd.read_excel(DATASETS_DIR/"congressvotingrecords.xlsx")
+    return vote
+
 def load_decathlon():
     """
     Performance in decathlon (data)
@@ -169,8 +370,10 @@ def load_decathlon():
 
     Usage
     -----
-    > from scientisttools import load_decathlon
-    > decathlon = load_decathlon()
+    ```python
+    >>> from scientisttools import load_decathlon
+    >>> decathlon = load_decathlon()
+    ```
 
     Format
     ------
@@ -182,20 +385,16 @@ def load_decathlon():
 
     Examples
     --------
-    > # Load decathlon dataset
-    > from scientisttools import load_decathlon
-    > decathlon = load_decathlon()
-    >
-    > from scientisttools import PCA
-    > res_pca = PCA(standardize=True,ind_sup=list(range(23,decathlon.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-    > res_pca.fit(decathlon)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    ```python
+    >>> # Load decathlon dataset
+    >>> from scientisttools import load_decathlon
+    >>> decathlon = load_decathlon()
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(standardize=True,ind_sup=list(range(23,decathlon.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+    >>> res_pca.fit(decathlon)
+    ```
     """
     data = pyreadr.read_r(DATASETS_DIR/"decathlon.rda")["decathlon"]
-    data.name = "decathlon"
     return data
 
 def load_decathlon2():
@@ -209,9 +408,11 @@ def load_decathlon2():
 
     Usage
     -----
-    > from scientisttools.datasets import load_decathlon2
-    > decathlon2 = load_decathlon2()
-
+    ```
+    >>> from scientisttools.datasets import load_decathlon2
+    >>> decathlon2 = load_decathlon2()
+    ```
+    
     Format
     ------
     A data frame with 27 observations and 13 variables.
@@ -222,65 +423,29 @@ def load_decathlon2():
 
     Examples
     --------
-    > # load decathlon2 dataset
-    > from scientisttools import load_decathlon2
-    > decathlon2 = load_decathlon2()
-    >
-    > from scientisttools import PCA
-    > res_pca = PCA(standardize=True,ind_sup=list(range(23,decathlon2.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-    > res_pca.fit(decathlon2)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    ```python
+    >>> # load decathlon2 dataset
+    >>> from scientisttools import load_decathlon2
+    >>> decathlon2 = load_decathlon2()
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(standardize=True,ind_sup=list(range(23,decathlon2.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+    >>> res_pca.fit(decathlon2)
+    ```
     """
     data = pyreadr.read_r(DATASETS_DIR/"decathlon2.rda")["decathlon2"]
-    data.name = "decathlon2"
     return data
 
-def load_temperature():
+def load_femmetravail():
     """
-    Temperature
-    -----------
-
+    Femmes travail dataset
+    ----------------------
 
     Usage
     -----
     ```python
-    >>> from scientisttools import load_temperature
-    >>> temperature = load_temperature()
+    >>> from scientisttools import load_femmetravail
+    >>> femmetravail = load_femmetravail()
     ```
-
-    Examples
-    --------
-    ```python
-    >>> # Load temperature dataset
-    >>> from scientisttools import load_temperature
-    >>> temperature = load_temperature()
-    >>> from scientisttools import PCA
-    >>> res_pca = PCA(ind_sup=list(range(15,temperatuer.shape[0])),quanti_sup=list(range(12,16)),quali_sup=16)
-    >>> res_pca.fit(temperature)
-    ```
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
-    """
-    data = pd.read_excel(DATASETS_DIR/"temperature.xlsx",header=0,index_col=0)
-    data.name = "temperature"
-    return data
-
-############################################# Correspondance Analysis ########################################""
-
-def load_women_work():
-    """
-    Women work
-    ----------
-
-    Usage
-    -----
-    > from scientisttools import load_women_work
-    > women_work = load_women_work()
 
     Format
     ------
@@ -288,97 +453,57 @@ def load_women_work():
 
     Examples
     --------
-    > # load women_work dataset
-    > from scientisttools import load_women_work
-    > women_work = load_women_work()
-    > from scientisttools import CA
-    > res_ca = CA(col_sup=[3,4,5,6])
-    > res_ca.fit(women_work)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pd.read_csv(DATASETS_DIR/"women_work.txt",sep="\t")
-    data.name = "women_work"
-    return data
-
-def load_femmes_travail():
-    """
-    Femmes travail
-    --------------
-
-    Usage
-    -----
-    > from scientisttools import load_femmes_travail
-    > femmes_travail = load_femmes_travail()
-
-    Format
-    ------
-    A data frame with 3 rows and 7 columns
-
-    Examples
-    --------
-    > # load women_work dataset
-    > from scientisttools import load_femmes_travail
-    > femmes_travail = load_femmes_travail()
-    > from scientisttools import CA
-    > res_ca = CA(col_sup=[3,4,5,6])
-    > res_ca.fit(femmes_travail)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    ```python
+    >>> # load women_work dataset
+    >>> from scientisttools import load_femmetravail
+    >>> femmetravail = load_femmetravail()
+    >>> from scientisttools import CA
+    >>> res_ca = CA(col_sup=[3,4,5,6])
+    >>> res_ca.fit(femmetravail)
+    ```
     """
     data = pd.read_csv(DATASETS_DIR/"femme_travail.csv",delimiter=";",encoding =  "cp1252",index_col =0)
-    data.name = "femmes_travail"
     return data
 
-def load_body():
+def load_gironde(which="all"):
     """
-    Body dimensions datasets
-    ------------------------
+    gironde dataset
+    ---------------
 
     Description
     -----------
-    The data give some body dimension measurements as well as age, weight, height, and gender on 507 individuals. The 247 men and 260 women were primarily individuals in their twenties and thirties, with a scattering of older men and women, all exercising serveral hours a week. 
+    a dataset with 542 individuals and 27 columns
 
-    Returns
-    -------
-    dataframe with 507 observations and 15 variables :
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_gironde
+    >>> gironde = load_gironde()
+    ```
 
-    shoulder.girth : shoulder girth (in cm) -- épaule (fr)
-
-    chest.girth : Chest girth (in cm) -- poitrine (fr)
-
-    waist.girth : Waist girth (in cm) -- taille (fr)
-
-    navel.girth : Navel girth (in cm) -- nombril (fr)
-
-    hip.girth : Hip girth (in cm) -- hanche (fr)
-
-    thigh.girth : Thigh girth (in cm) -- cuisse (fr)
-
-    bicep.girth : Bicep girth (in cm) -- biceps (fr)
-
-    forearm.girth : Forearm girth (in cm) -- avant-bras (fr)
-
-    knee.girth : Knee girth (in cm) -- genou (fr)
-
-    calf.girth : Calf girth (in cm) -- mollet (fr)
-
-    ankle.girth : Ankle girth (in cm) -- cheville (fr)
-
-    wrist.girth : Wrist girth (in cm)  -- poignet (fr)
-
-    weight : Weight (in kg)
-
-    height : Height (in cm)
-
-    gender : Gender ; 1 for males and 0 for females.
+    Examples
+    --------
+    ```python
+    >>> from scientisttools import load_gironde, PCAMIX
+    >>> gironde = load_gironde()
+    >>> res_pcamix = PCAMIX()
+    >>> res_pcamix.fit(gironde)
+    ```
     """
-    body = pd.read_excel(DATASETS_DIR/"body.xls",sheet_name="body")
-    return body
+    if which not in ["employment","housing","services","environment","all"]:
+        raise ValueError("'which' should be one of 'employment', 'housing', 'services', 'environment', 'all'")
+    
+    if which == "employment":
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_employment.rda")["employment"]
+    elif which == "housing":
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_housing.rda")["housing"]
+    elif which == "services":
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_services.rda")["services"]
+    elif which == "environment":
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_environment.rda")["environment"]
+    else:
+        gironde = pyreadr.read_r(DATASETS_DIR/"gironde.rda")["gironde"]
+    return gironde
 
 def load_housetasks():
     """
@@ -414,442 +539,36 @@ def load_housetasks():
     >>> res_ca = CA()
     >>> res_ca.fit(housetasks)
     ```
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     data = pyreadr.read_r(DATASETS_DIR/"housetasks.rda")["housetasks"]
-    data.name = "housetasks"
     return data
 
-def load_children():
+def load_jobrate():
     """
-    Children
-    --------
-
-    Description
-    -----------
-    The data used here is a contingency table that summarizes the answers given by different categories of people to the following question : according to you, what are the reasons that can make hesitate a woman or a couple to have children?
+    Jobrate dataset
+    ---------------
 
     Usage
     -----
-    > from scientisttools import load_children
-    > children = load_children()
-
-    Format
-    ------
-    A data frame with 18 rows and 8 columns. Rows represent the different reasons mentioned, columns represent the different categories (education, age) people belong to.
-
-    Source
-    ------
-    The children dataset from FactoMineR.
-
-    Examples
-    --------
-    > # Load children dataset
-    > from scientisttools import load_children
-    > children = load_children()
-    > res_ca = CA(row_sup=list(range(14,18)),col_sup=list(range(5,8)),parallelize=True)
-    > res_ca.fit(children)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pyreadr.read_r(DATASETS_DIR/"children.rda")["children"]
-    data.name = "children"
-    return data
-
-def load_races_canines():
-    """
-    Races canines
-    -------------
-
-    Description
-    -----------
-    The data contains 27 individuals
-
-    Usage
-    -----
-    > from scientisttools import load_races_canines
-    > races_canines = load_races_canines()
-
-    Examples
-    --------
-    > # Load races canines dataset
-    > from scientisttools import load_races_canines
-    > races_canines = load_races_canines()
-    >
-    > from scientisttools import MCA
-    > res_mca = MCA(ind_sup=list(range(27,races_canines.shape[0])),quanti_sup=7,quali_sup=6)
-    > res_mca.fit(races_canines)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pd.read_excel(DATASETS_DIR/"races_canines.xlsx",header=0,index_col=0)
-    data.name = "races_canines"
-    return data
-
-def load_tea():
-    """
-    tea
-    ---
-
-    Description
-    -----------
-    The data used here concern a questionnaire on tea. We asked to 300 individuals how they drink tea (18 questions), what are their product's perception (12 questions) and some personal details (4 questions).
-
-    Usage
-    -----
-    > from scientisttools load_tea
-    > tea = load_tea()
-
-    Format
-    ------
-    A data frame with 300 rows and 36 columns. Rows represent the individuals, columns represent the different questions. The first 18 questions are active ones, the 19th is a supplementary quantitative variable (the age) and the last variables are supplementary categorical variables.
-
-    Source
-    ------
-    The tea dataset from FactoMineR.
-
-    Examples
-    --------
-    # Load tea dataset
-    > from scientisttools import load_tea
-    > tea = load_tea()
-    >
-    > from scientisttools import MCA
-    > res_mca = MCA(quanti_sup=18, quali_sup=list(range(19,36)))
-    > res_mca.fit(tea)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pyreadr.read_r(DATASETS_DIR/"tea.rda")["tea"]
-    data.name = "tea"
-    return data
-
-def load_poison():
-    """
-    Poison
-    ------
-
-    Description
-    -----------
-    The data used here refer to a survey carried out on a sample of children of primary school who suffered from food poisoning. They were asked about their symptoms and about what they ate.
-
-    Usage
-    -----
-    > from scientisttools import load_poison
-    > poison = load_poison()
-
-    Format
-    ------
-    A data frame with 55 rows and 15 columns.
-
-    Source
-    ------
-    The poison dataset from FactoMineR
-
-    Examples
-    --------
-    > # Load poison dataset
-    > from scientisttools import load_poison
-    > poison = load_poison()
-    >
-    > from scientisttools import MCA
-    > res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1])
-    > res_mca.fit(poison)
-
-    Author(s)
-    --------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pyreadr.read_r(DATASETS_DIR/"poison.rda")["poison"]
-    data.name = "poison"
-    return data
-
-def load_mushroom():
-    """
-    Mushroom
-    --------
-
-    Usage
-    -----
-    > from scientisttools import load_mushroom
-    > mushroom = load_mushroom()
-
-    Source
-    ------
-    The Mushroom uci dataset. See https://archive.ics.uci.edu/dataset/73/mushroom
-
-    Examples
-    --------
-    > # Load mushroom dataset
-    > from scientisttools import load_mushroom
-    > mushroom = load_mushroom()
-    >
-    > from scientisttools import MCA
-    > res_mca = MCA()
-    > res_mca.fit(mushroom)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pd.read_excel(DATASETS_DIR/"mushroom.xlsx")
-    data.name = "mushroom"
-    return data
-
-def load_music():
-    """
-    Music
-    ----
-
-    Description
-    -----------
-    The data concerns tastes for music of a set of 500 individuals. It contains 5 variables of likes for music genres (french pop, rap, rock, jazz and classical), 2 variables about music listening and 2 additional variables (gender and age).
-
-    Usage
-    -----
-    > from scientisttools import load_music
-    > music = load_music()
-
-    Format
-    ------
-    A data frame with 500 observations and 7 variables
-
-    Source
-    ------
-    The Music dataset in R GDAtools packages
-
-    Examples
-    --------
-    > # Load music dataset
-    > from scientisttools import load_music, SpecificMCA
-    > music = load_music()
-    >
-    > excl = {"FrenchPop" : "NA", "Rap" : "NA" , "Rock" : "NA", "Jazz" : "NA","Classical" : "NA"}
-    > res_spemca = SpecificMCA(n_components=5,excl=excl)
-    > res_spemca.fit(music)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pyreadr.read_r(DATASETS_DIR/"Music.RData")["Music"]
-    data.name = "Music"
-    return data
-
-def load_gironde(which="all"):
-    """
-    gironde
-    -------
-
-    Description
-    -----------
-    a dataset with 542 individuals and 27 columns
+    ```python
+    >>> from scientisttools import load_jobrate
+    >>> jobrate = load_jobrate()
+    ```
 
     Examples
     --------
     ```python
-    >>> from scientisttools import load_gironde, PCAMIX
-    >>> gironde = load_gironde()
-    >>> res_pcamix = PCAMIX()
-    >>> res_pcamix.fit(gironde)
+    >>> # Load jobrate
+    >>> from scientisttools import load_jobrate
+    >>> jobrate = load_jobrate()
+    >>> from scientisttools import VARHCA
+    >>> varhca = VARHCA(n_clusters=4,var_sup=13,matrix_type="completed",metric="euclidean",method="ward",parallelize=False)
+    >>> varhca.fit(jobrate)
     ```
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-    if which not in ["employment","housing","services","environment","all"]:
-        raise ValueError("'which' should be one of 'employment', 'housing', 'services', 'environment', 'all'")
-    
-    if which == "employment":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_employment.rda")["employment"]
-    elif which == "housing":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_housing.rda")["housing"]
-    elif which == "services":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_services.rda")["services"]
-    elif which == "environment":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_environment.rda")["environment"]
-    else:
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde.rda")["gironde"]
-    return gironde
-
-def load_tennis():
-    """
-    Tennis
-    ------
-
-    Usage
-    -----
-    > from scientisttools import load_tennis
-    > tennis = load_tennis()
-
-    Examples
-    --------
-    > # Load tennis dataset
-    > from scientisttools import load_tennis
-    > tennis = load_tennis()
-    >
-    > from scientisttools import FAMD
-    > res_famd =  FAMD(n_components=2,ind_sup=list(range(16,tennis.shape[0])),quanti_sup=7)
-    > res_famd.fit(tennis)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pd.read_excel(DATASETS_DIR/"tennisplayers.xlsx",index_col=0)
-    return data
-
-################################## Multiple Fcator Analysis (MFA) ########################################
-def load_burgundy_wines():
-    """
-    Burgundy wines dataset
-    ----------------------
-
-    Source: https://personal.utdallas.edu/~herve/Abdi-MCA2007-pretty.pdf
-
-    """
-    wines = pd.DataFrame(
-        data=[
-            [1, 6, 7, 2, 5, 7, 6, 3, 6, 7],
-            [5, 3, 2, 4, 4, 4, 2, 4, 4, 3],
-            [6, 1, 1, 5, 2, 1, 1, 7, 1, 1],
-            [7, 1, 2, 7, 2, 1, 2, 2, 2, 2],
-            [2, 5, 4, 3, 5, 6, 5, 2, 6, 6],
-            [3, 4, 4, 3, 5, 4, 5, 1, 7, 5],
-        ],
-        columns=pd.MultiIndex.from_tuples(
-            [
-                ("Expert 1", "Fruity"),
-                ("Expert 1", "Woody"),
-                ("Expert 1", "Coffee"),
-                ("Expert 2", "Red fruit"),
-                ("Expert 2", "Roasted"),
-                ("Expert 2", "Vanillin"),
-                ("Expert 2", "Woody"),
-                ("Expert 3", "Fruity"),
-                ("Expert 3", "Butter"),
-                ("Expert 3", "Woody"),
-            ],
-            names=("expert", "aspect"),
-        ),
-        index=[f"Wine {i + 1}" for i in range(6)],
-    )
-    wines.insert(0, "Oak type", [1, 2, 2, 2, 1, 1])
-    return wines
-
-def load_wine():
-    """
-    Wine
-    ----
-
-    Description
-    -----------
-    The data used here refer to 21 wines of Val de Loire
-
-    Usage
-    -----
-    > from scientisttools import load_wine
-    > wine = load_wine()
-
-    Format
-    ------
-    A data frame with 21 rows (the number of wines) and 31 columns: 
-        - the first column corresponds to the label of origin, 
-        - the second column corresponds to the soil, 
-        - and the others correspond to sensory descriptors.
-    
-    Source
-    ------
-    The wine dataset from FactoMineR
-
-    Examples
-    --------
-    > # Load wine data
-    > from scientisttools import load_wine
-    > wine = load_wine()
-    > 
-    > # Example of PCA
-    > from scientisttools import PCA
-    > res_pca = PCA(standardize=True,n_components=5,quanti_sup=[29,30],quali_sup=[0,1],parallelize=True)
-    > res_pca.fit(wine)
-    > 
-    > # Example of MCA
-    > from scientisttools import MCA
-    > res_mca = MCA(quanti_sup = list(range(2,wine.shape[1])))
-    > res_mca.fit(wine)
-    > 
-    > # Example of FAMD
-    > from scientisttools import FAMD
-    > res_famd = FAMD()
-    > res_famd.fit(wine)
-    > 
-    > # Example of MFA
-    > from scientisttools import MFA
-    > res_mfa = MFA(n_components=5,group=group,group_type=["n"]+["s"]*5,var_weights_mfa=None,name_group = group_name,num_group_sup=[0,5],parallelize=True)
-    > res_mfa.fit(wine)
-    
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
-    """
-    data = pyreadr.read_r(DATASETS_DIR/"wine.rda")["wine"]
-    data.name = "wine"
-    return data
-
-def load_qtevie():
-    """
-    
-    
-    """
-    data = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
-    return data
-
-########################################## MFACT
-def load_mortality():
-    """
-    The cause of mortality in France in 1979 and 2006
-    -------------------------------------------------
-
-    Description
-    -----------
-    The cause of mortality in France in 1979 and 2006
-
-    Usage
-    -----
-    > from scientisttools import load_mortality
-    > mortality = load_mortality()
-
-    Format
-    ------
-    A data frame with 62 rows (the different causes of death) and 18 columns. Each column corresponds to an age interval (15-24, 25-34, 35-44, 45-54, 55-64, 65-74, 75-84, 85-94, 95 and more) in a year. The 9 first columns correspond to data in 1979 and the 9 last columns to data in 2006. In each cell, the counts of deaths for a cause of death in an age interval (in a year) is given.
-
-    Source
-    ------
-    The mortality dataset from FactoMineR
-
-    Examples
-    --------
-    > # load mortality dataset
-    > from scientisttools import load_mortality
-    > mortality = load_mortality()
-    >
-    > from scientisttools import MFACT
-    > res_mfact = MFACT()
-
-    """
-    data = pyreadr.read_r(DATASETS_DIR/"mortality.rda")["mortality"]
-    data.name = "mortality"
-    return data
+    jobrate = pd.read_excel(DATASETS_DIR/"jobrate.xlsx",index_col=None,header=0)
+    jobrate.index.name = None
+    return jobrate
 
 def load_lifecyclesavings():
     """
@@ -862,8 +581,10 @@ def load_lifecyclesavings():
 
     Usage
     -----
-    > from scientisttools import load_lifecyclesavings
-    > lifecyclesavings = load_lifecyclesavings()
+    ```python
+    >>> from scientisttools import load_lifecyclesavings
+    >>> lifecyclesavings = load_lifecyclesavings()
+    ```
 
     Format
     -----
@@ -875,26 +596,194 @@ def load_lifecyclesavings():
 
     Examples
     --------
-    > # Load lifecyclesavings dataset
-    > from scientisttools import load_lifecyclesavings
-    > lifecyclesavings = load_lifecyclesavings()
-    >
-    > from scientisttools import CCA
-    > res_cca = CCA(lifecyclesavings,vars=[1,2])
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com    
+    ```python
+    >>> # Load lifecyclesavings dataset
+    >>> from scientisttools import load_lifecyclesavings
+    >>> lifecyclesavings = load_lifecyclesavings()
+    >>> from scientisttools import CCA
+    >>> res_cca = CCA(lifecyclesavings,vars=[1,2])
+    ```  
     """
     data = pyreadr.read_r(DATASETS_DIR/"LifeCycleSavings.RData")["LifeCycleSavings"]
-    data.name = "LifeCycleSavings"
     return data
 
-# Sparse PCA datasets
+def load_madagascar():
+    """
+    Madagascar Multidimensional Scaling dataset
+    -------------------------------------------
+
+    Usage
+    -----
+    ```python
+    >>> from  scientisttools import load_madagascar
+    >>> madagascar = load_madagascar()
+
+    Examples
+    --------
+    ```
+    >>> # Load dataset
+    >>> from scientisttools import load_madagascar
+    >>> madagascar = load_madagascar()
+    >>> from scientisttools import MDS
+    >>> my_mds = MDS(n_components=None,proximity ="precomputed",normalized_stress=True)
+    >>> my_mds.fit(madagascar)
+    ```
+    """
+    madagascar = pd.read_excel(DATASETS_DIR/"madagascar.xlsx",index_col=0,header=0)
+    return madagascar
+
+def load_mortality():
+    """
+    The cause of mortality in France in 1979 and 2006
+    -------------------------------------------------
+
+    Description
+    -----------
+    The cause of mortality in France in 1979 and 2006
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_mortality
+    >>> mortality = load_mortality()
+    ```
+
+    Format
+    ------
+    A data frame with 62 rows (the different causes of death) and 18 columns. Each column corresponds to an age interval (15-24, 25-34, 35-44, 45-54, 55-64, 65-74, 75-84, 85-94, 95 and more) in a year. The 9 first columns correspond to data in 1979 and the 9 last columns to data in 2006. In each cell, the counts of deaths for a cause of death in an age interval (in a year) is given.
+
+    Source
+    ------
+    The mortality dataset from FactoMineR
+
+    Examples
+    --------
+    ```python
+    >>> # load mortality dataset
+    >>> from scientisttools import load_mortality
+    >>> mortality = load_mortality()
+    >>> import pandas as pd
+    >>> from scientisttools import MFACT
+    >>> mortality2 = mortality.copy()
+    >>> mortality2.columns = [x + "-2" for x in mortality2.columns]
+    >>> dat = pd.concat((mortality,mortality2),axis=1)
+    >>> res_mfact = MFACT(group=[9]*4,name_group=["1979","2006","1979-2","2006-2"],num_group_sup=[2,3],ind_sup=list(range(50,dat.shape[0])),parallelize=True)
+    >>> res_mfact.fit(dat)
+    ```
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"mortality.rda")["mortality"]
+    return data
+
+def load_mushroom():
+    """
+    Mushroom dataset
+    ----------------
+
+    Usage
+    -----
+    ```
+    >>> from scientisttools import load_mushroom
+    >>> mushroom = load_mushroom()
+    ```
+
+    Source
+    ------
+    The Mushroom uci dataset. See https://archive.ics.uci.edu/dataset/73/mushroom
+
+    Examples
+    --------
+    ```python
+    >>> # Load mushroom dataset
+    >>> from scientisttools import load_mushroom
+    >>> mushroom = load_mushroom()
+    >>> from scientisttools import MCA
+    >>> res_mca = MCA()
+    >>> res_mca.fit(mushroom)
+    ```
+    """
+    data = pd.read_excel(DATASETS_DIR/"mushroom.xlsx")
+    return data
+
+def load_music():
+    """
+    Music dataset
+    -------------
+
+    Description
+    -----------
+    The data concerns tastes for music of a set of 500 individuals. It contains 5 variables of likes for music genres (french pop, rap, rock, jazz and classical), 2 variables about music listening and 2 additional variables (gender and age).
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_music
+    >>> music = load_music()
+    ```
+    
+    Format
+    ------
+    A data frame with 500 observations and 7 variables
+
+    Source
+    ------
+    The Music dataset in R GDAtools packages
+
+    Examples
+    --------
+    ```python
+    >>> # Load music dataset
+    >>> from scientisttools import load_music, SpecificMCA
+    >>> music = load_music()
+    >>> excl = {"FrenchPop" : "NA", "Rap" : "NA" , "Rock" : "NA", "Jazz" : "NA","Classical" : "NA"}
+    >>> res_spemca = SpecificMCA(n_components=5,excl=excl)
+    >>> res_spemca.fit(music)
+    ```
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"Music.RData")["Music"]
+    return data
+
+def load_poison():
+    """
+    Poison dataset
+    --------------
+
+    Description
+    -----------
+    The data used here refer to a survey carried out on a sample of children of primary school who suffered from food poisoning. They were asked about their symptoms and about what they ate.
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    ```
+
+    Format
+    ------
+    A data frame with 55 rows and 15 columns.
+
+    Source
+    ------
+    The poison dataset from FactoMineR
+
+    Examples
+    --------
+    ```python
+    >>> # Load poison dataset
+    >>> from scientisttools import load_poison
+    >>> poison = load_poison()
+    >>> from scientisttools import MCA
+    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1])
+    >>> res_mca.fit(poison)
+    ```
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"poison.rda")["poison"]
+    return data
+
 def load_protein():
     """
-    Protein
-    -------
+    Protein dataset
+    ---------------
 
     Description
     -----------
@@ -903,10 +792,9 @@ def load_protein():
     Usage
     -----
     ```python
-    >>> 
+    >>> from scientisttools import load_protein
+    >>> protein = load_protein()
     ```
-    > from scientisttools import load_protein
-    > protein = load_protein()
 
     Format
     ------
@@ -915,46 +803,168 @@ def load_protein():
     Source
     ------
     The protein dataset for sparsePCA R package
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
     data = pyreadr.read_r(DATASETS_DIR/"protein.RData")["protein"]
-    data.name = "protein"
     return data
 
-def load_vote():
+def load_qtevie():
     """
-    Congressional Voting Records
-    ----------------------------
+    Qualité de vie dataset
+    ----------------------
 
+    Description
+    -----------
+    34 country of OCDE with Russia and Brazil describe by 22 indicators and one qualitative variable group by theme : 
+        * material.well.being (5), 
+        * employment (5), 
+        * satisfaction (3), 
+        * health.and.safety (6), 
+        * education (3)
+        * region (1)
 
     Usage
     -----
-    > from scientisttools import load_vote
-    > vote = load_vote()
-
+    ```python
+    >>> from scientisttools import load_qtevie
+    >>> qtevie = load_qtevie()
+    ```
     Source
     ------
-    The Congressional Voting Records. See https://archive.ics.uci.edu/dataset/105/congressional+voting+records
+    OCDE
+
+    Examples
+    --------
+    ```python
+    >>> from scientisttools import load_qtevie
+    >>> qtevie = load_qtevie()
+    >>> from scientisttools import MFA
+    >>> name = ["material.well.being","employment","satisfaction","health.and.safety","education","region"] 
+    >>> group_type = ["s","s","s","s","s","n"]
+    >>> res_mfa = MFA(n_components=5,group=[5,5,3,6,3,1],name_group=name,group_type=group_type,num_group_sup=5)
+    >>> res_mfa.fit(qtevie)
+    ```
+    """
+    data = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
+    return data
+
+def load_racescanines():
+    """
+    Races canines dataset
+    ---------------------
+
+    Description
+    -----------
+    The data contains 27 individuals
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_racescanines
+    >>> canines = load_racescanines()
+    ```
     
     Examples
     --------
-    > # Load vote dataset
-    > from scientistools import load_vote
-    > vote = load_vote()
-    >
-    > from scientisttools import CATVARHCA
-    > X = vote.iloc[:,1:]
-    > res_catvarhca =  CATVARHCA(n_clusters=2,diss_metric="cramer",metric="euclidean",method="ward",parallelize=True)
-    > res_catvarhca.fit(X)
-    
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    ```python
+    >>> # Load races canines dataset
+    >>> from scientisttools import load_races_canines
+    >>> canines = load_races_canines()
+    >>> from scientisttools import MCA
+    >>> res_mca = MCA(ind_sup=list(range(27,races_canines.shape[0])),quanti_sup=7,quali_sup=6)
+    >>> res_mca.fit(canines)
+    ```
     """
-    data = pd.read_excel(DATASETS_DIR/"congressvotingrecords.xlsx")
+    data = pd.read_excel(DATASETS_DIR/"races_canines.xlsx",header=0,index_col=0)
+    return data
+
+def load_tea():
+    """
+    tea dataset
+    -----------
+
+    Description
+    -----------
+    The data used here concern a questionnaire on tea. We asked to 300 individuals how they drink tea (18 questions), what are their product's perception (12 questions) and some personal details (4 questions).
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools load_tea
+    >>> tea = load_tea()
+    ```
+
+    Format
+    ------
+    A data frame with 300 rows and 36 columns. Rows represent the individuals, columns represent the different questions. The first 18 questions are active ones, the 19th is a supplementary quantitative variable (the age) and the last variables are supplementary categorical variables.
+
+    Source
+    ------
+    The tea dataset from FactoMineR.
+
+    Examples
+    --------
+    ```python
+    >>> # Load tea dataset
+    >>> from scientisttools import load_tea
+    >>> tea = load_tea()
+    >>> from scientisttools import MCA
+    >>> res_mca = MCA(quanti_sup=18, quali_sup=list(range(19,36)))
+    >>> res_mca.fit(tea)
+    ```
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"tea.rda")["tea"]
+    return data
+
+def load_temperature():
+    """
+    Temperature dataset
+    -------------------
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_temperature
+    >>> temperature = load_temperature()
+    ```
+
+    Examples
+    --------
+    ```python
+    >>> # Load temperature dataset
+    >>> from scientisttools import load_temperature
+    >>> temperature = load_temperature()
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(ind_sup=list(range(15,temperatuer.shape[0])),quanti_sup=list(range(12,16)),quali_sup=16)
+    >>> res_pca.fit(temperature)
+    ```
+    """
+    data = pd.read_excel(DATASETS_DIR/"temperature.xlsx",header=0,index_col=0)
+    return data
+
+def load_tennis():
+    """
+    Tennis dataset
+    --------------
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_tennis
+    >>> tennis = load_tennis()
+    ```
+    
+    Examples
+    --------
+    ```python
+    >>> # Load tennis dataset
+    >>> from scientisttools import load_tennis
+    >>> tennis = load_tennis()
+    >>> from scientisttools import FAMD
+    >>> res_famd =  FAMD(n_components=2,ind_sup=list(range(16,tennis.shape[0])),quanti_sup=7)
+    >>> res_famd.fit(tennis)
+    ```
+    """
+    data = pd.read_excel(DATASETS_DIR/"tennisplayers.xlsx",index_col=0)
     return data
 
 def load_usarrests():
@@ -968,7 +978,7 @@ def load_usarrests():
 
     Usage
     -----
-    ```
+    ```python
     >>> from scientisttools import load_usarrests
     >>> usarrests = load_usarrests()
     ```
@@ -996,5 +1006,88 @@ def load_usarrests():
     McNeil, D. R. (1977) Interactive Data Analysis. New York: Wiley.
     """
     usarrests = pd.read_excel(DATASETS_DIR/"usarrests.xlsx",index_col=0,header=0)
-    usarrests.index.name = None
     return usarrests
+
+def load_wine():
+    """
+    Wine dataset
+    ------------
+
+    Description
+    -----------
+    The data used here refer to 21 wines of Val de Loire
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_wine
+    >>> wine = load_wine()
+    ```
+
+    Format
+    ------
+    A data frame with 21 rows (the number of wines) and 31 columns: 
+        * the first column corresponds to the label of origin, 
+        * the second column corresponds to the soil, 
+        * and the others correspond to sensory descriptors.
+    
+    Source
+    ------
+    The wine dataset from FactoMineR
+
+    Examples
+    --------
+    ```python
+    >>> # Load wine data
+    >>> from scientisttools import load_wine
+    >>> wine = load_wine()
+    >>> # Example of PCA
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(standardize=True,n_components=5,quanti_sup=[29,30],quali_sup=[0,1],parallelize=True)
+    >>> res_pca.fit(wine) 
+    >>> # Example of MCA
+    >>> from scientisttools import MCA
+    >>> res_mca = MCA(quanti_sup = list(range(2,wine.shape[1])))
+    >>> res_mca.fit(wine)
+    >>> # Example of FAMD
+    >>> from scientisttools import FAMD
+    >>> res_famd = FAMD()
+    >>> res_famd.fit(wine)
+    >>> # Example of MFA
+    >>> from scientisttools import MFA
+    >>> res_mfa = MFA(n_components=5,group=group,group_type=["n"]+["s"]*5,var_weights_mfa=None,name_group = group_name,num_group_sup=[0,5],parallelize=True)
+    >>> res_mfa.fit(wine)
+    ```
+    """
+    data = pyreadr.read_r(DATASETS_DIR/"wine.rda")["wine"]
+    return data
+
+def load_womenwork():
+    """
+    Women work dataset
+    ------------------
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_womenwork
+    >>> womenwork = load_womenwork()
+    ```
+
+    Format
+    ------
+    A data frame with 3 rows and 7 columns
+
+    Examples
+    --------
+    ```python
+    >>> # load women_work dataset
+    >>> from scientisttools import load_women_work
+    >>> women_work = load_women_work()
+    >>> from scientisttools import CA
+    >>> res_ca = CA(col_sup=[3,4,5,6])
+    >>> res_ca.fit(women_work)
+    ```
+    """
+    data = pd.read_csv(DATASETS_DIR/"women_work.txt",sep="\t")
+    return data

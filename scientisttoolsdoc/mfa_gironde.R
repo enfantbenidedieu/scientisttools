@@ -20,6 +20,7 @@ res.mfa <- MFA(gironde,
                type = c("s","m","n","s"),
                name.group = c("employment","housing","services","environment"),
                num.group.sup = c(2,3),
+               ind.sup = c(501:542),
                graph = FALSE)
 
 active <- cbind.data.frame(gironde$employment,gironde$environment,gironde$housing)

@@ -16,86 +16,70 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
     """
     Classic Muldimensional Scaling (CMDSCALE)
     -----------------------------------------
+    This class inherits from sklearn BaseEstimator and TransformerMixin class
 
     Description
     -----------
+    This is a classical multidimensional scaling also known as Principal Coordinates Analysis (PCoA).Performs Classical Multidimensional Scaling (MDS) with supplementary rows points.
 
-    This class inherits from sklearn BaseEstimator and TransformerMixin class
-
-    This is a classical multidimensional scaling also 
-    known as Principal Coordinates Analysis (PCoA).
-
-    Performs Classical Multidimensional Scaling (MDS) with supplementary 
-    rows points.
+    Usage
+    -----
+    ```python
+    >>> CMDSCALE(n_components=None,ind_sup = None,proximity="euclidean",normalized_stress=True,parallelize=False)
+    ```
 
     Parameters
     ----------
-    n_components : int, default=None
-        Number of dimensions in which to immerse the dissimilarities.
+    `n_components` : int, default=None Number of dimensions in which to immerse the dissimilarities.
     
-    sup_labels : list of string, default = None
-        Labels of supplementary rows.
+    `sup_labels` : list of string, default = None Labels of supplementary rows.
     
-    proximity :  {'euclidean','precomputed','similarity'}, default = 'euclidean'
-        Dissmilarity measure to use :
-        - 'euclidean':
-            Pairwise Euclidean distances between points in the dataset
-        
-        - 'precomputed':
-            Pre-computed dissimilarities are passed disrectly to ``fit`` and ``fit_transform``.
-        
-        - `similarity`:
-            Similarity matrix is transform to dissimilarity matrix before passed to ``fit`` and ``fit_transform``.
+    `proximity` :  {'euclidean','precomputed','similarity'}, default = 'euclidean'. Dissmilarity measure to use :
+        * 'euclidean': Pairwise Euclidean distances between points in the dataset
+        * 'precomputed': Pre-computed dissimilarities are passed disrectly to ``fit`` and ``fit_transform``.
+        * `similarity`: Similarity matrix is transform to dissimilarity matrix before passed to ``fit`` and ``fit_transform``.
 
-    normalized_stress : bool, default = True
-        Whether use and return normed stress value (Stress-1) instead of raw
-        stress calculated by default.
+    `normalized_stress` : bool, default = True. Whether use and return normed stress value (Stress-1) instead of raw stress calculated by default.
     
-    graph : bool, default = True
-        if True a graph is displayed
+    `parallelize` : boolean, default = False. If model should be parallelize
+        * If True : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
+        * If False : parallelize using pandas apply
 
-    figsize : tuple of int, default = None
-        Width, height in inches.
+    Attributes
+    ----------
+    `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    Returns
-    -------
-    n_components_ : int
-        The estimated number of components.
-    
-    labels_ : array of strings
-        Labels for the rows.
-    
-    nobs_ : int
-        number of rows
-    
-    dist_ : ndarray of shape -n_rows, nr_ows)
-        Eulidean distances matrix.
-        
-    eig_ : array of float
-        A 4 x n_components_ matrix containing all the eigenvalues
-        (1st row), difference (2nd row) the percentage of variance (3rd row) and the
-        cumulative percentage of variance (4th row).
-    
-    eigen_vector_ : array of float:
-        A matrix containing eigenvectors
-    
-    coord_ : ndarray of shape (n_rows,n_components_)
-        A n_rows x n_components_ matrix containing the row coordinates.
-    
-    res_dist_ : ndarray of shape (n_rows,n_rows_)
-        A n_rows x n_rows_ matrix containing the distances based on coordinates.
-    
-    stress_ : float
+    `svd_` : eigen decomposition
 
-    inertia_ : 
+    `call_` : dictionary with some statistics
 
-    dim_index_ : 
+    `results` : dictionary containing :
+        * `coord` : individuals coordinates
+        * `dist` : square distance between individuals
+        * `res_dist` : restitutes square distance between individuals
+        * `stress` : stress
+        * `inertia` : inertia
     
-    centered_matrix_ : ndarray of shape
-    
-    model_ : string
-        The model fitted = 'cmds'
-    
+    `model_` : string specifying the model fitted = 'cmds'
+
+    Author(s)
+    --------
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    References
+    ----------
+    Rakotomalala, R. (2020). Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2. Version 1.0
+
+    Examples
+    --------
+    ```python
+    >>> # Load autosmds dataset
+    >>> from scientisttools import load_autosmds
+    >>> autosmds = load_autosmds()
+    >>> from scientisttools import CMDSCALE
+    >>> my_cmds = CMDSCALE(n_components=2,ind_sup=[12,13,14],proximity="euclidean",normalized_stress=True,parallelize=False)
+    >>> my_cmds.fit(autosmds)
+    ```
     """
     def __init__(self,
                  n_components=None,
@@ -113,18 +97,19 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         """
         Fit the model to X
         ------------------
-        
+
         Parameters
         ----------
-        X : DataFrame of float, shape (n_rows, n_columns)
+        `X` : pandas/polars DataFrame of shape (n_samples, n_columns)
+            Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
-        y : None
+        `y` : None
             y is ignored
-        
-        Returns:
-        --------
-        self : object
-                Returns the instance itself
+
+        Returns
+        -------
+        `self` : object
+            Returns the instance itself
         """
 
         # If proximinity == "euclidean"
@@ -132,7 +117,6 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
             """
             Compute eigenvalue and eigenvalue for euclidean matrix
             -------------------------------------------------------
-            
             """
             B = np.dot(np.dot(centering_matrix,X),np.dot(centering_matrix,X).T)
             value, vector = np.linalg.eig(B)
@@ -143,7 +127,6 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
             """
             Compute eigenvalue and eigenvector for precomputed matrix
             ---------------------------------------------------------
-            
             """
             if choice == "precomputed":
                 dist = check_symmetric(X.values, raise_exception=True)
@@ -169,13 +152,10 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         if self.proximity not in ["euclidean","precomputed","similarity"]:
             raise ValueError("'proximity' should be one of 'euclidean', 'precomputed', 'similarity'")
         
-        ###############################################################################################################"
         # Drop level if ndim greater than 1 and reset columns name
-        ###############################################################################################################
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
         
-        ############################
         # Check is supplementary rows
         if self.ind_sup is not None:
             if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
@@ -186,17 +166,15 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         else:
             ind_sup_label = None
         
-        ####################################### Save the base in a new variables
         # Store data
         Xtot = X.copy()
 
-        ####################################### Drop supplementary individuals ########################################
+        # Drop supplementary individuals
         if self.ind_sup is not None:
             # Extract supplementary individuals
             X_ind_sup = X.loc[ind_sup_label,:]
             X = X.drop(index=ind_sup_label)
         
-        ##############################################################################################
         # check matrix
         if X.shape[0] == X.shape[1] and self.proximity != "precomputed":
             raise warnings.warn(
@@ -206,7 +184,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
                 "``proximity='precomputed'``."
             )
         
-        ################################################### Compute distance matrix
+        # Compute distance matrix
         if self.proximity == "euclidean":
             dist = squareform(pdist(X,metric="euclidean"))
         elif self.proximity == "precomputed":
@@ -254,7 +232,7 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         self.svd_ = {"eigenvalues" : eigen_value[:n_components],
                      "eigenvectors" : eigen_vector[:,:n_components]}
 
-        ############################################### Coordinates ##########################################""""
+        # Coordinates 
         coord = eigen_vector[:,:n_components]*np.sqrt(eigen_value[:n_components])
         coord = pd.DataFrame(coord,index=X.index.tolist(),columns=["Dim."+str(x+1) for x in range(n_components)])
 
@@ -277,38 +255,53 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         # Store informations
         self.result_ = {"coord" : coord, "dist" : dist, "res_dist" : res_dist,"stress" : stress,"inertia" : inertia}
 
-        ##################### Supplementary individuals
+        # Supplementary individuals
         if self.ind_sup is not None:
             self.sup_coord_ = self.transform(X_ind_sup)
         
         self.model_ = "cmdscale"
         
         return self
-    
-    def transform(self,X,y=None):
-        """
-        Apply the Multidimensional Scaling reduction on X
-        --------------------------------------------------
 
-        X is projected on the first axes previous extracted from a training set.
+    def fit_transform(self,X,y=None):
+        """
+        Fit the model with X and apply the dimensionality reduction on X
+        ----------------------------------------------------------------
 
         Parameters
         ----------
-        X : DataFrame of float, shape (n_rows_sup, n_columns)
-            New data, where n_row_sup is the number of supplementary
-            row points and n_columns is the number of columns
-            X rows correspond to supplementary row points that are 
-            projected on the axes
-            X is a table containing numeric values
+        `X` : pandas/polars dataframe of shape (n_samples, n_columns)
+            Training data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
         
-        y : None
-            y is ignored
+        `y` : None
+            y is ignored.
         
         Returns
         -------
-        X_new : DataFrame of float, shape (n_rows_sup, n_components_)
-                X_new : coordinates of the projections of the supplementary
-                row points on the axes.
+        `X_new` : pandas dataframe of shape (n_samples, n_components)
+            Transformed values.
+        """
+        self.fit(X)
+        return self.result_["coord"]
+    
+    def transform(self,X):
+        """
+        Apply the dimensionality reduction on X
+        ---------------------------------------
+
+        Description
+        -----------
+        X is projected on the principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : pandas/polars dataframe of shape (n_samples, n_columns)
+            New data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
+
+        Returns
+        -------
+        `X_new` : pandas dataframe of shape (n_samples, n_components)
+            Projection of X in the principal components where `n_samples` is the number of samples and `n_components` is the number of the components.
         """
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
@@ -344,27 +337,3 @@ class CMDSCALE(BaseEstimator,TransformerMixin):
         sup_coord.columns = ["Dim."+str(x+1) for x in range(sup_coord.shape[1])]
         
         return sup_coord
-        
-    def fit_transform(self,X,y=None):
-        """Fit the model with X and apply the dimensionality reduction on X.
-        
-        Parameters
-        ----------
-        X : pd.DataFrame, shape (n_samples, n_features)
-            New data, where n_samples in the number of samples
-            and n_features is the number of features.
-        
-        Returns
-        -------
-        X_new : array-like, shape (n_samples, n_components)
-        """
-        
-        self.fit(X)
-        return self.result_["coord"]
-    
-
-def predictCMDSCALE(self,X):
-    """
-    
-    """
-    pass

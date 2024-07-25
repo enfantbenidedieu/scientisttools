@@ -11,6 +11,13 @@ data(wine)
 
 res.pca <- PCA(wine,quanti.sup = 30:31,quali.sup = 1:2,graph = F)
 
+DimDesc <- dimdesc(res.pca)
+DimDesc$Dim.1$category
+DimDesc$Dim.2$quali
+
+
+res.pca$quali.sup$eta2
+
 fviz_cos2(res.pca,choice = "var")
 
 ############ Eigenvalues

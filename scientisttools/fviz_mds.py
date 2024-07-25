@@ -33,12 +33,51 @@ def fviz_mds(self,
     Visualize the results for Multidimension Scaling (MDS)
     ------------------------------------------------------
 
+    Usage
+    -----
+    ```python
+    >>> fviz_mds(self,
+                axis=[0,1],
+                x_label=None,
+                y_label=None,
+                x_lim=None,
+                y_lim=None,
+                geom = ["point","text"],
+                text_type = "text",
+                point_size = 1.5,
+                text_size = 8,
+                title =None,
+                color="black",
+                color_sup ="blue",
+                marker = "o",
+                marker_sup = "^",
+                ind_sup = True,
+                add_grid =True,
+                add_hline = True,
+                add_vline=True,
+                ha="center",
+                va="center",
+                hline_color="black",
+                hline_style="dashed",
+                vline_color="black",
+                vline_style ="dashed",
+                repel=False,
+                ggtheme=pn.theme_minimal()) 
+    ```
+
+    Parameters
+    ----------
+    see fviz_pca_ind
+
+    Returns
+    -------
+    a plotnine
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-    
+    # Check if self is an object of class MDS
     if self.model_ != "mds":
         raise TypeError("'self' must be an instance of class MDS")
      

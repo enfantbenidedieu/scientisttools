@@ -50,6 +50,8 @@ class CA(BaseEstimator,TransformerMixin):
     ----------
     `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
+    `svd_` : dictionary of matrices containing all the results of the singular value decomposition
+
     `col_` : dictionary of pandas dataframe with all the results for the column variable (coordinates, square cosine, contributions, inertia)
 
     `row_` : dictionary of pandas dataframe with all the results for the row variable (coordinates, square cosine, contributions, inertia)

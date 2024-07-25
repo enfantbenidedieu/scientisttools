@@ -12,23 +12,34 @@ def splitmix(X):
 
     Usage
     -----
-    > from scientisttools import splitmix
-    > X_quanti = splitmix(X)["quanti"]
-    > X_quali = splitmix(X)["quali"]
-
+    ```python
+    >>> splitmix(X)
+    ```
+    
     Parameters
     ----------
-    X : pandas dataframe of mixed data
+    `X` : pandas dataframe of mixed data
 
     Return
     ------
-    quanti : pandas dataframe containing only the quantitative variables
+    a dictionary of two dataframe containing : 
 
-    quali : pandas dataframe containing only the qualitative variables
+    `quanti`: pandas dataframe containing only the quantitative variables or None
+
+    `quali` : pandas dataframe containing only the qualitative variables or None
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+
+    Examples
+    --------
+    ```
+    >>> from scientisttools import load_gironde, splitmix
+    >>> gironde = load_gironde()
+    >>> X_quanti = splitmix(X=gironde)["quanti]
+    >>> X_quali = splitmix(X=girdone)["quali]
+    ```
     """
     # Check if pandas dataframe
     if not isinstance(X,pd.DataFrame):

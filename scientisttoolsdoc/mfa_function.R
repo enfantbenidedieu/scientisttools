@@ -1,3 +1,4 @@
+rm(list = ls())
 MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.sup = NULL, ncp = 5, name.group = NULL, num.group.sup = NULL, graph = TRUE, weight.col.mfa = NULL, row.w = NULL, axes=c(1,2),tab.comp=NULL){
   
   moy.p <- function(V, poids) {
@@ -431,8 +432,6 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     coord.group.sup <- matrix(NA, length(num.group.sup), ncp)
     dimnames(coord.group.sup) <- list(name.group[num.group.sup], paste("Dim", c(1:ncp), sep = "."))
     ind.gc <- 0
-    print(head(ponderation.group.sup))
-    print(row.w)
     for (gc in 1:length(num.group.sup)) {
       for (k in 1:ncp){
         if (is.null(ind.sup)) coord.group.sup[gc,k] <- funcLg(res.globale$ind$coord[,k,drop=FALSE],data.group.sup[,(ind.gc+1):(ind.gc+group.mod[num.group.sup[gc]]),drop=FALSE],ponderation.x=1/res.globale$eig[k,1],ponderation.y=ponderation.group.sup[(ind.gc+1):(ind.gc+group.mod[num.group.sup[gc]])],wt=row.w/sum(row.w))
@@ -508,6 +507,7 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
     res.groupes$cos2.sup <- coord.group.sup[,1:ncp,drop=FALSE]^2/dist2.group.sup
     res.groupes$dist2.sup <- dist2.group.sup
   }
+  
   ####CHANGED THIS!!!! ------------------
   # OLD#
   # nom.ligne <- NULL
@@ -842,6 +842,7 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
   resultats$call$call <- match.call()
   resultats$global.pca <- res.globale
   class(resultats) <- c("MFA", "list")
+  print(head(resultats$call$X))
   
   if (graph & (ncp>1)){
     if (bool.act | bool.sup){
@@ -869,6 +870,7 @@ MFA2 <- function (base, group, type = rep("s",length(group)), excl = NULL, ind.s
 
 # rm(list = ls())
 library(FactoMineR)
+data("mortality")
 # library(factoextra)
 # data(wine)
 # data(poison)
@@ -885,7 +887,28 @@ colnames(mortality2) <- c(paste0(colnames(mortality2),"-2"))
 dat <- cbind.data.frame(mortality,mortality2)
 res2<-MFA2(dat,group=c(rep(9,4)),type=c(rep("f",4)),
           name.group=c("1979","2006","1979-2","2006-2"),
-          num.group.sup = c(3,4),graph = F)
+          ind.sup = c(51:nrow(dat)),num.group.sup = c(3,4),graph = F)
+
+dimDesc <- dimdesc(res2)
+
+x = res2$ind$coord
+y = res2$call$X[-res2$call$ind.sup,]
+w = res2$call$row.w.init
+Z = cbind.data.frame(x,y)
+
+result <- data.frame(matrix(0,nrow = ncol(y),ncol = ncol(x)))
+colnames(result) <- colnames(x)
+rownames(result) <- colnames(y)
+
+for(i in 1:ncol(x)){
+  for(j in 1:ncol(y)){
+    Z = cbind.data.frame(x[,i],y[j])
+    result[j,i] <- cov.wt(Z,wt=w,method="ML",cor=TRUE)$cor[1,2]
+  }
+}
+
+
+
 
 # mortality3 <- mortality
 # rownames(mortality3) <- c(paste0(rownames(mortality3),"-2"))

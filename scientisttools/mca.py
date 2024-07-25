@@ -54,6 +54,8 @@ class MCA(BaseEstimator,TransformerMixin):
     -----------
     `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
+    `svd_` : dictionary of matrices containing all the results of the singular value decomposition
+
     `var_` : dictionary of pandas dataframe containing all the results for the active variables (coordinates, correlation between variables and axes, square cosine, contributions)
 
     `ind_` : dictionary of pandas dataframe containing all the results for the active individuals (coordinates, square cosine, contributions)
