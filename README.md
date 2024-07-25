@@ -170,4 +170,4 @@ Dim.6	1.104214	0.355298	4.089681	90.145621
 
 ## Author(s)
 
-Duvérier DJIFACK ZEBAZE ([duverierdjifack@gmail.com](duverierdjifack@gmail.com))
+Duvérier DJIFACK ZEBAZE ([djifacklab@gmail.com](djifacklab@gmail.com))
