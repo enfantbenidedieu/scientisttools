@@ -159,6 +159,15 @@ Dim.5	1.544202	0.439988	5.719266	86.055941
 Dim.6	1.104214	0.355298	4.089681	90.145621
 ```
 
+```python
+>>> from scientisttools import fviz_screeplot
+>>> print(fviz_screeplot(res_pca))
+```
+<center>
+    <img src="./figures/screeplot.png" alt="centered image"/>
+</center>
+
+
 ## Author(s)
 
 Duvérier DJIFACK ZEBAZE ([duverierdjifack@gmail.com](duverierdjifack@gmail.com))
