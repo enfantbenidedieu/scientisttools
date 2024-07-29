@@ -122,13 +122,6 @@ from .text_label import text_label, text3d_label
 from .weightedcorrcoef import weightedcorrcoef
 from .weightedcorrtest import weightedcorrtest
 
-
-
-
-
-
-
-
 ## Load all datasets
 # PCA datasets
 from .datasets import (
@@ -164,7 +157,7 @@ from .datasets import (
     load_womenwork
 )
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 __name__ = "scientisttools"
 __author__ = 'Duverier DJIFACK ZEBAZE'
 __email__ = 'djifacklab@gmail.com'
