@@ -167,6 +167,43 @@ Dim.6	1.104214	0.355298	4.089681	90.145621
     <img src="./figures/screeplot.png" alt="centered image"/>
 </center>
 
+4. **Extract and visualize results for individuals**
+
+```python
+>>> # Extract the results for individuals
+>>> from scientisttools import get_pca_ind
+>>> ind = get_pca_ind(res_pca)
+>>> ind.keys()
+```
+
+```
+dict_keys(['coord', 'cos2', 'contrib', 'infos'])
+```
+
+```python
+>>> # Factor coordinates for individuals
+>>> ind["coord"].head(6)
+```
+```
+           Dim.1	  Dim.2	     Dim.3	    Dim.4	    Dim.5
+2EL	   -0.697060  -2.852968	  0.169384	 0.942456	 0.957457
+1CHA   -4.802838  -4.236054	 -0.969634	 0.164637	 0.288523
+1FON   -2.577287  -0.184102	 -1.879038	-2.541729	-0.390677
+1VAU  -10.582720   2.180724	  1.691468	-0.624785	 0.968510
+1DAM	4.906159   0.147573	  0.864068	-0.138473	 2.525392
+2BOU	1.746737   0.926421	 -1.281174	-1.113625	-1.805437
+```
+
+```python
+>>> # Individuals factor map
+>>> from scientisttools import fviz_pca_ind
+>>> print(fviz_pca_ind(res_pca))
+```
+
+<center>
+    <img src="./figures/indplot.png" alt="centered image"/>
+</center>
+
 
 ## Author(s)
 
