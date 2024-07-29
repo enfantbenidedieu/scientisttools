@@ -6,10 +6,10 @@ with open("README.md", "r",encoding="utf-8") as fh:
 # Setting up
 setuptools.setup(
     name="scientisttools",
-    version="0.1.5",
+    version="0.1.6",
     author="Duverier DJIFACK ZEBAZE",
-    author_email="duverierdjifack@gmail.com",
-    description="Python library for multidimensional analysis, classification - clustering analysis",
+    author_email="djifacklab@gmail.com",
+    description="Python library for multidimensional analysis, classification - clustering analysis and multidimensional analysis",
     long_description_content_type="text/markdown",
     long_description=long_description,
     packages=setuptools.find_packages(),
