@@ -448,7 +448,7 @@ class MFAMIX(BaseEstimator,TransformerMixin):
                 else:
                     if self.group_type[group_name.index(grp)]=="m":
                         # Factor Analysis of Mixed Data (FAMD)
-                        fa = FAMD(n_components=self.n_components,ind_weights=ind_weights,parallelize=self.parallelize)
+                        fa = FAMD(n_components=self.n_components,ind_weights=self.ind_weights,parallelize=self.parallelize)
                     else:
                         raise TypeError("For mixed variables 'group_type' should be 'm'")
                 # Fit the model

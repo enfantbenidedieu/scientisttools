@@ -16,6 +16,8 @@ res.mfa <- MFA(wine,
                               "odor.after.shaking", "taste","overall"),
                num.group.sup = c(1, 6),
                graph = FALSE)
+res.shiny <- Factoshiny::MFAshiny(res.mfa)
+res.shiny <- MFAshiny(wine)
 
 # Separate analyses
 res.mfa$separate.analyses$origin

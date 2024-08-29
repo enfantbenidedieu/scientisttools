@@ -476,7 +476,7 @@ class CA(BaseEstimator,TransformerMixin):
             
             ################ Transform to float
             X_quanti_sup = X_quanti_sup.astype("float")
-            X_quanti_sup = recodecont(X_quanti_sup)
+            X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
 
             ##################### Compute statistics
             summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})

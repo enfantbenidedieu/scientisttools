@@ -1,10 +1,16 @@
-<center>
-    <img src="./figures/scientisttools.svg" alt="centered image" height="50%"/>
-</center>
+<p align="center">
+    <img src="./figures/scientisttools.svg" height=300></img>
+</p>
 
+<div align="center">
+
+[![GitHub](https://shields.io/badge/license-MIT-informational)](https://github.com/enfantbenidedieu/scientisttools/blob/master/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/scientisttools.svg?color=dark-green)](https://pypi.org/project/scientisttools/)
 [![Downloads](https://static.pepy.tech/badge/scientisttools)](https://pepy.tech/project/scientisttools)
+[![Downloads](https://static.pepy.tech/badge/scientisttools/month)](https://pepy.tech/project/scientisttools)
+[![Downloads](https://static.pepy.tech/badge/scientisttools/week)](https://pepy.tech/project/scientisttools)
 
-
+</div>
 
 # scientisttools : Exploratory Multivariate Data Analysis with Python
 

@@ -6,6 +6,7 @@
 rm(list = ls())
 library(FactoMineR)
 library(factoextra)
+library(Factoshiny)
 
 data(children)
 children$group <- c(rep("A",4),rep("B",5),rep("C",5),rep("D",4))
@@ -13,6 +14,8 @@ res.ca <- CA (children, row.sup = 15:18, quanti.sup = 6:8,quali.sup = 9,graph = 
 
 ############"" Eigenvalyes
 res.ca$eig
+
+res.shiny <- CAshiny(res.ca)
 
 
 ############# Rows informations

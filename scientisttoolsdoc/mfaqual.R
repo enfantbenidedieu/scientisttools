@@ -5,10 +5,16 @@
 rm(list = ls())
 library(FactoMineR)
 library(factoextra)
+library(Factoshiny)
 data (poison)
 res2.mfa <- MFA(poison, group=c(2,2,5,6), type=c("s","n","n","n"),
                 name.group=c("desc","desc2","symptom","eat"),
                 num.group.sup=1:2,ind.sup = c(51:55),graph = FALSE)
+
+plot.MFA(res2.mfa)
+res2.shiny <- MFAshiny(res2.mfa)
+
+res.shiny <- Factoshiny::catdesshiny(poison)
 
 ################################################################
 # Eigenvalues

@@ -7,9 +7,14 @@
 rm(list = ls())
 library(FactoMineR)
 library(factoextra)
+library(Factoshiny)
 data(wine)
 
 res.pca <- PCA(wine,quanti.sup = 30:31,quali.sup = 1:2,graph = F)
+
+res.shiny <- PCAshiny(res.pca)
+
+res.shiny <- PCAshiny(wine)
 
 DimDesc <- dimdesc(res.pca)
 DimDesc$Dim.1$category

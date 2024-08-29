@@ -14,7 +14,7 @@ dat <- cbind.data.frame(mortality,mortality2)
 res <- MFA(dat,group=c(rep(9,4)),type=c(rep("f",4)),
            name.group=c("1979","2006","1979-2","2006-2"),
            ind.sup = c(51:62),num.group.sup = c(3,4),graph = F)
-
+res.shiny <- Factoshiny::MFAshiny(res)
 # Eigenvalues
 round(res$eig,4)
 

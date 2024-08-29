@@ -940,7 +940,7 @@ def load_temperature():
     >>> from scientisttools import load_temperature
     >>> temperature = load_temperature()
     >>> from scientisttools import PCA
-    >>> res_pca = PCA(ind_sup=list(range(15,temperatuer.shape[0])),quanti_sup=list(range(12,16)),quali_sup=16)
+    >>> res_pca = PCA(ind_sup=list(range(15,temperature.shape[0])),quanti_sup=list(range(12,16)),quali_sup=16)
     >>> res_pca.fit(temperature)
     ```
     """

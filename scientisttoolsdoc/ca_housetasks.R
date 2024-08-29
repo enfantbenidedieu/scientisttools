@@ -1,9 +1,16 @@
 rm(list = ls())
 library(FactoMineR)
+library(Factoshiny)
 data("children")
 
 data(housetasks)
-# res.ca <- CA(housetasks, graph=FALSE)
+res.ca <- CA(housetasks, graph=FALSE)
+res.shiny <- CAshiny(res.ca)
+
+
+
+
+
 children$group <- c(rep("A",5),rep("B",5),rep("C",4),rep(NA,4))
 res.ca <- CA (children,row.sup = 15:18,
               quanti.sup = 6:8,quali.sup = 9,graph = FALSE)
