@@ -47,17 +47,17 @@ def reconst(self,n_components=None):
         raise ValueError("'self' must be an object of class PCA, CA or MFA")
     
     if n_components is not None:
-        if n_components > self.call_["n_components"]:
+        if n_components > self.call_.n_components:
             raise ValueError("Enter good number of n_components" )
     else:
         raise ValueError("'n_components' must be pass.")
     
     if self.model_ == "pca":
         # Valeurs centrées
-        Z = np.dot(self.ind_["coord"].iloc[:,:n_components],self.svd_["V"][:,:n_components].T)
+        Z = np.dot(self.ind_.coord.iloc[:,:n_components],self.svd_.V[:,:n_components].T)
         # Déstandardisation et décentrage
-        X = self.call_["X"].copy()
-        for k in np.arange(self.var_["coord"].shape[0]):
-            X.iloc[:,k] = Z[:,k]*self.call_["std"].values[k] + self.call_["means"].values[k]
+        X = self.call_.X.copy()
+        for k in np.arange(self.var_.coord.shape[0]):
+            X.iloc[:,k] = Z[:,k]*self.call_.scale.values[k] + self.call_.center.values[k]
     
     return X

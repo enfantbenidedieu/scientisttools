@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 import pandas as pd
+from collections import namedtuple
 
 from .catdesc import catdesc
 from .contdesc import contdesc
@@ -17,7 +17,7 @@ def dimdesc(self,axis=None,proba=0.05):
 
     Usage
     -----
-    ```
+    ```python
     >>> dimdesc(self,axis=None,proba=0.05)
     ```
 
@@ -41,6 +41,15 @@ def dimdesc(self,axis=None,proba=0.05):
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
+    Examples
+    --------
+    ```python
+    >>> from scientisttools import 
+    >>> gironde = load_gironde()
+    >>> X_quanti = splitmix(X=gironde).quanti
+    >>> X_
+    ```
+
     References
     ----------
     F. Bertrand, M. Maumy-Bertrand, Initiation à la Statistique avec R, Dunod, 4ème édition, 2023.
@@ -49,8 +58,8 @@ def dimdesc(self,axis=None,proba=0.05):
     """
     def desc(x,y,weights,proba):
         # Split data
-        x_quanti = splitmix(x)["quanti"]
-        x_quali = splitmix(x)["quali"]
+        x_quanti = splitmix(x).quanti
+        x_quali = splitmix(x).quali
 
         res = {}
         if x_quanti is not None:
@@ -72,18 +81,18 @@ def dimdesc(self,axis=None,proba=0.05):
     
     if self.model_ == "ca":
         # Extract row coordinates
-        row_coord = self.row_["coord"]
+        row_coord = self.row_.coord
         # Exctract columns coordinates
-        col_coord = self.col_["coord"]
+        col_coord = self.col_.coord
 
         # Add Supplementary row
         if self.row_sup is not None:
-            row_sup_coord = self.row_sup_["coord"]
+            row_sup_coord = self.row_sup_.coord
             row_coord = pd.concat([row_coord,row_sup_coord],axis=0)
         
         # Add supplmentary columns
         if self.col_sup is not None:
-            col_coord_sup = self.col_sup_["coord"]
+            col_coord_sup = self.col_sup_.coord
             col_coord = pd.concat([col_coord,col_coord_sup],axis=0)
 
         # Select axis
@@ -100,14 +109,14 @@ def dimdesc(self,axis=None,proba=0.05):
                             "col" : (col_coord[idx].to_frame().sort_values(by=idx,ascending=True).rename(columns={idx:"coord"}))}
     else:
         if self.model_ != "mfact":
-            data = self.call_["Xtot"]
+            data = self.call_.Xtot
             if self.ind_sup is not None:
-                data = data.drop(index=self.call_["ind_sup"])
+                data = data.drop(index=self.call_.ind_sup)
         else:
-            data = self.global_pca_.call_["Z"]
+            data = self.global_pca_.call_.Z
 
-        ind_coord = self.ind_["coord"]
-        ind_weights = self.call_["ind_weights"]
+        ind_coord = self.ind_.coord
+        ind_weights = self.call_.ind_weights
 
         # Select axis
         if axis is not None:

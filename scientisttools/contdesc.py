@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import pandas as pd
+
+#load intern functions
 from .recodecont import recodecont
 from .weightedcorrtest import weightedcorrtest
 
@@ -48,7 +50,7 @@ def contdesc(x,y,weights=None,proba=0.05):
         weights = np.array([x/np.sum(weights) for x in weights])
 
     # Fill NA with the mean
-    x = recodecont(x)["Xcod"]
+    x = recodecont(x).Xcod
 
     # For continuous variables
     value = pd.DataFrame(index=x.columns,columns=["correlation","pvalue"]).astype("float")

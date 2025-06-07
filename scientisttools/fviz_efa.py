@@ -3,6 +3,7 @@ import plotnine as pn
 import pandas as pd
 import numpy as np
 
+from .colors import list_colors
 from .text_label import text_label
 from .gg_circle import gg_circle
 
@@ -15,7 +16,8 @@ def fviz_efa_ind(self,
                  title =None,
                  geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                 color ="black",
+                 palette = None,
+                 color = "black",
                  point_size = 1.5,
                  text_size = 8,
                  text_type = "text",
@@ -24,15 +26,15 @@ def fviz_efa_ind(self,
                  ind_sup = True,
                  color_sup = "blue",
                  marker_sup = "^",
-                 add_grid =True,
+                 add_grid = True,
                  add_hline = True,
-                 add_vline=True,
-                 ha="center",
-                 va="center",
-                 hline_color="black",
-                 hline_style="dashed",
-                 vline_color="black",
-                 vline_style ="dashed",
+                 add_vline = True,
+                 ha = "center",
+                 va = "center",
+                 hline_color = "black",
+                 hline_style = "dashed",
+                 vline_color = "black",
+                 vline_style = "dashed",
                  repel=False,
                  ggtheme=pn.theme_minimal()) -> pn:
     
@@ -52,6 +54,7 @@ def fviz_efa_ind(self,
                     title =None,
                     geom = ["point","text"],
                     gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    palette = None,
                     color ="black",
                     point_size = 1.5,
                     text_size = 8,
@@ -93,6 +96,8 @@ def fviz_efa_ind(self,
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
     `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+
+    `palette` :  a list or tuple specifying the color palette to be used for coloring or filling by groups.
     
     `color` : a color for the active individuals (by default = "black").
 
@@ -154,14 +159,14 @@ def fviz_efa_ind(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.call_["n_components"]-1)  or
+        (axis[1] > self.call_.n_components-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'")
 
-    coord = self.ind_["coord"]
+    coord = self.ind_.coord
 
     ##### Add initial data
-    coord = pd.concat((coord,self.call_["Xtot"]),axis=1)
+    coord = pd.concat((coord,self.call_.Xtot),axis=1)
 
     if isinstance(color,str):
         if color in coord.columns.tolist():
@@ -182,28 +187,36 @@ def fviz_efa_ind(self,
     if (isinstance(color,str) and color in coord.columns.tolist()) or (isinstance(color,np.ndarray)):
             # Add gradients colors
         if "point" in geom:
-            p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False)
-            p = p + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],
-                                                name = legend_title)
+            p = p + pn.geom_point(pn.aes(colour=c),shape=marker,size=point_size,show_legend=False) + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
         if "text" in geom:
             if repel :
-                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                        adjust_text={'arrowprops': {'arrowstyle': '->',"lw":1.0}})
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '->',"lw":1.0}})
             else:
                 p = p + text_label(text_type,pn.aes(color=c),size=text_size,va=va,ha=ha)
     elif hasattr(color, "labels_"):
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
+
+        # Set palette
+        index = np.unique(c).tolist()
+        if palette is None:
+            palette = [x for x in list_colors if x not in [color,color_sup]][:len(index)]
+        elif not isinstance(palette,(list,tuple)):
+            raise TypeError("'palette' must be a list or a tuple of colors")
+        elif len(palette) != len(index):
+            raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
+
         if "point" in geom:
-            p = (p + pn.geom_point(pn.aes(color=c),size=point_size)+
-                        pn.guides(color=pn.guide_legend(title=legend_title)))
+            p = p + pn.geom_point(pn.aes(color=c),size=point_size)+pn.guides(color=pn.guide_legend(title=legend_title))
         if "text" in geom:
             if repel :
-                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                    adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+                p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+
+        #set color manual
+        p = p + pn.scale_color_manual(values=palette)
     else:
         if "point" in geom:
             p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
@@ -213,13 +226,13 @@ def fviz_efa_ind(self,
             else:
                 p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     
+    #------------------------------------------------------------------------------------------------------------------------------------------------------
     ############################## Add supplementary individuals informations
     if ind_sup:
         if hasattr(self, "ind_sup_"):
-            sup_coord = self.ind_sup_["coord"]
+            sup_coord = self.ind_sup_.coord
             if "point" in geom:
-                p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
-                                      color = color_sup,shape = marker_sup,size=point_size)
+                p = p + pn.geom_point(sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),color = color_sup,shape = marker_sup,size=point_size)
             if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index.tolist()),
@@ -264,6 +277,7 @@ def fviz_efa_var(self,
                  color ="black",
                  geom = ["arrow", "text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                 palette = None,
                  scale = 1,
                  text_type = "text",
                  text_size = 8,
@@ -299,6 +313,7 @@ def fviz_efa_var(self,
                     color = "black",
                     geom = ["arrow", "text"],
                     gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    palette = None,
                     scale = 1,
                     text_type = "text",
                     text_size = 8,
@@ -337,6 +352,8 @@ def fviz_efa_var(self,
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
     `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+
+    `palette` :  a list or tuple specifying the color palette to be used for coloring or filling by groups.
     
     `scale` : a numeric specifying scale the variables coordinates (by default 1)
 
@@ -396,17 +413,17 @@ def fviz_efa_var(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.call_["n_components"]-1)  or
+        (axis[1] > self.call_.n_components-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'")
 
-    coord = self.var_["coord"]*scale
+    coord = self.var_.coord.mul(scale)
 
     # Using lim contrib
     if lim_contrib is not None:
-        if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
+        if isinstance(lim_contrib,(int,float)):
             lim_contrib = float(lim_contrib)
-            contrib = self.var_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = self.var_.contrib.iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -414,7 +431,7 @@ def fviz_efa_var(self,
 
     if isinstance(color,str):
         if color == "contrib":
-            c = self.var_["contrib"].iloc[:,axis].sum(axis=1).values
+            c = self.var_.contrib.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
@@ -436,11 +453,24 @@ def fviz_efa_var(self,
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
+
+        # Set palette
+        index = np.unique(c).tolist()
+        if palette is None:
+            palette = [x for x in list_colors if x != color][:len(index)]
+        elif not isinstance(palette,(list,tuple)):
+            raise TypeError("'palette' must be a list or a tuple of colors")
+        elif len(palette) != len(index):
+            raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
+
         if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
                      pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+
+        #set color manual
+        p = p + pn.scale_color_manual(values=palette)
     else:
         if "arrow" in geom:
             p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), arrow = pn.arrow(),color=color)
@@ -466,7 +496,7 @@ def fviz_efa_var(self,
     if add_hline:
         p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
     if add_vline:
-        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
+        p = p + pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
     if add_grid:
         p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
 
@@ -556,7 +586,7 @@ def fviz_efa_biplot(self,
 
     Parameters
     ----------
-    see fviz_efa_ind, fviz_efa_var
+    seefviz_efa_ind ``, `fviz_efa_var`
 
     Author(s)
     ---------
@@ -574,27 +604,24 @@ def fviz_efa_biplot(self,
     
     if ((len(axis) !=2) or 
         (axis[0] < 0) or 
-        (axis[1] > self.call_["n_components"]-1)  or
+        (axis[1] > self.call_.n_components-1)  or
         (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
     
     # Individuals coordinates
-    ind = self.ind_["coord"].iloc[:,axis]
+    ind = self.ind_.coord.iloc[:,axis]
     ind.columns = ["x","y"]
     # variables coordinates
-    var = self.var_["coord"].iloc[:,axis]
+    var = self.var_.coord.iloc[:,axis]
     var.columns = ["x","y"]
 
     # Rescale variables coordinates
     xscale = (np.max(ind["x"]) - np.min(ind["x"]))/(np.max(var["x"]) - np.min(var["x"]))
     yscale = (np.max(ind["y"]) - np.min(ind["y"]))/(np.max(var["y"]) - np.min(var["y"]))
-    rscale = min(xscale, yscale)
+    scale = min(xscale, yscale)
 
     #### Extract individuals coordinates
-    ind_coord = self.ind_["coord"]
-
-    # Variables coordinates
-    var_coord = self.var_["coord"]*rscale
+    ind_coord, var_coord = self.ind_.coord, self.var_.coord.mul(scale)
 
     p = pn.ggplot()
 
@@ -603,8 +630,7 @@ def fviz_efa_biplot(self,
     #####################################################################################################################################################
 
     if "point" in ind_geom:
-        p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),
-                                color=ind_color,shape=marker,size=ind_point_size,show_legend=False)
+        p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),color=ind_color,shape=marker,size=ind_point_size,show_legend=False)
     if "text" in ind_geom:
         if repel :
             p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),
@@ -617,7 +643,7 @@ def fviz_efa_biplot(self,
     # Add supplementary individuals coordinates
     if ind_sup:
         if hasattr(self, "ind_sup_"):
-            ind_sup_coord = self.ind_sup_["coord"]
+            ind_sup_coord = self.ind_sup_.coord
             if "point" in ind_geom:
                 p = p + pn.geom_point(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
                                       color = ind_color_sup,shape = ind_marker_sup,size=ind_point_size)

@@ -12,9 +12,11 @@ data(wine)
 
 res.pca <- PCA(wine,quanti.sup = 30:31,quali.sup = 1:2,graph = F)
 
+res.hcpc <- HCPC(res.pca,nb.clust = 3)
+
 res.shiny <- PCAshiny(res.pca)
 
-res.shiny <- PCAshiny(wine)
+res.shiny <- HCPCshiny(res.pca)
 
 DimDesc <- dimdesc(res.pca)
 DimDesc$Dim.1$category

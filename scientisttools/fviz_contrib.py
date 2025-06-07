@@ -78,13 +78,13 @@ def fviz_contrib(self,
     ---------
     Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
     """
-    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","pcamix","mfa","mfaqual","mfamix","mfact","partialpca","efa"]:
-        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA, EFA")    
+    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","pcamix","mfa","mfaqual","mfamix","mfact","partialpca","efa","dmfa"]:
+        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA, EFA, DMFA")    
         
     if choice not in ["row","col","var","ind","quanti_var","quali_var","freq","group","partial_axes"]:
         raise ValueError("'choice' should be one of 'row', 'col', 'var', 'ind', 'quanti_var', 'quali_var',  'freq','group' 'partial_axes'.")
 
-    ncp = self.call_["n_components"]
+    ncp = self.call_.n_components
     if axis is None:
         axis = 0
     elif not isinstance(axis,int):
@@ -96,7 +96,7 @@ def fviz_contrib(self,
         bar_width = 0.8
 
     ################## set
-    if self.model_ in ["pca","mca","specificmca","partialpca","efa"] and choice not in ["ind","var"]:
+    if self.model_ in ["pca","mca","specificmca","partialpca","efa","dmfa"] and choice not in ["ind","var"]:
         raise ValueError("'choice' should be one of 'var', 'ind'")
     
     if self.model_ == "efa" and choice != "var":
@@ -145,27 +145,27 @@ def fviz_contrib(self,
     
     # Extract contribution
     if choice == "ind":
-        contrib = self.ind_["contrib"]
+        contrib = self.ind_.contrib
     elif choice == "var":
-        contrib = self.var_["contrib"]
+        contrib = self.var_.contrib
     elif choice == "quali_var":
-        contrib = self.quali_var_["contrib"]
+        contrib = self.quali_var_.contrib
     elif choice == "quanti_var":
-        contrib = self.quanti_var_["contrib"]
+        contrib = self.quanti_var_.contrib
     elif choice == "freq":
-        contrib = self.freq_["contrib"]
+        contrib = self.freq_.contrib
     elif choice == "group":
-        contrib = self.group_["contrib"]
+        contrib = self.group_.contrib
     elif choice == "partial_axes":
         contrib = pd.DataFrame().astype("float")
-        for grp in self.partial_axes_["contrib"].columns.get_level_values(0).unique().tolist():
-            data = self.partial_axes_["contrib"][grp].T
+        for grp in self.partial_axes_.contrib.columns.get_level_values(0).unique().tolist():
+            data = self.partial_axes_.contrib[grp].T
             data.index = [x+"."+str(grp) for x in data.index]
             contrib = pd.concat([contrib,data],axis=0)
     elif choice == "row":
-        contrib = self.row_["contrib"]
+        contrib = self.row_.contrib
     elif choice == "col":
-        contrib = self.col_["contrib"]
+        contrib = self.col_.contrib
     
     ####
     contrib = contrib.iloc[:,[axis]].reset_index()
@@ -185,25 +185,19 @@ def fviz_contrib(self,
             contrib = pd.merge(contrib,self.group_label_,on=["variable"]).rename(columns={"variable" : "name"})
             
             if sort_contrib == "desc":
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group name",fill="group name"),
-                                    width=bar_width,stat="identity")
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group name",fill="group name"),width=bar_width,stat="identity")
             elif sort_contrib == "asc":
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group name",fill="group name"),
-                                    width=bar_width,stat="identity")
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group name",fill="group name"),width=bar_width,stat="identity")
             else:
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group name",fill="group name"),
-                                    width=bar_width,stat="identity")
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group name",fill="group name"),width=bar_width,stat="identity")
             p = p + pn.labs(fill='Groups', color="Groups")
         else:
             if sort_contrib == "desc":
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),
-                                    fill=fill_color,color=color,width=bar_width,stat="identity")
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),fill=fill_color,color=color,width=bar_width,stat="identity")
             elif sort_contrib == "asc":
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1),
-                                    fill=fill_color,color=color,width=bar_width,stat="identity")
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1),fill=fill_color,color=color,width=bar_width,stat="identity")
             else:
-                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1),
-                                    fill=fill_color,color=color,width=bar_width,stat="identity")
+                p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1),fill=fill_color,color=color,width=bar_width,stat="identity")
     elif choice == "freq":
         if self.model_ != "mfact":
              raise TypeError("'self' must be an object of class MFACT")
@@ -212,25 +206,19 @@ def fviz_contrib(self,
         contrib = pd.merge(contrib,self.group_label_,on=["variable"]).rename(columns={"variable" : "name"})
         
         if sort_contrib == "desc":
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group name",fill="group name"),
-                                width=bar_width,stat="identity")
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1,color="group name",fill="group name"),width=bar_width,stat="identity")
         elif sort_contrib == "asc":
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group name",fill="group name"),
-                                width=bar_width,stat="identity")
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1,color="group name",fill="group name"),width=bar_width,stat="identity")
         else:
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group name",fill="group name"),
-                                width=bar_width,stat="identity")
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1,color="group name",fill="group name"),width=bar_width,stat="identity")
         p = p + pn.labs(fill='Groups', color="Groups")
     else:
         if sort_contrib == "desc":
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),
-                                fill=fill_color,color=color,width=bar_width,stat="identity")
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,-contrib)",y="contrib",group = 1),fill=fill_color,color=color,width=bar_width,stat="identity")
         elif sort_contrib == "asc":
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1),
-                                fill=fill_color,color=color,width=bar_width,stat="identity")
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="reorder(name,contrib)",y="contrib",group = 1),fill=fill_color,color=color,width=bar_width,stat="identity")
         else:
-            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1),
-                                fill=fill_color,color=color,width=bar_width,stat="identity")
+            p = p + pn.geom_bar(data=contrib,mapping=pn.aes(x="name",y="contrib",group = 1),fill=fill_color,color=color,width=bar_width,stat="identity")
     
     if y_label is None:
         y_label = "Contributions (%)"

@@ -63,13 +63,13 @@ def fviz_cos2(self,
     -------
     None
     """
-    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","pcamix","mfa","mfaqual","mfamix","mfact","partialpca"]:
-        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA")
+    if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","pcamix","mfa","mfaqual","mfamix","mfact","partialpca","dmfa"]:
+        raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, PartialPCA, DMFA")
         
     if choice not in ["row","col","var","ind","quanti_var","quali_var","freq","group","partial_axes"]:
         raise ValueError("'choice' should be one of 'row', 'col', 'var', 'ind', 'quanti_var', 'quali_var',  'freq','group' 'partial_axes'.")
 
-    ncp = self.call_["n_components"]
+    ncp = self.call_.n_components
     if axis is None:
         axis = 0
     elif not isinstance(axis,int):
@@ -81,7 +81,7 @@ def fviz_cos2(self,
         bar_width = 0.8
 
     ################## set
-    if self.model_ in ["pca","mca","specificmca","partialpca"] and choice not in ["ind","var"]:
+    if self.model_ in ["pca","mca","specificmca","partialpca","dmfa"] and choice not in ["ind","var"]:
         raise ValueError("'choice' should be one of 'var', 'ind'")
     
     if self.model_ == "ca" and choice not in ["row","col"]:
@@ -127,27 +127,27 @@ def fviz_cos2(self,
     
     # Extract contribution
     if choice == "ind":
-        cos2 = self.ind_["cos2"]
+        cos2 = self.ind_.cos2
     elif choice == "var":
-        cos2 = self.var_["cos2"]
+        cos2 = self.var_.cos2
     elif choice == "quali_var":
-        cos2 = self.quali_var_["cos2"]
+        cos2 = self.quali_var_.cos2
     elif choice == "quanti_var":
-        cos2 = self.quanti_var_["cos2"]
+        cos2 = self.quanti_var_.cos2
     elif choice == "freq":
-        cos2 = self.freq_["cos2"]
+        cos2 = self.freq_.cos2
     elif choice == "group":
-        cos2 = self.group_["cos2"]
+        cos2 = self.group_.cos2
     elif choice == "partial_axes":
         cos2 = pd.DataFrame().astype("float")
-        for grp in self.partial_axes_["cos2"].columns.get_level_values(0).unique().tolist():
-            data = self.partial_axes_["cos2"][grp].T
+        for grp in self.partial_axes_.cos2.columns.get_level_values(0).unique().tolist():
+            data = self.partial_axes_.cos2[grp].T
             data.index = [x+"."+str(grp) for x in data.index]
             cos2 = pd.concat([cos2,data],axis=0)
     elif choice == "row":
-        cos2 = self.row_["cos2"]
+        cos2 = self.row_.cos2
     elif choice == "col":
-        cos2 = self.col_["cos2"]
+        cos2 = self.col_.cos2
     
     ####
     cos2 = cos2.iloc[:,[axis]].reset_index()
@@ -159,14 +159,11 @@ def fviz_cos2(self,
     
     p = pn.ggplot()
     if sort_cos2 == "desc":
-        p = p + pn.geom_bar(data=cos2,mapping=pn.aes(x="reorder(name,-cos2)",y="cos2",group = 1),
-                            fill=fill_color,color=color,width=bar_width,stat="identity")
+        p = p + pn.geom_bar(data=cos2,mapping=pn.aes(x="reorder(name,-cos2)",y="cos2",group = 1), fill=fill_color,color=color,width=bar_width,stat="identity")
     elif sort_cos2 == "asc":
-        p = p + pn.geom_bar(data=cos2,mapping=pn.aes(x="reorder(name,cos2)",y="cos2",group = 1),
-                            fill=fill_color,color=color,width=bar_width,stat="identity")
+        p = p + pn.geom_bar(data=cos2,mapping=pn.aes(x="reorder(name,cos2)",y="cos2",group = 1), fill=fill_color,color=color,width=bar_width,stat="identity")
     else:
-        p = p + pn.geom_bar(data=cos2,mapping=pn.aes(x="name",y="cos2",group = 1),
-                            fill=fill_color,color=color,width=bar_width,stat="identity")
+        p = p + pn.geom_bar(data=cos2,mapping=pn.aes(x="name",y="cos2",group = 1),fill=fill_color,color=color,width=bar_width,stat="identity")
     if y_label is None:
         y_label = "Cos2 - Quality of representation"
     title = f"Cos2 of {name} to Dim-{axis+1}"

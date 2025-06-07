@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import pandas as pd
+from typing import NamedTuple
 
-def get_pca_ind(self) -> dict:
+def get_pca_ind(self) -> NamedTuple:
     """
     Extract the results for individuals - PCA
     -----------------------------------------
@@ -23,7 +24,7 @@ def get_pca_ind(self) -> dict:
 
     Returns
     -------
-    dictionary of dataframes containing all the results for the active individuals including:
+    namedtuple of dataframes containing all the results for the active individuals including:
 
     `coord` : factor coordinates (scores) of the individuals
 
@@ -55,7 +56,7 @@ def get_pca_ind(self) -> dict:
         raise TypeError("'self' must be an object of class PCA")
     return self.ind_
 
-def get_pca_var(self) -> dict:
+def get_pca_var(self) -> NamedTuple:
     """
     Extract the results for variables - PCA
     ---------------------------------------
@@ -76,7 +77,7 @@ def get_pca_var(self) -> dict:
 
     Returns
     -------
-    dictionary of dataframes containing all the results for the active variables including:
+    namedtuple of dataframes containing all the results for the active variables including:
 
     `coord` : factor coordinates (scores) of the variables
 
@@ -108,7 +109,7 @@ def get_pca_var(self) -> dict:
         raise TypeError("'self' must be an object of class PCA")
     return self.var_
 
-def get_pca(self,choice="ind")-> dict:
+def get_pca(self,choice="ind")-> NamedTuple:
     """
     Extract the results for individuals/variables - PCA
     ---------------------------------------------------
@@ -137,7 +138,7 @@ def get_pca(self,choice="ind")-> dict:
                 
     Returns
     -------
-    dictionary of dataframes containing all the results for the active individuals/variables including:
+    namedtuple of dataframes containing all the results for the active individuals/variables including:
 
     `coord` : factor coordinates (scores) of the individuals/variables
     
@@ -228,8 +229,8 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         raise TypeError("'self' must be an object of class PCA")
 
     # Define number of components
-    ncp = min(ncp,self.call_["n_components"])
-    nb_element = min(nb_element,self.call_["X"].shape[0])
+    ncp = min(ncp,self.call_.n_components)
+    nb_element = min(nb_element,self.call_.X.shape[0])
 
     # Principal Components Analysis Results
     print("                     Principal Component Analysis - Results                     \n")
@@ -245,7 +246,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     
     # Bartlette's test of spericity
     print("\nBartlett's test of sphericity\n")
-    bartlett = self.others_["bartlett"]
+    bartlett = self.others_.bartlett
     if to_markdown:
         print(bartlett.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -253,16 +254,16 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     # Add individuals informations
     ind = self.ind_
-    if ind["coord"].shape[0] > nb_element:
+    if ind.coord.shape[0] > nb_element:
         print(f"\nIndividuals (the {nb_element} first)\n")
     else:
         print("\nIndividuals\n")
-    ind_infos = ind["infos"]
+    ind_infos = ind.infos
     for i in np.arange(ncp):
-        ind_coord = ind["coord"].iloc[:,i]
-        ind_cos2 = ind["cos2"].iloc[:,i]
+        ind_coord = ind.coord.iloc[:,i]
+        ind_cos2 = ind.cos2.iloc[:,i]
         ind_cos2.name = "cos2"
-        ind_ctr = ind["contrib"].iloc[:,i]
+        ind_ctr = ind.contrib.iloc[:,i]
         ind_ctr.name = "ctr"
         ind_infos = pd.concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
     ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
@@ -274,14 +275,14 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     # Add supplementary individuals
     if hasattr(self,"ind_sup_"):
         ind_sup = self.ind_sup_
-        if ind_sup["coord"].shape[0] > nb_element:
+        if ind_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
         else:
             print("\nSupplementary individuals\n")
-        ind_sup_infos = ind_sup["dist"]
+        ind_sup_infos = ind_sup.dist
         for i in np.arange(ncp):
-            ind_sup_coord = ind_sup["coord"].iloc[:,i]
-            ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
+            ind_sup_coord = ind_sup.coord.iloc[:,i]
+            ind_sup_cos2 = ind_sup.cos2.iloc[:,i]
             ind_sup_cos2.name = "cos2"
             ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
         ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
@@ -292,16 +293,16 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     # Add variables informations
     var = self.var_
-    if var["coord"].shape[0]>nb_element:
+    if var.coord.shape[0]>nb_element:
         print(f"\nVariables (the {nb_element} first)\n")
     else:
          print("\nVariables\n")
     var_infos = pd.DataFrame().astype("float")
     for i in np.arange(ncp):
-        var_coord = var["coord"].iloc[:,i]
-        var_cos2 = var["cos2"].iloc[:,i]
+        var_coord = var.coord.iloc[:,i]
+        var_cos2 = var.cos2.iloc[:,i]
         var_cos2.name = "cos2"
-        var_ctr = var["contrib"].iloc[:,i]
+        var_ctr = var.contrib.iloc[:,i]
         var_ctr.name = "ctr"
         var_infos = pd.concat([var_infos,var_coord,var_ctr,var_cos2],axis=1)
     var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
@@ -313,14 +314,14 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     # Add supplementary continuous variables informations
     if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
-        if quanti_sup["coord"].shape[0] > nb_element:
+        if quanti_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
         else:
             print("\nSupplementary continuous variables\n")
         quanti_sup_infos = pd.DataFrame().astype("float")
         for i in np.arange(ncp):
-            quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
-            quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
+            quanti_sup_coord = quanti_sup.coord.iloc[:,i]
+            quanti_sup_cos2 = quanti_sup.cos2.iloc[:,i]
             quanti_sup_cos2.name = "cos2"
             quanti_sup_infos =pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
         quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
@@ -332,16 +333,16 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     # Add Supplementary categories – Variable illustrative qualitative
     if hasattr(self,"quali_sup_"):
         quali_sup = self.quali_sup_
-        if quali_sup["coord"].shape[0] > nb_element:
+        if quali_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary categories (the {nb_element} first)\n")
         else:
             print("\nSupplementary categories\n")
-        quali_sup_infos = quali_sup["dist"]
+        quali_sup_infos = quali_sup.dist
         for i in np.arange(ncp):
-            quali_sup_coord = quali_sup["coord"].iloc[:,i]
-            quali_sup_cos2 = quali_sup["cos2"].iloc[:,i]
+            quali_sup_coord = quali_sup.coord.iloc[:,i]
+            quali_sup_cos2 = quali_sup.cos2.iloc[:,i]
             quali_sup_cos2.name = "cos2"
-            quali_sup_vtest = quali_sup["vtest"].iloc[:,i]
+            quali_sup_vtest = quali_sup.vtest.iloc[:,i]
             quali_sup_vtest.name = "v.test"
             quali_sup_infos = pd.concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
         quali_sup_infos = quali_sup_infos.round(decimals=digits)
@@ -351,11 +352,11 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(quali_sup_infos)
         
         # Add supplementary qualitatives - correlation ratio
-        if quali_sup["eta2"].shape[0] > nb_element:
+        if quali_sup.eta2.shape[0] > nb_element:
             print(f"\nSupplementary categorical variable (eta2) (the {nb_element} first)\n")
         else:
             print("\nSupplementary categorical variable (eta2)\n")
-        quali_sup_eta2 = quali_sup["eta2"].iloc[:nb_element,:ncp].round(decimals=digits)
+        quali_sup_eta2 = quali_sup.eta2.iloc[:nb_element,:ncp].round(decimals=digits)
         if to_markdown:
             print(quali_sup_eta2.to_markdown(tablefmt=tablefmt))
         else:

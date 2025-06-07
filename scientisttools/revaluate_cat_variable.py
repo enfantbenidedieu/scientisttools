@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import pandas as pd
 
 def revaluate_cat_variable(X):
     """
@@ -25,4 +26,8 @@ def revaluate_cat_variable(X):
                         valuei = {x : X.columns.tolist()[i]+"_"+str(x) for x in np.unique(X.iloc[:,i]).tolist()}
                         valuej = {x : X.columns.tolist()[j]+"_"+str(x) for x in np.unique(X.iloc[:,j]).tolist()}
                         Y.iloc[:,i],Y.iloc[:,j] = X.iloc[:,i].map(valuei), X.iloc[:,j].map(valuej)
+
+    #convert to categorical
+    for col in Y.columns:
+        Y[col] = pd.Categorical(Y[col],categories=sorted(np.unique(Y[col])),ordered=True)
     return Y

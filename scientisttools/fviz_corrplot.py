@@ -33,14 +33,10 @@ def fviz_corrplot(X,
     X.index = pd.Categorical(X.index,categories=X.index.tolist())
     melt = get_melt(X)
 
-    p = (pn.ggplot(melt,pn.aes(x="Var1",y="Var2",fill="value")) + 
-            pn.geom_point(pn.aes(size="value"),color=outline_color,shape="o")+pn.guides(size=None)+pn.coord_flip())
+    p = pn.ggplot(melt,pn.aes(x="Var1",y="Var2",fill="value")) +  pn.geom_point(pn.aes(size="value"),color=outline_color,shape="o")+pn.guides(size=None)+pn.coord_flip()
 
     # Adding colors
     p =p + pn.scale_fill_gradient2(low = colors[0],high = colors[2],mid = colors[1],name = legend_title) 
-
-    # Add theme
-    p = p + ggtheme
 
     # Add axis elements and title
     if title is None:
@@ -54,5 +50,8 @@ def fviz_corrplot(X,
     # Removing legend
     if not show_legend:
         p =p+pn.theme(legend_position=None)
+    
+    # Add theme
+    p = p + ggtheme
     
     return p

@@ -2,8 +2,8 @@
 import plotnine as pn
 import numpy as np
 
-from .text_label import text_label
-from .gg_circle import gg_circle
+#intern functions
+from .fviz_add import text_label,fviz_add,gg_circle
 
 def fviz_corrcircle(self,
                     axis=[0,1],
@@ -37,53 +37,45 @@ def fviz_corrcircle(self,
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     if self.model_ not in ["pca","ca","mca","specificmca","famd","mpca","pcamix","mfa","mfaqual","mfamix","partialpca","efa"]:
         raise TypeError("'self' must be an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, PartialPCA, EFA")
     
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.call_["n_components"]-1)  or
-        (axis[0] > axis[1])) :
+    if ((len(axis) !=2) or (axis[0] < 0) or (axis[1] > self.call_.n_components-1)  or (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
     
     if self.model_ in ["pca","partialpca","efa"]:
-        coord = self.var_["coord"]
+        coord = self.var_.coord
     elif self.model_ in ["famd","mpca","pcamix","mfa","mfamix"]:
-        coord = self.quanti_var_["coord"]
+        coord = self.quanti_var_.coord
     else:
         if hasattr(self, "quanti_sup_"):
-            coord = self.quanti_sup_["coord"]
+            coord = self.quanti_sup_.coord
         if hasattr(self, "quanti_var_sup_"):
-            coord = self.quanti_var_sup_["coord"]
+            coord = self.quanti_var_sup_.coord
 
     # Initialize
     p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if "arrow" in geom:
-        p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
-                                arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color)
+        p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color)
     if "text" in geom:
-            p = p + text_label(text_type,color=color,size=text_size,va="center",ha="center")
+            p = p + text_label(text_type,False,color=color,size=text_size,va="center",ha="center")
         
     if self.model_ in ["pca","famd","mpca","pcamix","mfa","mfamix"]:
         if hasattr(self, "quanti_sup_"):
-            sup_coord = self.quanti_sup_["coord"]
+            sup_coord = self.quanti_sup_.coord
             if "arrow" in geom:
-                p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
-                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
+                p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
             if "text" in geom:
-                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                    color=color_sup,size=text_size,va="center",ha="center")
+                p  = p + text_label(text_type,False,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=color_sup,size=text_size,va="center",ha="center")
         elif hasattr(self, "quanti_var_sup_"):
-            sup_coord = self.quanti_var_sup_["coord"]
+            sup_coord = self.quanti_var_sup_.coord
             if "arrow" in geom:
-                p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
-                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
+                p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype="--")
             if "text" in geom:
-                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                    color=color_sup,size=text_size,va="center",ha="center")
+                p  = p + text_label(text_type,False,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=color_sup,size=text_size,va="center",ha="center")
     
     # Create circle
     if add_circle:

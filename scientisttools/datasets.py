@@ -250,21 +250,27 @@ def load_cars2006(which="actif"):
     >>> res_pca = PCA(n_components=5)
     >>> res_pca.fit(D)
     >>> # Load supplementary individuals
-    >>> ind_sup = load_cars2006(which="indsup")
+    >>> ind_sup = load_cars2006(which="ind_sup")
     >>> ind_sup_coord = res_pca.transform(ind_sup)
     ```
     """
-    if which not in ["actif","indsup","varquantsup","varqualsup"]:
-        raise ValueError("'which' must be one of 'actif', 'indsup', 'varquantsup', 'varqualsup'")
+    if which not in ["all","actif","ind_sup","quanti_sup","quali_sup"]:
+        raise ValueError("'which' must be one of 'all','actif', 'ind_sup', 'quanti_sup', 'quali_sup'")
 
     if which == "actif":
         cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="actif",index_col=0,header=0)
-    elif which == "indsup":
+    elif which == "ind_sup":
         cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="ind. sup.",index_col=0,header=0)
-    elif which == "varquantsup":
+    elif which == "quanti_sup":
         cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. quant.",index_col=0,header=0)
-    elif which == "varqualsup":
+    elif which == "quali_sup":
         cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. qual.",index_col=0,header=0)
+    else:
+        actif = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="actif",index_col=0,header=0)
+        ind_sup = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="ind. sup.",index_col=0,header=0)
+        quanti_sup = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. quant.",index_col=0,header=0)
+        quali_sup = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. qual.",index_col=0,header=0)
+        cars = pd.concat((pd.concat((pd.concat((actif,ind_sup),axis=0),quanti_sup),axis=1),quali_sup),axis=1)
     return cars
 
 def load_carsacpm():

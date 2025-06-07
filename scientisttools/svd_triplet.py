@@ -1,5 +1,6 @@
-
+# -*- coding: utf-8 -*-
 import numpy as np
+from collections import namedtuple
 
 def svd_triplet(X,row_weights=None,col_weights=None,n_components=None):
     """
@@ -22,7 +23,7 @@ def svd_triplet(X,row_weights=None,col_weights=None,n_components=None):
 
     Return
     ------
-    a dictionary containing
+    a namedtuple containing
     vs : a vector containing the singular values of 'X'
 
     U : a matrix whose columns contain the left singular vectors of 'X'
@@ -35,7 +36,7 @@ def svd_triplet(X,row_weights=None,col_weights=None,n_components=None):
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE duverierdjifack@gmail.com
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
 
     # Set row weights
@@ -127,4 +128,4 @@ def svd_triplet(X,row_weights=None,col_weights=None,n_components=None):
         V[:,num] = np.apply_along_axis(func1d=lambda x : x*vs_num,axis=1,arr=V[:,num])
 
     # Store Singular Value Decomposition (SVD) information
-    return {"vs" : vs, "U" : U, "V" : V}
+    return namedtuple("svd",["vs","U","V"])(vs,U,V)

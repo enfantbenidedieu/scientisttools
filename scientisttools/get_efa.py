@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import pandas as pd
+from typing import NamedTuple
 
-def get_efa_ind(self) -> dict:
+def get_efa_ind(self) -> NamedTuple:
     """
     Extract the results for individuals - EFA
     -----------------------------------------
@@ -23,7 +24,7 @@ def get_efa_ind(self) -> dict:
 
     Returns
     -------
-    dictionary of dataframes containing all the results for the active individuals including:
+    namedtuple of dataframes containing all the results for the active individuals including:
 
     `coord` : factor coordinates (scores) of the individuals
     
@@ -42,7 +43,7 @@ def get_efa_ind(self) -> dict:
         raise TypeError("'self' must be an object of class EFA")
     return self.ind_
 
-def get_efa_var(self) -> dict:
+def get_efa_var(self) -> NamedTuple:
     """
     Extract the results for variables - EFA
     ---------------------------------------
@@ -63,7 +64,7 @@ def get_efa_var(self) -> dict:
 
     Returns
     -------
-    dictionary of dataframes containing all the results for the active variables including:
+    namedtuple of dataframes containing all the results for the active variables including:
 
     `coord` : factor coordinates (scores) of the variables
     
@@ -82,7 +83,7 @@ def get_efa_var(self) -> dict:
         raise TypeError("'self' must be an object of class EFA")
     return self.var_
 
-def get_efa(self,choice = "ind")-> dict:
+def get_efa(self,choice = "ind")-> NamedTuple:
     """
     Extract the results for individuals/variables - EFA
     ---------------------------------------------------
@@ -111,7 +112,7 @@ def get_efa(self,choice = "ind")-> dict:
                 
     Returns
     -------
-    dictionary of dataframes containing all the results for the active individuals/variables
+    namedtuple of dataframes containing all the results for the active individuals/variables
 
     Author(s)
     ---------
@@ -180,14 +181,14 @@ def summaryEFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     if self.model_ != "efa":
         raise TypeError("'self' must be an object of class EFA")
 
-    ncp = min(ncp,self.call_["n_components"])
-    nb_element = min(nb_element,self.call_["X"].shape[0])
+    ncp = min(ncp,self.call_.n_components)
+    nb_element = min(nb_element,self.call_.X.shape[0])
 
     # Exploratory Factor Analysis Results
     print("                     Exploratory Factor Analysis - Results                     \n")
 
     # Add eigenvalues informations
-    eig = self.eig_.iloc[:self.call_["n_components"],:].T.round(decimals=digits)
+    eig = self.eig_.iloc[:self.call_.n_components,:].T.round(decimals=digits)
     eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
     if to_markdown:
         print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -196,11 +197,11 @@ def summaryEFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     
     # Add individuals informations
     ind = self.ind_
-    if ind["coord"].shape[0] > nb_element:
+    if ind.coord.shape[0] > nb_element:
         print(f"\nIndividuals (the {nb_element} first)\n")
     else:
         print("\nIndividuals\n")
-    ind_coord = ind["coord"].iloc[:nb_element,:ncp].round(decimals=digits)
+    ind_coord = ind.coord.iloc[:nb_element,:ncp].round(decimals=digits)
     if to_markdown:
         print(ind_coord.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -209,12 +210,12 @@ def summaryEFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     # Add supplementary individuals
     if hasattr(self,"ind_sup_"):
         ind_sup = self.ind_sup_
-        if ind_sup["coord"].shape[0] > nb_element:
+        if ind_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
         else:
             print("\nSupplementary individuals\n")
         # Save all informations
-        ind_sup_coord = ind_sup["coord"].iloc[:nb_element,:ncp].round(decimals=digits)
+        ind_sup_coord = ind_sup.coord.iloc[:nb_element,:ncp].round(decimals=digits)
         if to_markdown:
             print(ind_sup_coord.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
@@ -222,14 +223,14 @@ def summaryEFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     # Add variables informations
     var = self.var_
-    if var["coord"].shape[0]>nb_element:
+    if var.coord.shape[0]>nb_element:
         print(f"\nVariables (the {nb_element} first)\n")
     else:
          print("\nVariables\n")
     var_infos = pd.DataFrame().astype("float")
     for i in np.arange(ncp):
-        var_coord = var["coord"].iloc[:,i]
-        var_ctr = var["contrib"].iloc[:,i]
+        var_coord = var.coord.iloc[:,i]
+        var_ctr = var.contrib.iloc[:,i]
         var_ctr.name = "ctr"
         var_infos = pd.concat([var_infos,var_coord,var_ctr],axis=1)
     var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)

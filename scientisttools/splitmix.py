@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import numpy as np
 import pandas as pd
+from collections import namedtuple
 
 def splitmix(X):
     """
@@ -22,7 +24,7 @@ def splitmix(X):
 
     Return
     ------
-    a dictionary of two dataframe containing : 
+    A NamedTuple of two dataframe containing : 
 
     `quanti`: pandas dataframe containing only the quantitative variables or None
 
@@ -34,11 +36,11 @@ def splitmix(X):
 
     Examples
     --------
-    ```
+    ```python
     >>> from scientisttools import load_gironde, splitmix
     >>> gironde = load_gironde()
-    >>> X_quanti = splitmix(X=gironde)["quanti]
-    >>> X_quali = splitmix(X=girdone)["quali]
+    >>> X_quanti = splitmix(X=gironde).quanti
+    >>> X_quali = splitmix(X=girdone).quali
     ```
     """
     # Check if pandas dataframe
@@ -53,7 +55,7 @@ def splitmix(X):
         X_quali = None
     else:
         for col in quali.columns:
-            quali[col] = quali[col].astype("object")
+            quali[col] = pd.Categorical(quali[col],categories=sorted(np.unique(quali[col])),ordered=True)
         X_quali = quali
     
     # exclude object of category
@@ -65,4 +67,4 @@ def splitmix(X):
             quanti[col] = quanti[col].astype("float")
         X_quanti = quanti
     
-    return {"quanti" : X_quanti, "quali" : X_quali}
+    return namedtuple("splitmix",["quanti","quali"])(X_quanti,X_quali)

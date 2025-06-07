@@ -21,7 +21,7 @@ def get_eig(self) -> pd.DataFrame:
 
     Parameters:
     -----------
-    `self` : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE
+    `self` : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE
 
     Returns
     -------
@@ -44,8 +44,8 @@ def get_eig(self) -> pd.DataFrame:
     >>> print(eig)
     ```
     """
-    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
-        raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
+    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamix","mfact","dmfa","cmdscale"]:
+        raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE")
     return self.eig_
 
 def get_eigenvalue(self) -> pd.DataFrame:
@@ -110,7 +110,7 @@ def fviz_screeplot(self,
     
     Parameters
     ----------
-    `self` : an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, MIXDISC, CMDSCALE
+    `self` : an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, MIXDISC, CMDSCALE
 
     `choice` : a text specifying the data to be plotted. Allowed values are "proportion", "eigenvalue" or "cumulative"
 
@@ -165,11 +165,11 @@ def fviz_screeplot(self,
     >>> print(p)
     ```
     """
-    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamix","mfact","cmdscale"]:
-        raise ValueError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, CMDSCALE")
+    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamix","mfact","dmfa","cmdscale"]:
+        raise ValueError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE")
 
     eig = get_eigenvalue(self)
-    eig = eig.iloc[:min(ncp,self.call_["n_components"]),:]
+    eig = eig.iloc[:min(ncp,self.call_.n_components),:]
 
     if choice == "eigenvalue":
         eig = eig["eigenvalue"]

@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import plotnine3d as pn3d
 
+from .colors import list_colors
 from .text_label import text_label, text3d_label
 from .gg_circle import gg_circle
 
@@ -17,14 +18,17 @@ def fviz_pca_ind(self,
                  color ="black",
                  geom = ["point","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                 palette = None,
                  point_size = 1.5,
                  text_size = 8,
                  text_type = "text",
                  marker = "o",
                  add_grid =True,
-                 ind_sup=True,
-                 color_sup = "blue",
-                 marker_sup = "^",
+                 ind_sup = True,
+                 ind_sup_color = "blue",
+                 ind_sup_marker = "^",
+                 ind_sup_point_size = 1.5,
+                 ind_sup_text_size = 8,
                  legend_title = None,
                  habillage = None,
                  add_ellipses = False, 
@@ -32,8 +36,10 @@ def fviz_pca_ind(self,
                  confint_level = 0.95,
                  geom_ellipse = "polygon",
                  quali_sup = True,
-                 color_quali_sup = "red",
-                 marker_quali_sup = ">",
+                 quali_sup_color = "red",
+                 quali_sup_marker = ">",
+                 quali_sup_point_size = 1.5,
+                 quali_sup_text_size = 8,
                  add_hline = True,
                  add_vline = True,
                  hline_color = "black",
@@ -67,14 +73,17 @@ def fviz_pca_ind(self,
                     color ="black",
                     geom = ["point","text"],
                     gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                    palette = None,
                     point_size = 1.5,
                     text_size = 8,
                     text_type = "text",
                     marker = "o",
                     add_grid = True,
                     ind_sup = True,
-                    color_sup = "blue",
-                    marker_sup = "^",
+                    ind_sup_color = "blue",
+                    ind_sup_marker = "^",
+                    ind_sup_point_size = 1.5,
+                    ind_sup_text_size = 8,
                     legend_title = None,
                     habillage = None,
                     add_ellipses=False, 
@@ -82,8 +91,10 @@ def fviz_pca_ind(self,
                     confint_level = 0.95,
                     geom_ellipse = "polygon",
                     quali_sup = True,
-                    color_quali_sup = "red",
-                    marker_quali_sup = ">",
+                    quali_sup_color = "red",
+                    quali_sup_marker = ">",
+                    quali_sup_point_size = 1.5,
+                    quali_sup_text_size = 8,
                     add_hline = True,
                     add_vline = True,
                     hline_color = "black",
@@ -119,6 +130,8 @@ def fviz_pca_ind(self,
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
     `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+
+    `palette` :  a list or tuple specifying the color palette to be used for coloring or filling by groups.
     
     `point_size` : a numeric value specifying the marker size (by default = 1.5).
     
@@ -132,11 +145,17 @@ def fviz_pca_ind(self,
 
     `ind_sup` : a boolean to either add or not supplementary individuals (by default = True).
 
-    `color_sup` : a color for the supplementary individuals points (by default = "blue").
+    `ind_sup_color` : a color for the supplementary individuals points (by default = "blue").
 
-    `marker_sup` :  a marker style for the supplementary individuals points (by default = "^").
+    `ind_sup_marker` :  a marker style for the supplementary individuals points (by default = "^").
+
+    `ind_sup_point_size` : a numeric value specifying the supplementary individuals marker size (by default = 1.5).
+    
+    `ind_sup_text_size` : a numeric value specifying the supplementary individuals label size (by default = 8).
 
     `legend_title` : a string corresponding to the title of the legend (by default = None).
+
+    `habillage` : a string or an integer specifying the variables of indexe for coloring the observations by groups. Default value is None.
 
     `add_ellipses` : a boolean to either add or not ellipses (by default = False). 
 
@@ -145,6 +164,16 @@ def fviz_pca_ind(self,
     `confint_level` : ellipse confindence level (by default = 0.95).
 
     `geom_ellipse` : ellipse geometry (by default = "polygon").
+
+    `quali_sup` : a boolean to either add or not supplementary categorical variable (by default = True).
+
+    `quali_sup_color` : a color for the supplementary categorical variables points (by default = "red").
+
+    `quali_sup_marker` :  a marker style for the supplementary categorical variables points (by default = ">").
+
+    `quali_sup_point_size` : a numeric value specifying the supplementary categorical variables marker size (by default = 1.5).
+    
+    `quali_sup_text_size` : a numeric value specifying the supplementary categorical variables label size (by default = 8).
 
     `add_hline` : a boolean to either add or not a horizontal ligne (by default = True).
 
@@ -196,37 +225,34 @@ def fviz_pca_ind(self,
     if self.model_ != "pca":
         raise TypeError("'self' must be an object of class PCA")
     
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.call_["n_components"]-1)  or
-        (axis[0] > axis[1])) :
+    if ((len(axis) !=2) or (axis[0] < 0) or (axis[1] > self.call_.n_components-1)  or (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
 
     # Extract individuals coordinates
-    coord = self.ind_["coord"]
+    coord = self.ind_.coord
 
     # Add Active Data
-    coord = pd.concat([coord,self.call_["X"]],axis=1)
+    coord = pd.concat([coord,self.call_.X],axis=1)
 
     # Add supplementary quantitatives columns
     if self.quanti_sup is not None:
-        X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
+        X_quanti_sup = self.call_.Xtot.loc[:,self.call_.quanti_sup].astype("float")
         if self.ind_sup is not None:
-            X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
+            X_quanti_sup = X_quanti_sup.drop(index=self.call_.ind_sup)
         coord = pd.concat([coord,X_quanti_sup],axis=1)
     
-    ################ Add supplementary qualitatives columns
+    # Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
+        X_quali_sup = self.call_.Xtot.loc[:,self.call_.quali_sup]
         if self.ind_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=self.call_["ind_sup"])
+            X_quali_sup = X_quali_sup.drop(index=self.call_.ind_sup)
         coord = pd.concat([coord,X_quali_sup],axis=1)
     
     # Using lim cos2
     if lim_cos2 is not None:
-        if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
+        if isinstance(lim_cos2,(int,float)):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.ind_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = self.ind_.cos2.iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -234,9 +260,9 @@ def fviz_pca_ind(self,
     
     # Using lim contrib
     if lim_contrib is not None:
-        if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
+        if isinstance(lim_contrib,(int,float)):
             lim_contrib = float(lim_contrib)
-            contrib = self.ind_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = self.ind_.contrib.iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -247,11 +273,11 @@ def fviz_pca_ind(self,
 
     if isinstance(color,str):
         if color == "cos2":
-            c = self.ind_["cos2"].iloc[:,axis].sum(axis=1).values
+            c = self.ind_.cos2.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "cos2"
         elif color == "contrib":
-            c = self.ind_["contrib"].iloc[:,axis].sum(axis=1).values
+            c = self.ind_.contrib.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Contrib"
         elif color in coord.columns.tolist():
@@ -269,81 +295,97 @@ def fviz_pca_ind(self,
         if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns]) or (isinstance(color,np.ndarray)):
             # Add gradients colors
             if "point" in geom:
-                p = (p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False)+ 
-                         pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
+                p = p + pn.geom_point(pn.aes(color=c),size=point_size,show_legend=False) + pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
             if "text" in geom:
                 if repel :
-                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': "black",'lw':1.0}})
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
                 else:
                     p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
         elif hasattr(color, "labels_"):
             c = [str(x+1) for x in color.labels_]
             if legend_title is None:
                 legend_title = "Cluster"
-                if "point" in geom:
-                    p = (p + pn.geom_point(pn.aes(color=c,linetype = c),size=point_size)+
-                            pn.guides(color=pn.guide_legend(title=legend_title)))
-                if "text" in geom:
-                    if repel :
-                        p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,
-                                            adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
-                    else:
-                        p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+
+            # Set palette
+            index = np.unique(c).tolist()
+            if palette is None:
+                palette = [x for x in list_colors if x not in [color,ind_sup_color,quali_sup_color]][:len(index)]
+            elif not isinstance(palette,(list,tuple)):
+                raise TypeError("'palette' must be a list or a tuple of colors")
+            elif len(palette) != len(index):
+                raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
+
+            if "point" in geom:
+                p = p + pn.geom_point(pn.aes(color=c,linetype = c),size=point_size)+pn.guides(color=pn.guide_legend(title=legend_title))
+            if "text" in geom:
+                if repel :
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+                else:
+                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+            
+            #set color manual
+            p = p + pn.scale_color_manual(values=palette)
         else:
             if "point" in geom:
                 p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
             if "text" in geom:
                 if repel :
-                    p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,
-                                    adjust_text={'arrowprops': {'arrowstyle': '-','color': color,'lw':1.0}})
+                    p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
                     p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
     else:
         if habillage not in coord.columns:
             raise ValueError(f"{habillage} not in DataFrame.")
+        
+        # Set palette
+        index = np.unique(coord.loc[:,habillage]).tolist()
+        if palette is None:
+            palette = [x for x in list_colors if x not in [color,ind_sup_color,quali_sup_color]][:len(index)]
+        elif not isinstance(palette,(list,tuple)):
+            raise TypeError("'palette' must be a list or a tuple of colors")
+        elif len(palette) != len(index):
+            raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
+        
         if "point" in geom:
             p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size)
         if "text" in geom:
             if repel:
-                p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,
-                                    adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
                 p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha)
         
         # Add ellipse
         if add_ellipses:
             p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
+
+        #set color manual
+        p = p + pn.scale_color_manual(values=palette)
     
     ##### Add supplementary individuals coordinates
     if ind_sup:
         if hasattr(self, "ind_sup_"):
-            ind_sup_coord = self.ind_sup_["coord"]
+            ind_sup_coord = self.ind_sup_.coord
             if "point" in geom:
-                p = p + pn.geom_point(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                    color = color_sup,shape = marker_sup,size=point_size)
+                p = p + pn.geom_point(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index), color = ind_sup_color,shape = ind_sup_marker,size=ind_sup_point_size)
             if "text" in geom:
                 if repel:
                     p = p + text_label(text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,'lw':1.0}})
+                                       color=ind_sup_color,size=ind_sup_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
-                    p = p + text_label(text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                        color = color_sup,size=text_size,va=va,ha=ha)
-                    
+                    p = p + text_label(text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = ind_sup_color,size=ind_sup_text_size,va=va,ha=ha)
+               
     # Add supplementary qualitatives/categories
     if quali_sup:
         if hasattr(self, "quali_sup_"):
-            if habillage is None:
-                quali_sup_coord = self.quali_sup_["coord"]
-                if "point" in geom:
-                    p = p + pn.geom_point(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                          color=color_quali_sup,shape = marker_quali_sup,size=point_size)
-                if "text" in geom:
-                    if repel:
-                        p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                           color=color_quali_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_quali_sup,'lw':1.0}})
-                    else:
-                        p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                           color =color_quali_sup,size=text_size,va=va,ha=ha)
+            quali_sup_coord = self.quali_sup_.coord
+            if "point" in geom:
+                p = p + pn.geom_point(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index), color=quali_sup_color,shape = quali_sup_marker,size=quali_sup_point_size)
+            if "text" in geom:
+                if repel:
+                    p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
+                                       color=quali_sup_color,size=quali_sup_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
+                else:
+                    p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),color=quali_sup_color,size=quali_sup_text_size,va=va,ha=ha)
 
     # Add additionnal        
     proportion = self.eig_.iloc[:,2].values
@@ -385,14 +427,16 @@ def fviz_pca_var(self,
                  color ="black",
                  geom = ["arrow","text"],
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
+                 palette = None,
                  scale = 1,
                  legend_title = None,
                  text_type = "text",
                  text_size = 8,
                  add_grid =True,
                  quanti_sup=True,
-                 color_sup = "blue",
-                 linestyle_sup="dashed",
+                 quanti_sup_color = "blue",
+                 quanti_sup_linestyle="dashed",
+                 quanti_sup_text_size = 8,
                  add_hline = True,
                  add_vline = True,
                  hline_color = "black",
@@ -402,7 +446,7 @@ def fviz_pca_var(self,
                  ha = "center",
                  va = "center",
                  add_circle = True,
-                 color_circle = "gray",
+                 circle_color = "gray",
                  arrow_angle = 10,
                  arrow_length = 0.1,
                  lim_cos2 = None,
@@ -433,8 +477,9 @@ def fviz_pca_var(self,
                     text_size = 8,
                     add_grid = True,
                     quanti_sup=True,
-                    color_sup = "blue",
-                    linestyle_sup="dashed",
+                    quanti_sup_color = "blue",
+                    quanti_sup_linestyle = "dashed",
+                    quanti_sup_text_size = 8,
                     add_hline = True,
                     add_vline = True,
                     hline_color = "black",
@@ -444,7 +489,7 @@ def fviz_pca_var(self,
                     ha = "center",
                     va = "center",
                     add_circle = True,
-                    color_circle = "gray",
+                    circle_color = "gray",
                     arrow_angle = 10,
                     arrow_length = 0.1,
                     lim_cos2 = None,
@@ -469,6 +514,8 @@ def fviz_pca_var(self,
     `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
     `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+
+    `palette` :  a list or tuple specifying the color palette to be used for coloring or filling by groups.
     
     `scale` : a numeric specifying scale the variables coordinates (by default 1)
 
@@ -482,9 +529,11 @@ def fviz_pca_var(self,
 
     `quanti_sup` : a boolean to either add or not supplementary quantitatives variables (by default = True).
 
-    `color_sup` : a color for the supplementary quantitatives variables (by default = "blue").
+    `quanti_sup_color` : a color for the supplementary quantitatives quantitative variables (by default = "blue").
 
-    `linestyle_sup` : a string specifying the supplementary variables line style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+    `quanti_sup_linestyle` : a string specifying the supplementary quantitative variables line style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+
+    `quanti_sup_text_size` : a numeric value specifying the supplementary quantitative variables label size (by default = 8).
 
     `add_hline` : a boolean to either add or not a horizontal ligne (by default = True).
 
@@ -504,7 +553,7 @@ def fviz_pca_var(self,
 
     `add_circle` : a boolean, whether to add or not a circle to plot.
 
-    `color_circle` : a string specifying the color for the correlation circle (by default = "gray")
+    `circle_color` : a string specifying the color for the correlation circle (by default = "gray")
 
     `arrow_angle` : a numeric specifying the angle in degrees between the tail a single edge (by default = 10)
 
@@ -541,19 +590,16 @@ def fviz_pca_var(self,
     if self.model_ != "pca":
         raise TypeError("'self' must be an object of class PCA")
     
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.call_["n_components"]-1)  or
-        (axis[0] > axis[1])) :
+    if ((len(axis) !=2) or (axis[0] < 0) or (axis[1] > self.call_.n_components-1)  or (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
 
-    coord = self.var_["coord"]*scale
+    coord = self.var_.coord.mul(scale)
 
     # Using lim cos2
     if lim_cos2 is not None:
-        if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
+        if isinstance(lim_cos2,(int,float)):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.var_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = self.var_.cos2.iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -561,9 +607,9 @@ def fviz_pca_var(self,
     
     # Using lim contrib
     if lim_contrib is not None:
-        if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
+        if isinstance(lim_contrib,(int,float)):
             lim_contrib = float(lim_contrib)
-            contrib = self.var_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = self.var_.contrib.iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -571,11 +617,11 @@ def fviz_pca_var(self,
 
     if isinstance(color,str):
         if color == "cos2":
-            c = self.var_["cos2"].iloc[:,axis].sum(axis=1).values
+            c = self.var_.cos2.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "cos2"
         elif color == "contrib":
-            c = self.var_["contrib"].iloc[:,axis].sum(axis=1).values
+            c = self.var_.contrib.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Contrib"
     elif isinstance(color,np.ndarray):
@@ -597,11 +643,24 @@ def fviz_pca_var(self,
         c = [str(x+1) for x in color.labels_]
         if legend_title is None:
             legend_title = "Cluster"
+        
+        # Set palette
+        index = np.unique(c).tolist()
+        if palette is None:
+            palette = [x for x in list_colors if x not in [color,quanti_sup_color]][:len(index)]
+        elif not isinstance(palette,(list,tuple)):
+            raise TypeError("'palette' must be a list or a tuple of colors")
+        elif len(palette) != len(index):
+            raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
+
         if "arrow" in geom:
             p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
                      pn.guides(color=pn.guide_legend(title=legend_title)))
         if "text" in geom:
             p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
+
+        #set color manual
+        p = p + pn.scale_color_manual(values=palette)
 
     else:
         if "arrow" in geom:
@@ -612,15 +671,16 @@ def fviz_pca_var(self,
     # Add supplmentary continuous variables
     if quanti_sup:
         if hasattr(self, "quanti_sup_"):
-            sup_coord = self.quanti_sup_["coord"]*scale
+            sup_coord = self.quanti_sup_.coord.mul(scale)
             if "arrow" in geom:
                 p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
-                                    arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype=linestyle_sup)
+                                    arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=quanti_sup_color,linetype=quanti_sup_linestyle)
             if "text" in geom:
-                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=color_sup,size=text_size,va=va,ha=ha)
+                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=quanti_sup_color,size=quanti_sup_text_size,va=va,ha=ha)
+
     # Create circle
     if add_circle:
-        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=color_circle, fill=None)
+        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=circle_color, fill=None)
     
     # Add additionnal        
     proportion = self.eig_.iloc[:,2].values
@@ -662,16 +722,24 @@ def fviz_pca_biplot(self,
                     var_color = "steelblue",
                     habillage = None,
                     add_circle = False,
-                    var_color_circle="gray",
+                    circle_color ="gray",
                     ind_sup = True,
-                    ind_color_sup = "blue",
-                    ind_marker_sup = "^",
+                    ind_sup_color = "blue",
+                    ind_sup_marker = "^",
+                    ind_sup_text_size = 8,
+                    ind_sup_text_type = "text",
+                    ind_sup_point_size = 1.5,
                     quali_sup = True,
                     quali_sup_color = "red",
                     quali_sup_marker = "v",
+                    quali_sup_text_size = 8,
+                    quali_sup_text_type = "text",
+                    quali_sup_point_size = 1.5,
                     quanti_sup = True,
-                    var_color_sup = "blue",
-                    var_linestyle_sup="dashed",
+                    quanti_sup_color = "blue",
+                    quanti_sup_linestyle="dashed",
+                    quanti_sup_text_size = 8,
+                    quanti_sup_text_type = "text",
                     repel = True,
                     add_ellipses=False, 
                     ellipse_type = "t",
@@ -698,60 +766,9 @@ def fviz_pca_biplot(self,
     -----------
     Principal components analysis (PCA) reduces the dimensionality of multivariate data, to two or three that can be visualized graphically with minimal loss of information. fviz_pca_biplot provides plotnine based elegant visualization of PCA outputs for individuals and variables.
 
-    Usage
-    -----
-    ```python
-    >>> fviz_pca_biplot(self,
-                        axis=[0,1],
-                        x_label = None,
-                        y_label = None,
-                        x_lim = None,
-                        y_lim = None,
-                        marker = "o",
-                        ind_text_size = 8,
-                        var_text_size = 8,
-                        ind_text_type = "text",
-                        var_text_type = "text",
-                        ind_point_size = 1.5,
-                        ind_geom = ["point","text"],
-                        var_geom = ["arrow","text"],
-                        ind_color = "black",
-                        var_color = "steelblue",
-                        habillage = None,
-                        add_circle = False,
-                        var_color_circle="gray",
-                        ind_sup = True,
-                        ind_color_sup = "blue",
-                        ind_marker_sup = "^",
-                        quali_sup = True,
-                        quali_sup_color = "red",
-                        quali_sup_marker = "v",
-                        quanti_sup = True,
-                        var_color_sup = "blue",
-                        var_linestyle_sup="dashed",
-                        repel = True,
-                        add_ellipses=False, 
-                        ellipse_type = "t",
-                        confint_level = 0.95,
-                        geom_ellipse = "polygon",
-                        title = "PCA - Biplot",
-                        arrow_angle=10,
-                        arrow_length =0.1,
-                        add_hline = True,
-                        add_vline=True,
-                        add_grid = True,
-                        ha="center",
-                        va="center",
-                        hline_color="black",
-                        hline_style="dashed",
-                        vline_color="black",
-                        vline_style ="dashed",
-                        ggtheme=pn.theme_minimal())
-    ```
-
     Parameters
     ----------
-    see fviz_pca_ind, fviz_pca_var
+    see `fviz_pca_ind`, `fviz_pca_var`.
 
     Returns
     -------
@@ -761,6 +778,8 @@ def fviz_pca_biplot(self,
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
+    Examples
+    --------
     ```python
     >>> # Load decathlon2 dataset
     >>> from scientisttools import load_decatlon2
@@ -777,93 +796,86 @@ def fviz_pca_biplot(self,
     if self.model_ != "pca":
         raise TypeError("'self' must be an object of class PCA")
     
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.call_["n_components"]-1)  or
-        (axis[0] > axis[1])) :
+    if ((len(axis) !=2) or (axis[0] < 0) or (axis[1] > self.call_.n_components-1)  or (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
     
-    # Individuals coordinates
-    ind = self.ind_["coord"].iloc[:,axis]
-    ind.columns = ["x","y"]
-    # variables coordinates
-    var = self.var_["coord"].iloc[:,axis]
-    var.columns = ["x","y"]
+    # Individuals and variables coordinates
+    ind, var = self.ind_.coord.iloc[:,axis], self.var_.coord.iloc[:,axis]
+    ind.columns, var.columns = ["x","y"], ["x","y"]
 
     # Rescale variables coordinates
-    xscale = (np.max(ind["x"]) - np.min(ind["x"]))/(np.max(var["x"]) - np.min(var["x"]))
-    yscale = (np.max(ind["y"]) - np.min(ind["y"]))/(np.max(var["y"]) - np.min(var["y"]))
-    rscale = min(xscale, yscale)
+    xscale, yscale = (np.max(ind["x"]) - np.min(ind["x"]))/(np.max(var["x"]) - np.min(var["x"])), (np.max(ind["y"]) - np.min(ind["y"]))/(np.max(var["y"]) - np.min(var["y"]))
+    scale = min(xscale, yscale)
 
-    #### Extract individuals coordinates
-    ind_coord = self.ind_["coord"]
+    #Extract individuals and variables coordinates
+    ind_coord, var_coord = self.ind_.coord, self.var_.coord.mul(scale)
 
     # Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
+        X_quali_sup = self.call_.Xtot.loc[:,self.call_.quali_sup]
         if self.ind_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=self.call_["ind_sup"])
+            X_quali_sup = X_quali_sup.drop(index=self.call_.ind_sup)
         ind_coord = pd.concat([ind_coord,X_quali_sup],axis=1)
     
-    # Variables coordinates
-    var_coord = self.var_["coord"]*rscale
-
+   # Initialize
     p = pn.ggplot()
 
-    #####################################################################################################################################################
-    # Individuals Informations
-    #####################################################################################################################################################
-
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ## Individuals Informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # Active individuals
     if habillage is None :  
         if "point" in ind_geom:
-            p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),
-                                  color=ind_color,shape=marker,size=ind_point_size,show_legend=False)
+            p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),color=ind_color,shape=marker,size=ind_point_size,show_legend=False)
         if "text" in ind_geom:
             if repel :
-                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),
-                                   color=ind_color,size=ind_text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '-','color': ind_color,'lw':1.0}})
+                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),color=ind_color,size=ind_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
             else:
-                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),
-                                   color=ind_color,size=ind_text_size,va=va,ha=ha)
+                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),color=ind_color,size=ind_text_size,va=va,ha=ha)
     else:
         if habillage not in ind_coord.columns:
             raise ValueError(f"{habillage} not in DataFrame.")
+        
+        # Set palette
+        index = np.unique(ind_coord.loc[:,habillage]).tolist()
+        if palette is None:
+            palette = [x for x in list_colors if x not in [ind_color,var_color,ind_sup_color,quali_sup_color,quanti_sup_color]][:len(index)]
+        elif not isinstance(palette,(list,tuple)):
+            raise TypeError("'palette' must be a list or a tuple of colors")
+        elif len(palette) != len(index):
+            raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
+
         if "point" in ind_geom:
-            p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,linetype = habillage),
-                                  size=ind_point_size)
+            p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,linetype = habillage),size=ind_point_size)
         if "text" in ind_geom:
             if repel:
-                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,label=ind_coord.index),
-                                   size=ind_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,label=ind_coord.index),size=ind_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
-                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,label=ind_coord.index),
-                                   size=ind_text_size,va=va,ha=ha)
+                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,label=ind_coord.index),size=ind_text_size,va=va,ha=ha)
         
         if add_ellipses:
-            p = p + pn.stat_ellipse(data=ind_coord,geom=geom_ellipse,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,fill=habillage),
-                                    type = ellipse_type,alpha = 0.25,level=confint_level)
+            p = p + pn.stat_ellipse(data=ind_coord,geom=geom_ellipse,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
     
+        #set color manual
+        p = p + pn.scale_color_manual(values=palette) 
+
     # Add supplementary individuals coordinates
     if ind_sup:
         if hasattr(self, "ind_sup_"):
-            ind_sup_coord = self.ind_sup_["coord"]
+            ind_sup_coord = self.ind_sup_.coord
             if "point" in ind_geom:
-                p = p + pn.geom_point(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                      color = ind_color_sup,shape = ind_marker_sup,size=ind_point_size)
+                p = p + pn.geom_point(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = ind_sup_color,shape = ind_sup_marker,size=ind_sup_point_size)
             if "text" in ind_geom:
                 if repel:
-                    p = p + text_label(ind_text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                        color=ind_color_sup,size=ind_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': ind_color_sup,'lw':1.0}})
+                    p = p + text_label(ind_text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color=ind_sup_color,size=ind_sup_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
                 else:
-                    p = p + text_label(ind_text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                        color = ind_color_sup,size=ind_text_size,va=va,ha=ha)
+                    p = p + text_label(ind_text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = ind_sup_color,size=ind_sup_text_size,va=va,ha=ha)
     
     # Add supplementary qualitatives coordinates
     if quali_sup:
         if hasattr(self, "quali_sup_"):
             if habillage is None:
-                quali_sup_coord = self.quali_sup_["coord"]
+                quali_sup_coord = self.quali_sup_.coord
                 if "point" in ind_geom:
                     p = p + pn.geom_point(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
                                           color=quali_sup_color,size=ind_point_size,shape=quali_sup_marker)
@@ -872,8 +884,7 @@ def fviz_pca_biplot(self,
                         p = p + text_label(ind_text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
                                            color=quali_sup_color,size=ind_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': quali_sup_color,'lw':1.0}})
                     else:
-                        p = p + text_label(ind_text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                           color =quali_sup_color,size=ind_text_size,va=va,ha=ha)
+                        p = p + text_label(ind_text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),color =quali_sup_color,size=ind_text_size,va=va,ha=ha)
     
     #########################################################################################################################################################
     #   Variables informations
@@ -883,19 +894,18 @@ def fviz_pca_biplot(self,
             p = p + pn.geom_segment(data=var_coord,mapping=pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=var_color)
     if "text" in var_geom:
-        p = p + text_label(var_text_type,data=var_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_coord.index),
-                           color=var_color,size=var_text_size,va=va,ha=ha)
+        p = p + text_label(var_text_type,data=var_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_coord.index),color=var_color,size=var_text_size,va=va,ha=ha)
     
     # Add supplmentary continuous variables
     if quanti_sup:
         if hasattr(self, "quanti_sup_"):
-            sup_coord = self.quanti_sup_["coord"]*rscale
+            sup_coord = self.quanti_sup_.coord.mul(scale)
             if "arrow" in var_geom:
                 p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
                                     arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=var_color_sup,linetype=var_linestyle_sup)
             if "text" in var_geom:
-                p  = p + text_label(var_text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                    color=var_color_sup,size=var_text_size,va=va,ha=ha)
+                p  = p + text_label(var_text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=var_color_sup,size=var_text_size,va=va,ha=ha)
+    
     # Create circle
     if add_circle:
         p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=var_color_circle, fill=None)
@@ -1029,37 +1039,37 @@ def fviz_pca3d_ind(self,
     
     if ((len(axis) !=3) or 
         (axis[0] < 0) or 
-        (axis[2] > self.call_["n_components"]-1)  or
+        (axis[2] > self.call_.n_components-1)  or
         (axis[0] > axis[1]) or 
         (axis[0] > axis[2]) or 
         (axis[1] > axis[2])) :
         raise ValueError("You must pass a valid 'axis'.")
 
     #### Extract individuals coordinates
-    coord = self.ind_["coord"]
+    coord = self.ind_.coord
 
     # Add Active Data
-    coord = pd.concat([coord,self.call_["X"]],axis=1)
+    coord = pd.concat([coord,self.call_.X],axis=1)
 
     ################ Add supplementary quantitatives columns
     if self.quanti_sup is not None:
-        X_quanti_sup = self.call_["Xtot"].loc[:,self.call_["quanti_sup"]].astype("float")
+        X_quanti_sup = self.call_.Xtot.loc[:,self.call_.quanti_sup].astype("float")
         if self.ind_sup is not None:
-            X_quanti_sup = X_quanti_sup.drop(index=self.call_["ind_sup"])
+            X_quanti_sup = X_quanti_sup.drop(index=self.call_.ind_sup)
         coord = pd.concat([coord,X_quanti_sup],axis=1)
     
     ################ Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_["Xtot"].loc[:,self.call_["quali_sup"]].astype("object")
+        X_quali_sup = self.call_.Xtot.loc[:,self.call_.quali_sup]
         if self.ind_sup is not None:
-            X_quali_sup = X_quali_sup.drop(index=self.call_["ind_sup"])
+            X_quali_sup = X_quali_sup.drop(index=self.call_.ind_sup)
         coord = pd.concat([coord,X_quali_sup],axis=1)
     
     # Using lim cos2
     if lim_cos2 is not None:
         if (isinstance(lim_cos2,float) or isinstance(lim_cos2,int)):
             lim_cos2 = float(lim_cos2)
-            cos2 = self.ind_["cos2"].iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
+            cos2 = self.ind_.cos2.iloc[:,axis].sum(axis=1).to_frame("cosinus").sort_values(by="cosinus",ascending=False).query("cosinus > @lim_cos2")
             if cos2.shape[0] != 0:
                 coord = coord.loc[cos2.index,:]
         else:
@@ -1069,7 +1079,7 @@ def fviz_pca3d_ind(self,
     if lim_contrib is not None:
         if (isinstance(lim_contrib,float) or isinstance(lim_contrib,int)):
             lim_contrib = float(lim_contrib)
-            contrib = self.ind_["contrib"].iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
+            contrib = self.ind_.contrib.iloc[:,axis].sum(axis=1).to_frame("contrib").sort_values(by="contrib",ascending=False).query("contrib > @lim_contrib")
             if contrib.shape[0] != 0:
                 coord = coord.loc[contrib.index,:]
         else:
@@ -1077,11 +1087,11 @@ def fviz_pca3d_ind(self,
     
     if isinstance(color,str):
         if color == "cos2":
-            coord["cos2"] = self.ind_["cos2"].iloc[:,axis].sum(axis=1).values
+            coord["cos2"] = self.ind_.cos2.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Cos2"
         elif color == "contrib":
-            coord["contrib"] = self.ind_["contrib"].iloc[:,axis].sum(axis=1).values
+            coord["contrib"] = self.ind_.contrib.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Contrib"
         elif color in coord.columns.tolist():
@@ -1151,18 +1161,16 @@ def fviz_pca3d_ind(self,
             p = p + pn3d.geom_point_3d(pn.aes(color = habillage,linetype = habillage),size=point_size)
         if "text" in geom:
             if repel:
-                p = p + text3d_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,
-                                    adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
+                p = p + text3d_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
             else:
                 p = p + text3d_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha)
     
     # Add supplementary individuals coordinates
     if ind_sup:
         if hasattr(self, "ind_sup_"):
-            ind_sup_coord = self.ind_sup_["coord"]
+            ind_sup_coord = self.ind_sup_.coord
             if "point" in geom:
-                p = p + pn3d.geom_point_3d(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                           color = color_sup,shape = marker_sup,size=point_size)
+                p = p + pn3d.geom_point_3d(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = color_sup,shape = marker_sup,size=point_size)
             if "text" in geom:
                 if repel:
                     p = p + text3d_label(text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
@@ -1175,10 +1183,9 @@ def fviz_pca3d_ind(self,
     if quali_sup:
         if hasattr(self, "quali_sup_"):
             if habillage is None:
-                quali_sup_coord = self.quali_sup_["coord"]
+                quali_sup_coord = self.quali_sup_.coord
                 if "point" in geom:
-                    p = p + pn3d.geom_point_3d(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                               color=color_quali_sup,size=point_size)
+                    p = p + pn3d.geom_point_3d(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),color=color_quali_sup,size=point_size)
                 if "text" in geom:
                     if repel:
                         p = p + text3d_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
