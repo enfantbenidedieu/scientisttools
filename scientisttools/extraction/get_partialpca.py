@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
+from pandas import DataFrame, concat
 from typing import NamedTuple
 
 def get_partialpca_ind(self) -> NamedTuple:
@@ -251,13 +250,10 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
     else:
         print("\nIndividuals\n")
     ind_infos = ind.infos
-    for i in np.arange(ncp):
-        ind_coord = ind.coord.iloc[:,i]
-        ind_cos2 = ind.cos2.iloc[:,i]
-        ind_cos2.name = "cos2"
-        ind_ctr = ind.contrib.iloc[:,i]
-        ind_ctr.name = "ctr"
-        ind_infos = pd.concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
+    for i in range(ncp):
+        ind_coord, ind_cos2, ind_ctr = ind.coord.iloc[:,i], ind.cos2.iloc[:,i], ind.contrib.iloc[:,i]
+        ind_cos2.name, ind_ctr.name = "cos2", "ctr"
+        ind_infos = concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
     ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -272,11 +268,10 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
         else:
             print("\nSupplementary individuals\n")
         ind_sup_infos = ind_sup.dist
-        for i in np.arange(ncp):
-            ind_sup_coord = ind_sup.coord.iloc[:,i]
-            ind_sup_cos2 = ind_sup.cos2.iloc[:,i]
+        for i in range(ncp):
+            ind_sup_coord, ind_sup_cos2 = ind_sup.coord.iloc[:,i], ind_sup.cos2.iloc[:,i]
             ind_sup_cos2.name = "cos2"
-            ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
+            ind_sup_infos = concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
         ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -289,14 +284,11 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
         print(f"\nVariables (the {nb_element} first)\n")
     else:
          print("\nVariables\n")
-    var_infos = pd.DataFrame().astype("float")
-    for i in np.arange(ncp):
-        var_coord = var.coord.iloc[:,i]
-        var_cos2 = var.cos2.iloc[:,i]
-        var_cos2.name = "cos2"
-        var_ctr = var.contrib.iloc[:,i]
-        var_ctr.name = "ctr"
-        var_infos = pd.concat([var_infos,var_coord,var_ctr,var_cos2],axis=1)
+    var_infos = DataFrame().astype("float")
+    for i in range(ncp):
+        var_coord, var_cos2, var_ctr = var.coord.iloc[:,i], var.cos2.iloc[:,i], var.contrib.iloc[:,i]
+        var_cos2.name, var_ctr.name = "cos2", "ctr"
+        var_infos = concat([var_infos,var_coord,var_ctr,var_cos2],axis=1)
     var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -310,12 +302,11 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
             print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
         else:
             print("\nSupplementary continuous variables\n")
-        quanti_sup_infos = pd.DataFrame().astype("float")
-        for i in np.arange(ncp):
-            quanti_sup_coord = quanti_sup.coord.iloc[:,i]
-            quanti_sup_cos2 = quanti_sup.cos2.iloc[:,i]
+        quanti_sup_infos = DataFrame().astype("float")
+        for i in range(ncp):
+            quanti_sup_coord, quanti_sup_cos2 = quanti_sup.coord.iloc[:,i], quanti_sup.cos2.iloc[:,i]
             quanti_sup_cos2.name = "cos2"
-            quanti_sup_infos =pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
+            quanti_sup_infos =concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
         quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -330,13 +321,10 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
         else:
             print("\nSupplementary categories\n")
         quali_sup_infos = quali_sup.dist
-        for i in np.arange(ncp):
-            quali_sup_coord = quali_sup.coord.iloc[:,i]
-            quali_sup_cos2 = quali_sup.cos2.iloc[:,i]
-            quali_sup_cos2.name = "cos2"
-            quali_sup_vtest = quali_sup.vtest.iloc[:,i]
-            quali_sup_vtest.name = "v.test"
-            quali_sup_infos = pd.concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
+        for i in range(ncp):
+            quali_sup_coord, quali_sup_cos2,quali_sup_vtest = quali_sup.coord.iloc[:,i],quali_sup.cos2.iloc[:,i], quali_sup.vtest.iloc[:,i]
+            quali_sup_cos2.name, quali_sup_vtest.name = "cos2", "v.test"
+            quali_sup_infos = concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
         quali_sup_infos = quali_sup_infos.round(decimals=digits)
         if to_markdown:
             print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))

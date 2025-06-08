@@ -6,19 +6,19 @@ import pingouin as pg
 import statsmodels.api as sm
 from typing import NamedTuple
 from collections import namedtuple, OrderedDict
-
 from mapply.mapply import mapply
 from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import mean_squared_error
 
-from .pca import PCA
-from .kmo import kmo_index
-from .predict_sup import predict_ind_sup, predict_quanti_sup
-from .recodecont import recodecont
-from .revaluate_cat_variable import revaluate_cat_variable
-from .function_eta2 import function_eta2
-from .conditional_average import conditional_average
+#intern functions
+from scientisttools.methods.PCA import PCA
+from scientisttools.others.kmo import kmo_index
+from scientisttools.others.predict_sup import predict_ind_sup, predict_quanti_sup
+from scientisttools.others.recodecont import recodecont
+from scientisttools.others.revaluate_cat_variable import revaluate_cat_variable
+from scientisttools.others.function_eta2 import function_eta2
+from scientisttools.others.conditional_average import conditional_average
 
 class PartialPCA(BaseEstimator,TransformerMixin):
     """
@@ -42,7 +42,7 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
     `n_components` : number of dimensions kept in the results (by default 5)
 
-    `partiel` : a list of string specifying the name of the partial variables
+    `partiel` : an integer or a list/tuple of string specifying the name of the partial variables
 
     `ind_weights` : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform row weights); the weights are given only for the active individuals
     
@@ -301,9 +301,9 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         #----------------------------------------------------------------------------------------------------
         res = PCA(standardize=self.standardize,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=self.var_weights).fit(resid)
 
-        ##############################################################################################################################################
-        ## Statistics for supplementary individuals
-        ###############################################################################################################################################
+        #----------------------------------------------------------------------------------------------------------------------------------------
+        ##statistics for supplementary individuals
+        #----------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
             # Transform to float
             X_ind_sup = X_ind_sup.astype("float")
@@ -320,9 +320,9 @@ class PartialPCA(BaseEstimator,TransformerMixin):
             # Extract supplementary individuals informations
             self.ind_sup_ = res.ind_sup_
         
-        ###############################################################################################################################
-        ## Statistics for supplementary quantitative variables
-        ###############################################################################################################################
+        #----------------------------------------------------------------------------------------------------------------------------------------
+        ##statistics for supplementary quantitative variables
+        #----------------------------------------------------------------------------------------------------------------------------------------
         if self.quanti_sup is not None:
             X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.ind_sup is not None:
@@ -390,10 +390,9 @@ class PartialPCA(BaseEstimator,TransformerMixin):
             # extract statistics for supplementary quantitative variables
             self.quanti_sup_ = res.quanti_sup_
             
-        ##############################################################################################################################################
-        # Compute supplementary qualitatives variables statistics
-        ###############################################################################################################################################
-        # Statistics for supplementary qualitatives variables
+        #----------------------------------------------------------------------------------------------------------------------------------------
+        ##statistics for supplementary qualitative variables
+        #----------------------------------------------------------------------------------------------------------------------------------------
         if self.quali_sup is not None:
             X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
@@ -599,11 +598,9 @@ def predictPartialPCA(self,X=None) -> NamedTuple:
     
     #### Standardize residuals
     Z = mapply(resid,lambda x : (x - pca_center)/pca_scale,axis=1,progressbar=False,n_workers=n_workers)
-
-    # statistics for supplementary individuals
     res = predict_ind_sup(Z,self.svd_.V[:,:n_components],var_weights,n_workers)
     
-    return namedtuple("predictPartialPCA",res.keys())(*res.values())
+    return namedtuple("predictPartialPCAResult",res.keys())(*res.values())
 
 def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
     """
@@ -677,9 +674,9 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
     # Extract
     ind_weights, n_components = self.call_.ind_weights.values, self.call_.n_components
 
-    ########################################################################################################################
-    ## Statistics for supplementary quantitative variables
-    #########################################################################################################################
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##statistics for supplementary quantitative variables
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if X_quanti_sup is not None:
         # Transform to float
         X_quanti_sup = recodecont(X_quanti_sup).Xcod
@@ -695,12 +692,12 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
             quanti_sup_resid.loc[:,col] = ols.resid
         
         # Standardize
-        d2 = DescrStatsW(quanti_sup_resid,weights=ind_weights,ddof=0)
+        d_quanti_sup = DescrStatsW(quanti_sup_resid,weights=ind_weights,ddof=0)
 
         # Standardization
-        center = d2.mean
+        center = d_quanti_sup.mean
         if self.standardize:
-            scale = d2.std
+            scale = d_quanti_sup.std
         else:
             scale = np.ones(X_quanti_sup.shape[1])
         
@@ -716,9 +713,9 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
     else:
         quanti_sup = None
     
-    ###########################################################################################################################
-    ## Statistics for supplementary qualitative variables
-    ###########################################################################################################################
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##statistics for supplementary qualitative variables
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if X_quali_sup is not None:
         # check if X_quali_sup is an instance of polars dataframe
         if isinstance(X_quali_sup,pl.DataFrame):
@@ -730,10 +727,9 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
         
         # Check if X_quali_sup is an instance of pd.DataFrame class
         if not isinstance(X_quali_sup,pd.DataFrame):
-            raise TypeError(
-            f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+            raise TypeError(f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
         # Set index name as None
         X_quali_sup.index.name = None
@@ -778,4 +774,4 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
         quali_sup = None
 
     # Store all informations
-    return namedtuple("supvarPartialPCA",["quanti","quali"])(quanti_sup,quali_sup)
+    return namedtuple("supvarPartialPCAResult",["quanti","quali"])(quanti_sup,quali_sup)
