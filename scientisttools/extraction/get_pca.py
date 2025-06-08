@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import pandas as pd
+from pandas import DataFrame, concat
 from typing import NamedTuple
 
 def get_pca_ind(self) -> NamedTuple:
@@ -265,7 +265,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         ind_cos2.name = "cos2"
         ind_ctr = ind.contrib.iloc[:,i]
         ind_ctr.name = "ctr"
-        ind_infos = pd.concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
+        ind_infos = concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
     ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -284,7 +284,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             ind_sup_coord = ind_sup.coord.iloc[:,i]
             ind_sup_cos2 = ind_sup.cos2.iloc[:,i]
             ind_sup_cos2.name = "cos2"
-            ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
+            ind_sup_infos = concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
         ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -297,14 +297,14 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(f"\nVariables (the {nb_element} first)\n")
     else:
          print("\nVariables\n")
-    var_infos = pd.DataFrame().astype("float")
+    var_infos = DataFrame().astype("float")
     for i in np.arange(ncp):
         var_coord = var.coord.iloc[:,i]
         var_cos2 = var.cos2.iloc[:,i]
         var_cos2.name = "cos2"
         var_ctr = var.contrib.iloc[:,i]
         var_ctr.name = "ctr"
-        var_infos = pd.concat([var_infos,var_coord,var_ctr,var_cos2],axis=1)
+        var_infos = concat([var_infos,var_coord,var_ctr,var_cos2],axis=1)
     var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -318,12 +318,12 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
         else:
             print("\nSupplementary continuous variables\n")
-        quanti_sup_infos = pd.DataFrame().astype("float")
+        quanti_sup_infos = DataFrame().astype("float")
         for i in np.arange(ncp):
             quanti_sup_coord = quanti_sup.coord.iloc[:,i]
             quanti_sup_cos2 = quanti_sup.cos2.iloc[:,i]
             quanti_sup_cos2.name = "cos2"
-            quanti_sup_infos =pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
+            quanti_sup_infos =concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
         quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -344,7 +344,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             quali_sup_cos2.name = "cos2"
             quali_sup_vtest = quali_sup.vtest.iloc[:,i]
             quali_sup_vtest.name = "v.test"
-            quali_sup_infos = pd.concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
+            quali_sup_infos = concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
         quali_sup_infos = quali_sup_infos.round(decimals=digits)
         if to_markdown:
             print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))

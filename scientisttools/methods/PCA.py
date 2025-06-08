@@ -3,21 +3,19 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import scipy as sp
-
 from typing import NamedTuple
 from collections import namedtuple
 from mapply.mapply import mapply
 from statsmodels.stats.weightstats import DescrStatsW
-from scipy.sparse import issparse
 from sklearn.base import BaseEstimator, TransformerMixin
 
 # intern functions
-from .recodecont import recodecont
-from .fitfa import fitfa
-from .function_eta2 import function_eta2
-from .revaluate_cat_variable import revaluate_cat_variable
-from .conditional_average import conditional_average
-from .predict_sup import predict_ind_sup, predict_quanti_sup
+from scientisttools.others.recodecont import recodecont
+from scientisttools.others.fitfa import fitfa
+from scientisttools.others.function_eta2 import function_eta2
+from scientisttools.others.revaluate_cat_variable import revaluate_cat_variable
+from scientisttools.others.conditional_average import conditional_average
+from scientisttools.others.predict_sup import predict_ind_sup, predict_quanti_sup
 
 class PCA(BaseEstimator,TransformerMixin):
     """
@@ -162,20 +160,16 @@ class PCA(BaseEstimator,TransformerMixin):
         `self` : object
             Returns the instance itself
         """
-        # Check if sparse matrix
-        if issparse(X):
-            raise TypeError("PCA does not support sparse input.")
-        
+
         # check if X is an instance of polars dataframe
         if isinstance(X,pl.DataFrame):
             X = X.to_pandas()
         
         # Check if X is an instance of pd.DataFrame class
         if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
         # set parallelize
         if self.parallelize:
@@ -386,16 +380,11 @@ class PCA(BaseEstimator,TransformerMixin):
         ## Statistics for supplementary individuals
         #-------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
-            # Transform to float
             X_ind_sup = X_ind_sup.astype("float")
-
-            # Standardization
             Z_ind_sup = mapply(X_ind_sup,lambda x : (x - center)/scale,axis=1,progressbar=False,n_workers=n_workers)
-            
-            # compute statistics for supplementary individuals
             ind_sup_ = predict_ind_sup(Z_ind_sup,self.svd_.V[:,:n_components],var_weights,n_workers)
 
-            # Store all informations
+            #store all informations
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
         #-------------------------------------------------------------------------------------------------------
@@ -422,19 +411,17 @@ class PCA(BaseEstimator,TransformerMixin):
             self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
 
             # Compute weighted average and standard deviation
-            d2 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
+            d_quanti_sup = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
 
             # Initializations - scale data
-            center_sup = d2.mean
+            center_sup = d_quanti_sup.mean
             if self.standardize:
-                scale_sup = d2.std
+                scale_sup = d_quanti_sup.std
             else:
                 scale_sup = np.ones(X_quanti_sup.shape[1])
             
             # Standardization
             Z_quanti_sup = mapply(X_quanti_sup,lambda x : (x - center_sup)/scale_sup,axis=1,progressbar=False,n_workers=n_workers)
-
-            # compute statistics for supplementary quantitative variables
             quanti_sup_ = predict_quanti_sup(Z_quanti_sup,self.svd_.U[:,:n_components],ind_weights,n_workers)
 
             # Store supplementary quantitatives informations
@@ -565,8 +552,6 @@ class PCA(BaseEstimator,TransformerMixin):
 
         # Standardize the new data
         Z = mapply(X,lambda x : (x - self.call_.center.values)/self.call_.scale.values,axis=1,progressbar=False,n_workers=n_workers)
-        
-        # Multiply by columns weight & Apply transition relation
         coord = mapply(Z,lambda x : x*self.call_.var_weights.values,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_.V[:,:self.call_.n_components])
         coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
         return coord
@@ -654,12 +639,10 @@ def predictPCA(self,X=None) -> NamedTuple:
 
     # Standardize data
     Z = mapply(X,lambda x : (x - self.call_.center.values)/self.call_.scale.values,axis=1,progressbar=False,n_workers=n_workers)
-    
-    # compute statistics for new data
     ind_sup_ = predict_ind_sup(Z,self.svd_.V[:,:self.call_.n_components],self.call_.var_weights.values,n_workers)
 
     # convert to NamedTuple
-    return namedtuple("predict",ind_sup_.keys())(*ind_sup_.values())
+    return namedtuple("predictPCAResult",ind_sup_.keys())(*ind_sup_.values())
 
 def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
     """
@@ -762,19 +745,17 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
         X_quanti_sup = recodecont(X_quanti_sup).Xcod
 
         # Compute weighted average and standard deviation
-        d1 = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
+        d_quanti_sup = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
 
         # Average
-        center_sup = d1.mean
+        center_sup = d_quanti_sup.mean
         if self.standardize:
-            scale_sup = d1.std
+            scale_sup = d_quanti_sup.std
         else:
             scale_sup = np.ones(X_quanti_sup.shape[1])
         
         # Standardization data
         Z_quanti_sup = mapply(X_quanti_sup,lambda x : (x - center_sup)/scale_sup,axis=1,progressbar=False,n_workers=n_workers)
-        
-        #compute statistics for supplementary quantitative variables
         quanti_sup_ = predict_quanti_sup(Z_quanti_sup,self.svd_.U[:,:n_components],ind_weights,n_workers=n_workers)
         
         # Store supplementary quantitatives informations
@@ -844,4 +825,4 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
         quali_sup = None
     
     # Store all informations
-    return namedtuple("supvarPCA",["quanti","quali"])(quanti_sup,quali_sup)
+    return namedtuple("supvarPCAResult",["quanti","quali"])(quanti_sup,quali_sup)
