@@ -3,9 +3,7 @@ import plotnine as pn
 import pandas as pd
 import numpy as np
 
-from .colors import list_colors
-from .text_label import text_label
-from .gg_circle import gg_circle
+from scientisttools.plot.fviz_add import text_label, gg_circle, fviz_add, list_colors
 
 def fviz_efa_ind(self,
                  axis=[0,1],

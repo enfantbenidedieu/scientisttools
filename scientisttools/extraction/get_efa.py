@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
+from pandas import concat, DataFrame
 from typing import NamedTuple
 
 def get_efa_ind(self) -> NamedTuple:
@@ -227,12 +226,11 @@ def summaryEFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(f"\nVariables (the {nb_element} first)\n")
     else:
          print("\nVariables\n")
-    var_infos = pd.DataFrame().astype("float")
-    for i in np.arange(ncp):
-        var_coord = var.coord.iloc[:,i]
-        var_ctr = var.contrib.iloc[:,i]
+    var_infos = DataFrame().astype("float")
+    for i in range(ncp):
+        var_coord, var_ctr = var.coord.iloc[:,i], var.contrib.iloc[:,i]
         var_ctr.name = "ctr"
-        var_infos = pd.concat([var_infos,var_coord,var_ctr],axis=1)
+        var_infos = concat([var_infos,var_coord,var_ctr],axis=1)
     var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))

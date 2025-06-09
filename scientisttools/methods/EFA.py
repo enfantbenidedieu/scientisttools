@@ -7,6 +7,7 @@ from mapply.mapply import mapply
 import pingouin as pg
 from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
+
 class EFA(BaseEstimator,TransformerMixin):
     """
     Exploratory Factor Analysis (EFA)
