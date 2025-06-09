@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
+from pandas import concat, DataFrame
 from typing import NamedTuple
 
 def get_ca_row(self)-> NamedTuple:
@@ -230,15 +229,17 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
 
-    # Set number of components
-    ncp = min(ncp,self.call_.n_components)
-    # Set number of elements
-    nb_element = min(nb_element,self.call_.X.shape[0])
+    # Set number of components and number of elements
+    ncp, nb_element = min(ncp,self.call_.n_components), min(nb_element,self.call_.X.shape[0])
 
-    # Principal Components Analysis Results
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##Principal Components Analysis Results
+    #----------------------------------------------------------------------------------------------------------------------------------------
     print("                     Correspondence Analysis - Results                     \n")
 
-    # Add eigenvalues informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add eigenvalues informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     print("Eigenvalues")
     eig = self.eig_.T.round(decimals=digits)
     eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
@@ -247,7 +248,9 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     else:
         print(eig)
     
-    # Chi-squared test
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add chi-squared test
+    #----------------------------------------------------------------------------------------------------------------------------------------
     print("\nChi-squared test\n")
     chi2_test = self.others_.chi2
     if to_markdown:
@@ -255,27 +258,28 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     else:
         print(chi2_test)
 
-    # Add rows informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add rows informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     row = self.row_
     if row.coord.shape[0] > nb_element:
         print(f"\nRows (the {nb_element} first)\n")
     else:
         print("\nRows\n")
     row_infos = row.infos
-    for i in np.arange(0,ncp,1):
-        row_coord = row.coord.iloc[:,i]
-        row_cos2 = row.cos2.iloc[:,i]
-        row_cos2.name = "cos2"
-        row_ctr = row.contrib.iloc[:,i]
-        row_ctr.name = "ctr"
-        row_infos = pd.concat([row_infos,row_coord,row_ctr,row_cos2],axis=1)
+    for i in range(ncp):
+        row_coord, row_cos2, row_ctr = row.coord.iloc[:,i], row.cos2.iloc[:,i], row.contrib.iloc[:,i]
+        row_cos2.name, row_ctr.name = "cos2", "ctr"
+        row_infos = concat([row_infos,row_coord,row_ctr,row_cos2],axis=1)
     row_infos = row_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(row_infos)
 
-    # Add supplementary rows informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add supplementary rows informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"row_sup_"):
         row_sup = self.row_sup_
         if row_sup.coord.shape[0] > nb_element:
@@ -283,38 +287,38 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         else:
             print("\nSupplementary rows\n")
         row_sup_infos = row_sup.dist
-        for i in np.arange(0,ncp,1):
-            row_sup_coord = row_sup.coord.iloc[:,i]
-            row_sup_cos2  = row_sup.cos2.iloc[:,i]
+        for i in range(ncp):
+            row_sup_coord, row_sup_cos2 = row_sup.coord.iloc[:,i], row_sup.cos2.iloc[:,i]
             row_sup_cos2.name = "cos2"
-            row_sup_infos = pd.concat([row_sup_infos,row_sup_coord,row_sup_cos2],axis=1)
+            row_sup_infos = concat([row_sup_infos,row_sup_coord,row_sup_cos2],axis=1)
         row_sup_infos = row_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(row_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(row_sup_infos)
 
-    # Add columns informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add columns informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     col = self.col_
     if col.coord.shape[0] > nb_element:
         print(f"\nColumns (the {nb_element} first)\n")
     else:
         print("\nColumns\n")
     col_infos = col.infos
-    for i in np.arange(0,ncp,1):
-        col_coord = col.coord.iloc[:,i]
-        col_cos2 = col.cos2.iloc[:,i]
-        col_cos2.name = "cos2"
-        col_ctr = col.contrib.iloc[:,i]
-        col_ctr.name = "ctr"
-        col_infos = pd.concat([col_infos,col_coord,col_ctr,col_cos2],axis=1)
+    for i in range(ncp):
+        col_coord, col_cos2, col_ctr = col.coord.iloc[:,i], col.cos2.iloc[:,i], col.contrib.iloc[:,i]
+        col_cos2.name, col_ctr.name = "cos2", "ctr"
+        col_infos = concat([col_infos,col_coord,col_ctr,col_cos2],axis=1)
     col_infos = col_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(col_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(col_infos)
     
-    # Add supplementary columns informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add supplementary columns informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"col_sup_"):
         col_sup = self.col_sup_
         if col_sup.coord.shape[0]> nb_element:
@@ -322,37 +326,39 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         else:
             print("\nSupplementary columns\n")
         col_sup_infos = col_sup.dist
-        for i in np.arange(0,ncp,1):
-            col_sup_coord = col_sup.coord.iloc[:,i]
-            col_sup_cos2 = col_sup.cos2.iloc[:,i]
+        for i in range(ncp):
+            col_sup_coord, col_sup_cos2 = col_sup.coord.iloc[:,i], col_sup.cos2.iloc[:,i]
             col_sup_cos2.name = "cos2"
-            col_sup_infos = pd.concat([col_sup_infos,col_sup_coord,col_sup_cos2],axis=1)
+            col_sup_infos = concat([col_sup_infos,col_sup_coord,col_sup_cos2],axis=1)
         col_sup_infos = col_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(col_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(col_sup_infos)
     
-    # Add supplementary quantitatives informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add supplementary quantitatives informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
         if quanti_sup.coord.shape[0]> nb_element:
             print(f"\nSupplementary quantitatives columns (the {nb_element})\n")
         else:
             print("\nSupplementary quantitatives columns\n")
-        quanti_sup_infos = pd.DataFrame().astype("float")
-        for i in np.arange(0,ncp,1):
-            quanti_sup_coord = quanti_sup.coord.iloc[:,i]
-            quanti_sup_cos2 = quanti_sup.cos2.iloc[:,i]
+        quanti_sup_infos = DataFrame().astype("float")
+        for i in range(ncp):
+            quanti_sup_coord, quanti_sup_cos2 = quanti_sup.coord.iloc[:,i], quanti_sup.cos2.iloc[:,i]
             quanti_sup_cos2.name = "cos2"
-            quanti_sup_infos = pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
+            quanti_sup_infos = concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
         quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(quanti_sup_infos)
     
-    # Add supplementary qualitatives informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add supplementary qualitatives informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quali_sup_"):
         quali_sup = self.quali_sup_
         if quali_sup.coord.shape[0] > nb_element:
@@ -360,13 +366,10 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         else:
             print("\nSupplementary categories\n")
         quali_sup_infos = quali_sup.dist
-        for i in np.arange(0,ncp,1):
-            quali_sup_coord = quali_sup.coord.iloc[:,i]
-            quali_sup_cos2 = quali_sup.cos2.iloc[:,i]
-            quali_sup_cos2.name = "cos2"
-            quali_sup_vtest = quali_sup.vtest.iloc[:,i]
-            quali_sup_vtest.name = "vtest"
-            quali_sup_infos = pd.concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
+        for i in range(ncp):
+            quali_sup_coord, quali_sup_cos2, quali_sup_vtest = quali_sup.coord.iloc[:,i], quali_sup.cos2.iloc[:,i], quali_sup.vtest.iloc[:,i]
+            quali_sup_cos2.name, quali_sup_vtest.name = "cos2", "vtest"
+            quali_sup_infos = concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
         quali_sup_infos = quali_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))

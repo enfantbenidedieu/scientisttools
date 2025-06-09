@@ -4,15 +4,16 @@ import pandas as pd
 import polars as pl
 import scipy as sp
 from statsmodels.stats.weightstats import DescrStatsW
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
+from typing import NamedTuple
 from mapply.mapply import mapply
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from .fitfa import fitfa
-from .weightedcorrcoef import weightedcorrcoef
-from .function_eta2 import function_eta2
-from .recodecont import recodecont
-from .revaluate_cat_variable import revaluate_cat_variable
+#intern functions
+from scientisttools.others.fitfa import fitfa
+from scientisttools.others.function_eta2 import function_eta2
+from scientisttools.others.recodecont import recodecont
+from scientisttools.others.revaluate_cat_variable import revaluate_cat_variable
 
 class CA(BaseEstimator,TransformerMixin):
     """
@@ -282,7 +283,7 @@ class CA(BaseEstimator,TransformerMixin):
         #----------------------------------------------------------------------------------------------------------------------------------------
         ## Set number of components
         #----------------------------------------------------------------------------------------------------------------------------------------
-        max_components = int(min(X.shape[0]-1,X.shape[1]-1))
+        max_components = int(min(n_rows-1,n_cols-1))
         if self.n_components is None:
             n_components = max_components
         elif not isinstance(self.n_components,int):
@@ -336,9 +337,9 @@ class CA(BaseEstimator,TransformerMixin):
         # store row and columns
         self.row_, self.col_ = namedtuple("row",row.keys())(*row.values()), namedtuple("col",col.keys())(*col.values())
         
-        ############################################################################################################
-        #  Compute others indicators 
-        #############################################################################################################
+        #----------------------------------------------------------------------------------------------------------------------------------------
+        ##Compute others indicators 
+        #----------------------------------------------------------------------------------------------------------------------------------------
         # Compute chi - squared test
         statistic, pvalue, dof, expected_freq = sp.stats.chi2_contingency(X, lambda_=None,correction=False)
         chi2_qt = sp.stats.chi2.ppf(0.95,dof)
@@ -369,7 +370,7 @@ class CA(BaseEstimator,TransformerMixin):
     
         # Inertia
         inertia = np.sum(row_infos.iloc[:,3])
-        kaiser_threshold, kaiser_proportion_threshold = np.mean(self.eig_.iloc[:,0]),100/max_components
+        kaiser_threshold, kaiser_proportion_threshold = np.mean(self.eig_.iloc[:,0]), 100/max_components
        
        # Others informations
         others_ = {"resid" : resid,
@@ -390,11 +391,9 @@ class CA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.row_sup is not None:
             X_row_sup = X_row_sup.astype("int")
-            # Sum row
-            row_sum = X_row_sup.sum(axis=1)
-
+            
             # Standardize with the row sum
-            Z_row_sup = mapply(X_row_sup,lambda x : x/row_sum,axis=0,progressbar=False,n_workers=n_workers)
+            Z_row_sup = mapply(X_row_sup,lambda x : x/X_row_sup.sum(axis=1),axis=0,progressbar=False,n_workers=n_workers)
 
             # Supplementary rows factor coordinates
             row_sup_coord = pd.DataFrame(Z_row_sup.dot(self.svd_.V[:,:n_components]).values,columns=["Dim."+str(x+1) for x in range(n_components)],index=row_sup_label)
@@ -603,7 +602,7 @@ class CA(BaseEstimator,TransformerMixin):
         coord.index = X.index.tolist()
         return coord
 
-def predictCA(self,X):
+def predictCA(self,X) -> NamedTuple:
     """
     Predict projection for new rows with Correspondence Analysis (CA)
     -----------------------------------------------------------------
@@ -678,7 +677,7 @@ def predictCA(self,X):
         n_workers = 1
     
     # Extract elements
-    n_components, col_marge = self.call_.n_components, self.call_.col_marge
+    n_components, col_marge = self.call_.n_components, self.call_.col_marge.values
 
     # Transform to int
     X = X.astype("int")
@@ -690,16 +689,16 @@ def predictCA(self,X):
     coord = pd.DataFrame(Z.dot(self.svd_.V[:,:n_components]).values,columns=["Dim."+str(x+1) for x in range(n_components)],index=X.index.tolist())
     
     # Supplementary square distance to origin
-    sqdisto = mapply(X,lambda x : ((x - col_marge.values)**2)/col_marge.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+    sqdisto = mapply(Z,lambda x : ((x - col_marge)**2)/col_marge,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
     sqdisto.name = "Sq. Dist."
     
     # Supplementary square cosinus
     cos2 = mapply(coord,lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=n_workers)
 
     # convert to namedtuple
-    return namedtuple("row_sup",["coord","cos2","dist"])(coord,cos2,sqdisto)
+    return namedtuple("predictCAResult",["coord","cos2","dist"])(coord,cos2,sqdisto)
 
-def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
+def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
     """
     Supplementary columns/variables with Correspondence Analysis (CA)
     -----------------------------------------------------------------
@@ -726,18 +725,18 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
 
     Returns
     -------
-    dictionary including : 
+    namedtuple including : 
 
-    `col` : dictionary containing the results of the supplementary columns variables:
+    `col` : namedtuple containing the results of the supplementary columns variables:
         * coord : factor coordinates (scores) of the supplementary columns
         * cos2 : square cosinus of the supplementary columns
         * dist : distance to origin of the supplementary columns
 
-    `quanti` : dictionary containing the results of the supplementary quantitatives variables:
+    `quanti` : namedtuple containing the results of the supplementary quantitatives variables:
         * coord : factor coordinates (scores) of the supplementary quantitativaes variables
         * cos2 : square cosinus of the supplementary quantitatives variables
     
-    `quali` : dictionary containing the results of the supplementary qualitatives/categories variables :
+    `quali` : namedtuple containing the results of the supplementary qualitatives/categories variables :
         * coord : factor coordinates (scores) of the supplementary categories
         * cos2 : square cosinus of the supplementary categories
         * vtest : value-test of the supplementary categories
@@ -761,17 +760,17 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
     >>> # Supplementary qualitatives variables
     >>> X_quali_sup = children.iloc[:14,8]
     >>> from scientisttools import CA
-    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
     >>> res_ca.fit(children)
     >>> # Supplementary columns/variables projections
     >>> from scientisttools import supvarCA
-    >>> supvar = supvarCA(res_ca,X_col_sup=X_col_sup,X_quanti_sup=X_col_sup,X_quali_sup=X_quali_sup)
+    >>> sup_var = supvarCA(res_ca,X_col_sup=X_col_sup,X_quanti_sup=X_col_sup,X_quali_sup=X_quali_sup)
     >>> # Extract supplementary columns results
-    >>> supvarcol = supvar["col"]
+    >>> col_sup_ = sup_var.col
     >>> # Extract supplementary quantitatives variables results
-    >>> supvarquanti = supvar["quanti"]
+    >>> quanti_sup_ = sup_var.quanti
     >>> # Extract supplementary qualitatives variables results
-    >>> supvarquali = supvar["quali"]
+    >>> quali_sup_ = sup_var.quali
     ```
     """
     # Check if self is and object of class CA
@@ -785,12 +784,11 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
         n_workers = 1
     
     # Extract elements
-    row_weights = self.call_["row_weights"] # row weights
-    n_components = self.call_["n_components"] # number of components
-    row_marge = self.call_["row_marge"] # row marge
-    row_coord = self.row_["coord"] # row coordinates
+    row_weights, n_components, row_marge = self.call_.row_weights.values, self.call_.n_components, self.call_.row_marge.values
     
-    ## For supplementary columns
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##statistics for supplementary columns
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if X_col_sup is not None:
         # check if X is an instance of polars dataframe
         if isinstance(X_col_sup,pl.DataFrame):
@@ -802,40 +800,36 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
         
         # Check if X is an instance of pd.DataFrame class
         if not isinstance(X_col_sup,pd.DataFrame):
-            raise TypeError(
-            f"{type(X_col_sup)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+            raise TypeError(f"{type(X_col_sup)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
         # Transform to int
         X_col_sup = X_col_sup.astype("int")
 
-        ### weighted with row weight
+        # weighted with row weight
         X_col_sup = mapply(X_col_sup,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=n_workers)
-        # Compute columns sum
-        col_sum = X_col_sup.sum(axis=0)
-        X_col_sup = mapply(X_col_sup,lambda x : x/col_sum,axis=1,progressbar=False,n_workers=n_workers)
+        # Standardize the data
+        X_col_sup = mapply(X_col_sup,lambda x : x/X_col_sup.sum(axis=0),axis=1,progressbar=False,n_workers=n_workers)
 
-        # Supplementary columns coordinates
-        col_sup_coord = X_col_sup.T.dot(self.svd_["U"][:,:n_components])
-        col_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+        # Supplementary columns factor coordinates
+        col_sup_coord = pd.DataFrame(X_col_sup.T.dot(self.svd_.U[:,:n_components]).values,index=X_col_sup.columns.tolist(),columns = ["Dim."+str(x+1) for x in range(n_components)])
 
-        # Supplementary distance to origin
-        col_sup_dist2 = mapply(X_col_sup,lambda x : ((x - row_marge)**2)/row_marge,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
-        col_sup_dist2.name = "Sq. Dist."
+        # Supplementary columns square distance to origin
+        col_sup_sqdisto = mapply(X_col_sup,lambda x : ((x - row_marge)**2)/row_marge,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+        col_sup_sqdisto.name = "Sq. Dist."
 
-        # Supplementary squared cosinus
-        col_sup_cos2 = mapply(col_sup_coord,lambda x : (x**2)/col_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
+        # Supplementary columns square cosinus
+        col_sup_cos2 = mapply(col_sup_coord,lambda x : (x**2)/col_sup_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
         
-        # Store all informations
-        col_sup = {"coord" : col_sup_coord,"cos2" : col_sup_cos2,"dist" : col_sup_dist2}
+        #convert to namedtuple
+        col_sup = namedtuple("col_sup",["coord","cos2","dist"])(col_sup_coord,col_sup_cos2,col_sup_sqdisto)
     else:
         col_sup = None
 
-    ########################################################################################################################
-    #                                          For supplementary quantitatives variables
-    #########################################################################################################################
-
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##statistics for supplementary quantitative variables
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if X_quanti_sup is not None:
         # check if X is an instance of polars dataframe
         if isinstance(X_quanti_sup,pl.DataFrame):
@@ -847,33 +841,28 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
         
         # Check if X is an instance of pd.DataFrame class
         if not isinstance(X_quanti_sup,pd.DataFrame):
-            raise TypeError(
-            f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+            raise TypeError(f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Transform to float
-        X_quanti_sup = X_quanti_sup.astype("float")
-
         # Recode variables
-        X_quanti_sup = recodecont(X_quanti_sup)["Xcod"]
-     
-        ############# Compute average mean
-        quanti_sup_coord = weightedcorrcoef(x=X_quanti_sup,y=row_coord,w=row_marge)[:X_quanti_sup.shape[1],X_quanti_sup.shape[1]:]
-        quanti_sup_coord = pd.DataFrame(quanti_sup_coord,index=X_quanti_sup.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
-        
-        #################### Compute cos2
-        quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers)
+        X_quanti_sup = recodecont(X_quanti_sup.astype("float")).Xcod
 
+        # supplementary quantitative variables factor coordinates - factor correlation
+        wcorr = DescrStatsW(pd.concat((X_quanti_sup,self.row_.coord),axis=1),weights=row_marge,ddof=0).corrcoef[:X_quanti_sup.shape[1],X_quanti_sup.shape[1]:]
+        quanti_sup_coord = pd.DataFrame(wcorr,index=X_quanti_sup.columns.tolist(),columns=["Dim."+str(x+1) for x in range(n_components)])
+        
+        # supplementary quantitative variable square cosinus
+        quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers)
+     
         # Set all informations
-        quanti_sup = {"coord" : quanti_sup_coord, "cos2" : quanti_sup_cos2}
+        quanti_sup = namedtuple("quanti_sup",["coord","cos2"])(quanti_sup_coord,quanti_sup_cos2)
     else:
         quanti_sup = None
     
-    ###########################################################################################################################
-    #                                                   For supplementary qualitatives variables
-    ###########################################################################################################################
-
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##statistics for supplementary qualitatives variables
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if X_quali_sup is not None:
         # check if X is an instance of polars dataframe
         if isinstance(X_quali_sup,pl.DataFrame):
@@ -885,17 +874,15 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
         
         # Check if X is an instance of pd.DataFrame class
         if not isinstance(X_quali_sup,pd.DataFrame):
-            raise TypeError(
-            f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+            raise TypeError(f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
+                            "pd.DataFrame. For more information see: "
+                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
         # Transform to object
         X_quali_sup = X_quali_sup.astype("object")
 
         # Extract active data
-        X = self.call_["X"]
-        col_marge = self.call_["col_marge"]
+        X, col_marge = self.call_.X, self.call_.col_marge.values
         total = X.sum().sum()
 
         # Check if two columns have the same categories
@@ -907,22 +894,19 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
             data = pd.concat((X,X_quali_sup[col]),axis=1).groupby(by=col,as_index=True).sum()
             data.index.name = None
             quali = pd.concat((quali,data),axis=0)
-        ############################################################################################
-        # Calculate sum by row
-        quali_sum = quali.sum(axis=1)
-        # Devide by sum
-        quali = mapply(quali,lambda x : x/quali_sum,axis=0,progressbar=False,n_workers=n_workers)
+        
+        #standardize 
+        Z_quali_sup = mapply(quali,lambda x : x/quali.sum(axis=1),axis=0,progressbar=False,n_workers=n_workers)
 
-        # Categories coordinates
-        quali_sup_coord = quali.dot(self.svd_["V"][:,:n_components])
-        quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+        # Categories factor coordinates
+        quali_sup_coord = pd.DataFrame(Z_quali_sup.dot(self.svd_.V[:,:n_components]).values,index=quali.index.tolist(),columns = ["Dim."+str(x+1) for x in range(n_components)])
 
         # Categories dist2
-        quali_sup_dist2 = mapply(quali,lambda x : ((x - col_marge.values)**2)/col_marge.values,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-        quali_sup_dist2.name="Sq. Dist."
+        quali_sup_sqdisto = mapply(Z_quali_sup,lambda x : ((x - col_marge)**2)/col_marge,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+        quali_sup_sqdisto.name="Sq. Dist."
 
         # Sup Cos2
-        quali_sup_cos2 = mapply(quali_sup_coord,lambda x : (x**2)/quali_sup_dist2,axis=0,progressbar=False,n_workers=n_workers)
+        quali_sup_cos2 = mapply(quali_sup_coord,lambda x : (x**2)/quali_sup_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
 
         # Disjonctif table
         dummies = pd.concat((pd.get_dummies(X_quali_sup[col],dtype=int) for col in X_quali_sup.columns),axis=1)
@@ -938,13 +922,12 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None):
         quali_sup_vtest = mapply(quali_sup_coord,lambda x : x*coef,axis=0,progressbar=False,n_workers=n_workers)
 
         # Correlation ratio
-        quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=row_coord.values,weights=row_marge,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
+        quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=self.row_.coord.values,weights=row_marge,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
         
-        # Set all informations
-        quali_sup = {"coord" : quali_sup_coord,"cos2" : quali_sup_cos2,"vtest" : quali_sup_vtest,"eta2" : quali_sup_eta2,"dist" : quali_sup_dist2}
+        #convert to namedtuple
+        quali_sup = namedtuple("quali_sup",["coord","cos2","vtest","eta2","dist"])(quali_sup_coord,quali_sup_cos2,quali_sup_vtest,quali_sup_eta2,quali_sup_sqdisto)
     else:
         quali_sup = None
     
     # Store all informations
-    res = {"col" : col_sup, "quanti" : quanti_sup, "quali" : quali_sup}
-    return res
+    return namedtuple("supvarCAResult",["col","quanti","quali"])(col_sup,quanti_sup,quali_sup)
