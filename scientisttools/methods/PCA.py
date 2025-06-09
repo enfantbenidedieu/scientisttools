@@ -193,7 +193,7 @@ class PCA(BaseEstimator,TransformerMixin):
                 X[col] = pd.Categorical(X[col],categories=sorted(X[col].dropna().unique().tolist()),ordered=True)
         
         #----------------------------------------------------------------------------------------------------------------------------------------
-        ## Check if supplementary qualitatives variables
+        ##check if supplementary qualitatives variables
         #----------------------------------------------------------------------------------------------------------------------------------------
         if self.quali_sup is not None:
             if isinstance(self.quali_sup,str):
@@ -269,7 +269,6 @@ class PCA(BaseEstimator,TransformerMixin):
         
         # Drop supplementary individuals
         if self.ind_sup is not None:
-            # Extract supplementary individuals
             X_ind_sup = X.loc[ind_sup_label,:]
             X = X.drop(index=ind_sup_label)
 
@@ -383,8 +382,7 @@ class PCA(BaseEstimator,TransformerMixin):
             X_ind_sup = X_ind_sup.astype("float")
             Z_ind_sup = mapply(X_ind_sup,lambda x : (x - center)/scale,axis=1,progressbar=False,n_workers=n_workers)
             ind_sup_ = predict_ind_sup(Z_ind_sup,self.svd_.V[:,:n_components],var_weights,n_workers)
-
-            #store all informations
+            #convert to namedtuple
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
         #-------------------------------------------------------------------------------------------------------
@@ -475,7 +473,7 @@ class PCA(BaseEstimator,TransformerMixin):
                 summary_quali_sup = pd.concat([summary_quali_sup,eff],axis=0,ignore_index=True)
             summary_quali_sup["count"] = summary_quali_sup["count"].astype("int") 
 
-            # Supplementary categories informations
+            #convert to namedtuple
             self.quali_sup_ = namedtuple("quali_sup",["barycentre","coord","cos2","vtest","dist","eta2"])(barycentre,quali_sup_coord,quali_sup_cos2,quali_sup_vtest,quali_sup_sqdisto,quali_sup_eta2)
             self.summary_quali_ = summary_quali_sup
             
@@ -819,10 +817,10 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
         quali_sup_vtest = mapply(quali_sup_coord,lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=n_workers)
         quali_sup_vtest = pd.concat(((quali_sup_vtest.loc[k,:]/np.sqrt((n_rows-n_k[k])/((n_rows-1)*n_k[k]))).to_frame().T for k in n_k.index),axis=0)
 
-        # Supplementary categories informations
+        #convert to namedtuple
         quali_sup = namedtuple("quali_sup",["barycentre","coord","cos2","vtest","dist","eta2"])(barycentre,quali_sup_coord,quali_sup_cos2,quali_sup_vtest,quali_sup_sqdisto,quali_sup_eta2)
     else:
         quali_sup = None
     
-    # Store all informations
+    #convert to namedtuple
     return namedtuple("supvarPCAResult",["quanti","quali"])(quanti_sup,quali_sup)
