@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-import pandas as pd
-import numpy as np
+from pandas import DataFrame, concat
+from typing import NamedTuple
 
-def get_mca_ind(self) -> dict:
+def get_mca_ind(self) -> NamedTuple:
     """
     Extract the results for individuals - MCA/SpecificMCA
     -----------------------------------------------------
@@ -23,7 +23,7 @@ def get_mca_ind(self) -> dict:
 
     Returns
     -------
-    dictionary containing the results of the cative individuals including : 
+    namedtuple containing the results of the cative individuals including : 
 
     `coord` : factor coordinates (scores) of the individuals
 
@@ -56,7 +56,7 @@ def get_mca_ind(self) -> dict:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     return self.ind_
             
-def get_mca_var(self) -> dict:
+def get_mca_var(self) -> NamedTuple:
     """
     Extract the results for the variables - MCA/SpecificMCA
     -------------------------------------------------------  
@@ -77,7 +77,7 @@ def get_mca_var(self) -> dict:
 
     Returns
     -------
-    dictionary of dataframes containing the results for the active variable categories including :
+    namedtuple of dataframes containing the results for the active variable categories including :
 
     `coord` : factor coordinates (scores) for the variables categories
 
@@ -118,7 +118,7 @@ def get_mca_var(self) -> dict:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     return self.var_
     
-def get_mca(self,choice="ind") -> dict:
+def get_mca(self,choice="ind") -> NamedTuple:
     """
     Extract the results for individuals/variables - MCA/SpecificMCA
     ---------------------------------------------------------------
@@ -237,8 +237,8 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     if self.model_ not in ["mca","specificmca"]:
         raise ValueError("'self' must be an object of class MCA or SpecificMCA")
 
-    ncp = min(ncp,self.call_["n_components"])
-    nb_element = min(nb_element,self.ind_["coord"].shape[0],self.var_["coord"].shape[0])
+    #et number of components and number of elements
+    ncp, nb_element = min(ncp,self.call_.n_components), min(nb_element,self.call_.X.shape[0],self.var_.coord.shape[0])
 
     # Multiple correspondance Analysis - Results
     if self.model_ == "mca":
@@ -246,7 +246,9 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     elif self.model_ == "specificmca":
         print("                     Specific Multiple Correspondance Analysis - Results                     \n")
 
-    # Add eigenvalues informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##Add eigenvalues informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     print("Importance of components")
     eig = self.eig_.iloc[:,:4].T.round(decimals=digits)
     eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
@@ -255,61 +257,58 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     else:
         print(eig)
     
-    # Add individuals informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add individuals informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     ind = self.ind_
-    if ind["coord"].shape[0] > nb_element:
+    if ind.coord.shape[0] > nb_element:
         print(f"\nIndividuals (the {nb_element} first)\n")
     else:
         print("\nIndividuals\n")
-    ind_infos = ind["infos"]
-    for i in np.arange(0,ncp,1):
-        ind_coord = ind["coord"].iloc[:,i]
-        ind_cos2 = ind["cos2"].iloc[:,i]
-        ind_cos2.name = "cos2"
-        ind_ctr = ind["contrib"].iloc[:,i]
-        ind_ctr.name = "ctr"
-        ind_infos = pd.concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
+    ind_infos = ind.infos
+    for i in range(ncp):
+        ind_coord, ind_cos2, ind_ctr = ind.coord.iloc[:,i], ind.cos2.iloc[:,i], ind.contrib.iloc[:,i]
+        ind_cos2.name, ind_ctr.name = "cos2", "ctr"
+        ind_infos = concat((ind_infos,ind_coord,ind_ctr,ind_cos2),axis=1)
     ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(ind_infos)
 
-    # Add supplementary individuals
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add supplementary individuals
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"ind_sup_"):
         ind_sup = self.ind_sup_
-        if ind_sup["coord"].shape[0] > nb_element:
+        if ind_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
         else:
             print("\nSupplementary individuals\n")
-        ind_sup_infos = ind_sup["dist"]
-        for i in np.arange(0,ncp,1):
-            ind_sup_coord = ind_sup["coord"].iloc[:,i]
-            ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
+        ind_sup_infos = ind_sup.dist
+        for i in range(ncp):
+            ind_sup_coord, ind_sup_cos2 = ind_sup.coord.iloc[:,i], ind_sup.cos2.iloc[:,i]
             ind_sup_cos2.name = "cos2"
-            ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
+            ind_sup_infos = concat((ind_sup_infos,ind_sup_coord,ind_sup_cos2),axis=1)
         ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(ind_sup_infos)
 
-    # Add variables informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add variables informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     var = self.var_
-    if var["coord"].shape[0] > nb_element:
+    if var.coord.shape[0] > nb_element:
         print(f"\nCategories (the {nb_element} first)\n")
     else:
         print("\nCategories\n")
-    var_infos = var["infos"]
-    for i in np.arange(0,ncp,1):
-        var_coord = var["coord"].iloc[:,i]
-        var_cos2 = var["cos2"].iloc[:,i]
-        var_cos2.name = "cos2"
-        var_ctr = var["contrib"].iloc[:,i]
-        var_ctr.name = "ctr"
-        var_vtest = var["vtest"].iloc[:,i]
-        var_vtest.name = "vtest"
-        var_infos = pd.concat([var_infos,var_coord,var_ctr,var_cos2,var_vtest],axis=1)
+    var_infos = var.infos
+    for i in range(ncp):
+        var_coord, var_cos2, var_ctr, var_vtest = var.coord.iloc[:,i], var.cos2.iloc[:,i],  var.contrib.iloc[:,i], var.vtest.iloc[:,i]
+        var_cos2.name, var_ctr.name, var_vtest.name = "cos2", "ctr", "vtest"
+        var_infos = concat((var_infos,var_coord,var_ctr,var_cos2,var_vtest),axis=1)
     var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
@@ -317,67 +316,65 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print(var_infos)
     
     # Add variables
-    if var["inertia"].shape[0] > nb_element:
+    if var.var_inertia.shape[0] > nb_element:
         print(f"\nCategorical variables (eta2) (the {nb_element} first)\n")
     else:
         print("\nCategorical variables (eta2)\n")
-    quali_var_infos = var["inertia"]
-    for i in np.arange(0,ncp,1):
-        quali_var_eta2 = var["eta2"].iloc[:,i]
-        quali_var_eta2.name = "Dim."+str(i+1)
-        quali_var_contrib = var["var_contrib"].iloc[:,i]
-        quali_var_contrib.name = "ctr"
-        quali_var_infos = pd.concat([quali_var_infos,quali_var_eta2,quali_var_contrib],axis=1)
+    quali_var_infos = var.var_inertia
+    for i in range(ncp):
+        quali_var_eta2, quali_var_contrib = var.eta2.iloc[:,i], var.var_contrib.iloc[:,i]
+        quali_var_eta2.name, quali_var_contrib.name = "Dim."+str(i+1), "ctr"
+        quali_var_infos = concat((quali_var_infos,quali_var_eta2,quali_var_contrib),axis=1)
     quali_var_infos = quali_var_infos.iloc[:nb_element,:].round(decimals=digits)
     if to_markdown:
         print(quali_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(quali_var_infos)
 
-    # Add Supplementary categories – Variable illustrative qualitative
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add supplementary categories
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quali_sup_"):
         var_sup = self.quali_sup_
-        if var_sup["coord"].shape[0] > nb_element:
+        if var_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary categories (the {nb_element} first)\n")
         else:
             print("\nSupplementary categories\n")
-        var_sup_infos = var_sup["dist"]
-        for i in np.arange(0,ncp,1):
-            var_sup_coord = var_sup["coord"].iloc[:,i]
-            var_sup_cos2 = var_sup["cos2"].iloc[:,i]
-            var_sup_cos2.name = "cos2"
-            var_sup_vtest = var_sup["vtest"].iloc[:,i]
-            var_sup_vtest.name = "v.test"
-            var_sup_infos = pd.concat([var_sup_infos,var_sup_coord,var_sup_cos2,var_sup_vtest],axis=1)
+        var_sup_infos = var_sup.dist
+        for i in range(ncp):
+            var_sup_coord, var_sup_cos2, var_sup_vtest = var_sup.coord.iloc[:,i], var_sup.cos2.iloc[:,i], var_sup.vtest.iloc[:,i]
+            var_sup_cos2.name, var_sup_vtest.name = "cos2", "v.test"
+            var_sup_infos = concat((var_sup_infos,var_sup_coord,var_sup_cos2,var_sup_vtest),axis=1)
         var_sup_infos = var_sup_infos.round(decimals=digits)
         if to_markdown:
             print(var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(var_sup_infos)
         
-        if var_sup["eta2"].shape[0] > nb_element:
+        if var_sup.eta2.shape[0] > nb_element:
             print(f"\nSupplementary categorical variables (eta2) (the {nb_element} first)\n")
         else:
             print("\nSupplementary categorical variables (eta2)\n")
-        quali_var_sup_infos = var_sup["eta2"].iloc[:nb_element,:ncp].round(decimals=digits)
+        quali_var_sup_infos = var_sup.eta2.iloc[:nb_element,:ncp].round(decimals=digits)
         if to_markdown:
             print(quali_var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(quali_var_sup_infos)
 
-    # Add supplementary continuous variables informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add supplementary continuous variables informations
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
-        if quanti_sup["coord"].shape[0] > nb_element:
+        if quanti_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
         else:
             print("\nSupplementary continuous variables\n")
-        quanti_sup_infos = pd.DataFrame().astype("float")
-        for i in np.arange(0,ncp,1):
-            quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
-            quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
+        quanti_sup_infos = DataFrame().astype("float")
+        for i in range(0,ncp,1):
+            quanti_sup_coord, quanti_sup_cos2 = quanti_sup.coord.iloc[:,i], quanti_sup.cos2.iloc[:,i]
             quanti_sup_cos2.name = "cos2"
-            quanti_sup_infos = pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
+            quanti_sup_infos = concat((quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2),axis=1)
         quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))

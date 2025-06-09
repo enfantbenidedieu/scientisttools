@@ -3,8 +3,7 @@ import plotnine as pn
 import pandas as pd
 import numpy as np
 
-from .text_label import text_label
-from .fviz_corrcircle import fviz_corrcircle
+from scientisttools.plot.fviz_add import text_label, fviz_add,list_colors
 
 def fviz_mca_ind(self,
                  axis=[0,1],
@@ -957,14 +956,14 @@ def fviz_mca(self,choice="biplot",**kwargs)->pn:
     Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. fviz_mca() provides plotnine-based elegant visualization of MCA/SpecificMCA outputs.
 
         * fviz_mca_ind(): Graph of individuals
-        * fviz_mca_mod(): Graph of categories
-        * fviz_mca_var(): Graph of variables
+        * fviz_mca_var(): Graph of categories
+        * fviz_mca_quali_var(): Graph of variables
         * fviz_mca_biplot(): Biplot of individuals and categories
     
     Usage
     -----
     ```
-    >>> fviz_mca(self,choice = ("ind","mod","var","quanti_sup","biplot"))
+    >>> fviz_mca(self,choice = ("ind","var","quali_var","biplot"))
     ```
 
     Parameters
@@ -973,9 +972,8 @@ def fviz_mca(self,choice="biplot",**kwargs)->pn:
 
     `choice` : The element to subset. Possible values are :
         * "ind" for the individuals graphs
-        * "mod" for the categories graphs
-        * "var" for the variables graphs
-        * "quanti_sup" for the supplementary quantitatives variables.
+        * "var" for the categories graphs
+        * "quali_var" for the variables graphs
         * "biplot" for both individuals and categories graphs
 
     **kwargs : 	further arguments passed to or from other methods
@@ -992,8 +990,8 @@ def fviz_mca(self,choice="biplot",**kwargs)->pn:
     if self.model_ not in ["mca","specificmca"]:
         raise TypeError("'self' must be an object of class MCA or SpecificMCA")
     
-    if choice not in ["ind","mod","var","quanti_sup","biplot"]:
-        raise ValueError("'choice' should be one of 'ind', 'mod', 'var', 'quanti_sup', 'biplot'")
+    if choice not in ["ind","var","quali_var","biplot"]:
+        raise ValueError("'choice' should be one of 'ind', 'var', 'quali_var','biplot'")
     
     if choice == "ind":
         return fviz_mca_ind(self,**kwargs)
@@ -1001,10 +999,5 @@ def fviz_mca(self,choice="biplot",**kwargs)->pn:
         return fviz_mca_mod(self,**kwargs)
     elif choice == "var":
         return fviz_mca_var(self,**kwargs)
-    elif choice == "quanti_sup":
-        if hasattr(self, "quanti_sup_"):
-            return fviz_corrcircle(self,**kwargs)
-        else:
-            raise TypeError("No supplementary continuous variables available")
     elif choice == "biplot":
         return fviz_mca_biplot(self,**kwargs)
