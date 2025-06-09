@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
+from numpy import ones,array,ndarray,unique,average
+from pandas import concat, DataFrame
 
 def conditional_average(X,Y,weights=None):
     """
@@ -27,8 +27,8 @@ def conditional_average(X,Y,weights=None):
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-    # Check if X is an instance of pd.DataFrame class
-    if not isinstance(X,pd.DataFrame):
+    # Check if X is an instance of DataFrame class
+    if not isinstance(X,DataFrame):
         raise TypeError(
         f"{type(X)} is not supported. Please convert to a DataFrame with "
         "pd.DataFrame. For more information see: "
@@ -36,15 +36,21 @@ def conditional_average(X,Y,weights=None):
     
     # Set weights
     if weights is None:
-        weights = np.ones(X.shape[0])/X.shape[0]
+        weights = ones(X.shape[0])/X.shape[0]
+    elif not isinstance(weights,(list,tuple,ndarray)):
+        raise TypeError("'weights' must be a list/tuple/array of weights.")
+    elif len(weights) != X.shape[0]:
+        raise ValueError(f"'weights' must be a list/tuple/array with length {X.shape[0]}.")
+    else:
+        weights = array([x/sum(weights) for x in weights])
     
-    barycentre = pd.DataFrame().astype("float")
+    barycentre = DataFrame().astype("float")
     for col in Y.columns:
         vsQual = Y[col]
-        modalite = np.unique(vsQual)
-        bary = pd.DataFrame(index=modalite,columns=X.columns)
+        modalite = unique(vsQual)
+        bary = DataFrame(index=modalite,columns=X.columns)
         for mod in modalite:
             idx = [elt for elt, cat in enumerate(vsQual) if  cat == mod]
-            bary.loc[mod,:] = np.average(X.iloc[idx,:],axis=0,weights=weights[idx])
-        barycentre = pd.concat((barycentre,bary),axis=0)
+            bary.loc[mod,:] = average(X.iloc[idx,:],axis=0,weights=weights[idx])
+        barycentre = concat((barycentre,bary),axis=0)
     return barycentre

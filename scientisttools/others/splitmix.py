@@ -2,8 +2,9 @@
 import numpy as np
 import pandas as pd
 from collections import namedtuple
+from typing import NamedTuple
 
-def splitmix(X):
+def splitmix(X) -> NamedTuple:
     """
     Split mixed data
     ----------------
@@ -24,7 +25,7 @@ def splitmix(X):
 
     Return
     ------
-    A NamedTuple of two dataframe containing : 
+    nametuple of two dataframe containing : 
 
     `quanti`: pandas dataframe containing only the quantitative variables or None
 
@@ -66,5 +67,4 @@ def splitmix(X):
         for col in quanti.columns:
             quanti[col] = quanti[col].astype("float")
         X_quanti = quanti
-    
-    return namedtuple("splitmix",["quanti","quali"])(X_quanti,X_quali)
+    return namedtuple("SplitmixResult",["quanti","quali"])(X_quanti,X_quali)

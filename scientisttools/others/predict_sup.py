@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import numpy as np
+from numpy import ones, dot
 from mapply.mapply import mapply
 from collections import OrderedDict
 
@@ -25,9 +25,9 @@ def predict_quanti_sup(X,U,row_weights,n_workers):
     coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
 
     # Square distance to origin
-    sqdisto = np.dot(np.ones(X.shape[0]),mapply(X,lambda x : (x**2)*row_weights,axis=0,progressbar=False,n_workers=n_workers))
+    sqdisto = dot(ones(X.shape[0]),mapply(X,lambda x : (x**2)*row_weights,axis=0,progressbar=False,n_workers=n_workers))
 
     # Square cosine
     cos2 = mapply(coord,lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=n_workers)  
     
-    return OrderedDict(coord=coord,cor=coord,cos2=cos2)
+    return OrderedDict(coord=coord,cos2=cos2)

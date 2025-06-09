@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import pandas as pd
+from pandas import Series, DataFrame
 
 #load intern functions
-from .recodecont import recodecont
-from .weightedcorrtest import weightedcorrtest
+from scientisttools.others.recodecont import recodecont
+from scientisttools.others.wpearsonr import wpearsonr
 
-def contdesc(x,y,weights=None,proba=0.05):
+def contdesc(x,y,weights=None,proba=0.05) -> DataFrame:
     """
     Continuous variables description
     --------------------------------
@@ -34,11 +34,11 @@ def contdesc(x,y,weights=None,proba=0.05):
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
     # Check if x is an instance of pandas series
-    if isinstance(x,pd.Series):
+    if isinstance(x,Series):
         x = x.to_frame() 
     
     # Check if x is an instance of pandas DataFrame
-    if not isinstance(x,pd.DataFrame):
+    if not isinstance(x,DataFrame):
         raise TypeError(f"{type(x)} is not supported. Please convert to a DataFrame with "
                         "pd.DataFrame. For more information see: "
                         "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
@@ -53,9 +53,9 @@ def contdesc(x,y,weights=None,proba=0.05):
     x = recodecont(x).Xcod
 
     # For continuous variables
-    value = pd.DataFrame(index=x.columns,columns=["correlation","pvalue"]).astype("float")
+    value = DataFrame(index=x.columns,columns=["correlation","pvalue"]).astype("float")
     for col in x.columns:
-        res = weightedcorrtest(x=x[col],y=y,weights=weights)
-        value.loc[col,:] = [res["statistic"],res["pvalue"]]
+        res = wpearsonr(x=x[col],y=y,weights=weights)
+        value.loc[col,:] = [res.statistic,res.pvalue]
     value = value.query('pvalue < @proba').sort_values(by="correlation",ascending=False)
     return value

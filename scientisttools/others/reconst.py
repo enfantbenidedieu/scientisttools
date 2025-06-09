@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 import numpy as np
+from pandas import DataFrame
 
-def reconst(self,n_components=None):
+def reconst(self,n_components=None) -> DataFrame:
     """
     Reconstruction of the data from the PCA, CA or MFA results
     ----------------------------------------------------------

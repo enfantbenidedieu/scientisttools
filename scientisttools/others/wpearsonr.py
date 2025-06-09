@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import scipy as sp
-from .weightedcorrcoef import weightedcorrcoef
+from scipy import stats
+from statsmodels.stats.weightstats import DescrStatsW
+from collections import namedtuple
 
-def weightedcorrtest(x,y,weights=None):
+def wpearsonr(x,y,weights=None):
     """
     Weighted Pearson correlation coefficient and p-value for testing non-correlation.
     ---------------------------------------------------------------------------------
@@ -15,7 +16,7 @@ def weightedcorrtest(x,y,weights=None):
     Usage
     -----
     ```python
-    >>> weightedcorrtest(x,y,weights=None)
+    >>> wpearsonr(x,y,weights=None)
     ```
 
     Parameters
@@ -28,7 +29,7 @@ def weightedcorrtest(x,y,weights=None):
 
     Return
     ------
-    a dictionary containing estimates of the weighted correlation, the degree of freedom and the pvalue associated :
+    nametuple containing estimates of the weighted correlation, the degree of freedom and the pvalue associated :
         * statistic : weighted Pearson product-moment correlation coefficient
         * dof : degre of freedom   
         * pvalue : the p-value associated
@@ -39,13 +40,15 @@ def weightedcorrtest(x,y,weights=None):
 
     Examples
     --------
-    ```
+    ```python
     >>> import numpy as np
-    >>> from scientisttools import weightedcorrtest
+    >>> from scientisttools import wpearsonr
     >>> x = np.arange(1,11)
     >>> y = np.array([1,2,3,8,7,6,5,8,9,10])
     >>> wt = np.array([0,0,0,1,1,1,1,1,0,0])
-    >>> res = weightedcorrtest(x=x,y=y,weights=wt)
+    >>> res = wpearsonr(x=x,y=y,weights=wt)
+    >>> res
+    ...WPearsonRResult(statistic=-0.24253562503633294, dof=8, pvalue=0.49957589436325933)
     ```
     """
      # Set weights
@@ -54,8 +57,7 @@ def weightedcorrtest(x,y,weights=None):
     else:
         weights = np.array([x/np.sum(weights) for x in weights])
     
-    statistic = weightedcorrcoef(x=x,y=y,w=weights)[0,1]
-    t_stat = statistic*np.sqrt(((len(x)-2)/(1- statistic**2)))
-    dof = len(x) - 2
-    pvalue = 2*(1 - sp.stats.t.cdf(np.abs(t_stat),dof))
-    return {"statistic" : statistic,"dof" : dof ,"pvalue" : pvalue}
+    statistic = DescrStatsW(np.c_[x,y],weights=weights).corrcoef[0,1]
+    t_stat, dof = statistic*np.sqrt(((len(x)-2)/(1- statistic**2))), len(x) - 2
+    pvalue = 2*(1 - stats.t.cdf(np.abs(t_stat),dof))
+    return namedtuple("WPearsonRResult",["statistic","dof","pvalue"])(statistic,dof,pvalue)
