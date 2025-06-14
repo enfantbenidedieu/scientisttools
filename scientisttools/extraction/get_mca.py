@@ -4,12 +4,12 @@ from typing import NamedTuple
 
 def get_mca_ind(self) -> NamedTuple:
     """
-    Extract the results for individuals - MCA/SpecificMCA
-    -----------------------------------------------------
+    Extract the results for individuals - MCA
+    -----------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus and relative contributions) for the active individuals from (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) outputs.
+    Extract all the results (factor coordinates, square cosinus and relative contributions) for the active individuals from Multiple Correspondence Analysis (MCA) outputs.
 
     Usage
     -----
@@ -19,7 +19,7 @@ def get_mca_ind(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class MCA, SpecificMCA
+    `self` : an object of class MCA
 
     Returns
     -------
@@ -44,26 +44,26 @@ def get_mca_ind(self) -> NamedTuple:
     >>> from scientisttools import load_poison
     >>> poison = load_poison()
     >>> from scientisttools import MCA
-    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca = MCA(n_components=5,ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
     >>> res_mca.fit(poison)
     >>> from scientistools import get_mca_ind
     >>> # Extract results for the individuals
     >>> ind = get_mca_ind(res_mca) 
     ```
     """
-    # Check if self is an object of class MCA/SpecificMCA
-    if self.model_ not in ["mca","specificmca"]:
-        raise TypeError("'self' must be an object of class MCA or SpecificMCA")
+    # Check if self is an object of class MCA
+    if self.model_ != "mca":
+        raise TypeError("'self' must be an object of class MCA")
     return self.ind_
             
 def get_mca_var(self) -> NamedTuple:
     """
-    Extract the results for the variables - MCA/SpecificMCA
-    -------------------------------------------------------  
+    Extract the results for the variables - MCA
+    -------------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus, relative contributions) for the active variable categories from (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) outputs.
+    Extract all the results (factor coordinates, square cosinus, relative contributions) for the active variable categories from Multiple Correspondence Analysis (MCA) outputs.
 
     Usage
     -----
@@ -73,7 +73,7 @@ def get_mca_var(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class MCA, SpecificMCA
+    `self` : an object of class MCA
 
     Returns
     -------
@@ -106,26 +106,26 @@ def get_mca_var(self) -> NamedTuple:
     >>> from scientisttools import load_poison
     >>> poison = load_poison()
     >>> from scientisttools import MCA
-    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca = MCA(n_components=5,ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
     >>> res_mca.fit(poison)
     >>> from scientistools import get_mca_var
     >>> # Extract results for the variables
     >>> var = get_mca_var(res_mca) 
     ```
     """
-    # Check if self is an object of class MCA/SpecificMCA
-    if self.model_ not in ["mca","specificmca"]:
-        raise TypeError("'self' must be an object of class MCA or SpecificMCA")
+    # Check if self is an object of class MCA
+    if self.model_ != "mca":
+        raise TypeError("'self' must be an object of class MCA")
     return self.var_
     
 def get_mca(self,choice="ind") -> NamedTuple:
     """
-    Extract the results for individuals/variables - MCA/SpecificMCA
-    ---------------------------------------------------------------
+    Extract the results for individuals/variables - MCA
+    ---------------------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosine and contributions) for the active individuals/variable categories from (specific) Multiple Correspondence Analysis (MCA/SpecificMCA) outputs.
+    Extract all the results (factor coordinates, squared cosine and contributions) for the active individuals/variable categories from Multiple Correspondence Analysis (MCA) outputs.
 
         * get_mca() : Extract the results for vriables and individuals
         * get_mca_ind() : Extract the results for individuals only
@@ -139,7 +139,7 @@ def get_mca(self,choice="ind") -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class MCA, SpecificMCA
+    `self` : an object of class MCA
 
     `choice` : the element to subset from the output. Possible values are :
         * "ind" for individuals, 
@@ -166,7 +166,7 @@ def get_mca(self,choice="ind") -> NamedTuple:
     >>> from scientisttools import load_poison
     >>> poison = load_poison()
     >>> from scientisttools import MCA, get_mca
-    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1])
+    >>> res_mca = MCA(n_components=5,ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1])
     >>> res_mca.fit(poison)
     >>> # Extract results for the individuals
     >>> ind = get_mca(res_mca, choice = "ind")
@@ -174,9 +174,9 @@ def get_mca(self,choice="ind") -> NamedTuple:
     >>> var = get_mca(res_mca, choice = "var")
     ```
     """
-    # Check if self is an object of class MCA/SpecificMCA
-    if self.model_ not in ["mca","specificmca"]:
-        raise TypeError("'self' must be an object of class MCA or SpecificMCA")
+    # Check if self is an object of class MCA
+    if self.model_ != "mca":
+        raise TypeError("'self' must be an object of class MCA")
     
     if choice not in ["ind","var"]:
         raise ValueError("'choice' should be one of 'ind', 'var'")
@@ -188,8 +188,8 @@ def get_mca(self,choice="ind") -> NamedTuple:
     
 def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
-    Printing summaries of (Specific) Multiple Correspondence Analysis model
-    -----------------------------------------------------------------------
+    Printing summaries of Multiple Correspondence Analysis model
+    ------------------------------------------------------------
 
     Description
     -----------
@@ -203,7 +203,7 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     Parameters
     ----------
-    `self` : an object of class MCA, SpecificMCA
+    `self` : an object of class MCA
 
     `digits` : int, default=3. Number of decimal printed
 
@@ -228,24 +228,21 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     >>> from scientisttools import load_poison
     >>> poison = load_poison()
     >>> from scientisttools import MCA, summaryMCA
-    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca = MCA(n_components=5,ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
     >>> res_mca.fit(poison)
     >>> summaryMCA(res_mca)
     ```
     """
-    # Check if self is an object of class MCA/SpecificMCA
-    if self.model_ not in ["mca","specificmca"]:
-        raise ValueError("'self' must be an object of class MCA or SpecificMCA")
+    # Check if self is an object of class MCA
+    if self.model_ != "mca":
+        raise ValueError("'self' must be an object of class MCA")
 
     #et number of components and number of elements
     ncp, nb_element = min(ncp,self.call_.n_components), min(nb_element,self.call_.X.shape[0],self.var_.coord.shape[0])
 
     # Multiple correspondance Analysis - Results
-    if self.model_ == "mca":
-        print("                     Multiple Correspondance Analysis - Results                     \n")
-    elif self.model_ == "specificmca":
-        print("                     Specific Multiple Correspondance Analysis - Results                     \n")
-
+    print("                     Multiple Correspondance Analysis - Results                     \n")
+    
     #----------------------------------------------------------------------------------------------------------------------------------------
     ##Add eigenvalues informations
     #----------------------------------------------------------------------------------------------------------------------------------------
