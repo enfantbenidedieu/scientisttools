@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
+from numpy import ones, c_, insert, diff, nan, cumsum, diag
+from pandas import DataFrame
 from mapply.mapply import mapply
 from collections import namedtuple, OrderedDict
 
@@ -14,11 +14,11 @@ def fitfa(Z,row_weights,col_weights,max_components,n_components,n_workers):
 
     # Set rows weights
     if row_weights is None:
-        row_weights = np.ones(n_rows)/n_rows
+        row_weights = ones(n_rows)/n_rows
 
     # Set columns weights
     if col_weights is None:
-        col_weights = np.ones(n_cols)
+        col_weights = ones(n_cols)
 
     #--------------------------------------------------------------------------------------------
     ## Rows informations: weights, squared distance to origin, inertia and percentage of inertia
@@ -28,9 +28,9 @@ def fitfa(Z,row_weights,col_weights,max_components,n_components,n_workers):
     # row inertia
     row_inertia = row_sqdisto*row_weights
     # row percentage of inertia
-    row_inertia_pct = 100*row_inertia/np.sum(row_inertia)
+    row_inertia_pct = 100*row_inertia/sum(row_inertia)
     # convert to DataFrame
-    row_infos = pd.DataFrame(np.c_[row_weights,row_sqdisto,row_inertia,row_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","% Inertia"],index=Z.index)
+    row_infos = DataFrame(c_[row_weights,row_sqdisto,row_inertia,row_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","% Inertia"],index=Z.index)
 
     #------------------------------------------------------------------------------------------------------------------------
     ## Columns informations : weights, squared distance to origin, inertia and percentage of inertia
@@ -40,9 +40,9 @@ def fitfa(Z,row_weights,col_weights,max_components,n_components,n_workers):
     # columns inertia
     col_inertia = col_sqdisto*col_weights
     # columns percentage of inertia
-    col_inertia_pct = 100*col_inertia/np.sum(col_inertia)
+    col_inertia_pct = 100*col_inertia/sum(col_inertia)
     # convert to DataFrame
-    col_infos = pd.DataFrame(np.c_[col_weights,col_sqdisto,col_inertia,col_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","% Inertia"],index=Z.columns)
+    col_infos = DataFrame(c_[col_weights,col_sqdisto,col_inertia,col_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","% Inertia"],index=Z.columns)
     
     #-------------------------------------------------------------------------------------------------------
     ## Generalized Singular Value Decomposition (GSVD)
@@ -53,18 +53,18 @@ def fitfa(Z,row_weights,col_weights,max_components,n_components,n_workers):
     ## Eigen - values
     #-------------------------------------------------------------------------------------------------------
     eigen_values = svd.vs[:max_components]**2
-    difference = np.insert(-np.diff(eigen_values),len(eigen_values)-1,np.nan)
-    proportion = 100*eigen_values/np.sum(eigen_values)
-    cumulative = np.cumsum(proportion)
+    difference = insert(-diff(eigen_values),len(eigen_values)-1,nan)
+    proportion = 100*eigen_values/sum(eigen_values)
+    cumulative = cumsum(proportion)
 
     # store all informations
-    eig = pd.DataFrame(np.c_[eigen_values,difference,proportion,cumulative],columns=["eigenvalue","difference","proportion","cumulative"],index = ["Dim."+str(x+1) for x in range(len(eigen_values))])
+    eig = DataFrame(c_[eigen_values,difference,proportion,cumulative],columns=["eigenvalue","difference","proportion","cumulative"],index = ["Dim."+str(x+1) for x in range(len(eigen_values))])
 
     #-----------------------------------------------------------------------------------------------------------
     ## row informations : factor coordinates, contributions and squared Cosinus
     #-----------------------------------------------------------------------------------------------------------
     # rows factor coordinates
-    row_coord = pd.DataFrame(svd.U.dot(np.diag(svd.vs[:n_components])),index=Z.index,columns=["Dim."+str(x+1) for x in range(n_components)])
+    row_coord = DataFrame(svd.U.dot(diag(svd.vs[:n_components])),index=Z.index,columns=["Dim."+str(x+1) for x in range(n_components)])
 
     # rows contributions
     row_contrib = mapply(mapply(row_coord,lambda x : 100*(x**2)*row_weights,axis=0,progressbar=False,n_workers=n_workers),lambda x : x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
@@ -79,7 +79,7 @@ def fitfa(Z,row_weights,col_weights,max_components,n_components,n_workers):
     ## columns informations : factor coordinates, contributions and squared cosinus
     #---------------------------------------------------------------------------------------------------------------
     # columns factor coordinates
-    col_coord = pd.DataFrame(svd.V.dot(np.diag(svd.vs[:n_components])),index=Z.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
+    col_coord = DataFrame(svd.V.dot(diag(svd.vs[:n_components])),index=Z.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
 
     # columns contributions
     col_contrib = mapply(mapply(col_coord,lambda x : 100*(x**2)*col_weights,axis=0,progressbar=False,n_workers=n_workers), lambda x : x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
