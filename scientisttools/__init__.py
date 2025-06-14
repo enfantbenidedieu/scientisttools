@@ -10,7 +10,6 @@ from scientisttools.methods.PartialPCA import PartialPCA, predictPartialPCA, sup
 from scientisttools.methods.EFA import EFA
 from scientisttools.methods.CA import CA, predictCA, supvarCA
 from scientisttools.methods.MCA import MCA, predictMCA, supvarMCA
-#from .specificmca import SpecificMCA, predictSpecificMCA, supvarSpecificMCA
 #from .famd import FAMD, predictFAMD, supvarFAMD
 #from .pcamix import PCAMIX, predictPCAMIX, supvarPCAMIX
 #from .mpca import MPCA, predictMPCA, supvarMPCA
