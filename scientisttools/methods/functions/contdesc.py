@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-import numpy as np
+from numpy import array, ones
 from pandas import Series, DataFrame
 
 #load intern functions
-from scientisttools.others.recodecont import recodecont
-from scientisttools.others.wpearsonr import wpearsonr
+from .recodecont import recodecont
+from .wpearsonr import wpearsonr
 
 def contdesc(x,y,weights=None,proba=0.05) -> DataFrame:
     """
@@ -39,18 +39,16 @@ def contdesc(x,y,weights=None,proba=0.05) -> DataFrame:
     
     # Check if x is an instance of pandas DataFrame
     if not isinstance(x,DataFrame):
-        raise TypeError(f"{type(x)} is not supported. Please convert to a DataFrame with "
-                        "pd.DataFrame. For more information see: "
-                        "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        raise TypeError(f"{type(x)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
     # Set weights
     if weights is None:
-        weights = np.ones(x.shape[0])/x.shape[0]
+        weights = ones(x.shape[0])/x.shape[0]
     else:
-        weights = np.array([x/np.sum(weights) for x in weights])
+        weights = array([x/sum(weights) for x in weights])
 
     # Fill NA with the mean
-    x = recodecont(x).Xcod
+    x = recodecont(x).X
 
     # For continuous variables
     value = DataFrame(index=x.columns,columns=["correlation","pvalue"]).astype("float")

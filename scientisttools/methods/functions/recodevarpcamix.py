@@ -1,53 +1,44 @@
 
 import numpy as np
-import pandas as pd
+from pandas import DataFrame, Series
 from .splitmix import splitmix
 from .recodecont import recodecont
 from .recodecat import recodecat
 
-def recodevar(X):
+def recodevarpcamix(X):
     """
     
     
     
     """
     # Check if pandas dataframe
-    if not isinstance(X,pd.DataFrame):
-        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
-                        "pd.DataFrame. For more information see: "
-                        "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with ""pd.DataFrame. For more information see: ""https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
     
-    X_quanti = splitmix(X)["quanti"]
-    X_quali = splitmix(X)["quali"]
+    #split data
+    X_quanti, X_quali = splitmix(X).quanti, splitmix(X).quali
 
-    # Set 
-    dummies = None
-    dummies_cod = None
-    nb_moda = None
+    # Set variables
+    dummies, dummies_cod, nb_moda = None, None, None
 
     if X_quanti is not None:
         n1, k1 = X_quanti.shape
         rec1 = recodecont(X=X_quanti)
-        Z1 = rec1["Z"]
-        means1 = rec1["means"]
-        std1 = rec1["std"]
-        Y1 = rec1["Xcod"]
+        Z1, center1, scale1, Y1 = rec1.Z, rec1.center, rec1.scale, rec1.Xcod
     
     if X_quali is not None:
         n2, k2 = X_quali.shape
         rec2 = recodecat(X_quali)
-        dummies = rec2["dummies"]
-        X_quali = rec2["X"]
-        means2 = dummies.mean(axis=0)
-        nk = dummies.sum(axis=0) 
-        std2 = np.sqrt(nk/n2)
+        X_quali, dummies = rec2.X, rec2.dummies
+        center2, n_k = dummies.mean(axis=0), dummies.sum(axis=0) 
+        scale2 = np.sqrt(n_k/n2)
 
-        dummies_cod = dummies/std2.values.reshape(1,-1)
+        dummies_cod = dummies.apply(lambda x : (x/scale2),axis=1)
         means = dummies_cod.mean(axis=0)
         Z2 = (dummies_cod - means.values.reshape(1,-1))
 
-        dummies_cent = dummies - (nk/n2).values.reshape(1,-1)
-        nb_moda = pd.Series([X_quali[col].nunique() for col in X_quali.columns],index=X_quali.columns)
+        dummies_cent = dummies - (n_k/n2).values.reshape(1,-1)
+        nb_moda = Series([X_quali[col].nunique() for col in X_quali.columns],index=X_quali.columns)
     
     # Collapse result
     if X_quanti is not None and X_quali is not None:

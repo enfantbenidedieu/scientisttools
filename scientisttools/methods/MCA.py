@@ -353,13 +353,13 @@ class MCA(BaseEstimator,TransformerMixin):
         #----------------------------------------------------------------------------------------------------------------------------------------
         max_components = n_cat - n_cols
         if self.n_components is None:
-            n_components =  max_components
+            n_components =  int(max_components)
         elif not isinstance(self.n_components,int):
             raise ValueError("'n_components' must be an integer.")
         elif self.n_components <= 0:
             raise ValueError("'n_components' must be equal or greater than 1.")
         else:
-            n_components = min(self.n_components,max_components)
+            n_components = int(min(self.n_components,max_components))
 
         #Store call informations
         call_ = OrderedDict(Xtot=Xtot,X=X,dummies=dummies,Z=Z, 

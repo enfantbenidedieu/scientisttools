@@ -2,9 +2,9 @@
 from pandas import Series,concat, DataFrame
 
 #intern functions
-from scientisttools.others.catdesc import catdesc
-from scientisttools.others.contdesc import contdesc
-from scientisttools.others.splitmix import splitmix
+from .catdesc import catdesc
+from .contdesc import contdesc
+from .splitmix import splitmix
 
 def dimdesc(self,axis=None,proba=0.05):
     """

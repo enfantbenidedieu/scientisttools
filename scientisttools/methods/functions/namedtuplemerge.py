@@ -5,6 +5,10 @@ from itertools import chain
 from operator import add
 
 def namedtuplemerge(typename=None,*args):
+    """"
+    Merge namedtuple
+    
+    """
 
     if typename is None:
         typename = '_'.join(arg.__class__.__name__ for arg in args)

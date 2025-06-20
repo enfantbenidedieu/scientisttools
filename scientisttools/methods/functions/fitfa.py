@@ -58,36 +58,36 @@ def fitfa(Z,row_weights,col_weights,max_components,n_components,n_workers):
     cumulative = cumsum(proportion)
 
     # store all informations
-    eig = DataFrame(c_[eigen_values,difference,proportion,cumulative],columns=["eigenvalue","difference","proportion","cumulative"],index = ["Dim."+str(x+1) for x in range(len(eigen_values))])
+    eig = DataFrame(c_[eigen_values,difference,proportion,cumulative],columns=["eigenvalue","difference","proportion","cumulative"],index = list(map(lambda x : "Dim."+str(x+1),range(len(eigen_values)))))
 
     #-----------------------------------------------------------------------------------------------------------
     ## row informations : factor coordinates, contributions and squared Cosinus
     #-----------------------------------------------------------------------------------------------------------
     # rows factor coordinates
-    row_coord = DataFrame(svd.U.dot(diag(svd.vs[:n_components])),index=Z.index,columns=["Dim."+str(x+1) for x in range(n_components)])
+    row_coord = DataFrame(svd.U.dot(diag(svd.vs[:n_components])),index=Z.index,columns=list(map(lambda x : "Dim."+str(x+1),range(n_components))))
 
     # rows contributions
-    row_contrib = mapply(mapply(row_coord,lambda x : 100*(x**2)*row_weights,axis=0,progressbar=False,n_workers=n_workers),lambda x : x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+    row_ctr = mapply(mapply(row_coord,lambda x : 100*(x**2)*row_weights,axis=0,progressbar=False,n_workers=n_workers),lambda x : x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
 
     # rows square cosine
     row_cos2 = mapply(row_coord,lambda x : (x**2)/row_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
 
     # Store all informations
-    row = OrderedDict(zip(["coord","cos2","contrib","infos"],[row_coord,row_cos2,row_contrib,row_infos]))
+    row = OrderedDict(zip(["coord","cos2","contrib","infos"],[row_coord,row_cos2,row_ctr,row_infos]))
 
     #---------------------------------------------------------------------------------------------------------------
     ## columns informations : factor coordinates, contributions and squared cosinus
     #---------------------------------------------------------------------------------------------------------------
     # columns factor coordinates
-    col_coord = DataFrame(svd.V.dot(diag(svd.vs[:n_components])),index=Z.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
+    col_coord = DataFrame(svd.V.dot(diag(svd.vs[:n_components])),index=Z.columns,columns=list(map(lambda x : "Dim."+str(x+1),range(n_components))))
 
     # columns contributions
-    col_contrib = mapply(mapply(col_coord,lambda x : 100*(x**2)*col_weights,axis=0,progressbar=False,n_workers=n_workers), lambda x : x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+    col_ctr = mapply(mapply(col_coord,lambda x : 100*(x**2)*col_weights,axis=0,progressbar=False,n_workers=n_workers), lambda x : x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
 
     # columns square cosine
     col_cos2 = mapply(col_coord,  lambda x : (x**2)/col_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
 
     # Store all informations
-    col = OrderedDict(zip(["coord","cos2","contrib","infos"],[col_coord,col_cos2,col_contrib,col_infos]))
+    col = OrderedDict(zip(["coord","cos2","contrib","infos"],[col_coord,col_cos2,col_ctr,col_infos]))
 
-    return namedtuple("fitfa",["svd","eig","row","col"])(svd,eig,row,col)
+    return namedtuple("fitfaResult",["svd","eig","row","col"])(svd,eig,row,col)
