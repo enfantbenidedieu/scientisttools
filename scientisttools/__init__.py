@@ -10,7 +10,7 @@ from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
 #from scientisttools.methods.EFA import EFA
 #from scientisttools.methods.CA import CA, predictCA, supvarCA
 #from scientisttools.methods.MCA import MCA, predictMCA, supvarMCA
-from scientisttools.methods.FAMD import FAMD, predictFAMD, supvarFAMD
+#from scientisttools.methods.FAMD import FAMD, predictFAMD, supvarFAMD
 #from .pcamix import PCAMIX, predictPCAMIX, supvarPCAMIX
 #from .mpca import MPCA, predictMPCA, supvarMPCA
 #from .mfa import MFA, predictMFA, supvarMFA
@@ -36,13 +36,13 @@ from scientisttools.methods.FAMD import FAMD, predictFAMD, supvarFAMD
 #----------------------------------------------------------------------------------------------------------------------------------------
 ## Extraction
 #----------------------------------------------------------------------------------------------------------------------------------------
-from scientisttools.extraction.get_eig import get_eig,get_eigenvalue
-from scientisttools.extraction.get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
-from scientisttools.extraction.get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
-from scientisttools.extraction.get_efa import get_efa_ind, get_efa_var, get_efa, summaryEFA
-from scientisttools.extraction.get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
-from scientisttools.extraction.get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
-from scientisttools.extraction.get_famd import get_famd_ind, get_famd_var, get_famd, summaryFAMD
+#from scientisttools.extraction.get_eig import get_eig,get_eigenvalue
+#from scientisttools.extraction.get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
+#from scientisttools.extraction.get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
+#from scientisttools.extraction.get_efa import get_efa_ind, get_efa_var, get_efa, summaryEFA
+#from scientisttools.extraction.get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
+#from scientisttools.extraction.get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
+#from scientisttools.extraction.get_famd import get_famd_ind, get_famd_var, get_famd, summaryFAMD
 #from .get_pcamix import get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX
 #from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
 #from .get_mfa import get_mfa_ind, get_mfa_var, get_mfa_partial_axes, get_mfa, summaryMFA
@@ -97,9 +97,9 @@ from scientisttools.extraction.get_famd import get_famd_ind, get_famd_var, get_f
 #from .coeffRV import coeffRV
 #from .conditional_average import conditional_average
 #from .contdesc import contdesc
-from scientisttools.methods.functions.coord_ellipse import coord_ellipse
+#from scientisttools.methods.functions.coord_ellipse import coord_ellipse
 #from .covariance_to_correlation import covariance_to_correlation
-from scientisttools.methods.functions.dimdesc import dimdesc
+#from scientisttools.methods.functions.dimdesc import dimdesc
 #from .eta2 import eta2
 #from .function_eta2 import function_eta2
 #from .function_lg import function_lg
@@ -111,12 +111,12 @@ from scientisttools.methods.functions.dimdesc import dimdesc
 #from .recodecont import recodecont
 #from .recodevar import recodevar
 #from .recodevarfamd import recodevarfamd
-from scientisttools.methods.functions.reconst import reconst
+#from scientisttools.methods.functions.reconst import reconst
 #from .revaluate_cat_variable import revaluate_cat_variable
 #from .sim_dist import sim_dist
-from scientisttools.methods.functions.splitmix import splitmix
+#from scientisttools.methods.functions.splitmix import splitmix
 #from .svd_triplet import svd_triplet
-from scientisttools.methods.functions.wpearsonr import wpearsonr
+#from scientisttools.methods.functions.wpearsonr import wpearsonr
 #from .weightedcorrtest import weightedcorrtest
 
 
