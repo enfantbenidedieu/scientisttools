@@ -1,8 +1,6 @@
-
 # -*- coding: utf-8 -*-
 from pandas import DataFrame, Categorical
-import plotnine as pn
-from mizani.formatters import percent_format
+from plotnine import ggplot, aes, theme_minimal, geom_bar, geom_line, geom_point, geom_text,scale_y_continuous,labs,ylim
 
 def fviz_screeplot(self,
                    choice = "proportion",
@@ -20,7 +18,7 @@ def fviz_screeplot(self,
                    x_label = None,
                    y_label = None,
                    title = None,
-                   ggtheme = pn.theme_minimal()) -> pn:
+                   ggtheme = theme_minimal()):
     """
     Visualize the eigenvalues/proportions/cumulative of dimensions
     ------------------------------------------------------------
@@ -33,22 +31,22 @@ def fviz_screeplot(self,
     -----
     ```python
     >>> fviz_screeplot(self,
-                        choice = "proportion",
-                        geom_type =["bar","line"],
-                        y_lim = None,
-                        bar_fill = "steelblue",
-                        bar_color = "steelblue",
-                        line_color = "black",
-                        line_type = "solid",
-                        bar_width = None,
-                        ncp = 10,
-                        add_labels = False,
-                        ha = "center",
-                        va = "bottom",
-                        title = None,
-                        x_label = None,
-                        y_label = None,
-                        ggtheme = pn.theme_minimal())
+                       choice = "proportion",
+                       geom_type =["bar","line"],
+                       y_lim = None,
+                       bar_fill = "steelblue",
+                       bar_color = "steelblue",
+                       line_color = "black",
+                       line_type = "solid",
+                       bar_width = None,
+                       ncp = 10,
+                       add_labels = False,
+                       ha = "center",
+                       va = "bottom",
+                       title = None,
+                       x_label = None,
+                       y_label = None,
+                       ggtheme = theme_minimal())
     ```
     
     Parameters
@@ -102,7 +100,7 @@ def fviz_screeplot(self,
     >>> from scientisttools import load_children
     >>> children  = load_children()
     >>> from scientisttools import CA, fviz_screeplot
-    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
     >>> res_ca.fit(children)
     >>> p = fviz_screeplot(res_ca)
     >>> print(p)
@@ -139,17 +137,17 @@ def fviz_screeplot(self,
     
     df_eig = DataFrame({"dim" : Categorical(range(1,len(eig)+1)),"eig" : eig.values})
     
-    p = pn.ggplot(df_eig,pn.aes(x = "dim",y="eig",group = 1))
+    p = ggplot(df_eig,aes(x = "dim",y="eig",group = 1))
     if "bar" in geom :
-        p = p +  pn.geom_bar(stat="identity",fill=fill_bar,color=col_bar,width=width_bar)
+        p = p +  geom_bar(stat="identity",fill=fill_bar,color=col_bar,width=width_bar)
     if "line" in geom :
-        p = p +  pn.geom_line(color=col_line,linetype=linetype) + pn.geom_point(shape="o",color=col_line)
+        p = p +  geom_line(color=col_line,linetype=linetype) + geom_point(shape="o",color=col_line)
     if add_labels:
-        p = p + pn.geom_text(label=text_labels,ha=ha,va=va)
+        p = p + geom_text(label=text_labels,ha=ha,va=va)
     
     # Scale y continuous
     if choice in ["proportion","cumulative"]:
-        p = p + pn.scale_y_continuous(labels=percent_format())
+        p = p + scale_y_continuous(labels=percent_format())
 
     if title is None:
         title = "Scree plot"
@@ -157,14 +155,14 @@ def fviz_screeplot(self,
         x_label = "Dimensions"
     if y_label is None:
         y_label = "% of explained variances"
-    p = p + pn.labs(title = title, x = x_label, y = y_label)
+    p = p + labs(title = title, x = x_label, y = y_label)
     if y_lim is not None:
-        p = p + pn.ylim(y_lim)
+        p = p + ylim(y_lim)
 
     p = p + ggtheme
     return p
 
-def fviz_eig(self,**kwargs) -> pn:
+def fviz_eig(self,**kwargs):
     """
     Visualize the eigenvalues/proportions/cumulative of dimensions
     --------------------------------------------------------------

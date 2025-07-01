@@ -18,7 +18,7 @@ from pandas import Categorical, concat
 from numpy import issubdtype,number,asarray,ndarray
 
 #intern functions
-from scientisttools.plot.fviz_add import fviz_add, gg_circle,text_label,list_colors
+from .fviz_add import fviz_add, gg_circle,text_label,list_colors
 
 def fviz_pca_ind(self,
                  axis = [0,1],

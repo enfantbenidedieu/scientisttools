@@ -238,7 +238,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     # Add eigenvalues informations
     print("Eigenvalues")
     eig = self.eig_.T.round(decimals=digits)
-    eig.index = ["Variance","Difference","% of var.","Cumulative % of var."]
+    eig.index = ["Variance","Difference","% of var.","Cumulative % of var.","Broken-stick crit. val."]
     if to_markdown:
         print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
     else:

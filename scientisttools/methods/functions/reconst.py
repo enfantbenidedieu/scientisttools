@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import numpy as np
+from mapply.mapply import mapply
 from pandas import DataFrame
 
 def reconst(self,n_components=None) -> DataFrame:
@@ -54,12 +54,25 @@ def reconst(self,n_components=None) -> DataFrame:
     else:
         raise ValueError("'n_components' must be pass.")
     
-    if self.model_ == "pca":
-        # Valeurs centrées
-        Z = np.dot(self.ind_.coord.iloc[:,:n_components],self.svd_.V[:,:n_components].T)
-        # Déstandardisation et décentrage
-        X = self.call_.X.copy()
-        for k in np.arange(self.var_.coord.shape[0]):
-            X.iloc[:,k] = Z[:,k]*self.call_.scale.values[k] + self.call_.center.values[k]
-    
-    return X
+    if self.model_ == "ca":
+        X = self.call_.X
+        F = X
+
+    else:
+        #variables factor coordinates
+        if self.model_ == "pca":
+            var_coord = self.var_.coord.iloc[:,:n_components]
+        
+        #individuals factor coordinates
+        ind_coord = self.ind_.coord.iloc[:,:n_components]
+
+        hatX = ind_coord.dot(mapply(var_coord,lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers).T)
+        
+        #Principal Component Analysis (PCA)
+        if self.model_ == "pca":
+            hatX = mapply(hatX,lambda x : (x*self.call_.scale)+self.call_.center,axis=1,progressbar=False,n_workers=self.call_.n_workers)
+        #Multiple Factor Analysis (MFA)
+        if self.model_ == "mfa":
+            pass
+
+    return hatX

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from scipy.stats import chi2
 from numpy import ndarray, array, ones, sqrt, linalg, log, flip,cumsum,mean
-from pandas import DataFrame, Series, Categorical, crosstab, concat
+from pandas import DataFrame, Series, Categorical, api, crosstab, concat
 from scipy.stats import chi2_contingency
 from typing import NamedTuple
 from collections import namedtuple,OrderedDict
@@ -153,14 +153,14 @@ class PCA(BaseEstimator,TransformerMixin):
         self.quali_sup = quali_sup
         self.parallelize = parallelize
 
-    def fit(self,X,y=None):
+    def fit(self,X:DataFrame,y=None):
         """
         Fit the model to X
         ------------------
 
         Parameters
         ----------
-        `X` : pandas/polars DataFrame of shape (n_samples, n_columns)
+        `X` : pandas DataFrame of shape (n_samples, n_columns)
             Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
         `y` : None
@@ -193,8 +193,8 @@ class PCA(BaseEstimator,TransformerMixin):
         #----------------------------------------------------------------------------------------------------------------------------------------
         is_quali = X.select_dtypes(include=["object","category"])
         if is_quali.shape[1]>0:
-            for j in is_quali.columns:
-                X[j] = Categorical(X[j],categories=sorted(X[j].dropna().unique().tolist()),ordered=True)
+            for q in is_quali.columns:
+                X[q] = Categorical(X[q],categories=sorted(X[q].dropna().unique().tolist()),ordered=True)
         
         #----------------------------------------------------------------------------------------------------------------------------------------
         ##check if supplementary qualitatives variables
@@ -251,10 +251,10 @@ class PCA(BaseEstimator,TransformerMixin):
             if self.quali_sup is None:
                 X = recodecont(X).X
             else:
-                col_list = [x for x in X.columns if x not in quali_sup_label]
-                for j in col_list:
-                    if X.loc[:,j].isnull().any():
-                        X.loc[:,j] = X.loc[:,j].fillna(X.loc[:,j].mean())
+                col_list = [k for k in X.columns if k not in quali_sup_label]
+                for k in col_list:
+                    if X.loc[:,k].isnull().any():
+                        X.loc[:,k] = X.loc[:,k].fillna(X.loc[:,k].mean())
 
         # Make a copy of the data
         Xtot = X.copy()
@@ -443,7 +443,7 @@ class PCA(BaseEstimator,TransformerMixin):
             quali_sup_sqdisto.name = "Sq. Dist."
 
             #categories coefficients
-            n_k = concat((X_quali_sup[j].value_counts().sort_index() for j in X_quali_sup.columns),axis=0)
+            n_k = concat((X_quali_sup[q].value_counts().sort_index() for q in X_quali_sup.columns),axis=0)
             coef_k = sqrt(((n_rows-1)*n_k)/(n_rows-n_k))
 
             #statistics for supplementary categories
@@ -458,9 +458,9 @@ class PCA(BaseEstimator,TransformerMixin):
 
             #summary statistiques for qualitative variables
             summary_quali_sup = DataFrame()
-            for j in X_quali_sup.columns:
-                eff = X_quali_sup[j].value_counts().to_frame("count").reset_index().rename(columns={j : "categorie"}).assign(proportion=lambda x :x["count"]/sum(x["count"]))
-                eff.insert(0,"variable",j)
+            for q in X_quali_sup.columns:
+                eff = X_quali_sup[q].value_counts().to_frame("count").reset_index().rename(columns={q : "categorie"}).assign(proportion=lambda x :x["count"]/sum(x["count"]))
+                eff.insert(0,"variable",q)
                 summary_quali_sup = concat([summary_quali_sup,eff],axis=0,ignore_index=True)
             summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
             self.summary_quali_ = summary_quali_sup
@@ -469,10 +469,10 @@ class PCA(BaseEstimator,TransformerMixin):
             if n_quali_sup>1:
                 chi2_test = DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
                 idx = 0
-                for i in range(n_quali_sup-1):
-                    for j in range(i+1,n_quali_sup):
-                        chi = chi2_contingency(crosstab(X_quali_sup.iloc[:,i],X_quali_sup.iloc[:,j]),correction=False)
-                        row_chi2 = DataFrame(OrderedDict(variable1=X_quali_sup.columns[i],variable2=X_quali_sup.columns[j],statistic=chi.statistic,dof=chi.dof,pvalue=chi.pvalue),index=[idx])
+                for q1 in range(n_quali_sup-1):
+                    for q2 in range(q1+1,n_quali_sup):
+                        chi = chi2_contingency(crosstab(X_quali_sup.iloc[:,q1],X_quali_sup.iloc[:,q2]),correction=False)
+                        row_chi2 = DataFrame(OrderedDict(variable1=X_quali_sup.columns[q1],variable2=X_quali_sup.columns[q2],statistic=chi.statistic,dof=chi.dof,pvalue=chi.pvalue),index=[idx])
                         chi2_test = concat((chi2_test,row_chi2),axis=0,ignore_index=True)
                         idx = idx + 1
                 chi2_test["dof"] = chi2_test["dof"].astype("int")
@@ -484,7 +484,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         return self
     
-    def fit_transform(self,X,y=None):
+    def fit_transform(self,X:DataFrame,y=None) -> DataFrame:
         """
         Fit the model with X and apply the dimensionality reduction on X
         ----------------------------------------------------------------
@@ -505,7 +505,7 @@ class PCA(BaseEstimator,TransformerMixin):
         self.fit(X)
         return self.ind_.coord
     
-    def inverse_transform(self,X,n_components=None):
+    def inverse_transform(self,X:DataFrame) -> DataFrame:
         """
         Transform data back to its original space
         -----------------------------------------
@@ -516,15 +516,28 @@ class PCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        `X` : pandas dataframe of shape (n_samples, n_components)
+        `X` : pandas dataframe of shape (n_samples, n_components).
+            New data, where `n_samples` is the number of samples and `n_components` is the number of components.
+
+        Returns
+        -------
+        `X_original` : pandas dataframe of shape (n_samples, n_columns)
+            Original data, where ``n_samples` is the number of samples and `n_columns` is the number of columns
         
         """
+        # Check if X is a pandas DataFrame
+        if not isinstance(X,DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-        self.fit(X)
-        #reconst(self,n_components=n_components)
-        return NotImplementedError("Not yet implemented")
+        # set number of components
+        n_components = min(X.shape[1],self.call_.n_components)
 
-    def transform(self,X):
+        #inverse transform
+        X_original = X.iloc[:,:n_components].dot(mapply(self.var_.coord.iloc[:,:n_components],lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers).T)
+        X_original = mapply(X_original,lambda x : (x*self.call_.scale)+self.call_.center,axis=1,progressbar=False,n_workers=self.call_.n_workers)
+        return X_original
+
+    def transform(self,X:DataFrame) -> DataFrame:
         """
         Apply the dimensionality reduction on X
         ---------------------------------------
@@ -547,21 +560,24 @@ class PCA(BaseEstimator,TransformerMixin):
         if not isinstance(X,DataFrame):
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # check if X.shape[1] = ncols
+        #check if X.shape[1] = ncols
         if X.shape[1] != self.call_.X.shape[1]:
             raise ValueError("'columns' aren't aligned")
         
-        # Set index name as None
+        #set index name as None
         X.index.name = None
         
-        # Transform to float
-        X = X.astype("float")
-        #
+        #check if all variables are numerics
+        all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
+        if not all_num:
+            raise TypeError("All columns must be numeric")
+        
+        #factor coordinates
         coord = mapply(X,lambda x : ((x - self.call_.center)/self.call_.scale)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.svd_.V)
         coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
         return coord
     
-def predictPCA(self,X=None) -> NamedTuple:
+def predictPCA(self,X:DataFrame) -> NamedTuple:
     """
     Predict projection for new individuals with Principal Component Analysis (PCA)
     ------------------------------------------------------------------------------
@@ -626,8 +642,10 @@ def predictPCA(self,X=None) -> NamedTuple:
     # Set index name as None
     X.index.name = None
 
-    # Convert to float
-    X = X.astype("float")
+    #check if all variables are numerics
+    all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
+    if not all_num:
+        raise TypeError("All columns must be numeric")
 
     # Standardize data
     Z = mapply(X,lambda x : (x - self.call_.center)/self.call_.scale,axis=1,progressbar=False,n_workers=self.call_.n_workers)
@@ -713,11 +731,13 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
         if not isinstance(X_quanti_sup,DataFrame):
             raise TypeError(f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Set index name as None
-        X_quanti_sup.index.name = None
+        #check if all variables are numerics
+        all_num = all(api.types.is_numeric_dtype(X_quanti_sup[k]) for k in X_quanti_sup.columns)
+        if not all_num:
+            raise TypeError("All columns in `X_quanti_sup` must be numeric")
         
         #fill missing with mean
-        X_quanti_sup = recodecont(X_quanti_sup.astype("float")).X
+        X_quanti_sup = recodecont(X_quanti_sup).X
 
         # Compute weighted average and standard deviation
         d_quanti_sup = DescrStatsW(X_quanti_sup,weights=self.call_.ind_weights,ddof=0)
@@ -750,12 +770,14 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
         if not isinstance(X_quali_sup,DataFrame):
             raise TypeError(f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Set index name as None
-        X_quali_sup.index.name = None
+        # Check if all columns are categoricals
+        all_cat = all(api.types.is_string_dtype(X_quali_sup[q]) for q in X_quali_sup.columns)
+        if not all_cat:
+            raise TypeError("All columns in `X_quali_sup` must be categoricals")
         
-        # Transform to object
-        for col in X_quali_sup.columns:
-            X_quali_sup[col] = Categorical(X_quali_sup[col],categories=sorted(X_quali_sup[col].dropna().unique().tolist()),ordered=True)
+        #convert to factor
+        for q in X_quali_sup.columns:
+            X_quali_sup[q] = Categorical(X_quali_sup[q],categories=sorted(X_quali_sup[q].dropna().unique().tolist()),ordered=True)
         
         # Check if two columns have the same categories
         X_quali_sup = revaluate_cat_variable(X_quali_sup)
@@ -770,8 +792,7 @@ def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
         quali_sup_sqdisto.name = "Sq. Dist."
 
         #categories coefficients
-        n_k = concat((X_quali_sup[j].value_counts().sort_index() for j in X_quali_sup.columns),axis=0)
-        n_rows = X_quali_sup.shape[0]
+        n_rows, n_k = X_quali_sup.shape[0], concat((X_quali_sup[q].value_counts().sort_index() for q in X_quali_sup.columns),axis=0)
         coef_k = sqrt(((n_rows-1)*n_k)/(n_rows-n_k))
 
         #statistics for supplementary categories
