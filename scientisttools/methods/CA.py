@@ -56,6 +56,7 @@ class CA(BaseEstimator,TransformerMixin):
         * `Xtot`: pandas dataframe with all data (active and supplementary)
         * `X`: pandas dataframe with active data
         * `Z`: pandas dataframe with standardized data
+        * `total`: a numeric specifying the sum of elements in X
         * `row_weights`: pandas series containing rows weights
         * `row_marge`: pandas series containing rows marging
         * `col_marge`: pandas series containing columns marging
@@ -66,23 +67,25 @@ class CA(BaseEstimator,TransformerMixin):
         * `quanti_sup`: None or a list of string indicating names of the supplementary quantitative variables
         * `quali_sup`: None or a list of string indicating names of the supplementary qualitative variables
 
-    `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+    `eig_`: pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    `svd_` : namedtuple of matrices containing all the results of the generalized singular value decomposition (GSVD)
+    `svd_`: namedtuple of matrices containing all the results of the generalized singular value decomposition (GSVD)
 
-    `col_` : namedtuple of pandas dataframe with all the results for the column variable (coordinates, square cosine, contributions, inertia)
+    `col_`: namedtuple of pandas dataframe with all the results for the column variable (coordinates, square cosine, contributions, inertia)
 
-    `row_` : dictionary of pandas dataframe with all the results for the row variable (coordinates, square cosine, contributions, inertia)
+    `row_`: namedtuple of pandas dataframe with all the results for the row variable (coordinates, square cosine, contributions, inertia)
 
-    `col_sup_` : dictionary of pandas dataframe containing all the results for the supplementary column points (coordinates, square cosine)
+    `others_`: namedtuple of others statistics (Kaiser threshold, ...)
 
-    `row_sup_` : dictionary of pandas dataframe containing all the results for the supplementary row points (coordinates, square cosine)
+    `row_sup_`: namedtuple of pandas dataframe containing all the results for the supplementary row points (coordinates, square cosine)
 
-    `quanti_sup_` : if quanti_sup is not None, a dictionary of pandas dataframe containing the results for the supplementary continuous variables (coordinates, square cosine)
+    `col_sup_`: namedtuple of pandas dataframe containing all the results for the supplementary column points (coordinates, square cosine)
 
-    `quali_sup_` : if quali.sup is not None, a dictionary of pandas dataframe with all the results for the supplementary categorical variables (coordinates of each categories of each variables, v.test which is a criterion with a Normal distribution, square correlation ratio)
+    `quanti_sup_`: if quanti_sup is not None, a dictionary of pandas dataframe containing the results for the supplementary continuous variables (coordinates, square cosine)
 
-    `model_` : string specifying the model fitted = 'ca'
+    `quali_sup_`: if quali.sup is not None, a dictionary of pandas dataframe with all the results for the supplementary categorical variables (coordinates of each categories of each variables, v.test which is a criterion with a Normal distribution, square correlation ratio)
+
+    `model_`: string specifying the model fitted = 'ca'
 
     Author(s)
     ---------
