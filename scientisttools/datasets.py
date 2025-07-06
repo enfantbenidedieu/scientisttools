@@ -333,12 +333,62 @@ def load_children():
     >>> # Load children dataset
     >>> from scientisttools import load_children
     >>> children = load_children()
-    >>> res_ca = CA(row_sup=list(range(14,18)),col_sup=list(range(5,8)),parallelize=True)
+    >>> res_ca = CA(row_sup=[14,15,16,17],col_sup=[5,6,7],parallelize=True)
     >>> res_ca.fit(children)
     ```
     """
     data = pyreadr.read_r(DATASETS_DIR/"children.rda")["children"]
     return data
+
+def load_children2(which="all"):
+    """
+    Children dataset
+    ----------------
+
+    Description
+    -----------
+    The data used here is a contingency table that summarizes the answers given by different categories of people to the following question : according to you, what are the reasons that can make hesitate a woman or a couple to have children?
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_children2
+    >>> children2 = load_children2()
+    ```
+
+    Format
+    ------
+    A data frame with 18 rows and 9 columns. Rows represent the different reasons mentioned, columns represent the different categories (education, age) people belong to.
+
+    Source
+    ------
+    The children dataset from FactoMineR.
+
+    Examples
+    --------
+    ```python
+    >>> # Load children dataset
+    >>> from scientisttools import load_children2
+    >>> children2 = load_children2()
+    >>> res_ca = CA(row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8,parallelize=True)
+    >>> res_ca.fit(children2)
+    ```
+    """
+    #check if which is in list
+    if which not in ["all","actif","row_sup","col_sup","quali_sup"]:
+        raise ValueError("'which' must be one of 'all', 'actif', 'row_sup', 'col_sup', 'quali_sup'")
+
+    if which == "actif":
+        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil1",index_col=0,header=0)
+    elif which == "row_sup":
+        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil2",index_col=0,header=0)
+    elif which == "col_sup":
+        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil3",index_col=0,header=0)
+    elif which == "quali_sup":
+        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+    else:
+        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil5",index_col=0,header=0)
+    return children2
 
 def load_congressvotingrecords():
     """
