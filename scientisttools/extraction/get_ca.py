@@ -19,19 +19,19 @@ def get_ca_row(self)-> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class CA
+    `self`: an object of class CA
 
     Return
     -------
     namedtuple of dataframes containing the results for the active rows including : 
 
-    `coord` : factor coordinates (scores) of the rows
+    `coord`: factor coordinates (scores) of the rows
 
-    `cos2` : square cosinus of the rows
+    `cos2`: square cosinus of the rows
 
-    `contrib` : relative contributions of the rows
+    `contrib`: relative contributions of the rows
 
-    `infos` : additionnal informations (weights, margin, square distance to origin and inertia) of the rows
+    `infos`: additionnal informations (weights, margin, square distance to origin and inertia) of the rows
     
     Author(s)
     ---------
@@ -40,17 +40,17 @@ def get_ca_row(self)-> NamedTuple:
     Examples
     --------
     ```python
-    >>> # load children dataset
-    >>> from scientisttools import load_children
-    >>> children  = load_children()
+    >>> #load children2 dataset
+    >>> from scientisttools import load_children2
+    >>> children2  = load_children2()
     >>> from scientisttools import CA, get_ca_row
     >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
-    >>> res_ca.fit(children)
-    >>> # Extract the results of rows
+    >>> res_ca.fit(children2)
+    >>> #Extract the results of rows
     >>> row = get_ca_row(res_ca)
     ```
     """
-    # Check if self is an object of class CA
+    #Check if self is an object of class CA
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
     return self.row_
@@ -72,19 +72,19 @@ def get_ca_col(self)-> NamedTuple:
     
     Parameters
     ----------
-    `self` : an object of class CA
+    `self`: an object of class CA
 
     Returns
     -------
     namedtuple of dataframes containing the results for the columns including : 
 
-    `coord` : factor coordinates of the columns
+    `coord`: factor coordinates of the columns
 
-    `cos2` : square cosinus of the columns
+    `cos2`: square cosinus of the columns
 
-    `contrib` : relative contributions of the columns
+    `contrib`: relative contributions of the columns
     
-    `infos` : additionals informations (margin, square distance to origin and inertia) of the columns
+    `infos`: additionals informations (margin, square distance to origin and inertia) of the columns
     
     Author(s)
     ---------
@@ -93,17 +93,17 @@ def get_ca_col(self)-> NamedTuple:
     Examples
     --------
     ```python
-    >>> # load children dataset
-    >>> from scientisttools import load_children
-    >>> children  = load_children()
+    >>> #load children2 dataset
+    >>> from scientisttools import load_children2
+    >>> children2  = load_children2()
     >>> from scientisttools import CA, get_ca_col
     >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
-    >>> res_ca.fit(children)
-    >>> # Extract the results of columns
+    >>> res_ca.fit(children2)
+    >>> #extract the results of columns
     >>> col = get_ca_col(res_ca)
     ```
     """
-    # Check if self is an object of class CA
+    #check if self is an object of class CA
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
     return self.col_
@@ -117,9 +117,9 @@ def get_ca(self,choice = "row")-> NamedTuple:
     -----------
     Extract all the results (factor coordinates, square cosinus, relative contributions) for the active row/column variables from Correspondence Analysis (CA) outputs.
 
-        * get_ca() : Extract the results for rows and columns
-        * get_ca_row() : Extract the results for rows only
-        * get_ca_col() : Extract the results for columns only
+        * `get_ca()`: Extract the results for rows and columns
+        * `get_ca_row()`: Extract the results for rows only
+        * `get_ca_col()`: Extract the results for columns only
 
     Usage
     -----
@@ -131,9 +131,9 @@ def get_ca(self,choice = "row")-> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class CA
+    `self`: an object of class CA
 
-    `choice` : the element to subset from the output. Possible values are : 
+    `choice`: the element to subset from the output. Possible values are : 
         * "row" for active rows
         * "col" for active columns
 
@@ -141,11 +141,11 @@ def get_ca(self,choice = "row")-> NamedTuple:
     ------
     namedtuple of dataframes containing the results for the active rows/columns including :
 
-    `coord` : factor coordinates for the rows/columns
+    `coord`: factor coordinates for the rows/columns
 
-    `cos2` : square cosinus for the rows/columns
+    `cos2`: square cosinus for the rows/columns
 
-    `contrib` : relative contributions of the rows/columns
+    `contrib`: relative contributions of the rows/columns
 
     Author(s)
     ---------
@@ -154,24 +154,24 @@ def get_ca(self,choice = "row")-> NamedTuple:
     Examples
     --------
     ```python
-    >>> # load children dataset
-    >>> from scientisttools import load_children
-    >>> children  = load_children()
+    >>> #load children2 dataset
+    >>> from scientisttools import load_children2
+    >>> children2  = load_children2()
     >>> from scientisttools import CA, get_ca
     >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
-    >>> res_ca.fit(children)
-    >>> # Extract the results of rows
+    >>> res_ca.fit(children2)
+    >>> #extract the results of rows
     >>> row = get_ca(res_ca, choice = "row")
-    >>> # Extract the results of columns
+    >>> #extract the results of columns
     >>> col = get_ca(res_ca, choice = "col")
     ```
     """
-    # Check if self is an obkect of class CA
+    #check if self is an object of class CA
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
     
     if choice not in ["row","col"]:
-        raise ValueError("'choice' should be one of 'row','col'")
+        raise ValueError("'choice' should be one of 'row', 'col'")
     
     if choice == "row":
         return get_ca_row(self)
@@ -195,19 +195,19 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     
     Parameters
     ----------
-    `self` : an object of class CA
+    `self`: an object of class CA
 
-    `digits` : int, default=3. Number of decimal printed
+    `digits`: int, default=3. Number of decimal printed
 
-    `nb_element` : int, default = 10. Number of element
+    `nb_element`: int, default = 10. Number of element
 
-    `ncp` : int, default = 3. Number of components
+    `ncp`: int, default = 3. Number of components
 
-    `to_markdown` : Print DataFrame in Markdown-friendly format.
+    `to_markdown`: Print DataFrame in Markdown-friendly format.
 
-    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt`: Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
 
-    `**kwargs` : These parameters will be passed to tabulate.
+    `**kwargs`: These parameters will be passed to tabulate.
 
     Author(s)
     ---------
@@ -216,16 +216,16 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     Examples
     --------
     ```python
-    >>> # load children dataset
-    >>> from scientisttools import load_children
-    >>> children  = load_children()
+    >>> #load children2 dataset
+    >>> from scientisttools import load_children2
+    >>> children2  = load_children2()
     >>> from scientisttools import CA, summaryCA
     >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
-    >>> res_ca.fit(children)
+    >>> res_ca.fit(children2)
     >>> summaryCA(res_ca)
     ```
     """
-    # Check if self is an object of class CA
+    #Check if self is an object of class CA
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
 
@@ -252,11 +252,31 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     ##add chi-squared test
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("\nChi-squared test\n")
-    chi2_test = self.others_.chi2
+    chi2_test = self.others_.chi2_test
     if to_markdown:
         print(chi2_test.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(chi2_test)
+
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##add log-likelihood test
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    print("\nlog-likelihood test\n")
+    g_test = self.others_.g_test
+    if to_markdown:
+        print(g_test.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(g_test)
+
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##others measure of association
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    print("\nOthers measure of association\n")
+    association = self.others_.association.round(decimals=digits)
+    if to_markdown:
+        print(association.to_markdown(tablefmt=tablefmt,**kwargs))
+    else:
+        print(association)
 
     #----------------------------------------------------------------------------------------------------------------------------------------
     ##add rows informations
