@@ -21,15 +21,15 @@ def recodecont(X) -> NamedTuple:
 
     Parameters
     ----------
-    `X` : pandas dataframe of continuous variables
+    `X`: pandas dataframe of continuous variables
 
     Return
     ------
     namedtuple containing:
-        - `X` : the continuous DataFrame X with missing values replaced with the column mean values
-        - `Z` : the standardizd continuous dataframe
-        - `center` : the mean value for each columns in X
-        - `scale` : the standard deviation for each columns of X
+        - `X`: the continuous DataFrame X with missing values replaced with the column mean values
+        - `Z`: the standardizd continuous dataframe
+        - `center`: the mean value for each columns in X
+        - `scale`: the standard deviation for each columns of X
  
     Author(s)
     ---------
