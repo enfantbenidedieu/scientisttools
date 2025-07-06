@@ -27,9 +27,9 @@ def fviz_ca_row(self,
                 text_type_row = "text",
                 gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                 legend_title = None,
-                habillage=None,
+                habillage = None,
                 palette = None,
-                add_ellipses=False, 
+                add_ellipses = False, 
                 ellipse_type = "t",
                 confint_level = 0.95,
                 geom_ellipse = "polygon",
@@ -51,7 +51,7 @@ def fviz_ca_row(self,
                 text_size_quali_sup = 8,
                 stroke_quali_sup = 0.5,
                 text_type_quali_sup = "text",
-                add_grid =True,
+                add_grid = True,
                 ha = "center",
                 va = "center",
                 add_hline = True,
@@ -126,23 +126,23 @@ def fviz_ca_row(self,
 
     Parameters
     ----------
-    `self` : an object of class CA
+    `self`: an object of class CA
 
-    `axis` : a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
+    `axis`: a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
 
-    `x_lim` : a numeric list of length 2 specifying the range of the plotted 'x' values (by default = None).
+    `x_lim`: a numeric list of length 2 specifying the range of the plotted 'x' values (by default = None).
 
-    `y_lim` : a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
+    `y_lim`: a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
 
-    `x_label` : a string specifying the label text of x (by default = None and a x_label is chosen).
+    `x_label`: a string specifying the label text of x (by default = None and a x_label is chosen).
 
-    `y_label` : a string specifying the label text of y (by default = None and a x_label is chosen).
+    `y_label`: a string specifying the label text of y (by default = None and a x_label is chosen).
 
-    `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
+    `title`: a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
 
-    `color` : a color for the active rows points (by default = "black").
+    `color`: a color for the active rows points (by default = "black").
 
-    `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
+    `geom`: a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
     `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
 
@@ -229,18 +229,18 @@ def fviz_ca_row(self,
     Examples
     --------
     ```python
-    >>> # load children dataset
-    >>> from scientisttools import load_children
-    >>> children  = load_children()
+    >>> #load children2 dataset
+    >>> from scientisttools import load_children2
+    >>> children2  = load_children2()
     >>> from scientisttools import CA, fviz_ca_row
     >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
-    >>> res_ca.fit(children)
-    >>> # Graph of row variables
+    >>> res_ca.fit(children2)
+    >>> #graph of row variables
     >>> p = fviz_ca_row(res_ca)
     >>> print(p)
     ```
     """
-    # check if self is an object of class CA
+    #check if self is an object of class CA
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
     
