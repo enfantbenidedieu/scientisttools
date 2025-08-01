@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, dot
+from numpy import ones
+from pandas import concat, DataFrame
 from mapply.mapply import mapply
 from collections import OrderedDict
+from statsmodels.stats.weightstats import DescrStatsW
 
 #intern functions
 from .function_eta2 import function_eta2
 
 #----------------------------------------------------------------------------------------------------------------------------------------
-##predict supplementary individuals
+#predict supplementary individuals
 #----------------------------------------------------------------------------------------------------------------------------------------
 def predict_ind_sup(Z,V,sqdisto,col_weights=None,n_workers=1):
     """
@@ -16,70 +18,66 @@ def predict_ind_sup(Z,V,sqdisto,col_weights=None,n_workers=1):
 
     Parameters
     ----------
-    `Z` :  pandas dataframe of standardize individuals data
+    `Z`: a pandas DataFrame of standardized individuals data
 
-    `V` : right matrix of generalized singular value decomposition
+    `V`: a 2D numpy array of the right matrix of generalized singular value decomposition (GSVD)
 
-    `sqdisto` : pandas series of supplementary individuals square distance to origin
+    `sqdisto`: pandas Series of supplementary individuals squared distance to origin
 
-    `col_weights` : array of columns weights (by default None)
+    `col_weights`: a pandas Series/ndarray/list of columns weights (by default None)
 
-    `n_workers` : integer specifying maximum amount of workers (by default 1). See https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
+    `n_workers`: integer specifying maximum amount of workers (by default 1). See https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
 
     Return(s)
     ---------
-    ordered dictionary containing:
+    an ordered dictionary of pandas DataFrames containing all the results for the supplementary individuals.
+    
+    `coord`: factor coordinates
 
-    `coord` : pandas dataframe of supplementary individuals factor coordinates
+    `cos2`: squared cosinus
 
-    `cos2` : pandas dataframe of supplementary individuals square cosinus
-
-    `dist` : pandas dataframe of supplementary individuals square distance to origin
+    `dist`: squared distance to origin
 
     Author(s)
     ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com    
-
+    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com   
     """
     #set columns weights
     if col_weights is None:
         col_weights = ones(Z.shape[1])
     
-    # Factor coordinates
+    #factor coordinates
     coord = mapply(Z,lambda x : x*col_weights,axis=1,progressbar=False,n_workers=n_workers).dot(V)
     coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
-
-    #Square cosine
+    #squared cosine
     sqcos = mapply(coord,lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=n_workers)
-    
     return OrderedDict(coord=coord,cos2=sqcos,dist=sqdisto)
 
 #----------------------------------------------------------------------------------------------------------------------------------------
-##predict supplementary quantitative variables
+#predict supplementary quantitative variables
 #----------------------------------------------------------------------------------------------------------------------------------------
-def predict_quanti_sup(Z,U,row_weights=None,n_workers=1):
+def predict_quanti_sup(X,row_coord,row_weights=None,n_workers=1):
     """
     Predict supplementary quantitative variables
     --------------------------------------------
 
     Parameters
     ----------
-    `Z` :  pandas dataframe of standardize quantitative variables
+    `X`: a pandas DataFrame of quantitative variables
 
-    `U` : left matrix of generalized singular value decomposition
+    `row_coord`: a pandas DataFrame of row factor coordinates
 
-    `row_weights` : array of rows weights (by default None)
+    `row_weights`: a pandas Series/ndarray/list of rows weights (by default None)
 
-    `n_workers` : integer specifying maximum amount of workers (by default 1). See https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
+    `n_workers`: integer specifying maximum amount of workers (by default 1). See https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
 
     Return(s)
     ---------
-    ordered dictionary containing:
+    an ordered dictionary of pandas DataFrames containing all the results for the supplementary quantitative variables.
 
-    `coord` : pandas dataframe of supplementary quantitative variables factor coordinates
+    `coord`: factor coordinates
 
-    `cos2` : pandas dataframe of supplementary quantitative variables square cosinus
-
+    `cos2`: squared cosinus
 
     Author(s)
     ---------
@@ -87,86 +85,65 @@ def predict_quanti_sup(Z,U,row_weights=None,n_workers=1):
     """
     #set row weights
     if row_weights is None:
-        row_weights = ones(Z.shape[0])/Z.shape[0]
-
-    # Factor coordinates
-    coord = mapply(Z,lambda x : x*row_weights,axis=0,progressbar=False,n_workers=n_workers).T.dot(U)
-    coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
-
-    # Square distance to origin
-    sqdisto = dot(ones(Z.shape[0]),mapply(Z,lambda x : (x**2)*row_weights,axis=0,progressbar=False,n_workers=n_workers))
-
-    # Square cosine
-    sqcos = mapply(coord,lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=n_workers)  
+        row_weights = ones(row_coord.shape[0])/row_coord.shape[0]
     
+    #factor coordinates - factor correlation
+    wcorr = DescrStatsW(concat((X,row_coord),axis=1),weights=row_weights,ddof=0).corrcoef[:X.shape[1],X.shape[1]:]
+    coord = DataFrame(wcorr,index=X.columns,columns=["Dim."+str(x+1) for x in range(wcorr.shape[1])])
+    #squared cosinus
+    sqcos = mapply(coord,lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers)
     return OrderedDict(coord=coord,cos2=sqcos)
 
 #----------------------------------------------------------------------------------------------------------------------------------------
-##predict supplementary qualitative variables
+#predict supplementary qualitative variables
 #----------------------------------------------------------------------------------------------------------------------------------------
-def predict_quali_sup(X,Z,Y,V,col_coef,sqdisto,row_weights=None,col_weights=None,n_workers=1):
+def predict_quali_sup(X,row_coord,coord,sqdisto,col_coef,row_weights=None,n_workers=1):
     """
     Predict supplementary qualitative variables
     -------------------------------------------
 
     Parameters
     ----------
-    `X` : pandas dataframe of qualitative variables
+    `X`: a pandas DataFrame of qualitative variables
 
-    `Z` : pandas dataframe of standardize categorical variables
+    `row_coord`: a pandas DataFrame of rows factor coordinates
 
-    `Y` : pandas dataframe of rows factor coordinates
+    `coord`: a pandas DataFrame of categories factor coordinates
 
-    `V` : right matrix of generalized singular value decomposition
+    `sqdisto`: a pandas Series of categories square distance to origin
 
-    `col_coef` : pandas series of categories coefficients. Useful for categories value-test
+    `col_coef`: a pandas Series of categories coefficients. Useful for categories value-test
 
-    `sqdisto` : pandas series of categories square distance to origin
+    `row_weights`: a pandas Series/ndarrya/list of rows weights (by default None)
 
-    `row_weights` : ndarray of rows weights (by default None)
-
-    `col_weights` : ndarray of columns weights (by default None)
-
-    `n_workers` : integer specifying maximum amount of workers (by default 1). See https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
+    `n_workers`: integer specifying maximum amount of workers (by default 1). See https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
 
     Retun(s)
     --------
-    ordered dictionary containing:
+    an ordered dictionary of pandas DataFrames containing all the results for the supplementary categories.
 
-    `coord` : pandas dataframe of categories factor coordinates
+    `coord`: factor coordinates
 
-    `cos2` : pandas dataframe of categories square cosinus.
+    `cos2`: squared cosinus.
 
-    `vtest` : pandas dataframe of categories value-test.
+    `vtest`: value-test.
 
-    `dist` : pandas series of categories square distance to origin
+    `dist`: squared distance to origin
 
-    `eta2` : pandas dataframe of qualitative variables square correlation ratio
+    `eta2`: squared correlation ratio
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
-    
     """
     #set row weights
     if row_weights is None:
-        row_weights = ones(Z.shape[0])/Z.shape[0]
-    
-    #set columns weights
-    if col_weights is None:
-        col_weights = ones(Z.shape[1])
-
-    #factor coordinates
-    coord = mapply(Z, lambda x : x*col_weights,axis=1,progressbar=False,n_workers=n_workers).dot(V)
-    coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
+        row_weights = ones(row_coord.shape[0])/row_coord.shape[0]
 
     #value-test (vtest)
     vtest = mapply(coord,lambda x : x*col_coef,axis=0,progressbar=False,n_workers=n_workers)
-
-    #square cosinus (cos2)
+    #squared cosinus (cos2)
     sqcos = mapply(coord, lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=n_workers)
-
-    #square correlation ratio (eta2)
-    sqeta = function_eta2(X=X,Y=Y,weights=row_weights,n_workers=n_workers)
-
+    #squared correlation ratio (eta2)
+    sqeta = function_eta2(X=X,Y=row_coord,weights=row_weights,n_workers=n_workers)
     return OrderedDict(coord=coord,cos2=sqcos,vtest=vtest,dist=sqdisto,eta2=sqeta)
