@@ -15,20 +15,20 @@ def svd_triplet(X,row_weights=None,col_weights=None,n_components=None):
     ----------
     `X` : pandas DataFrame of float, shape (n_rows, n_columns)
 
-    `row_weights` : array with the weights of each row (None by default and the weights are uniform)
+    `row_weights`: array with the weights of each row (None by default and the weights are uniform)
 
-    `col_weights` : array with the weights of each colum (None by default and the weights are uniform)
+    `col_weights`: array with the weights of each colum (None by default and the weights are uniform)
 
-    `n_components` : the number of components kept for the outputs
+    `n_components`: the number of components kept for the outputs
 
     Return
     ------
     namedtuple of array containing
-    `vs` : a vector containing the singular values of 'X'
+    `vs`: a vector containing the singular values of 'X'
 
-    `U` : a matrix whose columns contain the left singular vectors of 'X'
+    `U`: a matrix whose columns contain the left singular vectors of 'X'
 
-    `V` : a matrix whose columns contain the right singular vectors of 'X'.
+    `V`: a matrix whose columns contain the right singular vectors of 'X'.
     
     See also
     --------
