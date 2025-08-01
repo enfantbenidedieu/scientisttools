@@ -18,7 +18,7 @@ def get_eig(self) -> DataFrame:
 
     Parameters:
     -----------
-    `self` : an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE
+    `self`: an object of class PCA, PartialPCA, FactorAnalysis, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE
 
     Returns
     -------
@@ -31,17 +31,17 @@ def get_eig(self) -> DataFrame:
     Examples
     --------
     ```python
-    >>> # load children dataset
+    >>> #load children dataset
     >>> from scientisttools import load_children
-    >>> children  = load_children()
+    >>> children = load_children()
     >>> from scientisttools import CA, get_eig
-    >>> res_ca = CA(n_components=None,row_sup=list(range(14,18)),col_sup=list(range(5,8)),quali_sup=8)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
     >>> res_ca.fit(children)
     >>> eig = get_eig(res_ca)
     >>> print(eig)
     ```
     """
-    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamix","mfact","dmfa","cmdscale"]:
+    if self.model_ not in ["pca","partialpca","fa","ca","mca","specificmca","famd","mpca","pcamix","mfa","mfaqual","mfamix","mfact","dmfa","cmdscale"]:
         raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE")
     return self.eig_
 
