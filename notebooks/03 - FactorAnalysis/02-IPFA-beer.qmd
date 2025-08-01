@@ -1,0 +1,914 @@
+---
+title: "Iterative Principal Factor Analysis (IPFA)"
+subtitle: "Beer Dataset"
+format: 
+    html:
+        toc: true
+        number-sections: true
+        code-fold: false
+jupyter: python3
+---
+
+```{python}
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.filterwarnings("ignore")
+from itables import init_notebook_mode
+init_notebook_mode(all_interactive=True)
+```
+
+# Load Beer dataset
+
+```{python}
+#load beer dataset
+from scientisttools import load_beer
+beer = load_beer()
+beer
+```
+
+# Unrotated IPFA
+
+```{python}
+#instanciation
+from scientisttools import FactorAnalysis
+res_fa = FactorAnalysis(n_components=2,rotate=None,max_iter=50)
+#training
+res_fa.fit(beer)
+```
+
+## Eigen values
+
+```{python}
+#eigenvalues
+eig = res_fa.eig_
+eig
+```
+
+## Eigen comparison
+
+```{python}
+#eigen comparison
+eigval = res_fa.eigval_
+eigval._fields
+```
+
+### Eigen values with original data
+
+```{python}
+#eigen valus with initial data
+eigval.original
+```
+
+### Eigen values with common
+
+```{python}
+#eigen values with commun
+eigval.common
+```
+
+## Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+## Variables informations
+
+```{python}
+#variables informations
+var = res_fa.var_
+var._fields
+```
+
+### Variables loadings
+
+```{python}
+#variables loadings
+var.coord
+```
+
+### Variables contributions
+
+```{python}
+#variables contributions
+var.contrib
+```
+
+### Variables Factor scores
+
+```{python}
+#variables factor scores
+var.f_score
+```
+
+## Individuals informations
+
+```{python}
+#individuals informations
+ind = res_fa.ind_
+ind._fields
+```
+
+### Individuals factor coordinates
+
+```{python}
+#individuals factor coordinates
+ind.coord
+```
+
+## Correlation matrix
+
+```{python}
+#correlation matrix
+corr = res_fa.corr_
+corr._fields
+```
+
+### Pearson correlation 
+
+```{python}
+#pearson correlation matrix
+corr.corrcoef
+```
+
+### Model correlation matrix
+
+```{python}
+#model correlation matrix
+corr.model
+```
+
+### Partial correlation matrix
+
+```{python}
+#partial correlation matrix
+corr.pcorrcoef
+```
+
+### Reconst correlation matrix
+
+```{python}
+#reconst correlation matrix
+corr.reconst
+```
+
+### Residual correlation matrix
+
+```{python}
+#residual correlation matrix
+corr.residual
+```
+
+### Error
+
+```{python}
+#rerror
+corr.error
+```
+
+## Others informations
+
+```{python}
+#others informations
+others = res_fa.others_
+others._fields
+```
+
+### Communality iterations
+
+```{python}
+#communality iterations
+others.communality_iterations
+```
+
+### Vscores - fidelity
+
+```{python}
+#vscores - factors fidelity
+others.r2_score
+```
+
+### Communality
+
+```{python}
+#communality
+others.communality
+```
+
+### Communalities
+
+```{python}
+#communalities
+others.communalities
+```
+
+### Uniquenesses
+
+```{python}
+#uniqueness
+others.uniquenesses
+```
+
+### Explained variance
+
+```{python}
+#explained variance
+others.explained_variance
+```
+
+### Inertia
+
+```{python}
+#inertia
+others.inertia
+```
+
+## Others functions
+
+### `fit_transform`
+
+```{python}
+#fit_transform
+res_fa.fit_transform(beer)
+```
+
+### `transform`
+
+
+```{python}
+#transform
+res_fa.transform(beer)
+```
+
+# Rotated IPFA
+
+## Othogonal rotations
+
+### `varimax` rotation
+
+```{python}
+#varimax rotation
+res_fa = FactorAnalysis(n_components=2,rotate="varimax",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+### `oblimax` rotation
+
+```{python}
+#oblimax rotation
+res_fa = FactorAnalysis(n_components=2,rotate="oblimax",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+### `quartimax` rotation
+
+```{python}
+#quartimax rotation
+res_fa = FactorAnalysis(n_components=2,rotate="quartimax",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+### `equamax` rotation
+
+```{python}
+#equamax rotation
+res_fa = FactorAnalysis(n_components=2,rotate="equamax",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+### `geomin_ort` rotation
+
+```{python}
+#geomin_ort rotation
+res_fa = FactorAnalysis(n_components=2,rotate="geomin_ort",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+## Oblique rotation
+
+### `promax` rotation
+
+```{python}
+#promax rotation
+res_fa = FactorAnalysis(n_components=2,rotate="promax",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+### `oblimin` rotation
+
+```{python}
+#oblimin rotation
+res_fa = FactorAnalysis(n_components=2,rotate="oblimin",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+### `quartimin` rotation
+
+```{python}
+#quartimin rotation
+res_fa = FactorAnalysis(n_components=2,rotate="quartimin",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+### `geomin_obl` rotation
+
+```{python}
+#quartimin rotation
+res_fa = FactorAnalysis(n_components=2,rotate="geomin_obl",max_iter=50)
+res_fa.fit(beer)
+```
+
+#### Loadings
+
+```{python}
+#loadings
+res_fa.var_.coord
+```
+
+#### Factor scores
+
+```{python}
+#factor scores
+res_fa.var_.f_score
+```
+
+#### Variance accounted
+
+```{python}
+#variance accounted
+res_fa.vaccounted_
+```
+
+#### R2 score
+
+```{python}
+#R2
+res_fa.others_.r2_score
+```
+
+#### Correlation matrix
+
+##### Reproduced correlation matrix
+
+```{python}
+#reproduced matri
+res_fa.corr_.reconst
+```
+
+#### Rotate matrix
+
+```{python}
+#reproduced matrix
+res_fa.rotate_.rotmat
+```
+
+#### Individuals factor coordinates - scores
+
+```{python}
+#scores
+res_fa.ind_.coord
+```
+
+#### Communality
+
+```{python}
+#communality
+res_fa.others_.communality
+```
+
+#### Communalities
+
+```{python}
+#communality
+res_fa.others_.communalities
+```
+
+# Extraction
+
+```{python}
+#extraction
+from scientisttools import get_fa, summaryFA
+ind, var = get_fa(res_fa,element="ind"), get_fa(res_fa,element="var")
+summaryFA(res_fa)
+```
