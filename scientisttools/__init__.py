@@ -7,9 +7,9 @@ from __future__ import annotations
 #generalized factor analysis (GFA)
 from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
 #from scientisttools.methods.PartialPCA import PartialPCA, predictPartialPCA, supvarPartialPCA
-#from scientisttools.methods.EFA import EFA
+#from scientisttools.methods.FactorAnalysis import FactorAnalysis
 #from scientisttools.methods.CA import CA, predictCA, supvarCA
-#from scientisttools.methods.MCA import MCA, predictMCA, supvarMCA
+from scientisttools.methods.MCA import MCA, predictMCA, supvarMCA
 #from scientisttools.methods.FAMD import FAMD, predictFAMD, supvarFAMD
 #from .pcamix import PCAMIX, predictPCAMIX, supvarPCAMIX
 #from .mpca import MPCA, predictMPCA, supvarMPCA
@@ -36,12 +36,12 @@ from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
 #----------------------------------------------------------------------------------------------------------------------------------------
 ## Extraction
 #----------------------------------------------------------------------------------------------------------------------------------------
-#from scientisttools.extraction.get_eig import get_eig,get_eigenvalue
-#from scientisttools.extraction.get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
+from scientisttools.extraction.get_eig import get_eig,get_eigenvalue
+from scientisttools.extraction.get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
 #from scientisttools.extraction.get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
-#from scientisttools.extraction.get_efa import get_efa_ind, get_efa_var, get_efa, summaryEFA
+#from scientisttools.extraction.get_fa import get_fa_ind, get_fa_var, get_fa, summaryFA
 #from scientisttools.extraction.get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
-#from scientisttools.extraction.get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
+from scientisttools.extraction.get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
 #from scientisttools.extraction.get_famd import get_famd_ind, get_famd_var, get_famd, summaryFAMD
 #from .get_pcamix import get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX
 #from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
@@ -54,7 +54,7 @@ from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
 #----------------------------------------------------------------------------------------------------------------------------------------
 ## Visualization
 #----------------------------------------------------------------------------------------------------------------------------------------
-#from scientisttools.plot.fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot,fviz_pca
+from scientisttools.plot.fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot,fviz_pca
 #from scientisttools.plot.fviz_partialpca import fviz_partialpca_ind, fviz_partialpca_var, fviz_partialpca_biplot,fviz_partialpca
 #from scientisttools.plot.fviz_efa import fviz_efa_ind, fviz_efa_var, fviz_efa_biplot, fviz_efa
 #from scientisttools.plot.fviz_ca import fviz_ca_row, fviz_ca_col, fviz_ca_biplot, fviz_ca
@@ -80,17 +80,18 @@ from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
 
 
 #others functions of visualization
-#from scientisttools.plot.fviz_eig import fviz_eig,fviz_screeplot
-#from scientisttools.plot.fviz_contrib import fviz_contrib
-#from scientisttools.plot.fviz_cos2 import fviz_cos2
-#from scientisttools.plot.fviz_corrplot import fviz_corrplot
-#from scientisttools.plot.fviz_corrcircle import fviz_corrcircle
+from scientisttools.plot.fviz_eig import fviz_eig,fviz_screeplot
+from scientisttools.plot.fviz_contrib import fviz_contrib
+from scientisttools.plot.fviz_cos2 import fviz_cos2
+from scientisttools.plot.fviz_corrplot import fviz_corrplot
+from scientisttools.plot.fviz_corrcircle import fviz_corrcircle
 
 
 #----------------------------------------------------------------------------------------------------------------------------------------
 ## Others functions
 #----------------------------------------------------------------------------------------------------------------------------------------
 # Others functions
+from scientisttools.methods.functions.association import association
 #from .auto_cut_tree import auto_cut_tree
 #from .catdesc import catdesc
 #from .coeffLg import coeffLg
@@ -99,7 +100,7 @@ from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
 #from .contdesc import contdesc
 #from scientisttools.methods.functions.coord_ellipse import coord_ellipse
 #from .covariance_to_correlation import covariance_to_correlation
-#from scientisttools.methods.functions.dimdesc import dimdesc
+from scientisttools.methods.functions.dimdesc import dimdesc
 #from .eta2 import eta2
 #from .function_eta2 import function_eta2
 #from .function_lg import function_lg
@@ -111,8 +112,9 @@ from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
 #from .recodecont import recodecont
 #from .recodevar import recodevar
 #from .recodevarfamd import recodevarfamd
-#from scientisttools.methods.functions.reconst import reconst
+from scientisttools.methods.functions.reconst import reconst
 #from .revaluate_cat_variable import revaluate_cat_variable
+#from scientisttools.methods.functions.rotate_factors import rotate_factors
 #from .sim_dist import sim_dist
 #from scientisttools.methods.functions.splitmix import splitmix
 #from .svd_triplet import svd_triplet
@@ -122,17 +124,16 @@ from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
 
 ## Load all datasets
 from .datasets import (
-    load_autos,
-    load_autos2,
+    load_autos1990,
+    load_autos2005,
+    load_autos2006,
     load_autosmds,
+    load_beer,
     load_body,
     load_burgundywines,
-    load_cars2006,
-    load_carsacpm,
-    load_children,
+    load_children2,
     load_congressvotingrecords,
     load_decathlon,
-    load_decathlon2,
     load_femmetravail,
     load_gironde,
     load_housetasks,
@@ -142,6 +143,7 @@ from .datasets import (
     load_mortality,
     load_mushroom,
     load_music,
+    load_olympic,
     load_poison,
     load_protein,
     load_qtevie,
@@ -150,8 +152,14 @@ from .datasets import (
     load_temperature,
     load_tennis,
     load_usarrests,
+    load_uscrime,
     load_wine,
-    load_womenwork
+    load_womenwork,
+    #DataFrame
+    autos1990,
+    decathlon,
+    poison,
+    racescanines
 )
 
 __version__ = '0.1.6'

@@ -9,7 +9,7 @@ def get_partialpca_ind(self) -> NamedTuple:
 
     Description
     ------------
-    Extract all the results (factor coordinates, square cosinus, relative contributions) of the active individuals from Partial Principal Component Analysis (PartialPCA) outputs.
+    Extract all the results (factor coordinates, squared cosinus, relative contributions) of the active individuals from Partial Principal Component Analysis (PartialPCA) outputs.
 
     Usage
     -----
@@ -19,19 +19,19 @@ def get_partialpca_ind(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class PartialPCA
+    `self`: an object of class PartialPCA
 
     Returns
     -------
-    namedtuple of dataframes containing all the results for the active individuals including:
+    namedtuple of Dataframes containing all the results for the active individuals including:
 
-    `coord` : factor coordinates (scores) of the individuals
+    `coord`: factor coordinates (scores) of the individuals
 
-    `cos2` : square cosine of the individuals
+    `cos2`: squared cosine of the individuals
 
-    `contrib` : relative contributions of the individuals
+    `contrib`: relative contributions of the individuals
 
-    `infos` : additionals informations (weight, squared distance to origin and inertia) of the individuals
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals
 
     Author(s)
     ---------
@@ -40,14 +40,18 @@ def get_partialpca_ind(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> # load cars2006 dataset
+    >>> #load cars2006 dataset
     >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA, get_partialpca_ind
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=0,parallelize=False)
-    >>> res_partialpca.fit(D)
-    >>> # Results for individuals
-    >>> ind = get_partialpca_ind(res_partialpca)
+    >>> cars = load_cars2006()
+    >>> from scientisttools import PartialPCA, summaryPartialPCA
+    >>> #with integer
+    >>> res_ppca = PartialPCA(partial=0)
+    >>> res_ppca.fit(cars)
+    >>> #extract the results for individuals
+    >>> ind = get_partialpca_ind(res_ppca)
+    >>> ind.coord.head() #coordinates of individuals
+    >>> ind.cos2.head() #cos2 of individuals
+    >>> ind.contrib.head() #contributions of individuals
     ```
     """
     # Check if self is an object of class PartialPCA
@@ -108,7 +112,7 @@ def get_partialpca_var(self) -> NamedTuple:
         raise TypeError("'self' must be an object of class PartialPCA")
     return self.var_
 
-def get_partialpca(self,choice = "ind")-> NamedTuple:
+def get_partialpca(self,element = "ind")-> NamedTuple:
     """
     Extract the results for individuals/variables - PartialPCA
     ----------------------------------------------------------
@@ -117,21 +121,21 @@ def get_partialpca(self,choice = "ind")-> NamedTuple:
     -----------
     Extract all the results (factor coordinates, square cosinus, relative contributions) for the active individuals/variables from Partial Principal Component Analysis (PartialPCA) outputs.
 
-        * get_partialpca() : Extract the results for variables and individuals
-        * get_partialpca_ind() : Extract the results for individuals only
-        * get_partialpca_var() : Extract the results for variables only
+        * `get_partialpca()`: Extract the results for variables and individuals
+        * `get_partialpca_ind()`: Extract the results for individuals only
+        * `get_partialpca_var()`: Extract the results for variables only
 
     Usage
     -----
      ```python
-    >>> get_partialpca(self,choice=("ind","var"))
+    >>> get_partialpca(self,element=("ind","var"))
     ```
 
     Parameters
     ----------
-    `self` : an object of class PartialPCA
+    `self`: an object of class PartialPCA
 
-    `choice` : the element to subset from the output. Allowed values are :
+    `element`: the element to subset from the output. Allowed values are :
         * "ind" for individuals 
         * "var" for variables
     
@@ -139,11 +143,11 @@ def get_partialpca(self,choice = "ind")-> NamedTuple:
     -------
     namedtuple of dataframes containing all the results for the active individuals/variables including:
 
-    `coord` : factor coordinates (scores) of the individuals/variables
+    `coord`: factor coordinates (scores) of the individuals/variables
     
-    `cos2` : square cosinus of the individuals/variables
+    `cos2`: squared cosinus of the individuals/variables
     
-    `contrib` : relative contributions of the individuals/variables
+    `contrib`: relative contributions of the individuals/variables
 
     Author(s)
     ---------
@@ -152,29 +156,29 @@ def get_partialpca(self,choice = "ind")-> NamedTuple:
     Examples
     --------
     ```python
-    >>> # load cars2006 dataset
+    >>> #load cars2006 dataset
     >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
+    >>> cars = load_cars2006(element="actif")
     >>> from scientisttools import PartialPCA, get_partialpca
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=["CYL"],parallelize=False)
-    >>> res_partialpca.fit(D)
+    >>> res_partialpca = PartialPCA(partial=0)
+    >>> res_partialpca.fit(cars)
     >>> # Results for individuals
-    >>> ind = get_partialpca(res_partialpca, choice = "ind")
+    >>> ind = get_partialpca(res_partialpca, element = "ind")
     >>> # Results for variables
-    >>> var = get_partialpca(res_partialpca, choice = "var")
+    >>> var = get_partialpca(res_partialpca, element = "var")
     ```
     """
     # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
     
-    if choice not in ["ind","var"]:
-        raise ValueError("'choice' should be one of 'ind', 'var'")
-    
-    if choice == "row":
+    if element == "ind":
         return get_partialpca_ind(self)
-    elif choice == "var":
+    elif element == "var":
         return get_partialpca_var(self)
+    else:
+        raise ValueError("'element' should be one of 'ind', 'var'")
+
 
 def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """

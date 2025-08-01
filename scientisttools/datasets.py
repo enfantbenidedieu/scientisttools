@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import pandas as pd
-import pyreadr 
+from pandas import DataFrame, read_excel, read_csv
+from pyreadr import read_r
 import pathlib
 
 # https://husson.github.io/data.html
@@ -10,64 +10,142 @@ import pathlib
 
 DATASETS_DIR = pathlib.Path(__file__).parent / "datasets"
 
-def load_autos():
+def load_autos1990():
     """
-    Autos 2005 - Données sur 40 voitures
-    -------------------------------------
+    Autos 1990 Dataset
+    ------------------
 
     Usage
     -----
     ```python
-    >>> from scientisttools import load_autos
-    >>> autos = load_autos()
+    >>> from scientisttools import load_carsacpm
+    >>> cars = load_carsacpm()
     ```
-    
+
+    Format
+    ------
+    a data frame with 27 individuals and 9 variables
+
+    Reference
+    ---------
+    Abdesselam, R. (2006), Analyise en Composantes Principales Mixte, 
+
     Examples
     --------
     ```python
-    >>> # Load autos dataset
-    >>> from scientisttools import load_autos
-    >>> autos = load_autos()
-    >>> # Example of PCA
-    >>> res_pca = PCA(quanti_sup=[10,11],quali_sup = [12,13,14])
-    >>> res_pca.fit(autos)
-    >>> # Example of FAMD
-    >>> res_afdm = FAMD(quanti_sup=[10,11],quali_sup=14,parallelize=False)
-    >>> res_afdm.fit(autos)
+    >>> #load autos1990 dataset
+    >>> from scientisttools import load_autos1990
+    >>> autos1990 = load_autos1990() 
+    >>> from scientisttools import MPCA
+    >>> res_mpca = MPCA()
+    >>> res_mpca.fit(autos1990)
     ```
     """
-    data = pd.read_excel(DATASETS_DIR/"autos2005.xls",header=0,index_col=0)
-    return data
+    return read_csv(DATASETS_DIR/'autos1990.txt', delimiter = " ",header=0,index_col=0)
 
-def load_autos2():
+def load_autos2005(element="all"):
     """
-    Autos Data - Données sur 45 voitures
-    -----------------------------------
+    Autos 2005 Dataset
+    ------------------
+
+    Description
+    -----------
+    The dataset contains 45 autos
 
     Usage
     -----
     ```python
     >>> from scientisttools import load_autos2005
-    >>> auto2 = laod_autos2()
+    >>> autos2005 = laod_autos2005()
     ```
 
     Examples
     --------
     ```python
-    >>> # Load dataset
-    >>> from scientisttools import load_autos2
-    >>> autos2 = load_autos2()
+    >>> #load autos2005 dataset
+    >>> from scientisttools import load_autos2005
+    >>> autos2005 = load_autos2005()
     >>> from scientisttools import FAMD
-    >>> res_famd = FAMD(ind_sup=list(range(38,autos2.shape[0])),quanti_sup=[12,13,14],quali_sup=15)
-    >>> res_famd.fit(autos2)
+    >>> res_famd = FAMD(ind_sup=(38,39,40,41,42,43,44),quanti_sup=(12,13,14),quali_sup=15)
+    >>> res_famd.fit(autos2005)
     ```
     """
-    data = pd.read_excel(DATASETS_DIR/"autos2005_afdm.xlsx",header=0,index_col=0)
-    return data
+    if element == "actif":
+        return read_excel(DATASETS_DIR/"autos2005.xlsx",sheet_name="Feuil1",index_col=0,header=0)
+    elif element == "ind_sup":
+        return read_excel(DATASETS_DIR/"autos2005.xlsx",sheet_name="Feuil2",index_col=0,header=0)
+    elif element == "quali_sup":
+        return read_excel(DATASETS_DIR/"autos2005.xlsx",sheet_name="Feuil3",index_col=0,header=0)
+    elif element == "quali_sup":
+        return read_excel(DATASETS_DIR/"autos2005.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+    elif element == "all":
+        return read_excel(DATASETS_DIR/"autos2005.xlsx",sheet_name="Feuil5",index_col=0,header=0)
+    else:
+        raise ValueError("'element' must be one of 'all', 'actif', 'ind_sup', 'quanti_sup', 'quali_sup'")
+
+def load_autos2006(element="actif"):
+    """
+    Autos 2006 Dataset
+    ------------------
+
+    Description
+    -----------
+    The dataset contains 20 autos
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_autos2006
+    >>> autos2006 = load_autos2006()
+    ```
+
+    Parameters
+    ----------
+    `element`: the element to subset from the output. Allowed values are :
+        * "actif" for actifs elements
+        * "ind_sup" for supplementary individuals
+        * "quanti_sup" for supplementary quantitative variables
+        * "quali_sup" for supplementary qualitative variables
+        * "all" for actifs and supplementary elements
+    
+    Returns
+    -------
+    pandas Dataframe
+
+    References
+    ----------
+    * Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
+
+    * Rakotomalala R. (2020). Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2. Version 1.0
+
+    Examples
+    --------
+    ```python
+    >>> #load autos2006 dataset
+    >>> from scientisttools import load_autos2006
+    >>> autos2006 = load_autos2006()
+    >>> from scientisttools import PartialPCA, summaryPartialPCA
+    >>> res_ppca = PartialPCA(partial=0,index=(18,19),quanti_sup=(6,7),quali_sup=8)
+    >>> res_ppca.fit(cars)
+    >>> summaryPartialPCA(res_ppca)
+    ```
+    """     
+    if element == "actif":
+        return read_excel(DATASETS_DIR/"autos2006.xlsx",sheet_name="Feuil1",index_col=0,header=0)
+    elif element == "ind_sup":
+        return read_excel(DATASETS_DIR/"autos2006.xlsx",sheet_name="Feuil2",index_col=0,header=0)
+    elif element == "quanti_sup":
+        return read_excel(DATASETS_DIR/"autos2006.xlsx",sheet_name="Feuil3",index_col=0,header=0)
+    elif element == "quali_sup":
+        return read_excel(DATASETS_DIR/"autos2006.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+    elif element == "all":
+        return read_excel(DATASETS_DIR/"autos2006.xlsx",sheet_name="Feuil5",index_col=0,header=0)
+    else:
+        raise ValueError("'element' must be one of 'all', 'actif', 'ind_sup', 'quanti_sup', 'quali_sup'")
 
 def load_autosmds():
     """
-    Autos Multidimensional Scaling dataset
+    Autos Multidimensional Scaling Dataset
     --------------------------------------
 
     Usage
@@ -80,21 +158,44 @@ def load_autosmds():
     Examples
     --------
     ```python
-    >>> # Load autosmds dataset
+    >>> #load autosmds dataset
     >>> from scientisttools import load_autosmds
     >>> autosmds = load_autosmds()
     >>> from scientisttools import CMDSCALE
-    >>> my_cmds = CMDSCALE(n_components=2,ind_sup=[12,13,14],proximity="euclidean",normalized_stress=True,parallelize=False)
+    >>> my_cmds = CMDSCALE(n_components=2,ind_sup=(12,13,14),proximity="euclidean",normalized_stress=True,parallelize=False)
     >>> my_cmds.fit(autosmds)
     ```
     """
-    autosmds = pd.read_excel(DATASETS_DIR/"autosmds.xlsx",index_col=0,header=0)
-    autosmds.index.name = None
-    return autosmds
+    return read_excel(DATASETS_DIR/"autosmds.xlsx",index_col=0,header=0)
+
+def load_beer():
+    """
+    Beer Dataset
+    ------------
+
+    Usage
+    -----
+    ```python
+    >>> from scientisttools import load_beer
+    >>> beerpfa = load_beer()
+    ```
+
+    Examples
+    --------
+    ```python
+    >>> #load beerpfa dataset
+    >>> from scientisttools import load_beer
+    >>> beer = load_beer()
+    >>> from scientisttools import PFA
+    >>> my_pfa = PFA()
+    >>> my_pfa.fit(beer)
+    ```
+    """
+    return read_excel(DATASETS_DIR/"beer_rnd.xlsx",index_col=None,header=0)
 
 def load_body():
     """
-    Body dimensions datasets
+    Body Dimensions Datasets
     ------------------------
 
     Description
@@ -159,12 +260,11 @@ def load_body():
     >>> res_partialpca.fit(D)
     ```
     """
-    body = pd.read_excel(DATASETS_DIR/"body.xls",sheet_name="body")
-    return body
+    return read_excel(DATASETS_DIR/"body.xls",sheet_name="body")
 
 def load_burgundywines():
     """
-    Burgundy wines dataset
+    Burgundy Wines Dataset
     ----------------------
 
     Usage
@@ -191,7 +291,7 @@ def load_burgundywines():
     >>> res_mfa.fit(wines)
     ```
     """
-    wines = pd.DataFrame(
+    wines = DataFrame(
         data=[
             [1, 6, 7, 2, 5, 7, 6, 3, 6, 7],
             [5, 3, 2, 4, 4, 4, 2, 4, 4, 3],
@@ -206,155 +306,31 @@ def load_burgundywines():
     wines.insert(0, "Oak type", [1, 2, 2, 2, 1, 1])
     return wines
 
-def load_cars2006(which="actif"):
+def load_children2(element="all"):
     """
-    Cars dataset
-    ------------
+    Children2 dataset
+    -----------------
 
     Description
     -----------
-    18 cars described by 6 quantitatives variables
+    The data used here is a contingency table that summarizes the answers given by different categories of people to the following question : according to you, what are the reasons that can make hesitate a woman or a couple to have children?
 
     Usage
     -----
     ```python
-    >>> from scientisttools import load_cars2006
-    >>> cars = load_cars2006()
+    >>> #load children2 dataset
+    >>> from scientisttools import load_children2
+    >>> children2 = load_children2()
     ```
 
     Parameters
     ----------
-    which : the element to subset from the output. Allowed values are :
-        * "actif" for actifs elements
-        * "indsup" for supplementary individuals
-        * "varquantsup" for supplementary quantitatives variables
-        * "varqualsup" for supplementary qualitatives variables
-    
-    Returns
-    -------
-    pandas dataframe
-
-    References
-    ----------
-    Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
-
-    Rakotomalala R. (2020). Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2. Version 1.0
-
-    Examples
-    --------
-    ```python
-    >>> # load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PCA
-    >>> res_pca = PCA(n_components=5)
-    >>> res_pca.fit(D)
-    >>> # Load supplementary individuals
-    >>> ind_sup = load_cars2006(which="ind_sup")
-    >>> ind_sup_coord = res_pca.transform(ind_sup)
-    ```
-    """
-    if which not in ["all","actif","ind_sup","quanti_sup","quali_sup"]:
-        raise ValueError("'which' must be one of 'all','actif', 'ind_sup', 'quanti_sup', 'quali_sup'")
-
-    if which == "actif":
-        cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="actif",index_col=0,header=0)
-    elif which == "ind_sup":
-        cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="ind. sup.",index_col=0,header=0)
-    elif which == "quanti_sup":
-        cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. quant.",index_col=0,header=0)
-    elif which == "quali_sup":
-        cars = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. qual.",index_col=0,header=0)
-    else:
-        actif = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="actif",index_col=0,header=0)
-        ind_sup = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="ind. sup.",index_col=0,header=0)
-        quanti_sup = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. quant.",index_col=0,header=0)
-        quali_sup = pd.read_excel(DATASETS_DIR/"cars2006.xlsx",sheet_name="var. illus. qual.",index_col=0,header=0)
-        cars = pd.concat((pd.concat((pd.concat((actif,ind_sup),axis=0),quanti_sup),axis=1),quali_sup),axis=1)
-    return cars
-
-def load_carsacpm():
-    """
-    Cars
-    ----
-
-    Usage
-    -----
-    ```python
-    >>> from scientisttools import load_carsacpm
-    >>> cars = load_carsacpm()
-    ```
-
-    Format
-    ------
-    a data frame with 27 individuals and 9 variables
-
-    Examples
-    --------
-    ```python
-    >>> # Load cars dataset
-    >>> from scientisttools import load_carsacpm
-    >>> cars = load_carsacpm() 
-    >>> from scientisttools import MPCA
-    >>> res_mpca = MPCA()
-    >>> res_mpca.fit(cars)
-    ```
-    """
-    data = pd.read_csv(DATASETS_DIR/'carsacpm.txt', delimiter = " ",header=0,index_col=0)
-    return data
-
-def load_children():
-    """
-    Children dataset
-    ----------------
-
-    Description
-    -----------
-    The data used here is a contingency table that summarizes the answers given by different categories of people to the following question : according to you, what are the reasons that can make hesitate a woman or a couple to have children?
-
-    Usage
-    -----
-    ```python
-    >>> from scientisttools import load_children
-    >>> children = load_children()
-    ```
-
-    Format
-    ------
-    A data frame with 18 rows and 8 columns. Rows represent the different reasons mentioned, columns represent the different categories (education, age) people belong to.
-
-    Source
-    ------
-    The children dataset from FactoMineR.
-
-    Examples
-    --------
-    ```python
-    >>> # Load children dataset
-    >>> from scientisttools import load_children
-    >>> children = load_children()
-    >>> res_ca = CA(row_sup=[14,15,16,17],col_sup=[5,6,7],parallelize=True)
-    >>> res_ca.fit(children)
-    ```
-    """
-    data = pyreadr.read_r(DATASETS_DIR/"children.rda")["children"]
-    return data
-
-def load_children2(which="all"):
-    """
-    Children dataset
-    ----------------
-
-    Description
-    -----------
-    The data used here is a contingency table that summarizes the answers given by different categories of people to the following question : according to you, what are the reasons that can make hesitate a woman or a couple to have children?
-
-    Usage
-    -----
-    ```python
-    >>> from scientisttools import load_children2
-    >>> children2 = load_children2()
-    ```
+    `element`: the element to return (default "all"). Allowed values are :
+        * "all" for actives and supplementary elements
+        * "actif" for active elements
+        * "row_sup" for supplementary rows
+        * "col_sup" for supplementary columns
+        * "quali_sup" for supplementary qualitative variables
 
     Format
     ------
@@ -362,33 +338,30 @@ def load_children2(which="all"):
 
     Source
     ------
-    The children dataset from FactoMineR.
+    The children2 dataset from FactoMineR with supplementary qualitative variables
 
     Examples
     --------
     ```python
-    >>> # Load children dataset
+    >>> #load children2 dataset
     >>> from scientisttools import load_children2
     >>> children2 = load_children2()
-    >>> res_ca = CA(row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8,parallelize=True)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
     >>> res_ca.fit(children2)
     ```
     """
-    #check if which is in list
-    if which not in ["all","actif","row_sup","col_sup","quali_sup"]:
-        raise ValueError("'which' must be one of 'all', 'actif', 'row_sup', 'col_sup', 'quali_sup'")
-
-    if which == "actif":
-        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil1",index_col=0,header=0)
-    elif which == "row_sup":
-        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil2",index_col=0,header=0)
-    elif which == "col_sup":
-        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil3",index_col=0,header=0)
-    elif which == "quali_sup":
-        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+    if element == "actif":
+        return read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil1",index_col=0,header=0)
+    elif element == "row_sup":
+        return read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil2",index_col=0,header=0)
+    elif element == "col_sup":
+        return read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil3",index_col=0,header=0)
+    elif element == "quali_sup":
+        return read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+    elif element == "all":
+        return read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil5",index_col=0,header=0)
     else:
-        children2 = pd.read_excel(DATASETS_DIR/"children2.xlsx",sheet_name="Feuil5",index_col=0,header=0)
-    return children2
+        raise ValueError("'element' must be one of 'all', 'actif', 'row_sup', 'col_sup', 'quali_sup'")
 
 def load_congressvotingrecords():
     """
@@ -398,6 +371,7 @@ def load_congressvotingrecords():
     Usage
     -----
     ```python
+    >>> #load congressvotingrecords dataset
     >>> from scientisttools import load_congressvotingrecords
     >>> vote = load_congressvotingrecords()
     ```
@@ -409,7 +383,7 @@ def load_congressvotingrecords():
     Examples
     --------
     ```python
-    >>> # Load vote dataset
+    >>> #load congressvotingrecords dataset
     >>> from scientistools import load_congressvotingrecords
     >>> vote = load_congressvotingrecords()
     >>> from scientisttools import CATVARHCA
@@ -418,10 +392,9 @@ def load_congressvotingrecords():
     >>> res_catvarhca.fit(X)
     ```
     """
-    vote = pd.read_excel(DATASETS_DIR/"congressvotingrecords.xlsx")
-    return vote
+    return read_excel(DATASETS_DIR/"congressvotingrecords.xlsx")
 
-def load_decathlon():
+def load_decathlon(element = "all"):
     """
     Performance in decathlon (data)
     -------------------------------
@@ -433,73 +406,43 @@ def load_decathlon():
     Usage
     -----
     ```python
+    >>> #load decathlon dataset
     >>> from scientisttools import load_decathlon
     >>> decathlon = load_decathlon()
     ```
 
     Format
     ------
-    A data frame with 41 rows and 13 columns: the first ten columns corresponds to the performance of the athletes for the 10 events of the decathlon. The columns 11 and 12 correspond respectively to the rank and the points obtained. The last column is a categorical variable corresponding to the sporting event (2004 Olympic Game or 2004 Decastar)
-
-    Source
-    ------
-    The decathlon dataset from FactoMineR. See [https://rdrr.io/cran/FactoMineR/man/decathlon.html](https://rdrr.io/cran/FactoMineR/man/decathlon.html)
+    A data frame with 46 rows and 13 columns: the first ten columns corresponds to the performance of the athletes for the 10 events of the decathlon. The columns 11 and 12 correspond respectively to the rank and the points obtained. The last column is a categorical variable corresponding to the sporting event (2004 Olympic Game or 2004 Decastar)
+    Supplementary individuals are the top 5 from the 1988 Seoul Olympics.
 
     Examples
     --------
     ```python
-    >>> # Load decathlon dataset
+    >>> #load decathlon dataset
     >>> from scientisttools import load_decathlon
     >>> decathlon = load_decathlon()
     >>> from scientisttools import PCA
-    >>> res_pca = PCA(standardize=True,ind_sup=list(range(23,decathlon.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotation=None)
     >>> res_pca.fit(decathlon)
     ```
     """
-    data = pyreadr.read_r(DATASETS_DIR/"decathlon.rda")["decathlon"]
-    return data
-
-def load_decathlon2():
-    """
-    Athletes' performance in decathlon
-    ----------------------------------
-
-    Description
-    -----------
-    Athletes' performance during two sporting meetings
-
-    Usage
-    -----
-    ```python
-    >>> from scientisttools.datasets import load_decathlon2
-    >>> decathlon2 = load_decathlon2()
-    ```
-    
-    Format
-    ------
-    A data frame with 27 observations and 13 variables.
-
-    Source
-    ------
-    The decathlon2 dataset from factoextra. See [https://rpkgs.datanovia.com/factoextra/reference/decathlon2.html](https://rpkgs.datanovia.com/factoextra/reference/decathlon2.html)
-
-    Examples
-    --------
-    ```python
-    >>> # load decathlon2 dataset
-    >>> from scientisttools import load_decathlon2
-    >>> decathlon2 = load_decathlon2()
-    >>> from scientisttools import PCA
-    >>> res_pca = PCA(standardize=True,ind_sup=list(range(23,decathlon2.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-    >>> res_pca.fit(decathlon2)
-    ```
-    """
-    data = pyreadr.read_r(DATASETS_DIR/"decathlon2.rda")["decathlon2"]
-    return data
+    if element == "actif":
+        return read_excel(DATASETS_DIR/"decathlon.xlsx",sheet_name="Feuil1",index_col=0,header=0)
+    elif element == "ind_sup":
+        return read_excel(DATASETS_DIR/"decathlon.xlsx",sheet_name="Feuil2",index_col=0,header=0)
+    elif element == "quanti_sup":
+        return read_excel(DATASETS_DIR/"decathlon.xlsx",sheet_name="Feuil3",index_col=0,header=0)
+    elif element == "quali_sup":
+        return read_excel(DATASETS_DIR/"decathlon.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+    elif element == "all":
+        return read_excel(DATASETS_DIR/"decathlon.xlsx",sheet_name="Feuil5",index_col=0,header=0)
+    else:
+        raise ValueError("'element' must be one of 'all', 'actif', 'ind_sup', 'quanti_sup', 'quali_sup'")
 
 def load_femmetravail():
     """
-    Femmes travail dataset
+    Femmes travail Dataset
     ----------------------
 
     Usage
@@ -524,12 +467,11 @@ def load_femmetravail():
     >>> res_ca.fit(femmetravail)
     ```
     """
-    data = pd.read_csv(DATASETS_DIR/"femme_travail.csv",delimiter=";",encoding =  "cp1252",index_col =0)
-    return data
+    return read_csv(DATASETS_DIR/"femmetravail.csv",delimiter=";",encoding =  "cp1252",index_col =0)
 
-def load_gironde(which="all"):
+def load_gironde(element="all"):
     """
-    gironde dataset
+    Gironde Dataset
     ---------------
 
     Description
@@ -552,25 +494,23 @@ def load_gironde(which="all"):
     >>> res_pcamix.fit(gironde)
     ```
     """
-    if which not in ["employment","housing","services","environment","all"]:
-        raise ValueError("'which' should be one of 'employment', 'housing', 'services', 'environment', 'all'")
-    
-    if which == "employment":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_employment.rda")["employment"]
-    elif which == "housing":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_housing.rda")["housing"]
-    elif which == "services":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_services.rda")["services"]
-    elif which == "environment":
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde_environment.rda")["environment"]
+    if element == "employment":
+        return read_r(DATASETS_DIR/"gironde_employment.rda")["employment"]
+    elif element == "housing":
+        return read_r(DATASETS_DIR/"gironde_housing.rda")["housing"]
+    elif element == "services":
+        return read_r(DATASETS_DIR/"gironde_services.rda")["services"]
+    elif element == "environment":
+        return read_r(DATASETS_DIR/"gironde_environment.rda")["environment"]
+    elif element == "all":
+        return read_r(DATASETS_DIR/"gironde.rda")["gironde"]
     else:
-        gironde = pyreadr.read_r(DATASETS_DIR/"gironde.rda")["gironde"]
-    return gironde
+        Exception("'element' should be one of 'employment', 'housing', 'services', 'environment', 'all'")
 
 def load_housetasks():
     """
     House tasks contingency table
-    ----------------------------
+    -----------------------------
 
     Description
     -----------
@@ -583,9 +523,9 @@ def load_housetasks():
     >>> housetasks = load_housetasks()
     ```
 
-    Format
+    Return
     ------
-    dataframe with 13 observations (house tasks) on the following 4 columns : Wife, Alternating, Husband and Jointly
+    a pandas dataframe with 13 observations (house tasks) on the following 4 columns : Wife, Alternating, Husband and Jointly
 
     Source
     ------
@@ -594,7 +534,7 @@ def load_housetasks():
     Examples
     --------
     ```python
-    >>> # Load housetasks datasest
+    >>> #load housetasks datasest
     >>> from scientisttools import load_housetasks
     >>> housetasks = load_housetasks()
     >>> from scientisttools import CA
@@ -602,12 +542,12 @@ def load_housetasks():
     >>> res_ca.fit(housetasks)
     ```
     """
-    data = pyreadr.read_r(DATASETS_DIR/"housetasks.rda")["housetasks"]
+    data = read_r(DATASETS_DIR/"housetasks.rda")["housetasks"]
     return data
 
 def load_jobrate():
     """
-    Jobrate dataset
+    Jobrate Dataset
     ---------------
 
     Usage
@@ -620,7 +560,7 @@ def load_jobrate():
     Examples
     --------
     ```python
-    >>> # Load jobrate
+    >>> #load jobrate datasets
     >>> from scientisttools import load_jobrate
     >>> jobrate = load_jobrate()
     >>> from scientisttools import VARHCA
@@ -628,9 +568,7 @@ def load_jobrate():
     >>> varhca.fit(jobrate)
     ```
     """
-    jobrate = pd.read_excel(DATASETS_DIR/"jobrate.xlsx",index_col=None,header=0)
-    jobrate.index.name = None
-    return jobrate
+    return read_excel(DATASETS_DIR/"jobrate.xlsx",index_col=None,header=0)
 
 def load_lifecyclesavings():
     """
@@ -659,19 +597,18 @@ def load_lifecyclesavings():
     Examples
     --------
     ```python
-    >>> # Load lifecyclesavings dataset
+    >>> #load lifecyclesavings dataset
     >>> from scientisttools import load_lifecyclesavings
     >>> lifecyclesavings = load_lifecyclesavings()
     >>> from scientisttools import CCA
     >>> res_cca = CCA(lifecyclesavings,vars=[1,2])
     ```  
     """
-    data = pyreadr.read_r(DATASETS_DIR/"LifeCycleSavings.RData")["LifeCycleSavings"]
-    return data
+    return read_r(DATASETS_DIR/"LifeCycleSavings.RData")["LifeCycleSavings"]
 
 def load_madagascar():
     """
-    Madagascar Multidimensional Scaling dataset
+    Madagascar Multidimensional Scaling Dataset
     -------------------------------------------
 
     Usage
@@ -683,7 +620,7 @@ def load_madagascar():
     Examples
     --------
     ```python
-    >>> # Load dataset
+    >>> #load madagascar dataset
     >>> from scientisttools import load_madagascar
     >>> madagascar = load_madagascar()
     >>> from scientisttools import MDS
@@ -691,8 +628,7 @@ def load_madagascar():
     >>> my_mds.fit(madagascar)
     ```
     """
-    madagascar = pd.read_excel(DATASETS_DIR/"madagascar.xlsx",index_col=0,header=0)
-    return madagascar
+    return read_excel(DATASETS_DIR/"madagascar.xlsx",index_col=0,header=0)
 
 def load_mortality():
     """
@@ -721,7 +657,7 @@ def load_mortality():
     Examples
     --------
     ```python
-    >>> # load mortality dataset
+    >>> #load mortality dataset
     >>> from scientisttools import load_mortality
     >>> mortality = load_mortality()
     >>> import pandas as pd
@@ -733,12 +669,11 @@ def load_mortality():
     >>> res_mfact.fit(dat)
     ```
     """
-    data = pyreadr.read_r(DATASETS_DIR/"mortality.rda")["mortality"]
-    return data
+    return read_r(DATASETS_DIR/"mortality.rda")["mortality"]
 
 def load_mushroom():
     """
-    Mushroom dataset
+    Mushroom Dataset
     ----------------
 
     Usage
@@ -755,7 +690,7 @@ def load_mushroom():
     Examples
     --------
     ```python
-    >>> # Load mushroom dataset
+    >>> #load mushroom dataset
     >>> from scientisttools import load_mushroom
     >>> mushroom = load_mushroom()
     >>> from scientisttools import MCA
@@ -763,12 +698,11 @@ def load_mushroom():
     >>> res_mca.fit(mushroom)
     ```
     """
-    data = pd.read_excel(DATASETS_DIR/"mushroom.xlsx")
-    return data
+    return read_excel(DATASETS_DIR/"mushroom.xlsx")
 
 def load_music():
     """
-    Music dataset
+    Music Dataset
     -------------
 
     Description
@@ -784,7 +718,7 @@ def load_music():
     
     Format
     ------
-    A data frame with 500 observations and 7 variables
+    a pandas DataFrame with 500 observations and 7 variables
 
     Source
     ------
@@ -793,7 +727,7 @@ def load_music():
     Examples
     --------
     ```python
-    >>> # Load music dataset
+    >>> #load music dataset
     >>> from scientisttools import load_music, SpecificMCA
     >>> music = load_music()
     >>> excl = {"FrenchPop" : "NA", "Rap" : "NA" , "Rock" : "NA", "Jazz" : "NA","Classical" : "NA"}
@@ -801,10 +735,53 @@ def load_music():
     >>> res_spemca.fit(music)
     ```
     """
-    data = pyreadr.read_r(DATASETS_DIR/"Music.RData")["Music"]
-    return data
+    return read_r(DATASETS_DIR/"music.RData")["Music"]
 
-def load_poison():
+def load_olympic(element = "all"):
+    """
+    Olympic Decathlon
+    -----------------
+
+    Description
+    -----------
+    This data set gives the performances of 33 men's decathlon at the Olympic Games (1988) and 5 men's decathlon at the Olympic Games (2004)
+
+    Usage
+    -----
+    ```python
+    >>> #load olympic dataset
+    >>> from scientisttools import load_olympic
+    >>> olympic = load_olympic()
+    ```
+
+    Format
+    ------
+    A data frame with 38 rows and 12 columns: the first ten columns corresponds to the performance of the athletes for the 10 events of the decathlon. The columns 11 and 12 correspond respectively to the rank and the points obtained.
+    Supplementary individuals are the top 5 from the 2004 decathlon Olympic Games.
+
+    Examples
+    --------
+    ```python
+    >>> #load olympic dataset
+    >>> from scientisttools import load_olympic
+    >>> olympic = load_olympic()
+    >>> from scientisttools import PCA
+    >>> res_pca = PCA(ind_sup=(33,34,35,36,37),quanti_sup=(10,11),rotation=None)
+    >>> res_pca.fit(olympic)
+    ```
+    """
+    if element == "actif":
+        return read_excel(DATASETS_DIR/"olympic.xlsx",sheet_name="Feuil1",index_col=0,header=0)
+    elif element == "ind_sup":
+        return read_excel(DATASETS_DIR/"olympic.xlsx",sheet_name="Feuil2",index_col=0,header=0)
+    elif element == "quanti_sup":
+        return read_excel(DATASETS_DIR/"olympic.xlsx",sheet_name="Feuil3",index_col=0,header=0)
+    elif element == "all":
+        return read_excel(DATASETS_DIR/"olympic.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+    else:
+        raise ValueError("'element' must be one of 'all', 'actif', 'ind_sup', 'quanti_sup'")
+
+def load_poison(element="all"):
     """
     Poison dataset
     --------------
@@ -831,16 +808,24 @@ def load_poison():
     Examples
     --------
     ```python
-    >>> # Load poison dataset
+    >>> #load poison dataset
     >>> from scientisttools import load_poison
     >>> poison = load_poison()
     >>> from scientisttools import MCA
-    >>> res_mca = MCA(n_components=5,ind_sup=list(range(50,55)),quali_sup = [2,3],quanti_sup =[0,1])
+    >>> res_mca = MCA(quali_sup=(2,3),quanti_sup=(0,1))
     >>> res_mca.fit(poison)
     ```
     """
-    data = pyreadr.read_r(DATASETS_DIR/"poison.rda")["poison"]
-    return data
+    if element == "actif":
+        return read_excel(DATASETS_DIR/"poison.xlsx",sheet_name="Feuil1",index_col=0,header=0)
+    elif element == "quali_sup":
+        return read_excel(DATASETS_DIR/"poison.xlsx",sheet_name="Feuil2",index_col=0,header=0)
+    elif element == "quanti_sup":
+        return read_excel(DATASETS_DIR/"poison.xlsx",sheet_name="Feuil3",index_col=0,header=0)
+    elif element == "all":
+        return read_excel(DATASETS_DIR/"poison.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+    else:
+        raise ValueError("'element' must be one of 'all', 'actif', 'quali_sup', 'quanti_sup'")
 
 def load_protein():
     """
@@ -866,8 +851,7 @@ def load_protein():
     ------
     The protein dataset for sparsePCA R package
     """
-    data = pyreadr.read_r(DATASETS_DIR/"protein.RData")["protein"]
-    return data
+    return read_r(DATASETS_DIR/"protein.RData")["protein"]
 
 def load_qtevie():
     """
@@ -906,17 +890,16 @@ def load_qtevie():
     >>> res_mfa.fit(qtevie)
     ```
     """
-    data = pd.read_csv(DATASETS_DIR/"QteVie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
-    return data
+    return read_csv(DATASETS_DIR/"qtevie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0)
 
-def load_racescanines():
+def load_racescanines(element="all"):
     """
-    Races canines dataset
+    Races canines Dataset
     ---------------------
 
     Description
     -----------
-    The data contains 27 individuals
+    The data contains 32 individuals
 
     Usage
     -----
@@ -928,20 +911,30 @@ def load_racescanines():
     Examples
     --------
     ```python
-    >>> # Load races canines dataset
-    >>> from scientisttools import load_races_canines
-    >>> canines = load_races_canines()
+    >>> #load racescanines dataset
+    >>> from scientisttools import load_racescanines
+    >>> canines = load_racescanines()
     >>> from scientisttools import MCA
-    >>> res_mca = MCA(ind_sup=list(range(27,races_canines.shape[0])),quanti_sup=7,quali_sup=6)
+    >>> res_mca = MCA(ind_sup=(27,28,29,30,31),quali_sup=6,quanti_sup=7)
     >>> res_mca.fit(canines)
     ```
     """
-    data = pd.read_excel(DATASETS_DIR/"races_canines.xlsx",header=0,index_col=0)
-    return data
+    if element == "actif":
+         return read_excel(DATASETS_DIR/"racescanines.xlsx",sheet_name="Feuil1",header=0,index_col=0)
+    elif element == "ind_sup":
+         return read_excel(DATASETS_DIR/"racescanines.xlsx",sheet_name="Feuil2",header=0,index_col=0)
+    elif element == "quali_sup":
+         return read_excel(DATASETS_DIR/"racescanines.xlsx",sheet_name="Feuil3",header=0,index_col=0)
+    elif element == "quanti_sup":
+         return read_excel(DATASETS_DIR/"racescanines.xlsx",sheet_name="Feuil4",header=0,index_col=0)
+    elif element == "all":
+         return read_excel(DATASETS_DIR/"racescanines.xlsx",sheet_name="Feuil5",header=0,index_col=0)
+    else:
+        Exception("'element' must be one of 'all', 'actif', 'ind_sup', 'quali_sup', 'quanti_sup'")
 
 def load_tea():
     """
-    tea dataset
+    Tea Dataset
     -----------
 
     Description
@@ -955,9 +948,9 @@ def load_tea():
     >>> tea = load_tea()
     ```
 
-    Format
+    Return
     ------
-    A data frame with 300 rows and 36 columns. Rows represent the individuals, columns represent the different questions. The first 18 questions are active ones, the 19th is a supplementary quantitative variable (the age) and the last variables are supplementary categorical variables.
+    A pandas DataFrame with 300 rows and 36 columns. Rows represent the individuals, columns represent the different questions. The first 18 questions are active ones, the 19th is a supplementary quantitative variable (the age) and the last variables are supplementary categorical variables.
 
     Source
     ------
@@ -966,20 +959,19 @@ def load_tea():
     Examples
     --------
     ```python
-    >>> # Load tea dataset
+    >>> #load tea dataset
     >>> from scientisttools import load_tea
     >>> tea = load_tea()
     >>> from scientisttools import MCA
-    >>> res_mca = MCA(quanti_sup=18, quali_sup=list(range(19,36)))
+    >>> res_mca = MCA(quanti_sup=18,quali_sup=list(range(19,36)))
     >>> res_mca.fit(tea)
     ```
     """
-    data = pyreadr.read_r(DATASETS_DIR/"tea.rda")["tea"]
-    return data
+    return read_r(DATASETS_DIR/"tea.rda")["tea"]
 
-def load_temperature():
+def load_temperature(element="all"):
     """
-    Temperature dataset
+    Temperature Dataset
     -------------------
 
     Usage
@@ -992,27 +984,37 @@ def load_temperature():
     Examples
     --------
     ```python
-    >>> # Load temperature dataset
+    >>> #load temperature dataset
     >>> from scientisttools import load_temperature
     >>> temperature = load_temperature()
     >>> from scientisttools import PCA
-    >>> res_pca = PCA(ind_sup=list(range(15,temperature.shape[0])),quanti_sup=list(range(12,16)),quali_sup=16)
+    >>> res_pca = PCA(ind_sup=(15,16,17,18,19,20,21,22,23,24),quanti_sup=(12,13,14,15),quali_sup=16,rotation=None)
     >>> res_pca.fit(temperature)
     ```
     """
-    data = pd.read_excel(DATASETS_DIR/"temperature.xlsx",header=0,index_col=0)
-    return data
+    if element == "actif":
+         return read_excel(DATASETS_DIR/"temperature.xlsx",sheet_name="Feuil1",header=0,index_col=0)
+    elif element == "ind_sup":
+         return read_excel(DATASETS_DIR/"temperature.xlsx",sheet_name="Feuil2",header=0,index_col=0)
+    elif element == "quanti_sup":
+         return read_excel(DATASETS_DIR/"temperature.xlsx",sheet_name="Feuil3",header=0,index_col=0)
+    elif element == "quali_sup":
+         return read_excel(DATASETS_DIR/"temperature.xlsx",sheet_name="Feuil4",header=0,index_col=0)
+    elif element == "all":
+         return read_excel(DATASETS_DIR/"temperature.xlsx",sheet_name="Feuil5",header=0,index_col=0)
+    else:
+        Exception("'element' must be one of 'all', 'actif', 'ind_sup', 'quanti_sup', 'quali_sup'")
 
-def load_tennis():
+def load_tennis(element="all"):
     """
-    Tennis dataset
-    --------------
+    Tennis 2020 Dataset
+    -------------------
 
     Usage
     -----
     ```python
     >>> from scientisttools import load_tennis
-    >>> tennis = load_tennis()
+    >>> tennis2020 = load_tennis()
     ```
     
     Examples
@@ -1022,12 +1024,20 @@ def load_tennis():
     >>> from scientisttools import load_tennis
     >>> tennis = load_tennis()
     >>> from scientisttools import FAMD
-    >>> res_famd =  FAMD(n_components=2,ind_sup=list(range(16,tennis.shape[0])),quanti_sup=7)
+    >>> res_famd =  FAMD(n_components=2,ind_sup=(16,17,18,19),quanti_sup=7)
     >>> res_famd.fit(tennis)
     ```
     """
-    data = pd.read_excel(DATASETS_DIR/"tennisplayers.xlsx",index_col=0)
-    return data
+    if element == "actif":
+         return read_excel(DATASETS_DIR/"tennis.xlsx",sheet_name="Feuil1",header=0,index_col=0)
+    elif element == "ind_sup":
+         return read_excel(DATASETS_DIR/"tennis.xlsx",sheet_name="Feuil2",header=0,index_col=0)
+    elif element == "quanti_sup":
+         return read_excel(DATASETS_DIR/"tennis.xlsx",sheet_name="Feuil3",header=0,index_col=0)
+    elif element == "all":
+         return read_excel(DATASETS_DIR/"tennis.xlsx",sheet_name="Feuil4",header=0,index_col=0)
+    else:
+        Exception("'element' must be one of 'all', 'actif', 'ind_sup', 'quanti_sup'")
 
 def load_usarrests():
     """
@@ -1049,13 +1059,13 @@ def load_usarrests():
     ------
     dataframe with 50 observations on 4 variables.
 
-    `Murder` :	numeric	Murder arrests (per 100,000)
+    `Murder`:	numeric	Murder arrests (per 100,000)
     
     `Assault`: 	numeric	Assault arrests (per 100,000)
     
-    `UrbanPop` : numeric Percent urban population
+    `UrbanPop`: numeric Percent urban population
     
-    `Rape` : numeric Rape arrests (per 100,000)
+    `Rape`: numeric Rape arrests (per 100,000)
 
     Source
     ------
@@ -1067,8 +1077,60 @@ def load_usarrests():
     ----------
     McNeil, D. R. (1977) Interactive Data Analysis. New York: Wiley.
     """
-    usarrests = pd.read_excel(DATASETS_DIR/"usarrests.xlsx",index_col=0,header=0)
-    return usarrests
+    return read_excel(DATASETS_DIR/"usarrests.xlsx",index_col=0,header=0)
+
+def load_uscrime():
+    """
+    US Crime Dataset
+    ----------------
+
+    Description
+    -----------
+    These data are crime-related and demographic statistics for 47 US states in 1960. The data were collected from the FBI's Uniform Crime Report and other government agencies to determine how the variable crime rate depends on the other variables measured in the study.
+    
+    1. Crime.rate: # of offenses reported to police per million population
+    2. Male14_24: The number of males of age 14-24 per 1000 population
+    3. Southern.states: Indicator variable for Southern states (Yes, No)
+    4. Education: Mean # of years of schooling x 10 for persons of age 25 or older
+    5. Expend60: 1960 per capita expenditure on police by state and local government
+    6. Expend59: 1959 per capita expenditure on police by state and local government
+    7. Labor.force: Labor force participation rate per 1000 civilian urban males age 14-24
+    8. Male: The number of males per 1000 females
+    9. Pop.size: State population size in hundred thousands
+    10. Non.white: The number of non-whites per 1000 population
+    11. Unemp14_24: Unemployment rate of urban males per 1000 of age 14-24
+    12. Unemp35_39: Unemployment rate of urban males per 1000 of age 35-39
+    13. Family.income: Median value of transferable goods and assets or family income in tens of $
+    14. Under.median: The number of families per 1000 earning below 1/2 the median income
+
+    Usage
+    -----
+    ```python
+    >>> #load uscrime dataset
+    >>> from scientisttools import load_uscrime
+    >>> uscrime = load_uscrime()
+    ```
+    
+    Source
+    ------
+    see https://lib.stat.cmu.edu/DASL/Datafiles/USCrime.html
+
+    Reference
+    ---------
+    Vandaele, W. (1978) Participation in illegitimate activities: Erlich revisited. In Deterrence and incapacitation, Blumstein, A., Cohen, J. and Nagin, D., eds., Washington, D.C.: National Academy of Sciences, 270-335. Methods: A Primer, New York: Chapman & Hall, 11. Also found in: Hand, D.J., et al. (1994) A Handbook of Small Data Sets, London: Chapman & Hall, 101-103.
+
+    Examples
+    --------
+    ```python
+    >>> #load uscrime dataset
+    >>> from scientistools import load_uscrime
+    >>> uscrime = load_uscrime()
+    >>> from scientisttools import FAMD
+    >>> res_famd = FAMD()
+    >>> res_famd.fit(uscrime)
+    ```
+    """
+    return read_excel(DATASETS_DIR/"crime.xlsx",sheet_name="Feuil1",header=0,index_col=0)
 
 def load_wine():
     """
@@ -1121,12 +1183,11 @@ def load_wine():
     >>> res_mfa.fit(wine)
     ```
     """
-    data = pyreadr.read_r(DATASETS_DIR/"wine.rda")["wine"]
-    return data
+    return read_r(DATASETS_DIR/"wine.rda")["wine"]
 
 def load_womenwork():
     """
-    Women work dataset
+    Women Work Dataset
     ------------------
 
     Usage
@@ -1138,18 +1199,26 @@ def load_womenwork():
 
     Format
     ------
-    A data frame with 3 rows and 7 columns
+    A pandas DataFrame with 3 rows and 7 columns
 
     Examples
     --------
     ```python
-    >>> # load women_work dataset
+    >>> # load womenwork dataset
     >>> from scientisttools import load_women_work
-    >>> women_work = load_women_work()
+    >>> womenwork = load_womenwork()
     >>> from scientisttools import CA
-    >>> res_ca = CA(col_sup=[3,4,5,6])
+    >>> res_ca = CA(col_sup=(3,4,5,6))
     >>> res_ca.fit(women_work)
     ```
     """
-    data = pd.read_csv(DATASETS_DIR/"women_work.txt",sep="\t")
-    return data
+    return read_csv(DATASETS_DIR/"womenwork.txt",sep="\t")
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#Datasets as DataFrame
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+autos1990 = read_csv(DATASETS_DIR/'autos1990.txt', delimiter = " ",header=0,index_col=0)
+decathlon = read_excel(DATASETS_DIR/"decathlon.xlsx",sheet_name="Feuil5",index_col=0,header=0)
+poison = read_excel(DATASETS_DIR/"poison.xlsx",sheet_name="Feuil4",index_col=0,header=0)
+racescanines = read_excel(DATASETS_DIR/"racescanines.xlsx",sheet_name="Feuil5",header=0,index_col=0)

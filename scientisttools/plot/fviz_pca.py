@@ -23,7 +23,7 @@ from .fviz_add import fviz_add, gg_circle,text_label,list_colors
 def fviz_pca_ind(self,
                  axis = [0,1],
                  geom = ["point","text"],
-                 repel_ind = False,
+                 repel = False,
                  lim_cos2 = None,
                  lim_contrib = None,
                  x_lim = None,
@@ -66,8 +66,8 @@ def fviz_pca_ind(self,
                  stroke_quali_sup = 0.5,
                  text_type_quali_sup = "text",
                  add_grid =True,
-                 ha_ind = "center",
-                 va_ind = "center",
+                 ha = "center",
+                 va = "center",
                  add_hline = True,
                  alpha_hline = 0.5,
                  col_hline = "black",
@@ -90,154 +90,101 @@ def fviz_pca_ind(self,
     Usage
     -----
     ```python
-    >>> fviz_pca_ind(self,
-                    axis = [0,1],
-                    geom = ["point","text"],
-                    repel_ind = False,
-                    lim_cos2 = None,
-                    lim_contrib = None,
-                    x_lim = None,
-                    y_lim = None,
-                    x_label = None,
-                    y_label = None,
-                    title = None,
-                    alpha_ind = 1,
-                    col_ind ="black",
-                    fill_ind = None,
-                    shape_ind = "o",
-                    point_size_ind = 1.5,
-                    text_size_ind = 8,
-                    stroke_ind = 0.5,
-                    text_type_ind = "text",
-                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                    legend_title = None,
-                    habillage = None,
-                    palette = None,
-                    add_ellipses = False, 
-                    ellipse_type = "t",
-                    confint_level = 0.95,
-                    geom_ellipse = "polygon",
-                    ind_sup = True,
-                    alpha_ind_sup = 1,
-                    col_ind_sup = "blue",
-                    fill_ind_sup = None,
-                    shape_ind_sup = "^",
-                    point_size_ind_sup = 1.5,
-                    text_size_ind_sup = 8,
-                    stroke_ind_sup = 0.5,
-                    text_type_ind_sup = "text",
-                    quali_sup = True,
-                    alpha_quali_sup = 1,
-                    col_quali_sup = "red",
-                    fill_quali_sup = None,
-                    shape_quali_sup = ">",
-                    point_size_quali_sup = 1.5,
-                    text_size_quali_sup = 8,
-                    stroke_quali_sup = 0.5,
-                    text_type_quali_sup = "text",
-                    add_grid =True,
-                    ha_ind = "center",
-                    va_ind = "center",
-                    add_hline = True,
-                    alpha_hline = 0.5,
-                    col_hline = "black",
-                    size_hline = 0.5,
-                    linetype_hline = "dashed",
-                    add_vline = True,
-                    alpha_vline = 0.5,
-                    col_vline = "black",
-                    size_vline = 0.5,
-                    linetype_vline = "dashed",
-                    ggtheme = theme_minimal())
+    >>> fviz_pca_ind(self,**kwargs)
         ```
 
     Parameters
     ----------
-    `self` : an object of class PCA
+    `self`: an object of class PCA
 
-    `axis` : a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
+    `axis`: a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
 
-    `x_lim` : a numeric list of length 2 specifying the range of the plotted 'x' values (by default = None).
-
-    `y_lim` : a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
-
-    `x_label` : a string specifying the label text of x (by default = None and a x_label is chosen).
-
-    `y_label` : a string specifying the label text of y (by default = None and a x_label is chosen).
-
-    `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
-
-    `color` : a color for the active individuals points (by default = "black").
-
-    `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
+    `geom`: a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
-    `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+    `repel`: a boolean, whether to avoid overplotting text labels or not (by default == False)
 
-    `palette` :  a list or tuple specifying the color palette to be used for coloring or filling by groups.
+    `lim_cos2`: a numeric specifying the square cosinus limit (by default = None).
+
+    `lim_contrib`: a numeric specifying the relative contribution limit (by default = None),
+
+    `x_lim`: a numeric list of length 2 specifying the range of the plotted 'x' values (by default = None).
+
+    `y_lim`: a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
+
+    `x_label`: a string specifying the label text of x (by default = None and a x_label is chosen).
+
+    `y_label`: a string specifying the label text of y (by default = None and a x_label is chosen).
+
+    `title`: a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
+
+    `alpha_ind`: a numeric to controls the transparency of individuals colors. The value can variate from 0 (total transparency) to 1 (no transparency). Default value is 1.
+
+    `col_ind`: a color for the active individuals points (by default = "black"). Can be a continuous variable or a labels from sciikit-learn KMeans functions. Possible values include also: "cos2", "contrib". 
+        In this case, the colors for active individuals are automatically controlled by their qualities of representation ("cos2") or contributions ("contrib"). To use automatic coloring (by cos2, contrib), make sure that habillage = None.
+
+    `gradient_cols`:  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+
+    `palette`:  a list or tuple specifying the color palette to be used for coloring or filling by groups.
     
-    `point_size` : a numeric value specifying the marker size (by default = 1.5).
+    `point_size`: a numeric value specifying the marker size (by default = 1.5).
     
-    `text_size` : a numeric value specifying the label size (by default = 8).
+    `text_size`: a numeric value specifying the label size (by default = 8).
 
-    `text_type` :  a string specifying either `geom_text` or `geom_label` (by default = "text"). Allowed values are : "text" or "label".
+    `text_type`:  a string specifying either `geom_text` or `geom_label` (by default = "text"). Allowed values are : "text" or "label".
 
-    `marker` : the marker style (by default = "o").
+    `marker`: the marker style (by default = "o").
     
-    `add_grid` : a boolean to either add or not a grid customization (by default = True).
+    `add_grid`: a boolean to either add or not a grid customization (by default = True).
 
-    `ind_sup` : a boolean to either add or not supplementary individuals (by default = True).
+    `ind_sup`: a boolean to either add or not supplementary individuals (by default = True).
 
-    `ind_sup_color` : a color for the supplementary individuals points (by default = "blue").
+    `ind_sup_color`: a color for the supplementary individuals points (by default = "blue").
 
-    `ind_sup_marker` :  a marker style for the supplementary individuals points (by default = "^").
+    `ind_sup_marker`:  a marker style for the supplementary individuals points (by default = "^").
 
-    `ind_sup_point_size` : a numeric value specifying the supplementary individuals marker size (by default = 1.5).
+    `ind_sup_point_size`: a numeric value specifying the supplementary individuals marker size (by default = 1.5).
     
-    `ind_sup_text_size` : a numeric value specifying the supplementary individuals label size (by default = 8).
+    `ind_sup_text_size`: a numeric value specifying the supplementary individuals label size (by default = 8).
 
-    `legend_title` : a string corresponding to the title of the legend (by default = None).
+    `legend_title`: a string corresponding to the title of the legend (by default = None).
 
-    `habillage` : a string or an integer specifying the variables of indexe for coloring the observations by groups. Default value is None.
+    `habillage`: a string or an integer specifying the variables of indexe for coloring the observations by groups. Default value is None.
 
-    `add_ellipses` : a boolean to either add or not ellipses (by default = False). 
+    `add_ellipses`: a boolean to either add or not ellipses (by default = False). 
 
-    `ellipse_type` : ellipse multivariate distribution (by default = "t" for t-distribution). However, you can set type = "norm" to assume a multivariate normal distribution or type = "euclid" for an euclidean ellipse.
+    `ellipse_type`: ellipse multivariate distribution (by default = "t" for t-distribution). However, you can set type = "norm" to assume a multivariate normal distribution or type = "euclid" for an euclidean ellipse.
 
-    `confint_level` : ellipse confindence level (by default = 0.95).
+    `confint_level`: ellipse confindence level (by default = 0.95).
 
-    `geom_ellipse` : ellipse geometry (by default = "polygon").
+    `geom_ellipse`: ellipse geometry (by default = "polygon").
 
-    `quali_sup` : a boolean to either add or not supplementary categorical variable (by default = True).
+    `quali_sup`: a boolean to either add or not supplementary categorical variable (by default = True).
 
-    `quali_sup_color` : a color for the supplementary categorical variables points (by default = "red").
+    `quali_sup_color`: a color for the supplementary categorical variables points (by default = "red").
 
-    `quali_sup_marker` :  a marker style for the supplementary categorical variables points (by default = ">").
+    `quali_sup_marker`:  a marker style for the supplementary categorical variables points (by default = ">").
 
-    `quali_sup_point_size` : a numeric value specifying the supplementary categorical variables marker size (by default = 1.5).
+    `quali_sup_point_size`: a numeric value specifying the supplementary categorical variables marker size (by default = 1.5).
     
-    `quali_sup_text_size` : a numeric value specifying the supplementary categorical variables label size (by default = 8).
+    `quali_sup_text_size`: a numeric value specifying the supplementary categorical variables label size (by default = 8).
 
-    `add_hline` : a boolean to either add or not a horizontal ligne (by default = True).
+    `add_hline`: a boolean to either add or not a horizontal ligne (by default = True).
 
-    `add_vline` : a boolean to either add or not a vertical ligne (by default = True).
+    `add_vline`: a boolean to either add or not a vertical ligne (by default = True).
 
-    `hline_color` : a string specifying the horizontal ligne color (by default = "black").
+    `hline_color`: a string specifying the horizontal ligne color (by default = "black").
 
-    `hline_style` : a string specifying the horizontal ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+    `hline_style`: a string specifying the horizontal ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
 
-    `vline_color` : a string specifying the vertical ligne color (by default = "black").
+    `vline_color`: a string specifying the vertical ligne color (by default = "black").
 
-    `vline_style` : a string specifying the vertical ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+    `vline_style`: a string specifying the vertical ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
 
-    `ha` : horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
+    `ha`: horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
 
-    `va` : vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
+    `va`: vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
 
-    `lim_cos2` : a numeric specifying the square cosinus limit (by default = None).
-
-    `lim_contrib` : a numeric specifying the relative contribution limit (by default = None),
-
-    `repel` : a boolean, whether to avoid overplotting text labels or not (by default == False)
+    
 
     `ggtheme`: function, plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes : theme_gray(), theme_bw(), theme_classic(), theme_void(),...
 
@@ -252,15 +199,11 @@ def fviz_pca_ind(self,
     Examples
     --------
     ```python
-    >>> # Load decathlon2 dataset
-    >>> from scientisttools import load_decatlon2
-    >>> X = load_decathlon2()
-    >>> from scientisttools import PCA, fviz_pca_ind
-    >>> res_pca = PCA(standardize=True,n_components=None,ind_sup=[23,24,25,26],quanti_sup=[10,11],quali_sup=12,parallelize=True)
-    >>> res_pca.fit(X)
-    >>> # Graph of individuals
-    >>> p = fviz_pca_ind(res_pca)
-    >>> print(p)
+    >>> from scientisttools import decatlon, PCA, fviz_pca_ind
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> res_pca.fit(decathlon)
+    >>> #hraph of individuals
+    >>> print(fviz_pca_ind(res_pca,repel=True))
     ```
     """
     # Check if self is an object of class PCA
@@ -359,25 +302,25 @@ def fviz_pca_ind(self,
                 p = (p + geom_point(aes(color=c),alpha=alpha_ind,fill=fill_ind,shape=shape_ind,size=point_size_ind,stroke=stroke_ind,show_legend=False) 
                        + scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
             if "text" in geom:
-                p = p + text_label(text_type_ind,repel_ind,mapping=aes(color=c),size=text_size_ind,ha=ha_ind,va=va_ind)
+                p = p + text_label(text_type_ind,repel,mapping=aes(color=c),size=text_size_ind,ha=ha,va=va)
         elif hasattr(col_ind, "labels_"):
             if "point" in geom:
                 p = (p + geom_point(aes(color=legend_title,fill=legend_title,shape=legend_title),alpha=alpha_ind,size=point_size_ind,stroke=stroke_ind,show_legend=True)
                        + guides(color=guide_legend(title=legend_title)))
             if "text" in geom:
-                p = p + text_label(text_type_ind,repel_ind,mapping=aes(color=legend_title),size=text_size_ind,ha=ha_ind,va=va_ind)
+                p = p + text_label(text_type_ind,repel,mapping=aes(color=legend_title),size=text_size_ind,ha=ha,va=va)
         else:
             if "point" in geom:
                 p = p + geom_point(alpha=alpha_ind,color=col_ind,fill=fill_ind,size=point_size_ind,stroke=stroke_ind,show_legend=False)
             if "text" in geom:
-                p = p + text_label(text_type_ind,repel_ind,color=col_ind,size=text_size_ind,va=va_ind,ha=ha_ind)
+                p = p + text_label(text_type_ind,repel,color=col_ind,size=text_size_ind,va=va,ha=ha)
     else:
         if habillage not in coord.columns:
             raise ValueError(f"{habillage} not in DataFrame.")
         if "point" in geom:
             p = p + geom_point(aes(color=habillage,fill=habillage,shape=habillage),alpha=alpha_ind,size=point_size_ind,stroke=stroke_ind,show_legend=True)
         if "text" in geom:
-            p = p + text_label(text_type_ind,repel_ind,mapping=aes(color=habillage),size=text_size_ind,va=va_ind,ha=ha_ind)
+            p = p + text_label(text_type_ind,repel,mapping=aes(color=habillage),size=text_size_ind,va=va,ha=ha)
         if add_ellipses:
             p = p + stat_ellipse(geom=geom_ellipse,mapping=aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
 
@@ -393,7 +336,7 @@ def fviz_pca_ind(self,
             if "point" in geom:
                 p = p + geom_point(ind_sup_coord,aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),alpha=alpha_ind_sup,color = col_ind_sup,fill=fill_ind_sup,shape = shape_ind_sup,size=point_size_ind_sup,stroke=stroke_ind_sup,show_legend=False)
             if "text" in geom:
-                p = p + text_label(text_type_ind_sup,repel_ind,data=ind_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = col_ind_sup,size=text_size_ind_sup,ha=ha_ind,va=va_ind)
+                p = p + text_label(text_type_ind_sup,repel,data=ind_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = col_ind_sup,size=text_size_ind_sup,ha=ha,va=va)
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #add supplementary categorical variables coordinates
@@ -404,7 +347,7 @@ def fviz_pca_ind(self,
             if "point" in geom:
                 p = p + geom_point(quali_sup_coord,aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),alpha=alpha_quali_sup,color = col_quali_sup,fill=fill_quali_sup,shape = shape_quali_sup,size=point_size_quali_sup,stroke=stroke_quali_sup,show_legend=False)
             if "text" in geom:
-                p = p + text_label(text_type_quali_sup,repel_ind,data=quali_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),color = col_quali_sup,size=text_size_quali_sup,ha=ha_ind,va=va_ind)
+                p = p + text_label(text_type_quali_sup,repel,data=quali_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),color = col_quali_sup,size=text_size_quali_sup,ha=ha,va=va)
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     ##add additionnal informations
@@ -460,8 +403,8 @@ def fviz_pca_var(self,
                  col_vline = "black",
                  size_vline = 0.5,
                  linetype_vline = "dashed",
-                 ha_var = "center",
-                 va_var = "center",
+                 ha = "center",
+                 va = "center",
                  ggtheme=theme_minimal()):
     """
     Visualize Principal Component Analysis (PCA) - Graph of variables
@@ -474,38 +417,7 @@ def fviz_pca_var(self,
     Usage
     -----
     ```python
-    >>> fviz_pca_var(self,
-                    axis = [0,1],
-                    x_label = None,
-                    y_label = None,
-                    title = None,
-                    color = "black",
-                    geom = ["arrow","text"],
-                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                    scale = 1,
-                    legend_title = None,
-                    text_type = "text",
-                    text_size = 8,
-                    add_grid = True,
-                    quanti_sup=True,
-                    quanti_sup_color = "blue",
-                    quanti_sup_linestyle = "dashed",
-                    quanti_sup_text_size = 8,
-                    add_hline = True,
-                    add_vline = True,
-                    hline_color = "black",
-                    hline_style = "dashed",
-                    vline_color = "black",
-                    vline_style ="dashed",
-                    ha = "center",
-                    va = "center",
-                    add_circle = True,
-                    circle_color = "gray",
-                    arrow_angle = 10,
-                    arrow_length = 0.1,
-                    lim_cos2 = None,
-                    lim_contrib = None,
-                    ggtheme=theme_minimal())
+    >>> fviz_pca_var(self,**kwargs)
     ```
 
     Parameters
@@ -558,9 +470,9 @@ def fviz_pca_var(self,
 
     `vline_style` : a string specifying the vertical ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
 
-    `ha` : horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
+    `ha`: horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
 
-    `va` : vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
+    `va`: vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
 
     `add_circle` : a boolean, whether to add or not a circle to plot.
 
@@ -587,15 +499,11 @@ def fviz_pca_var(self,
     Examples
     --------
     ```python
-    >>> # Load decathlon2 dataset
-    >>> from scientisttools import load_decatlon2
-    >>> X = load_decathlon2()
-    >>> from scientisttools import PCA, fviz_pca_var
-    >>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-    >>> res_pca.fit(X)
-    >>> # Graph of variables
-    >>> p = fviz_pca_var(res_pca)
-    >>> print(p)
+    >>> from scientisttools import decathlon, PCA, fviz_pca_var
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> res_pca.fit(decathlon)
+    >>> #graph of variables
+    >>> print(fviz_pca_var(res_pca))
     """
     # Check if self is an object of class PCA
     if self.model_ != "pca":
@@ -663,19 +571,19 @@ def fviz_pca_var(self,
             p = (p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c),alpha=alpha_var,linetype=linetype_var,size=line_size_var,arrow = arrow(angle=arrow_angle_var,length=arrow_length_var,type=arrow_type_var))
                    + scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
         if "text" in geom:
-            p = p + text_label(text_type_var,False,mapping=aes(color=c),size=text_size_var,va=va_var,ha=ha_var)
+            p = p + text_label(text_type_var,False,mapping=aes(color=c),size=text_size_var,va=va,ha=ha)
     elif hasattr(col_var, "labels_"):
         if "arrow" in geom:
             p = (p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=legend_title),alpha=alpha_var,linetype=linetype_var,size=line_size_var,arrow = arrow(length=arrow_length_var,angle=arrow_angle_var,type=arrow_type_var))
                    + guides(color=guide_legend(title=legend_title)))
         if "text" in geom:
-            p = p + text_label(text_type_var,False,mapping=aes(color=legend_title),size=text_size_var,ha=ha_var,va=va_var)
+            p = p + text_label(text_type_var,False,mapping=aes(color=legend_title),size=text_size_var,ha=ha,va=va)
         p = p + scale_color_manual(values=palette)
     else:
         if "arrow" in geom:
             p = p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"),alpha=alpha_var,color=col_var,linetype=linetype_var,size=line_size_var,arrow = arrow(length=arrow_length_var,angle=arrow_angle_var,type=arrow_type_var))
         if "text" in geom:
-            p = p + text_label(text_type_var,False,color=col_var,size=text_size_var,ha=ha_var,va=va_var)
+            p = p + text_label(text_type_var,False,color=col_var,size=text_size_var,ha=ha,va=va)
 
     # Create circle
     if add_circle:
@@ -690,7 +598,7 @@ def fviz_pca_var(self,
             if "arrow" in geom:
                 p  = p + annotate("segment",x=0,y=0,xend=asarray(sup_coord.iloc[:,axis[0]]),yend=asarray(sup_coord.iloc[:,axis[1]]),alpha=alpha_quanti_sup,color=col_quanti_sup,linetype=linetype_quanti_sup,size=line_size_quanti_sup,arrow = arrow(length=arrow_length_quanti_sup,angle=arrow_angle_quanti_sup,type=arrow_type_quanti_sup))
             if "text" in geom:
-                p  = p + text_label(text_type_quanti_sup,False,data=sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=col_quanti_sup,size=text_size_quanti_sup,ha=ha_var,va=va_var)
+                p  = p + text_label(text_type_quanti_sup,False,data=sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=col_quanti_sup,size=text_size_quanti_sup,ha=ha,va=va)
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     ##add additionnal informations
@@ -803,15 +711,11 @@ def fviz_pca_biplot(self,
     Examples
     --------
     ```python
-    >>> # Load decathlon2 dataset
-    >>> from scientisttools import load_decatlon2
-    >>> X = load_decathlon2()
-    >>> from scientisttools import PCA, fviz_pca_biplot
-    >>> res_pca = PCA(standardize=True,n_components=None,ind_sup=list(range(23,X.shape[0])),quanti_sup=[10,11],quali_sup=12,parallelize=True)
-    >>> res_pca.fit(X)
-    >>> # Biplot of individuals and variables
-    >>> p = fviz_pca_biplot(res_pca)
-    >>> print(p)
+    >>> from scientisttools import decathlon, PCA, fviz_pca_biplot
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> res_pca.fit(decathlon)
+    >>> #biplot of individuals and variables
+    >>> print(fviz_pca_biplot(res_pca))
     ```
     """
     # Check if self is an object of class PCA
@@ -918,7 +822,7 @@ def fviz_pca_biplot(self,
     
     return p
     
-def fviz_pca(self,choice="biplot",**kwargs):
+def fviz_pca(self,element="biplot",**kwargs):
     """
     Visualize Principal Component Analysis (PCA)
     --------------------------------------------
@@ -927,26 +831,29 @@ def fviz_pca(self,choice="biplot",**kwargs):
     -----------
     Plot the graphs for a Principal Component Analysis (PCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
 
-        * fviz_pca_ind() : Graph of individuals
-        * fviz_pca_var() : Graph of variables (Correlation circle)
-        * fviz_pca_biplot() : Biplot of individuals and variables
+        * `fviz_pca_ind()`: Graph of individuals
+        * `fviz_pca_var()`: Graph of variables (Correlation circle)
+        * `fviz_pca_biplot()`: Biplot of individuals and variables
 
     Usage
     -----
     ```python
-    >>> fviz_pca(self,choice=("ind","var","biplot"))
+    >>> fviz_pca(self,element=("ind","var","biplot"),**kwargs)
+    >>> fviz_pca(self,"ind",**kwargs)
+    >>> fviz_pca(self,"var",**kwargs)
+    >>> fviz_pca(self,"biplot",**kwargs)
     ```
 
     Parameters
     ----------
-    `self` : an object of class PCA
+    `self`: an object of class PCA
 
-    `choice` : the element to plot from the output. Possible value are : 
+    `element`: the element to plot from the output. Allowed values are: 
         * 'ind' for the individuals graphs
         * 'var' for the variables graphs (= Correlation circle)
         * 'biplot' for biplot of individuals and variables
     
-    `**kwargs` : further arguments passed to or from other methods
+    `**kwargs`: further arguments passed to or from other methods
 
     Returns
     ------
@@ -964,12 +871,11 @@ def fviz_pca(self,choice="biplot",**kwargs):
     if self.model_ != "pca":
         raise TypeError("'self' must be an object of class PCA")
     
-    if choice not in ["ind","var","biplot"]:
-        raise ValueError("'choice' should be one of 'ind', 'var', 'biplot'")
-
-    if choice == "ind":
+    if element == "ind":
         return fviz_pca_ind(self,**kwargs)
-    elif choice == "var":
+    elif element == "var":
         return fviz_pca_var(self,**kwargs)
-    else:
+    elif element == "biplot":
         return fviz_pca_biplot(self,**kwargs)
+    else:
+        raise ValueError("'element' should be one of 'ind', 'var', 'biplot'")

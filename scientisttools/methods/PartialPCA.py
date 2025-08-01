@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
-import polars as pl
-import pingouin as pg
+from numpy import ndarray, array, ones, zeros, sqrt
+from pandas import DataFrame, Series, Categorical, api, concat
 import statsmodels.api as sm
 from typing import NamedTuple
 from collections import namedtuple, OrderedDict
@@ -12,13 +10,14 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import mean_squared_error
 
 #intern functions
-from scientisttools.methods.PCA import PCA
-from scientisttools.others.kmo import kmo_index
-from scientisttools.others.predict_sup import predict_ind_sup, predict_quanti_sup
-from scientisttools.others.recodecont import recodecont
-from scientisttools.others.revaluate_cat_variable import revaluate_cat_variable
-from scientisttools.others.function_eta2 import function_eta2
-from scientisttools.others.conditional_average import conditional_average
+from .PCA import PCA
+from .functions.summarize import summarize
+from .functions.pcorrcoef import pcorrcoef
+from .functions.kaiser_msa import kaiser_msa
+from .functions.predict_sup import predict_ind_sup, predict_quanti_sup, predict_quali_sup
+from .functions.recodecont import recodecont
+from .functions.revaluate_cat_variable import revaluate_cat_variable
+from .functions.conditional_average import conditional_average
 
 class PartialPCA(BaseEstimator,TransformerMixin):
     """
@@ -28,34 +27,38 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
     Description
     -----------
-    Performs Partial Principal Component Analysis with supplementary individuals
+    Performs Partial Principal Component Analysis (PartialPCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables. Missing values are replaced by the column mean.
 
     Usage
     -----
     ```python
-    >>> PartialPCA(standardize = True, n_components = 5, partial = None, ind_weights = None, var_weights = None, ind_sup = None, parallelize = False)
+    >>> PartialPCA(n_components = 5, partial = None, ind_weights = None, var_weights = None, ind_sup = None, quanti_sup = None, quali_sup = None, parallelize = False)
     ```
 
     Parameters:
     -----------
-    `standardize` : a boolean, if True (value set by default) then data are scaled to unit variance
+    `n_components`: number of dimensions kept in the results (by default 5)
 
-    `n_components` : number of dimensions kept in the results (by default 5)
+    `partiel`: an integer or a list/tuple of string specifying the name of the partial variables
 
-    `partiel` : an integer or a list/tuple of string specifying the name of the partial variables
-
-    `ind_weights` : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform row weights); the weights are given only for the active individuals
+    `ind_weights`: an optional individuals weights (by default, a list/tuple/array/Series of 1/(number of active individuals) for uniform individuals weights), the weights are given only for active individuals.
     
-    `var_weights` : an optional variables weights (by default, uniform column weights); the weights are given only for the active variables
+    `var_weights`: an optional variables weights (by default, a list/tuple/array/Series of 1 for uniform variables weights), the weights are given only for the active variables
     
-    `ind_sup` : list/tuple indicating the indexes of the supplementary individuals
+    `ind_sup`: an integer/string/list/tuple indicating the indexes/names of the supplementary individuals
 
-    `parallelize` : boolean, default = False. If model should be parallelize
-        * If `True` : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
-        * If `False` : parallelize using pandas apply
+    `quanti_sup`: an integer/string/list/tuple indicating the indexes/names of the supplementary quantitative variables
+
+    `quali_sup`: an integer/string/list/tuple indicating the indexes/names of the supplementary categorical variables
+
+    `parallelize`: boolean, default = False. If model should be parallelize
+        * If `True`: parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
+        * If `False`: parallelize using pandas apply
 
     Attributes
     ----------
+    `call_` : namedtuple with some informations
+
     `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
     `var_`  : namedtuple of pandas dataframe containing all the results for the variables considered as group (coordinates, square cosine, contributions)
@@ -63,8 +66,6 @@ class PartialPCA(BaseEstimator,TransformerMixin):
     `ind_` : namedtuple of pandas dataframe with all the results for the individuals (coordinates, square cosine, contributions)
 
     `ind_sup_` : namedtuple of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
-
-    `call_` : namedtuple with some statistics
 
     `others_` : namedtuple of others statistics
 
@@ -76,9 +77,9 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    A. Boudou (1982), Analyse en composantes principales partielle, Statistique et analyse des données, tome 7, n°2 (1982), p. 1-21
+    * A. Boudou (1982), Analyse en composantes principales partielle, Statistique et analyse des données, tome 7, n°2 (1982), p. 1-21
 
-    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
+    * Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Version 1.0
 
     See Also
     --------
@@ -87,27 +88,32 @@ class PartialPCA(BaseEstimator,TransformerMixin):
     Examples
     --------
     ```python
-    >>> # load cars2006 dataset
+    >>> #load cars2006 dataset
     >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=0,parallelize=False)
-    >>> res_partialpca.fit(D)
+    >>> cars = load_cars2006(element="all")
+    >>> from scientisttools import PartialPCA, summaryPartialPCA
+    >>> #with integer
+    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(cars)
+    >>> #with string
+    >>> res_ppca = PartialPCA(partial="CYL",ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(cars)
+    >>> #with list
+    >>> res_ppca = PartialPCA(partial=["CYL"],ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(cars)
+    >>> #with tuple
+    >>> res_ppca = PartialPCA(partial=("CYL"),ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(cars)
+    >>> summaryPartialPCA(res_ppca)
     ```
     """
     def __init__(self,
-                 standardize = True,
-                 n_components = 5,
                  partial = None,
+                 n_components = 5,
                  ind_weights = None,
                  var_weights = None,
                  ind_sup = None,
                  quanti_sup = None,
                  quali_sup = None,
                  parallelize = False):
-        self.n_components = n_components
-        self.standardize = standardize
         self.partial = partial
+        self.n_components = n_components
         self.ind_weights = ind_weights
         self.var_weights = var_weights
         self.ind_sup = ind_sup
@@ -115,43 +121,36 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         self.quali_sup = quali_sup
         self.parallelize = parallelize
 
-    def fit(self,X,y=None):
+    def fit(self,X:DataFrame,y=None):
         """
         Fit the model to X
         ------------------
 
         Parameters
         ----------
-        `X` : pandas/polars DataFrame of float, shape (n_samples, n_columns)
+        `X`: pandas DataFrame of float, shape (n_samples, n_columns)
             Training data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
 
-        `y` : None
+        `y`: None
             y is ignored
 
         Returns
         -------
-        `self` : object
+        `self`: object
             Returns the instance itself
         """
-        # check if X is an instance of polars dataframe
-        if isinstance(X,pl.DataFrame):
-            X = X.to_pandas()
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # Check if X is an instance of pd.DataFrame class
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not isinstance(X,DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Check if X is a pandas Dataframe
-        if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        # check if standardize is a boolean
-        if not isinstance(self.standardize,bool):
-            raise TypeError("'standardize' must be a boolean.")
-        
-        # check if parallelize is a boolean
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if parallelize is a boolean
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not isinstance(self.parallelize,bool):
             raise TypeError("'parallelize' must be a boolean.")
-        
+
         # set parallelize
         if self.parallelize:
             n_workers = -1
@@ -160,20 +159,24 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
         # Set index name as None
         X.index.name = None
-        
-        # Drop level if ndim greater than 1 and reset columns name
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ## rop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
 
-        # Checks if categoricals variables is in X
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ## checks if categoricals variables is in X
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         is_quali = X.select_dtypes(include=["object","category"])
         if is_quali.shape[1]>0:
-            for col in is_quali.columns:
-                X[col] = pd.Categorical(X[col],categories=sorted(X[col].dropna().unique().tolist()),ordered=True)
-        
-        #----------------------------------------------------------------------------------------------------------------------------------------
+            for q in is_quali.columns:
+                X[q] = Categorical(X[q],categories=sorted(X[q].dropna().unique().tolist()),ordered=True)
+                
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ## Set partial label and index
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.partial is None:
             raise ValueError("'partial' must be assigned.")  
         elif isinstance(self.partial,str):
@@ -186,9 +189,9 @@ class PartialPCA(BaseEstimator,TransformerMixin):
             elif all(isinstance(x,(int,float)) for x in self.partial):
                 partial_label = X.columns[[int(x) for x in self.partial]].tolist()
         
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ## Check if supplementary qualitatives variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.quali_sup is not None:
             if isinstance(self.quali_sup,str):
                 quali_sup_label = [self.quali_sup]
@@ -234,251 +237,230 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         else:
             ind_sup_label = None
              
-        ###### Store initial data
+        #make a copy of the original data
         Xtot = X.copy()
 
-        #--------------------------
-        ## Drop supplementary elements
-        #----------------------------------------------------------------------------------------------------------------
-        # Drop supplementary qualitative variables
+        #drop supplementary qualitative variables
         if self.quali_sup is not None:
             X = X.drop(columns=quali_sup_label)
         
-        # Drop supplementary quantitative variables
+        #drop supplementary quantitative variables
         if self.quanti_sup is not None:
             X = X.drop(columns=quanti_sup_label)
         
-        # Drop supplementary individuals
+        #drop supplementary individuals
         if self.ind_sup is not None:
             # Extract supplementary individuals
             X_ind_sup = X.loc[ind_sup_label,:]
             X = X.drop(index=ind_sup_label)
 
-        #Summary quantitatives variables
-        summary_quanti = X.describe().T.reset_index().rename(columns={"index" : "variable"})
-        summary_quanti["count"] = summary_quanti["count"].astype("int")
-        self.summary_quanti_ = summary_quanti
-
-        #------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ## Principal Component Analysis with partial correlation matrix (PartialPCA)
-        #------------------------------------------------------------------------------------------------------------------
-        # Split X into target and features
-        y, x = X[partial_label], X.drop(columns = partial_label)
-        
-        #------------------------------------------------------------------------------------------------------------------
-        ## Standardisation of 
-        #------------------------------------------------------------------------------------------------------------------
-        # weighted mean and standard deviation
-        d1 = DescrStatsW(X,weights=self.ind_weights,ddof=0)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if all variables are numerics
+        all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
+        if not all_num:
+            raise TypeError("All columns must be numeric")
+    
+        #descriptive statistics of quantitatives variables 
+        summary_quanti = summarize(X=X)
 
-        # Standardization
-        center = d1.mean
-        if self.standardize:
-            scale = d1.std
+        #split X into target (y) and features (x)
+        y, x = X[partial_label], X.drop(columns = partial_label)
+
+        #number of rows/columns
+        n_rows, n_cols = x.shape
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ## Set individuals weights
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.ind_weights is None:
+            ind_weights = ones(n_rows)/n_rows
+        elif not isinstance(self.ind_weights,(list,tuple,ndarray,Series)):
+            raise TypeError("'ind_weights' must be a list/tuple/array/Series of individuals weights.")
+        elif len(self.ind_weights) != n_rows:
+            raise ValueError(f"'ind_weights' must be a list/tuple/array/Series with length {n_rows}.")
         else:
-            scale = np.ones(X.shape[1])
-        # Z = (X - mu)/sigma
+            ind_weights = array([x/sum(self.ind_weights) for x in self.ind_weights])
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ## Set variables weights
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.var_weights is None:
+            var_weights = ones(n_cols)
+        elif not isinstance(self.var_weights,(list,tuple,ndarray,Series)):
+            raise TypeError("'var_weights' must be a list/tuple/array/Series of variables weights.")
+        elif len(self.var_weights) != n_cols:
+            raise ValueError(f"'var_weights' must be a list/tuple/array/Series with length {n_cols}.")
+        else:
+            var_weights = array(self.var_weights)
+
+        #convert weights to Series
+        ind_weights, var_weights =  Series(ind_weights,index=x.index,name="weight"), Series(var_weights,index=x.columns,name="weight")
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ##standardize the active data
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #compute weighted average and standard deviation
+        d1 = DescrStatsW(X,weights=ind_weights,ddof=0)
+        #convert to Series
+        center, scale, wcorr = Series(d1.mean,index=X.columns,name="center"), Series(d1.std,index=X.columns,name="scale"), DataFrame(d1.corrcoef,index=X.columns,columns=X.columns)
+
+        #standardization : Z = (X - mu)/sigma
         Z = mapply(X,lambda x : (x - center)/scale,axis=1,progressbar=False,n_workers=n_workers)
-        
-        #-------------------------------------------------------------------------------------------------------------------------
-        # Normalized coefficients
-        #-------------------------------------------------------------------------------------------------------------------------
-        coef_n = pd.DataFrame(np.zeros((x.shape[1],len(partial_label))),columns = partial_label,index=x.columns)
-        for col in x.columns:
-            coef_n.loc[col,:] = sm.OLS(endog=Z[col],exog=sm.add_constant(Z[partial_label])).fit().params[1:]
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ##normalized coefficients
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        coef_n = DataFrame(zeros((x.shape[1],len(partial_label))),columns = partial_label,index=x.columns)
+        for k in x.columns:
+            coef_n.loc[k,:] = sm.OLS(endog=Z[k],exog=sm.add_constant(Z[partial_label])).fit().params[1:]
 
         # Ordinary least squares models
-        ols_results = pd.DataFrame(np.zeros((x.shape[1],len(partial_label)+4)),columns = [*["intercept"],*partial_label,*["R2","Adj. R2","RMSE"]],index=x.columns)
-        resid, model = pd.DataFrame(index=x.index,columns=x.columns).astype("float"), OrderedDict()
-        for col in x.columns:
-            ols = sm.OLS(endog=x[col],exog=sm.add_constant(y)).fit()
-            ols_results.loc[col,:] = [*ols.params.values.tolist(),*[ols.rsquared,ols.rsquared_adj,mean_squared_error(x[col],ols.fittedvalues,squared=False)]]
-            resid.loc[:,col] = ols.resid
-            model[col] = ols
+        ols_results = DataFrame(zeros((x.shape[1],len(partial_label)+4)),columns = [*["intercept"],*partial_label,*["R2","Adj. R2","RMSE"]],index=x.columns)
+        resid, model = DataFrame(index=x.index,columns=x.columns).astype("float"), OrderedDict()
+        for k in x.columns:
+            ols = sm.OLS(endog=x[k],exog=sm.add_constant(y)).fit()
+            ols_results.loc[k,:] = [*ols.params.values.tolist(),*[ols.rsquared,ols.rsquared_adj,mean_squared_error(x[k],ols.fittedvalues,squared=False)]]
+            resid.loc[:,k] = ols.resid
+            model[k] = ols
 
-        #----------------------------------------------------------------------------------------------------
-        # Fit Principal Components Analysis with resid
-        #----------------------------------------------------------------------------------------------------
-        res = PCA(standardize=self.standardize,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=self.var_weights).fit(resid)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ##fit Principal Components Analysis with resid
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        fit_ = PCA(standardize=True,n_components=self.n_components,ind_weights=ind_weights,var_weights=var_weights,rotate=None).fit(resid)
 
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ##statistics for supplementary individuals
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
-            # Transform to float
-            X_ind_sup = X_ind_sup.astype("float")
-
-            # Apply regression to compute Residuals
-            X_ind_resid = pd.concat((pd.DataFrame({f"{col}": X_ind_sup[col].sub(model[col].predict(sm.add_constant(X_ind_sup[partial_label])))},index=ind_sup_label) for col in x.columns),axis=1)
-            
-            # Concatenate the two datasets
-            X_ind_resid = pd.concat((resid,X_ind_resid),axis=0)
-
-            # Update PCA with supplementary individuals
-            res = PCA(standardize=self.standardize,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=self.var_weights,ind_sup=self.ind_sup).fit(X_ind_resid)
-
-            # Extract supplementary individuals informations
-            self.ind_sup_ = res.ind_sup_
+            #apply regression to compute Residuals
+            ind_sup_resid = concat((DataFrame({f"{k}": X_ind_sup[k].sub(model[k].predict(sm.add_constant(X_ind_sup[partial_label])))},index=ind_sup_label) for k in x.columns),axis=1)
+            #update PCA with supplementary individuals
+            fit_ = PCA(standardize=True,n_components=self.n_components,ind_weights=ind_weights,var_weights=var_weights,ind_sup=self.ind_sup,rotate=None).fit(concat((resid,ind_sup_resid),axis=0))
+            #extract supplementary individuals informations
+            self.ind_sup_ = fit_.ind_sup_
         
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ##statistics for supplementary quantitative variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.quanti_sup is not None:
             X_quanti_sup = Xtot.loc[:,quanti_sup_label]
             if self.ind_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
-            
-            # Transform to float
-            X_quanti_sup = recodecont(X_quanti_sup).Xcod
+            #fill missing with mean
+            X_quanti_sup = recodecont(X=X_quanti_sup).X
 
-            # Summary statistics
-            self.summary_quanti_.insert(0,"group","active")
-            summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
-            summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
-            summary_quanti_sup.insert(0,"group","sup")
+            #standardize supplementary quantitative variables
+            d_quanti_sup = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
+            Z_quanti_sup = mapply(X_quanti_sup,lambda x : (x - d_quanti_sup.mean)/d_quanti_sup.std,axis=1,progressbar=False,n_workers=n_workers)
 
-            # Concatenate
-            self.summary_quanti_ = pd.concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
-
-            # Standardize supplementary quantitative variables
-            d_quanti_sup = DescrStatsW(X_quanti_sup,weights=self.ind_weights,ddof=0)
-
-            # Standardization
-            center_sup = d_quanti_sup.mean
-            if self.standardize:
-                scale_sup = d_quanti_sup.std
-            else:
-                scale_sup = np.ones(X_quanti_sup.shape[1])
-            Z_quanti_sup = mapply(X_quanti_sup,lambda x : (x - center_sup)/scale_sup,axis=1,progressbar=False,n_workers=n_workers)
-
-            #-------------------------------------------------------------------------------------------------------------------------
-            # Normalized coefficients
-            #-------------------------------------------------------------------------------------------------------------------------
-            coef_n_sup = pd.DataFrame(np.zeros((X_quanti_sup.shape[1],len(partial_label))),columns = partial_label,index=quanti_sup_label)
-            for col in X_quanti_sup.columns:
-                coef_n_sup.loc[col,:] = sm.OLS(endog=Z_quanti_sup[col],exog=sm.add_constant(Z[partial_label])).fit().params[1:]
-            
-            #concatenate
+            #normalized coefficients
+            coef_n_sup = DataFrame(zeros((X_quanti_sup.shape[1],len(partial_label))),columns = partial_label,index=quanti_sup_label)
+            for k in X_quanti_sup.columns:
+                coef_n_sup.loc[k,:] = sm.OLS(endog=Z_quanti_sup[k],exog=sm.add_constant(Z[partial_label])).fit().params[1:]
+            #insert `group` columns
             coef_n.insert(0,"group","actif")
             coef_n_sup.insert(0,"group","sup")
-            coef_n = pd.concat((coef_n,coef_n_sup),axis=0)
+            #concatenate
+            coef_n = concat((coef_n,coef_n_sup),axis=0)
 
-            #----------------------------------------------------------------------------------------------------------------------
             # Compute resid
-            ols2_results = pd.DataFrame(np.zeros((X_quanti_sup.shape[1],len(partial_label)+4)),columns = [*["intercept"],*partial_label,*["R2","Adj. R2","RMSE"]],index=quanti_sup_label)
-            X_quanti_sup_resid = pd.DataFrame(columns=quanti_sup_label,index=x.index).astype("float")
-            for col in quanti_sup_label:
-                ols = sm.OLS(endog=X_quanti_sup[col],exog=sm.add_constant(y)).fit()
-                ols2_results.loc[col,:] = [*ols.params.values.tolist(),*[ols.rsquared,ols.rsquared_adj,mean_squared_error(X_quanti_sup[col],ols.fittedvalues,squared=False)]]
-                X_quanti_sup_resid.loc[:,col] = ols.resid
-                model[col] = ols
-
-            # Concatenate Ols results
+            ols2_results = DataFrame(zeros((X_quanti_sup.shape[1],len(partial_label)+4)),columns = [*["intercept"],*partial_label,*["R2","Adj. R2","RMSE"]],index=quanti_sup_label)
+            quanti_sup_resid = DataFrame(columns=quanti_sup_label,index=x.index).astype("float")
+            for k in quanti_sup_label:
+                ols = sm.OLS(endog=X_quanti_sup[k],exog=sm.add_constant(y)).fit()
+                ols2_results.loc[k,:] = [*ols.params.values.tolist(),*[ols.rsquared,ols.rsquared_adj,mean_squared_error(X_quanti_sup[k],ols.fittedvalues,squared=False)]]
+                quanti_sup_resid.loc[:,k] = ols.resid
+                model[k] = ols
+            #insert `group` columns
             ols_results.insert(0,"group","actif")
             ols2_results.insert(0,"group","sup")
-            ols_results = pd.concat((ols_results,ols2_results))
+            #concatenate Ols results
+            ols_results = concat((ols_results,ols2_results))
 
-            # Concatenate
-            X_quanti_sup_resid = pd.concat((resid,X_quanti_sup_resid),axis=1)
+            #update PCA with supplementary quantitatives variables
+            fit_ = PCA(standardize=True,n_components=self.n_components,ind_weights=ind_weights,var_weights=var_weights,quanti_sup=quanti_sup_label,rotate=None).fit(concat((resid,quanti_sup_resid),axis=1))
+            #extract statistics for supplementary quantitative variables
+            self.quanti_sup_ = fit_.quanti_sup_
 
-            # Find index
-            index = [X_quanti_sup_resid.columns.tolist().index(x) for x in quanti_sup_label]
-
-            # PCA with supplementary quantitatives variables
-            res = PCA(standardize=self.standardize,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=self.var_weights,quanti_sup=index).fit(X_quanti_sup_resid)
+            #summary statistics for supplementary quantitative variables
+            summary_quanti_sup = summarize(X=X_quanti_sup)
+            #insert `group` columns
+            summary_quanti.insert(0,"group","active")
+            summary_quanti_sup.insert(0,"group","sup")
+            #concatenate
+            summary_quanti = concat((summary_quanti,summary_quanti_sup),axis=0,ignore_index=True)
             
-            # extract statistics for supplementary quantitative variables
-            self.quanti_sup_ = res.quanti_sup_
-            
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ##statistics for supplementary qualitative variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.quali_sup is not None:
             X_quali_sup = Xtot.loc[:,quali_sup_label]
             if self.ind_sup is not None:
                 X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
             
-            # Concatenate
-            X_quali_sup_resid = pd.concat((resid,X_quali_sup),axis=1)
+            #update PCA with supplementary qualitatives variables
+            fit_= PCA(standardize=True,n_components=self.n_components,ind_weights=ind_weights,var_weights=var_weights,quali_sup=quali_sup_label,rotate=None).fit(concat((resid,X_quali_sup),axis=1))
+            #extract supplementary qualitatives variables informations
+            self.quali_sup_, self.summary_quali_ = fit_.quali_sup_, fit_.summary_quali_
 
-            # Find new index labels
-            index = [X_quali_sup_resid.columns.tolist().index(x) for x in quali_sup_label]
-            
-            # Update PCA with supplementary qualitatives variables
-            res = PCA(standardize=self.standardize,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=self.var_weights,quali_sup=index).fit(X_quali_sup_resid)
-            
-            # Extract supplementary qualitatives variables informations
-            self.quali_sup_, self.summary_quali_ = res.quali_sup_, res.summary_quali_
+        #Update number of components
+        n_components, var_weights, ind_weights = fit_.call_.n_components, fit_.call_.var_weights, fit_.call_.ind_weights
 
-        #--------------------------------------------------------------------------------------------------
-        # Add others informations
-        #--------------------------------------------------------------------------------------------------
-        others_ = dict(
-            corr = X.corr(method="pearson"),
-            pcorr = X.pcorr(),
-            kmo = kmo_index(X),
-            coef_n = coef_n,
-            statistics = ols_results
-        )
+        #Store call informations
+        call_ = OrderedDict(Xtot=Xtot,X=X,Z=Z,x=x,y=y,resid=resid,partial=partial_label,ind_weights=ind_weights,var_weights=var_weights,center=center,scale=scale,n_components=n_components,n_workers=n_workers,
+                            ind_sup=ind_sup_label,quanti_sup=quanti_sup_label,quali_sup=quali_sup_label,pca=fit_)
+        #convert to namedtuple
+        self.call_ = namedtuple("call",call_.keys())(*call_.values())
+        
+        #extract all additionals informations
+        self.svd_, self.eig_, self.ind_, self.var_ = fit_.svd_, fit_.eig_.drop(columns=[]), fit_.ind_, fit_.var_
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ##correlation matrix
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #partial pearson correlation coefficient
+        pcorr =  pcorrcoef(X=X)
+        #convert to ordered dictionary
+        corr_ = OrderedDict(corrcoef=wcorr,pcorrcoef=pcorr)
+        #convert to namedtuple
+        self.corr_ = namedtuple("correlation",corr_.keys())(*corr_.values())
+
+        #add others informations
+        others_ = OrderedDict(kaiser_msa = kaiser_msa(X),coef_n = coef_n,statistics = ols_results)
         self.others_ = namedtuple("others",others_.keys())(*others_.values())
 
-        #### Store separate model
+        #Store separate model
         self.separate_model_ = namedtuple("separate_model",model.keys())(*model.values())
-
-        # Store global PCA method
-        self.global_pca_ = res
         
-        # Update number of components
-        n_components, var_weights, ind_weights = res.call_.n_components, res.call_.var_weights, res.call_.ind_weights
-
-        #Store call informations  : X = Z, M = diag(col_weight), D = diag(row_weight) : t(X)DXM
-        call_ = {"Xtot":Xtot,
-                "X" : x,
-                "Z" : Z,
-                "y" : y,
-                "ind_sup" : ind_sup_label,
-                "quanti_sup" : quanti_sup_label,
-                "quali_sup" : quali_sup_label,
-                "center" : pd.Series(center,index=X.columns,name="center"),
-                "scale" : pd.Series(scale,index=X.columns,name="scale"),
-                "ind_weights" : ind_weights,
-                "var_weights" : var_weights,
-                "n_components" : n_components,
-                "standardize" : self.standardize,
-                "partial" : partial_label}
-        
-        self.call_ = namedtuple("call",call_.keys())(*call_.values())
-
-        #extract all additionals informations
-        self.svd_, self.eig_, self.ind_, self.var_ = res.svd_, res.eig_, res.ind_, res.var_
-
-        # store model
+        self.summary_quanti_ = summary_quanti
         self.model_ = "partialpca"
 
         return self
 
-    def fit_transform(self,X,y=None):
+    def fit_transform(self,X:DataFrame,y=None) -> DataFrame:
         """
         Fit the model with X and apply the dimensionality reduction on X.
         ----------------------------------------------------------------
 
         Parameters
         ----------
-        `X` : pandas/polars dataframe of shape (n_samples, n_columns)
+        `X`: pandas Dataframe of shape (n_samples, n_columns)
             Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
-        `y` : None.
+        `y`: None.
             y is ignored.
 
         Returns
         -------
-        `X_new` : pandas dataframe of shape (n_samples, n_components)
+        `X_new`: pandas Dataframe of shape (n_samples, n_components)
             Transformed values.
         """
         self.fit(X)
         return self.ind_.coord
 
-    def transform(self,X):
+    def transform(self,X:DataFrame) -> DataFrame:
         """
         Apply the dimensionality reduction on X
         ---------------------------------------
@@ -489,32 +471,41 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        `X` : pandas/polars dataframe of shape (n_samples, n_columns)
+        `X`: pandas Dataframe of shape (n_samples, n_columns)
             New data, where `n_samples` is the number of samples and `n_columns` is the number of columns
 
         Returns
         -------
-        `X_new` : pandas dataframe of shape (n_samples, n_components)
+        `X_new`: pandas Dataframe of shape (n_samples, n_components)
             Projection of X in the principal components where `n_samples` is the number of samples and `n_components` is the number of the components.
         """ 
-        # check if X is an instance of polars dataframe
-        if isinstance(X,pl.DataFrame):
-            X = X.to_pandas()
-
-        # Check if X is a pandas DataFrame
-        if not isinstance(X,pd.DataFrame):
-            raise TypeError(
-            f"{type(X)} is not supported. Please convert to a DataFrame with "
-            "pd.DataFrame. For more information see: "
-            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        # Transform to float
-        X = X.astype("float")
-        # Residuals
-        resid = pd.concat((pd.DataFrame({f"{col}" : X[col].sub(self.separate_model_[i].predict(sm.add_constant(X[self.call_.partial])))},index=X.index) for i,col in enumerate(self.call_.X.columns)),axis=1)
+        #check if X is a pandas DataFrame
+        if not isinstance(X,DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Apply PCA transform to resid
-        return self.global_pca_.transform(resid)
+        #set index name as None
+        X.index.name = None
+
+        #check if X.shape[1] = ncols
+        if X.shape[1] != self.call_.X.shape[1]:
+            raise ValueError("'columns' aren't aligned")
+        
+        #check if all variables are numerics
+        all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
+        if not all_num:
+            raise TypeError("All columns must be numeric")
+        
+        #find intersect
+        intersect_col = [x for x in X.columns if x in self.call_.X.columns]
+        if len(intersect_col) != self.call_.X.shape[1]:
+            raise ValueError("The names of the variables is not the same as the ones in the active variables of the PartialPCA result")
+        #reorder columns
+        X = X.loc[:,self.call_.X.columns]
+        
+        #residuals for new observations
+        resid = concat((DataFrame({f"{k}" : X[k].sub(self.separate_model_[i].predict(sm.add_constant(X[self.call_.partial])))},index=X.index) for i,k in enumerate(self.call_.x.columns)),axis=1)
+        #ppply PCA transform to resid
+        return self.call_.pca.transform(resid)
 
 def predictPartialPCA(self,X=None) -> NamedTuple:
     """
@@ -533,19 +524,19 @@ def predictPartialPCA(self,X=None) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class PartialPCA
+    `self`: an object of class PartialPCA
 
-    `X` : pandas/polars dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
+    `X`: pandas Dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
     
     Return
     ------
-    namedtuple of dataframes containing all the results for the new individuals including:
+    namedtuple of Dataframes containing all the results for the new individuals including:
     
-    `coord` : factor coordinates of the new individuals
+    `coord`: factor coordinates of the new individuals
 
-    `cos2` : square cosinus of the new individuals
+    `cos2`: square cosinus of the new individuals
 
-    `dist` : square distance to origin for new individuals
+    `dist`: square distance to origin for new individuals
     
     Author(s)
     ---------
@@ -554,52 +545,56 @@ def predictPartialPCA(self,X=None) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> # load cars2006 dataset
+    >>> #load cars2006 dataset
     >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial="CYL",parallelize=False)
-    >>> res_partialpca.fit(D)
-    >>> # Load supplementary individuals
-    >>> ind_sup = load_cars2006(which="ind_sup")
-    >>> from scientisttools import predictPartialPCA
-    >>> predict = predictPartialPCA(res_partialpca,X=ind_sup)
+    >>> cars = load_cars2006(element="actif")
+    >>> from scientisttools import PartialPCA, predictPartialPCA
+    >>> res_ppca = PartialPCA(partial="CYL")
+    >>> res_ppca.fit(cars)
+    >>> #load new individuals
+    >>> ind_sup = load_cars2006(element="ind_sup")
+    >>> predict = predictPartialPCA(res_ppca,X=ind_sup)
+    >>> predict.coord.head() #coordinate of the new individuals
+    >>> predict.cos2.head() #squared cosinus of the new individuals
+    >>> predict.dist.head() #squared distance to origin of the new individuals
     ```
     """
     # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
     
-    # check if X is an instance of polars dataframe
-    if isinstance(X,pl.DataFrame):
-        X = X.to_pandas()
+    #check if X is an instance of pd.DataFrame class
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
     
-    # Check if X is an instance of pd.DataFrame class
-    if not isinstance(X,pd.DataFrame):
-        raise TypeError(
-        f"{type(X)} is not supported. Please convert to a DataFrame with "
-        "pd.DataFrame. For more information see: "
-        "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-    
-    # set parallelize
-    if self.parallelize:
-        n_workers = -1
-    else:
-        n_workers = 1
-    
-    # Extract elements
-    pca_center, pca_scale = self.global_pca_.call_.center.values, self.global_pca_.call_.scale.values
-    n_components, var_weights = self.call_.n_components, self.call_.var_weights.values
+    #set index name as None
+    X.index.name = None
 
-    # Transform to float
-    X = X.astype("float")
-    # Residuals
-    resid = pd.concat((pd.DataFrame({f"{x}" : X[x] - self.separate_model_[i].predict(sm.add_constant(X[self.call_.partial]))},index=X.index) for i,x in enumerate(self.call_.X.columns)),axis=1)
+    # Check if columns are aligned
+    if X.shape[1] != self.call_.X.shape[1]:
+        raise ValueError("'columns' aren't aligned")
     
-    #### Standardize residuals
-    Z = mapply(resid,lambda x : (x - pca_center)/pca_scale,axis=1,progressbar=False,n_workers=n_workers)
-    res = predict_ind_sup(Z,self.svd_.V[:,:n_components],var_weights,n_workers)
+    #check if all variables are numerics
+    all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
+    if not all_num:
+        raise TypeError("All columns must be numeric")
     
+    #find intersect
+    intersect_col = [x for x in X.columns if x in self.call_.X.columns]
+    if len(intersect_col) != self.call_.X.shape[1]:
+        raise ValueError("The names of the variables is not the same as the ones in the active variables of the PartialPCA result")
+    #reorder columns
+    X = X.loc[:,self.call_.X.columns]
+
+    #residuals for new observations
+    resid = concat((DataFrame({f"{x}" : X[x] - self.separate_model_[i].predict(sm.add_constant(X[self.call_.partial]))},index=X.index) for i,x in enumerate(self.call_.x.columns)),axis=1)
+    #standardize residuals
+    Z = mapply(resid,lambda x : (x - self.call_.pca.call_.center)/self.call_.pca.call_.scale,axis=1,progressbar=False,n_workers=self.call_.n_workers)
+    #square distance to origin
+    sqdisto = mapply(Z, lambda x : (x**2)*self.call_.pca.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
+    sqdisto.name = "Sq. Dist."
+    #statistics for new observations
+    res = predict_ind_sup(Z=Z,V=self.svd_.V,sqdisto=sqdisto,col_weights=self.call_.pca.call_.var_weights,n_workers=self.call_.n_workers)
     return namedtuple("predictPartialPCAResult",res.keys())(*res.values())
 
 def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
@@ -609,7 +604,7 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
 
     Description
     -----------
-    Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables with Partial Principal Components Analysis (PartialPCA)
+    Performs the factor coordinates, squared cosinus and squared distance to origin of supplementary variables (quantitative and/or qualitative) with Partial Principal Components Analysis (PartialPCA).
 
     Usage
     -----
@@ -619,26 +614,27 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class PartialPCA
+    `self`: an object of class PartialPCA
 
-    `X_quanti_sup` : pandas/polars dataframe of supplementary quantitatives variables (default = None)
+    `X_quanti_sup`: pandas Dataframe of supplementary quantitative variables (default = None)
 
-    `X_quali_sup` : pandas/polars dataframe of supplementary qualitatives variables (default = None)
+    `X_quali_sup`: pandas Dataframe of supplementary qualitative variables (default = None)
 
     Returns
     -------
     namedtuple of namedtuple containing the results for supplementary variables including : 
 
-    `quanti` : namedtuple containing the results of the supplementary quantitatives variables including :
-        * coord : factor coordinates of the supplementary quantitatives variables
-        * cos2 : square cosinus of the supplementary quantitatives variables
+    `quanti`: namedtuple containing the results of the supplementary quantitative variables including :
+        * `coord`: factor coordinates of the supplementary quantitative variables
+        * `cos2`: squared cosinus of the supplementary quantitative variables
+        * `statistics`: statistics for linear regression between supplementary quantitative variables and partial variable
     
-    `quali` : namedtuple containing the results of the supplementary qualitatives/categories variables including :
-        * coord : factor coordinates of the supplementary categories
-        * cos2 : square cosinus of the supplementary categories
-        * vtest : value-test of the supplementary categories
-        * dist : square distance to origin of the supplementary categories
-        * eta2 : square correlation ratio of the supplementary qualitatives variables
+    `quali`: namedtuple containing the results of the supplementary qualitative/categories variables including :
+        * `coord`: factor coordinates of the supplementary categories
+        * `cos2`: squared cosinus of the supplementary categories
+        * `vtest`: value-test of the supplementary categories
+        * `dist`: squared distance to origin of the supplementary categories
+        * `eta2`: squared correlation ratio of the supplementary qualitative variables
 
     Author(s)
     ---------
@@ -647,129 +643,103 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
     Examples
     --------
      ```python
-    >>> # load cars2006 dataset
+    >>> #load cars2006 dataset
     >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial="CYL",parallelize=False)
-    >>> res_partialpca.fit(D)
-    >>> # Supplementary quantitatives variables
-    >>> X_quanti_sup = load_cars2006(which="quanti_sup")
-    >>> # Supplementary qualitatives variables
-    >>> X_quali_sup = load_cars2006(which="quali_sup")
-    >>> from scientisttools import supvarPartialPCA
-    >>> sup_var_predict = supvarPartialPCA(res_partialpca,X_quanti_sup=X_quanti_sup,X_quali_sup=X_quali_sup)
+    >>> cars = load_cars2006(element="actif")
+    >>> from scientisttools import PartialPCA, supvarPartialPCA
+    >>> res_ppca = PartialPCA(partial="CYL")
+    >>> res_ppca.fit(cars)
+    >>> #supplementary variables (quantitative & qualitative)
+    >>> X_quanti_sup, X_quali_sup = load_cars2006(element="quanti_sup"), load_cars2006(element="quali_sup")
+    >>> sup_var = supvarPartialPCA(res_ppca,X_quanti_sup=X_quanti_sup,X_quali_sup=X_quali_sup)
     ``` 
     """
-    # Check if self is and object of class PCA
+    # Check if self is and object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
     
-    # set parallelize
-    if self.parallelize:
-        n_workers = -1
-    else:
-        n_workers = 1
-
-    # Extract
-    ind_weights, n_components = self.call_.ind_weights.values, self.call_.n_components
-
-    #----------------------------------------------------------------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     ##statistics for supplementary quantitative variables
-    #----------------------------------------------------------------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if X_quanti_sup is not None:
-        # Transform to float
-        X_quanti_sup = recodecont(X_quanti_sup).Xcod
-        # Extract
-        partial_label, y = self.call_.partial, self.call_.y
-
-        # Extract coefficients and intercept
-        ols_results = pd.DataFrame(np.zeros((X_quanti_sup.shape[1],len(partial_label)+4)),columns = [*["intercept"],*partial_label,*["R2","Adj. R2","RMSE"]],index=X_quanti_sup.columns)
-        quanti_sup_resid = pd.DataFrame(columns=X_quanti_sup.columns,index=X_quanti_sup.index.tolist()).astype("float")
-        for col in X_quanti_sup.columns:
-            ols = sm.OLS(endog=X_quanti_sup[col],exog=sm.add_constant(y)).fit()
-            ols_results.loc[col,:] = [*ols.params.values.tolist(),*[ols.rsquared,ols.rsquared_adj,mean_squared_error(X_quanti_sup[col],ols.fittedvalues,squared=False)]]
-            quanti_sup_resid.loc[:,col] = ols.resid
+        #if pandas Series, transform to pandas Dataframe
+        if isinstance(X_quanti_sup,Series):
+            X_quanti_sup = X_quanti_sup.to_frame()
+        
+        #check if X_quanti_sup is an instance of pd.DataFrame class
+        if not isinstance(X_quanti_sup,DataFrame):
+            raise TypeError(f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        #check if all variables are numerics
+        all_num = all(api.types.is_numeric_dtype(X_quanti_sup[k]) for k in X_quanti_sup.columns)
+        if not all_num:
+            raise TypeError("All columns in `X_quanti_sup` must be numeric")
+        
+        #fill missing with mean
+        X_quanti_sup = recodecont(X_quanti_sup).X
+        
+        #xteract coefficients and intercept
+        ols_results = DataFrame(zeros((X_quanti_sup.shape[1],len(self.call_.partial)+4)),columns = [*["intercept"],*self.call_.partial,*["R2","Adj. R2","RMSE"]],index=X_quanti_sup.columns)
+        quanti_sup_resid = DataFrame(columns=X_quanti_sup.columns,index=X_quanti_sup.index.tolist()).astype("float")
+        for k in X_quanti_sup.columns:
+            ols = sm.OLS(endog=X_quanti_sup[k],exog=sm.add_constant(self.call_.y)).fit()
+            ols_results.loc[k,:] = [*ols.params.values.tolist(),*[ols.rsquared,ols.rsquared_adj,mean_squared_error(X_quanti_sup[k],ols.fittedvalues,squared=False)]]
+            quanti_sup_resid.loc[:,k] = ols.resid
         
         # Standardize
-        d_quanti_sup = DescrStatsW(quanti_sup_resid,weights=ind_weights,ddof=0)
-
-        # Standardization
-        center = d_quanti_sup.mean
-        if self.standardize:
-            scale = d_quanti_sup.std
-        else:
-            scale = np.ones(X_quanti_sup.shape[1])
-        
-        # Z = (X - mu)/sigma
-        Z_quanti_sup_resid = mapply(quanti_sup_resid,lambda x : (x - center)/scale,axis=1,progressbar=False,n_workers=n_workers)
-
+        d_quanti_sup = DescrStatsW(quanti_sup_resid,weights=self.call_.ind_weights,ddof=0)
+        Z_quanti_sup_resid = mapply(quanti_sup_resid,lambda x : (x - d_quanti_sup.mean)/d_quanti_sup.std,axis=1,progressbar=False,n_workers=self.call_.n_workers)
         #compute statistics for supplementary quantitative variables
-        quanti_sup_ = predict_quanti_sup(Z_quanti_sup_resid,self.svd_.U[:,:n_components],ind_weights,n_workers)
+        quanti_sup_ = predict_quanti_sup(Z=Z_quanti_sup_resid,U=self.svd_.U,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
         quanti_sup_["statistics"] = ols_results
-        
-        # Store supplementary quantitatives informations
+        #convert to namedtuple
         quanti_sup =  namedtuple("quanti_stp",quanti_sup_.keys())(*quanti_sup_.values())
     else:
         quanti_sup = None
     
-    #----------------------------------------------------------------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     ##statistics for supplementary qualitative variables
-    #----------------------------------------------------------------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if X_quali_sup is not None:
-        # check if X_quali_sup is an instance of polars dataframe
-        if isinstance(X_quali_sup,pl.DataFrame):
-            X_quali_sup = X_quali_sup.to_pandas()
-        
-        # If pandas series, transform to pandas dataframe
-        if isinstance(X_quali_sup,pd.Series):
+        #if pandas Series, transform to pandas Dataframe
+        if isinstance(X_quali_sup,Series):
             X_quali_sup = X_quali_sup.to_frame()
         
-        # Check if X_quali_sup is an instance of pd.DataFrame class
-        if not isinstance(X_quali_sup,pd.DataFrame):
-            raise TypeError(f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with "
-                            "pd.DataFrame. For more information see: "
-                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        #check if X_quali_sup is an instance of pd.DataFrame class
+        if not isinstance(X_quali_sup,DataFrame):
+            raise TypeError(f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Set index name as None
-        X_quali_sup.index.name = None
+        #check if all columns are categoricals
+        all_cat = all(api.types.is_string_dtype(X_quali_sup[q]) for q in X_quali_sup.columns)
+        if not all_cat:
+            raise TypeError("All columns in `X_quali_sup` must be categoricals") 
         
-        # Transform to object
-        for col in X_quali_sup.columns:
-            X_quali_sup[col] = pd.Categorical(X_quali_sup[col],categories=sorted(X_quali_sup[col].dropna().unique().tolist()),ordered=True)
-        
-        # Check if two columns have the same categories
+        #convert to factor
+        for q in X_quali_sup.columns:
+            X_quali_sup[q] = Categorical(X_quali_sup[q],categories=sorted(X_quali_sup[q].dropna().unique().tolist()),ordered=True)
+        #check if two columns have the same categories
         X_quali_sup = revaluate_cat_variable(X_quali_sup)
-        n_rows = X_quali_sup.shape[0]
-
-        # Extract elements
-        var_weights, center, scale  = self.global_pca_.call_.var_weights.values, self.global_pca_.call_.center.values, self.global_pca_.call_.scale.values
-
-        # Square correlation ratio
-        quali_sup_eta2 = pd.concat((function_eta2(X=X_quali_sup,lab=col,x=self.ind_.coord.values,weights=ind_weights,n_workers=n_workers) for col in X_quali_sup.columns),axis=0)
-
-        # conditional average of original data
-        barycentre = conditional_average(X=self.global_pca_.call_.X,Y=X_quali_sup,weights=ind_weights)
-        n_k = pd.concat((X_quali_sup[col].value_counts().sort_index() for col in X_quali_sup.columns),axis=0)
-
-        # Supplementary qualitatives squared distance
-        bary = mapply(barycentre,lambda x : (x - center)/scale,axis=1,progressbar=False,n_workers=n_workers)
-        quali_sup_sqdisto  = mapply(bary, lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+        #conditional average of original data
+        barycentre = conditional_average(X=self.call_.pca.call_.X,Y=X_quali_sup,weights=self.call_.ind_weights)
+        #standardize the data
+        Z_quali_sup = mapply(barycentre,lambda x : (x - self.call_.pca.call_.center)/self.call_.pca.call_.scale,axis=1,progressbar=False,n_workers=self.call_.n_workers)
+        #categories factor coordinates (scores)
+        quali_sup_coord = mapply(Z_quali_sup, lambda x : x*self.call_.pca.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.svd_.V)
+        quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(self.call_.n_components)]
+        #squared distance to origin
+        quali_sup_sqdisto  = mapply(Z_quali_sup, lambda x : (x**2)*self.call_.pca.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
         quali_sup_sqdisto.name = "Sq. Dist."
-
-        # Supplementary qualitatives coordinates
-        quali_sup_coord = mapply(bary, lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_.V[:,:n_components])
-        quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
-
-        # Supplementary qualiatives square cosine
-        quali_sup_cos2 = mapply(quali_sup_coord, lambda x : (x**2)/quali_sup_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
-        
-        # Supplementary qualitatives value-test
-        quali_sup_vtest = mapply(quali_sup_coord,lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=n_workers)
-        quali_sup_vtest = pd.concat(((quali_sup_vtest.loc[k,:]/np.sqrt((n_rows-n_k[k])/((n_rows-1)*n_k[k]))).to_frame().T for k in n_k.index),axis=0)
-
-        # Supplementary categories informations
-        quali_sup = namedtuple("quali_sup",["coord","cos2","vtest","dist","eta2"])(quali_sup_coord,quali_sup_cos2,quali_sup_vtest,quali_sup_sqdisto,quali_sup_eta2)
+        #categories coefficients
+        n_rows, n_k = X_quali_sup.shape[0], concat((X_quali_sup[q].value_counts().sort_index() for q in X_quali_sup.columns),axis=0)
+        coef_k = sqrt(((n_rows-1)*n_k)/(n_rows-n_k))
+        #statistics for supplementary categories
+        quali_sup_ = predict_quali_sup(X=X_quali_sup,Y=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
+        #update value-test with squared eigenvalues
+        quali_sup_["vtest"] = mapply(quali_sup_["vtest"],lambda x : x/self.svd_.vs[:self.call_.n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers)
+        #merge dictionary
+        quali_sup_ = OrderedDict(**OrderedDict(barycentre=barycentre),**quali_sup_)
+        #convert to namedtuple
+        quali_sup = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
     else:
         quali_sup = None
 

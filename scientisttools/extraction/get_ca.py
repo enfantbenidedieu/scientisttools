@@ -23,15 +23,15 @@ def get_ca_row(self)-> NamedTuple:
 
     Return
     -------
-    namedtuple of dataframes containing the results for the active rows including : 
+    a namedtuple of pandas DataFrame containing the results for the active rows including: 
 
-    `coord`: factor coordinates (scores) of the rows
+    `coord`: factor coordinates
 
-    `cos2`: square cosinus of the rows
+    `cos2`: squared cosinus
 
-    `contrib`: relative contributions of the rows
+    `contrib`: relative contributions
 
-    `infos`: additionnal informations (weights, margin, square distance to origin and inertia) of the rows
+    `infos`: additionnal informations (weights, margin, square distance to origin and inertia)
     
     Author(s)
     ---------
@@ -42,12 +42,16 @@ def get_ca_row(self)-> NamedTuple:
     ```python
     >>> #load children2 dataset
     >>> from scientisttools import load_children2
-    >>> children2  = load_children2()
+    >>> children2 = load_children2()
     >>> from scientisttools import CA, get_ca_row
-    >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
     >>> res_ca.fit(children2)
-    >>> #Extract the results of rows
+    >>> #extract the results of rows
     >>> row = get_ca_row(res_ca)
+    >>> row.coord.head() #row coordinates
+    >>> row.cos2.head() #rows cos2
+    >>> row.conrib.head() #row contributions
+    >>> row.infos.head() #row additionals informations
     ```
     """
     #Check if self is an object of class CA
@@ -78,13 +82,13 @@ def get_ca_col(self)-> NamedTuple:
     -------
     namedtuple of dataframes containing the results for the columns including : 
 
-    `coord`: factor coordinates of the columns
+    `coord`: factor coordinates
 
-    `cos2`: square cosinus of the columns
+    `cos2`: square cosinus
 
-    `contrib`: relative contributions of the columns
+    `contrib`: relative contributions
     
-    `infos`: additionals informations (margin, square distance to origin and inertia) of the columns
+    `infos`: additionals informations (margin, square distance to origin and inertia)
     
     Author(s)
     ---------
@@ -101,6 +105,10 @@ def get_ca_col(self)-> NamedTuple:
     >>> res_ca.fit(children2)
     >>> #extract the results of columns
     >>> col = get_ca_col(res_ca)
+    >>> col.coord.head() #column coordinates
+    >>> col.cos2.head() #column cos2
+    >>> col.contrib.head() #column contributions
+    >>> col.infos.head() #column additionals informations
     ```
     """
     #check if self is an object of class CA
@@ -108,7 +116,7 @@ def get_ca_col(self)-> NamedTuple:
         raise TypeError("'self' must be an object of class CA")
     return self.col_
 
-def get_ca(self,choice = "row")-> NamedTuple:
+def get_ca(self, element = "row")-> NamedTuple:
     """
     Extract the results for rows/columns - CA
     -----------------------------------------
@@ -124,7 +132,7 @@ def get_ca(self,choice = "row")-> NamedTuple:
     Usage
     -----
     ```python
-    >>> get_ca(self, choice = ("row", "col"))
+    >>> get_ca(self, element = ("row", "col"))
     >>> get_ca_row(self)
     >>> get_ca_col(self) 
     ```
@@ -133,7 +141,7 @@ def get_ca(self,choice = "row")-> NamedTuple:
     ----------
     `self`: an object of class CA
 
-    `choice`: the element to subset from the output. Possible values are : 
+    `element`: the element to subset from the output. Possible values are : 
         * "row" for active rows
         * "col" for active columns
 
@@ -147,6 +155,8 @@ def get_ca(self,choice = "row")-> NamedTuple:
 
     `contrib`: relative contributions of the rows/columns
 
+    `infos`: additionals informations of the rows/columns
+
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
@@ -156,27 +166,34 @@ def get_ca(self,choice = "row")-> NamedTuple:
     ```python
     >>> #load children2 dataset
     >>> from scientisttools import load_children2
-    >>> children2  = load_children2()
+    >>> children2 = load_children2()
     >>> from scientisttools import CA, get_ca
-    >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
     >>> res_ca.fit(children2)
     >>> #extract the results of rows
-    >>> row = get_ca(res_ca, choice = "row")
+    >>> row = get_ca(res_ca, element = "row")
+    >>> row.coord.head() #row coordinates
+    >>> row.cos2.head() #rows cos2
+    >>> row.conrib.head() #row contributions
+    >>> row.infos.head() #row additionals informations
     >>> #extract the results of columns
-    >>> col = get_ca(res_ca, choice = "col")
+    >>> col = get_ca(res_ca, element = "col")
+    >>> col.coord.head() #column coordinates
+    >>> col.cos2.head() #column cos2
+    >>> col.contrib.head() #column contributions
+    >>> col.infos.head() #column additionals informations
     ```
     """
     #check if self is an object of class CA
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
     
-    if choice not in ["row","col"]:
-        raise ValueError("'choice' should be one of 'row', 'col'")
-    
-    if choice == "row":
+    if element == "row":
         return get_ca_row(self)
-    else:
+    elif element == "col":
         return get_ca_col(self)
+    else:
+        raise ValueError("'element' should be one of 'row', 'col'")
     
 def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe",**kwargs):
     """
@@ -218,22 +235,22 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     ```python
     >>> #load children2 dataset
     >>> from scientisttools import load_children2
-    >>> children2  = load_children2()
+    >>> children2 = load_children2()
     >>> from scientisttools import CA, summaryCA
-    >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
     >>> res_ca.fit(children2)
     >>> summaryCA(res_ca)
     ```
     """
-    #Check if self is an object of class CA
+    #check if self is an object of class CA
     if self.model_ != "ca":
         raise TypeError("'self' must be an object of class CA")
 
-    # Set number of components and number of elements
+    #set number of components and number of elements
     ncp, nb_element = min(ncp,self.call_.n_components), min(nb_element,self.call_.X.shape[0])
 
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##Principal Components Analysis Results
+    #Correspondence Analysis Results
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("                     Correspondence Analysis - Results                     \n")
 
@@ -252,7 +269,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     ##add chi-squared test
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("\nChi-squared test\n")
-    chi2_test = self.others_.chi2_test
+    chi2_test = self.goodness_.chi2
     if to_markdown:
         print(chi2_test.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -262,7 +279,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     ##add log-likelihood test
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("\nlog-likelihood test\n")
-    g_test = self.others_.g_test
+    g_test = self.goodness_.gtest
     if to_markdown:
         print(g_test.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -272,7 +289,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     ##others measure of association
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("\nOthers measure of association\n")
-    association = self.others_.association.round(decimals=digits)
+    association = self.goodness_.association.round(decimals=digits)
     if to_markdown:
         print(association.to_markdown(tablefmt=tablefmt,**kwargs))
     else:

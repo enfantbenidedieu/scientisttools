@@ -9,7 +9,7 @@ def get_mca_ind(self) -> NamedTuple:
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus and relative contributions) for the active individuals from Multiple Correspondence Analysis (MCA) outputs.
+    Extract all the results (factor coordinates, squared cosinus, relative contributions and additional informations) for the active individuals from Multiple Correspondence Analysis (MCA) outputs.
 
     Usage
     -----
@@ -19,20 +19,20 @@ def get_mca_ind(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class MCA
+    `self`: an object of class MCA
 
     Returns
     -------
-    namedtuple containing the results of the cative individuals including : 
+    a namedtuple of pandas DataFrames containing all the results for the active individuals including:
 
-    `coord` : factor coordinates (scores) of the individuals
+    `coord`: factor coordinates
 
-    `cos2` : square cosinus of the individuals
+    `cos2`: squared cosinus
 
-    `contrib` : relative contributions of the individuals
+    `contrib`: relative contributions
 
-    `infos` : additionnal informations (weight, square distance to origin, inertia) of the individuals.
-    
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia)
+
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
@@ -40,15 +40,15 @@ def get_mca_ind(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> # Load poison dataset
-    >>> from scientisttools import load_poison
-    >>> poison = load_poison()
-    >>> from scientisttools import MCA
-    >>> res_mca = MCA(n_components=5,ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> from scientisttools import poison, MCA, get_mca_ind
+    >>> res_mca = MCA(quali_sup=(2,3),quanti_sup=(0,1))
     >>> res_mca.fit(poison)
-    >>> from scientistools import get_mca_ind
-    >>> # Extract results for the individuals
+    >>> #extract results for the individuals
     >>> ind = get_mca_ind(res_mca) 
+    >>> ind.coord.head() #coordinates of individuals
+    >>> ind.cos2.head() #cos2 of individuals
+    >>> ind.contrib.head() #contributions of individuals
+    >>> ind.infos.head() #additionals informations of individuals
     ```
     """
     # Check if self is an object of class MCA
@@ -63,7 +63,7 @@ def get_mca_var(self) -> NamedTuple:
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus, relative contributions) for the active variable categories from Multiple Correspondence Analysis (MCA) outputs.
+    Extract all the results (factor coordinates, square cosinus, relative contributions and additionals informations) for the active variable categories from Multiple Correspondence Analysis (MCA) outputs.
 
     Usage
     -----
@@ -73,27 +73,29 @@ def get_mca_var(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class MCA
+    `self`: an object of class MCA
 
     Returns
     -------
-    namedtuple of dataframes containing the results for the active variable categories including :
+    namedtuple of pandas DataFrames containing all the results for the active variable categories including :
 
-    `coord` : factor coordinates (scores) for the variables categories
+    `coord`: factor coordinates
 
-    `corrected_coord` : corrected factor coordinates for the variables categories
+    `coord_n`: corrected (normalized) factor coordinates
 
-    `cos2` : square cosinus for the variables categories
+    `cos2`: squared cosinus
 
-    `contrib`  : relative contributions of the variables categories
+    `contrib`: relative contributions
 
-    `vtest` : v-test for the variables categories
+    `vtest`: value-test
 
-    `eta2` : squared correlation ratio for the variables
+    `eta2`: squared correlation ratio
 
-    `var_contrib` : contributions of the variables
+    `var_inertia`: variables inertia
 
-    `infos` : additionnal informations (weight, square distance to oriigin, inertia) for the variables categories :
+    `var_contrib`: contributions of the variables
+
+    `infos`: additionnal informations (weight, square distance to origin, inertia and percentage of inertia)
 
     Author(s)
     ---------
@@ -102,15 +104,23 @@ def get_mca_var(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> # Load poison dataset
+    >>> #load poison dataset
     >>> from scientisttools import load_poison
     >>> poison = load_poison()
-    >>> from scientisttools import MCA
-    >>> res_mca = MCA(n_components=5,ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> from scientisttools import MCA, get_mca_var
+    >>> res_mca = MCA(ind_sup=(50,51,52,53,54),quali_sup=(2,3),quanti_sup=(0,1))
     >>> res_mca.fit(poison)
-    >>> from scientistools import get_mca_var
-    >>> # Extract results for the variables
+    >>> #extract results for the variables
     >>> var = get_mca_var(res_mca) 
+    >>> var.coord.head() #coordinates of the categories
+    >>> var.cos2.head() #cos2 of the categories
+    >>> var.contrib.head() #contributions of the categories
+    >>> var.cond_n.head() #corrected coordinates of the categories
+    >>> var.vtest.head() #value-test of the categories
+    >>> var.infos.head() #additionals informations of the categories
+    >>> var.eta2.head() #squared correlation ratio of the variables
+    >>> var.var_inertia.head() #inertia of the variables
+    >>> var.var_contrib.head() #contributions of the variables
     ```
     """
     # Check if self is an object of class MCA
@@ -118,42 +128,45 @@ def get_mca_var(self) -> NamedTuple:
         raise TypeError("'self' must be an object of class MCA")
     return self.var_
     
-def get_mca(self,choice="ind") -> NamedTuple:
+def get_mca(self,element="ind") -> NamedTuple:
     """
     Extract the results for individuals/variables - MCA
     ---------------------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosine and contributions) for the active individuals/variable categories from Multiple Correspondence Analysis (MCA) outputs.
+    Extract all the results (factor coordinates, squared cosine, contributions and additionals informations) for the active individuals/variable categories from Multiple Correspondence Analysis (MCA) outputs.
 
-        * get_mca() : Extract the results for vriables and individuals
-        * get_mca_ind() : Extract the results for individuals only
-        * get_mca_var() : Extract the results for variables/categories only
+        * `get_mca()`: Extract the results for vriables and individuals
+        * `get_mca_ind()`: Extract the results for individuals only
+        * `get_mca_var()`: Extract the results for variables/categories only
     
     Usage
     -----
     ```python
-    >>> get_mca(self,choice=c("ind","var"))
+    >>> get_mca(self,element="ind")
+    >>> get_mca(self,element="var")
     ```
 
     Parameters
     ----------
-    `self` : an object of class MCA
+    `self`: an object of class MCA
 
-    `choice` : the element to subset from the output. Possible values are :
+    `elment`: the element to subset from the output. Possible values are :
         * "ind" for individuals, 
         * "var" for variables/categories
     
     Returns
     -------
-    dictionary of dataframes containing the results for the active individuals/variable categories including :
+    a namedtuple of pandas DataFrames containing all the results for the active individuals/variable categories including :
 
-    `coord` : factor coordinates (scores) for the individuals/variable categories
+    `coord`: coordinates for the individuals/variable categories
 
-    `cos2` : square cosinus of the individuals/variable categories
+    `cos2`: squared cosinus for the individuals/variable categories
 
-    `contrib` : relative contributions of the individuals/variable categories
+    `contrib`: relative contributions for the individuals/variable categories
+
+    `infos`: additionals informations for the individuals/variable categories
 
     Author(s)
     ---------
@@ -162,29 +175,41 @@ def get_mca(self,choice="ind") -> NamedTuple:
     Examples
     --------
     ```python
-    >>> # load poison dataset
+    >>> #load poison dataset
     >>> from scientisttools import load_poison
     >>> poison = load_poison()
     >>> from scientisttools import MCA, get_mca
-    >>> res_mca = MCA(n_components=5,ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1])
+    >>> res_mca = MCA(ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1])
     >>> res_mca.fit(poison)
-    >>> # Extract results for the individuals
-    >>> ind = get_mca(res_mca, choice = "ind")
-    >>> # Extract results for the categories
-    >>> var = get_mca(res_mca, choice = "var")
+    >>> #extract results for the individuals
+    >>> ind = get_mca(res_mca, element = "ind")
+    >>> ind.coord.head() #coordinates of individuals
+    >>> ind.cos2.head() #cos2 of individuals
+    >>> ind.contrib.head() #contributions of individuals
+    >>> ind.infos.head() #additionals informations of individuals
+    >>> #extract results for the categories
+    >>> var = get_mca(res_mca, element = "var")
+    >>> var.coord.head() #coordinates of the categories
+    >>> var.cos2.head() #cos2 of the categories
+    >>> var.contrib.head() #contributions of the categories
+    >>> var.cond_n.head() #corrected coordinates of the categories
+    >>> var.vtest.head() #value-test of the categories
+    >>> var.infos.head() #additionals informations of the categories
+    >>> var.eta2.head() #squared correlation ratio of the variables
+    >>> var.var_inertia.head() #inertia of the variables
+    >>> var.var_contrib.head() #contributions of the variables
     ```
     """
     # Check if self is an object of class MCA
     if self.model_ != "mca":
         raise TypeError("'self' must be an object of class MCA")
-    
-    if choice not in ["ind","var"]:
-        raise ValueError("'choice' should be one of 'ind', 'var'")
 
-    if choice == "ind":
+    if element == "ind":
         return get_mca_ind(self)
-    else:
+    elif element == "var":
         return get_mca_var(self)
+    else:
+        raise ValueError("'element' should be one of 'ind', 'var'")
     
 def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
@@ -203,19 +228,19 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
 
     Parameters
     ----------
-    `self` : an object of class MCA
+    `self`: an object of class MCA
 
-    `digits` : int, default=3. Number of decimal printed
+    `digits`: int, default=3. Number of decimal printed
 
-    `nb_element` : int, default = 10. Number of element
+    `nb_element`: int, default = 10. Number of element
 
-    `ncp` : int, default = 3. Number of components
+    `ncp`: int, default = 3. Number of components
 
-    `to_markdown` : Print DataFrame in Markdown-friendly format.
+    `to_markdown`: Print DataFrame in Markdown-friendly format.
 
-    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt`: Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
     
-    `**kwargs` : These parameters will be passed to tabulate.
+    `**kwargs`: These parameters will be passed to tabulate.
 
     Author(s)
     ---------
@@ -224,11 +249,11 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     Examples
     --------
     ```python
-    >>> # Load poison dataset
+    >>> #load poison dataset
     >>> from scientisttools import load_poison
     >>> poison = load_poison()
     >>> from scientisttools import MCA, summaryMCA
-    >>> res_mca = MCA(n_components=5,ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1],parallelize=True)
+    >>> res_mca = MCA(ind_sup=(50,51,52,53,54),quali_sup = (2,3),quanti_sup=(0,1))
     >>> res_mca.fit(poison)
     >>> summaryMCA(res_mca)
     ```

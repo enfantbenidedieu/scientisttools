@@ -23,14 +23,16 @@ scientisttools provides functions for :
 1. **Generalized Factor Analysis (GFA) :** 
     * Principal Component Analysis (PCA)
     * Principal Component Analysis with partial correlation matrix (PartialPCA)
-    * Exploratory Factor Analysis (EFA)
+    * Factor Analysis (FactrAnalysis)
+        * Iterative and Non Iterative Principal Factor Analysis
+        * Harris Component Analysis
     * Correspondence Analysis (CA)
     * Multiple Correspondence Analysis (MCA)
     * Specific Multiple Correspondence Analysis (SpecificMCA)
     * Factor Analysis of Mixed Data (FAMD)
     * Mixed Principal Component Analysis (MPCA)
     * Principal Component Analysis of Mixed Data (PCAMIX)
-    * Canonical Correlation Analysis (CCA)
+    * Canonical Correlation Analysis (CANCORR)
     * Multiple Factor Analysis (MFA)
     * Multiple Factor Analysis for qualitatives/categoricals variables (MFAQUAL)
     * Multiple Factor Analysis of Mixed Data (MFAMD)
