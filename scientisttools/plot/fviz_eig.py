@@ -9,7 +9,7 @@ def fviz_screeplot(self,
                    col_bar = "steelblue",
                    width_bar = None,
                    col_line = "black",
-                   linetype = "solid",
+                   type_line = "solid",
                    add_labels = False,
                    ncp = 10,
                    y_lim = None,
@@ -21,69 +21,69 @@ def fviz_screeplot(self,
                    ggtheme = theme_minimal()):
     """
     Visualize the eigenvalues/proportions/cumulative of dimensions
-    ------------------------------------------------------------
+    --------------------------------------------------------------
 
     Description
     -----------
-    This function suppport the results of multiple general factor analysis methods such as PCA (Principal Components Analysis), CA (Correspondence Analysis), MCA (Multiple Correspondence Analysis), etc...
+    This function support the results of multiple general factor analysis methods such as PCA (Principal Component Analysis), CA (Correspondence Analysis), MCA (Multiple Correspondence Analysis), etc...
 
     Usage
     -----
     ```python
     >>> fviz_screeplot(self,
                        choice = "proportion",
-                       geom_type =["bar","line"],
-                       y_lim = None,
-                       bar_fill = "steelblue",
-                       bar_color = "steelblue",
-                       line_color = "black",
-                       line_type = "solid",
-                       bar_width = None,
-                       ncp = 10,
+                       geom = ["bar","line"],
+                       fill_bar = "steelblue",
+                       col_bar = "steelblue",
+                       width_bar = None,
+                       col_line = "black",
+                       type_line = "solid",
                        add_labels = False,
+                       ncp = 10,
+                       y_lim = None,
                        ha = "center",
                        va = "bottom",
-                       title = None,
                        x_label = None,
                        y_label = None,
+                       title = None,
                        ggtheme = theme_minimal())
     ```
     
     Parameters
     ----------
-    `self` : an object of class PCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, MIXDISC, CMDSCALE
+    `self`: an object of class PCA, PartialPCA, FA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, MIXDISC, CMDSCALE
 
-    `choice` : a text specifying the data to be plotted. Allowed values are "proportion", "eigenvalue" or "cumulative"
+    `choice`: a text specifying the data to be plotted. Allowed values are "proportion", "eigenvalue" or "cumulative"
 
-    `geom_type` : a text specifying the geometry to be used for the graph. Allowed values are "bar" for barplot, "line" for lineplot or ["bar", "line"] to use both types.
+    `geom`: a text specifying the geometry to be used for the graph. Allowed values are "bar" for barplot, "line" for lineplot or ["bar", "line"] to use both types.
 
-    `y_lim` : a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
+    `fill_bar`: fill color for bar plot.
 
-    `bar_fill` : fill color for bar plot.
+    `col_bar`: outline color for bar plot.
 
-    `bar_color` : outline color for bar plot.
+    `width_bar`: float, the width(s) of the bars
 
-    `line_color` : color for line plot (when geom contains "line").
+    `col_line`: color for line plot (when geom contains "line").
 
-    `line_type` : line type. Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+    `type_line`: line type. Allowed values are : "solid", "dashed", "dashdot" or "dotted"
 
-    `bar_width` : float, the width(s) of the bars
+    `add_labels`: logical value. If True, labels are added at the top of bars or points showing the information retained by each dimension.
 
-    `ncp` : a numeric value specifying the number of dimensions to be shown.
+    `ncp`: a numeric value specifying the number of dimensions to be shown.
 
-    `add_labels` : logical value. If TRUE, labels are added at the top of bars or points showing the information retained by each dimension.
+    `y_lim`: a numeric list/tuple of length 2 specifying the range of the plotted 'Y' values (by default = None).
 
-    `ha` : horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
+    `ha`: horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
 
-    `va` : vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
+    `va`: vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
 
-    `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
+    `x_label`: a string specifying the label text of x (by default = None and a x_label is chosen).
 
-    `x_label` : a string specifying the label text of x (by default = None and a x_label is chosen).
+    `y_label`: a string specifying the label text of y (by default = None and a x_label is chosen).
 
-    `y_label` : a string specifying the label text of y (by default = None and a x_label is chosen).
+    `title`: a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
     
-    `ggtheme` : function plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes: theme_gray(), theme_bw(), theme_gray(), theme_classic(), theme_void(), ....
+    `ggtheme`: function plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes: theme_gray(), theme_bw(), theme_gray(), theme_classic(), theme_void(), ....
     
     Return
     ------
@@ -96,31 +96,27 @@ def fviz_screeplot(self,
     Examples
     --------
     ```python
-    >>> # load children dataset
-    >>> from scientisttools import load_children
-    >>> children  = load_children()
-    >>> from scientisttools import CA, fviz_screeplot
-    >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
-    >>> res_ca.fit(children)
-    >>> p = fviz_screeplot(res_ca)
-    >>> print(p)
+    >>> from scientisttools import decathlon, PCA, fviz_screeplot
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> res_pca.fit(decathlon)
+    >>> print(fviz_screeplot(res_ca))
     ```
     """
-    if self.model_ not in ["pca","partialpca","ca","mca","specificmca","famd","mpca","pcamix","efa","mfa","mfaqual","mfamix","mfact","dmfa","cmdscale"]:
-        raise ValueError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE")
+    if self.model_ not in ["pca","partialpca","fa","ca","mca","specificmca","famd","mpca","pcamix","mfa","mfaqual","mfamix","mfact","dmfa","cmdscale"]:
+        raise ValueError("'self' must be an object of class PCA, PartialPCA, FactorAnalysis, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE")
 
     eig = self.eig_.iloc[:min(ncp,self.call_.n_components),:]
 
     if choice == "eigenvalue":
-        eig = eig["eigenvalue"]
+        eig = eig["Eigenvalue"]
         text_labels = [str(round(x,3)) for x in eig.values]
         if y_label is None:
             y_label = "Eigenvalue"
     elif choice == "proportion":
-        eig = (1/100)*eig["proportion"]
+        eig = (1/100)*eig["Proportion"]
         text_labels = [str(round(100*x,2))+"%" for x in eig.values]
     elif choice == "cumulative":
-        eig = (1/100)*eig["cumulative"]
+        eig = (1/100)*eig["Cumulative"]
         text_labels = [str(round(100*x,2))+"%" for x in eig.values]
         if y_label is None:
             y_label = "Cumulative % of explained variances"
@@ -141,13 +137,13 @@ def fviz_screeplot(self,
     if "bar" in geom :
         p = p +  geom_bar(stat="identity",fill=fill_bar,color=col_bar,width=width_bar)
     if "line" in geom :
-        p = p +  geom_line(color=col_line,linetype=linetype) + geom_point(shape="o",color=col_line)
+        p = p +  geom_line(color=col_line,linetype=type_line) + geom_point(shape="o",color=col_line)
     if add_labels:
         p = p + geom_text(label=text_labels,ha=ha,va=va)
     
     # Scale y continuous
     if choice in ["proportion","cumulative"]:
-        p = p + scale_y_continuous(labels=percent_format())
+        p = p + scale_y_continuous(labels=lambda l: ["%d%%" % (v * 100) for v in l])
 
     if title is None:
         title = "Scree plot"
