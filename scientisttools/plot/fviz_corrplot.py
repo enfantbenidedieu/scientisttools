@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from plotnine import ggplot, aes,geom_point,guides,coord_flip,scale_fill_gradient2,labs, theme, theme_minimal
 from pandas import DataFrame, Categorical
+from plotnine import ggplot, aes,geom_point,guides,coord_flip,scale_fill_gradient2,labs,theme, theme_minimal
 
 #intern function
 from scientisttools.methods.functions.pivot_longer import pivot_longer
@@ -24,13 +24,28 @@ def fviz_corrplot(X,
     Usage
     -----
     ```python
-    >>> fviz_coorplot(X,**kwargs)
+    >>> fviz_corrplot(X,x_label=None,y_label=None,title=None,col_outline = "gray",gradient_cols = ["blue","white","red"],legend_title = "Corr",show_legend = True,ggtheme = theme_minimal())
     ```
 
     Parameters
     ----------
     `X`: a pandas DataFrame with `n` rows and `p` columns
 
+    `x_label`: a string specifying the label text of x (by default = None and a x_label is chosen).
+
+    `y_label`: a string specifying the label text of y (by default = None and a x_label is chosen).
+
+    `title`: a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
+
+    `col_outline`: a string specifying the point outline color
+
+    `gradient_cols`:  a list/tuple of 3 colors for low, mid and high values (by default = ("blue", "white", "red")).
+
+    `legend_title`: a string corresponding to the title of the legend (by default = "Corr").
+
+    `show_legend`: a boolean to either add or not legend (by default = True).
+
+    `ggtheme`: function, plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes: theme_gray(), theme_bw(), theme_classic(), theme_void(), ....
 
     Return
     ------
@@ -45,7 +60,10 @@ def fviz_corrplot(X,
     >>> from scientisttools import decathlon, PCA, fviz_corrplot
     >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
     >>> res_pca.fit(decathlon)
-    >>> print(fviz_corrplot(res_pca.var_.coord))
+    >>> #variables squared cosinus
+    >>> print(fviz_corrplot(res_pca.var_.cos2,title="Variables cos2",legend_title="Cos2"))
+    >>> #variables contributions
+    >>> print(fviz_corrplot(res_pca.var_.contrib,title="Variables contributions",legend_title="Contrib"))
     ```
     """
     #check if X is an instance of pandas DataFrame
