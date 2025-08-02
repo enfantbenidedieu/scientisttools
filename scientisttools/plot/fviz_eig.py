@@ -3,7 +3,7 @@ from pandas import DataFrame, Categorical
 from plotnine import ggplot, aes, theme_minimal, geom_bar, geom_line, geom_point, geom_text,scale_y_continuous,labs,ylim
 
 def fviz_screeplot(self,
-                   choice = "proportion",
+                   element = "proportion",
                    geom = ["bar","line"],
                    fill_bar = "steelblue",
                    col_bar = "steelblue",
@@ -31,7 +31,7 @@ def fviz_screeplot(self,
     -----
     ```python
     >>> fviz_screeplot(self,
-                       choice = "proportion",
+                       element = "proportion",
                        geom = ["bar","line"],
                        fill_bar = "steelblue",
                        col_bar = "steelblue",
@@ -51,9 +51,9 @@ def fviz_screeplot(self,
     
     Parameters
     ----------
-    `self`: an object of class PCA, PartialPCA, FA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, MIXDISC, CMDSCALE
+    `self`: an object of class PCA, PartialPCA, FactorAnalysis, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, MIXDISC, CMDSCALE
 
-    `choice`: a text specifying the data to be plotted. Allowed values are "proportion", "eigenvalue" or "cumulative"
+    `element`: a text specifying the data to be plotted. Allowed values are "proportion", "eigenvalue" or "cumulative"
 
     `geom`: a text specifying the geometry to be used for the graph. Allowed values are "bar" for barplot, "line" for lineplot or ["bar", "line"] to use both types.
 
@@ -107,15 +107,15 @@ def fviz_screeplot(self,
 
     eig = self.eig_.iloc[:min(ncp,self.call_.n_components),:]
 
-    if choice == "eigenvalue":
+    if element == "eigenvalue":
         eig = eig["Eigenvalue"]
         text_labels = [str(round(x,3)) for x in eig.values]
         if y_label is None:
             y_label = "Eigenvalue"
-    elif choice == "proportion":
+    elif element == "proportion":
         eig = (1/100)*eig["Proportion"]
         text_labels = [str(round(100*x,2))+"%" for x in eig.values]
-    elif choice == "cumulative":
+    elif element == "cumulative":
         eig = (1/100)*eig["Cumulative"]
         text_labels = [str(round(100*x,2))+"%" for x in eig.values]
         if y_label is None:
@@ -142,7 +142,7 @@ def fviz_screeplot(self,
         p = p + geom_text(label=text_labels,ha=ha,va=va)
     
     # Scale y continuous
-    if choice in ["proportion","cumulative"]:
+    if element in ["proportion","cumulative"]:
         p = p + scale_y_continuous(labels=lambda l: ["%d%%" % (v * 100) for v in l])
 
     if title is None:
@@ -155,8 +155,7 @@ def fviz_screeplot(self,
     if y_lim is not None:
         p = p + ylim(y_lim)
 
-    p = p + ggtheme
-    return p
+    return p + ggtheme
 
 def fviz_eig(self,**kwargs):
     """
