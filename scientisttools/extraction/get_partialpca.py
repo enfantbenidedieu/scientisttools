@@ -23,15 +23,15 @@ def get_partialpca_ind(self) -> NamedTuple:
 
     Returns
     -------
-    namedtuple of Dataframes containing all the results for the active individuals including:
+    a namedtuple of pandas Dataframes containing all the results for the active individuals including:
 
-    `coord`: factor coordinates (scores) of the individuals
+    `coord`: factor coordinates (scores)
 
-    `cos2`: squared cosine of the individuals
+    `cos2`: squared cosine
 
-    `contrib`: relative contributions of the individuals
+    `contrib`: relative contributions
 
-    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia)
 
     Author(s)
     ---------
@@ -40,10 +40,7 @@ def get_partialpca_ind(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> cars = load_cars2006()
-    >>> from scientisttools import PartialPCA, summaryPartialPCA
+    >>> from scientisttools import autos2006, PartialPCA, summaryPartialPCA
     >>> #with integer
     >>> res_ppca = PartialPCA(partial=0)
     >>> res_ppca.fit(cars)
@@ -80,15 +77,15 @@ def get_partialpca_var(self) -> NamedTuple:
 
     Returns
     -------
-    namedtuple of dataframes containing all the results for the active variables including:
+    a namedtuple of pandas DataFrames containing all the results for the active variables including:
 
-    `coord` : factor coordinates (scores) of the variables
+    `coord`: factor coordinates
 
-    `cor` : correlation between variables and axes of the variables
+    `contrib`: relative contributions
 
-    `contrib` : relative contributions of the variables
+    `cos2`: squared cosinus
 
-    `cos2` : square cosinus of the variables
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia)
 
     Author(s)
     ---------
@@ -97,14 +94,14 @@ def get_partialpca_var(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> # load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA, get_partialpca_var
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=0,parallelize=False)
-    >>> res_partialpca.fit(D)
-    >>> # Results for variables
-    >>> var = get_partialpca_var(res_partialpca)
+    >>> from scientisttools import autos2006, PartialPCA, get_partialpca_var
+    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
+    >>> #extract results for variables
+    >>> var = get_partialpca_var(res_pca)
+    >>> var.coord.head() #coordinates of variables
+    >>> var.cos2.head() #cos2 of variables
+    >>> var.contrib.head() #contributions of variables
+    >>> var.infos.head() #additionals informations of variables
     ```
     """
     # Check if self is an object of class PartialPCA
@@ -156,16 +153,12 @@ def get_partialpca(self,element = "ind")-> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> cars = load_cars2006(element="actif")
-    >>> from scientisttools import PartialPCA, get_partialpca
-    >>> res_partialpca = PartialPCA(partial=0)
-    >>> res_partialpca.fit(cars)
-    >>> # Results for individuals
-    >>> ind = get_partialpca(res_partialpca, element = "ind")
-    >>> # Results for variables
-    >>> var = get_partialpca(res_partialpca, element = "var")
+    >>> from scientisttools import autos2006, PartialPCA, get_partialpca
+    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
+    >>> #extract results for individuals
+    >>> ind = get_partialpca(res_partialpca,"ind")
+    >>> #extract results for variables
+    >>> var = get_partialpca(res_partialpca, "var")
     ```
     """
     # Check if self is an object of class PartialPCA
@@ -178,7 +171,6 @@ def get_partialpca(self,element = "ind")-> NamedTuple:
         return get_partialpca_var(self)
     else:
         raise ValueError("'element' should be one of 'ind', 'var'")
-
 
 def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
@@ -197,19 +189,19 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
 
     Parameters
     ----------
-    `self` : an object of class PartialPCA
+    `self`: an object of class PartialPCA
 
-    `digits` : int, default=3. Number of decimal printed
+    `digits`: int, default=3. Number of decimal printed
 
-    `nb_element` :   int, default = 10. Number of element
+    `nb_element`:   int, default = 10. Number of element
 
-    ``ncp` :   int, default = 3. Number of components
+    ``ncp`:   int, default = 3. Number of components
 
-    `to_markdown` : Print DataFrame in Markdown-friendly format
+    `to_markdown`: Print DataFrame in Markdown-friendly format
 
-    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt`: Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
 
-    `**kwargs` : These parameters will be passed to tabulate.
+    `**kwargs`: These parameters will be passed to tabulate.
 
     Author(s)
     ---------
@@ -218,13 +210,9 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
     Examples
     --------
     ```python
-    >>> # load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA, summaryPartialPCA
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=0,parallelize=False)
-    >>> res_partialpca.fit(D)
-    >>> summaryPartialPCA(res_partialpca)
+    >>> from scientisttools import autos2006, PartialPCA, summaryPartialPCA
+    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
+    >>> summaryPartialPCA(res_ppca)
     ```
     """
     # Check if self is and object of class PartialPCA
@@ -232,8 +220,7 @@ def summaryPartialPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablef
         raise TypeError("'self' must be an object of class PartialPCA")
 
     # Define number of components
-    ncp = min(ncp,self.call_.n_components)
-    nb_element = min(nb_element,self.call_.X.shape[0])
+    ncp, nb_element = min(ncp,self.call_.n_components), min(nb_element,self.call_.X.shape[0])
 
     # Partial Principal Components Analysis Results
     print("                     Partial Principal Component Analysis - Results                     \n")

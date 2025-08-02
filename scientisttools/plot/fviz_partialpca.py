@@ -1,53 +1,87 @@
 # -*- coding: utf-8 -*-
-import plotnine as pn
-import pandas as pd
-import numpy as np
+from plotnine import (
+    ggplot,
+    aes,
+    geom_point,
+    geom_segment,
+    scale_color_gradient2,
+    guides,
+    guide_legend,
+    stat_ellipse,
+    scale_color_manual,
+    scale_fill_manual,
+    scale_shape_manual,
+    arrow,
+    annotate,
+    theme_minimal)
+from pandas import Categorical, concat
+from numpy import issubdtype,number,asarray,ndarray
 
-from scientisttools.plot.fviz_add import text_label, gg_circle, fviz_add, list_colors
+#intern functions
+from .fviz_add import fviz_add, gg_circle,text_label,list_colors
 
 def fviz_partialpca_ind(self,
                         axis = [0,1],
+                        geom = ["point","text"],
+                        repel = False,
+                        lim_cos2 = None,
+                        lim_contrib = None,
                         x_lim = None,
                         y_lim = None,
                         x_label = None,
                         y_label = None,
                         title = None,
-                        color ="black",
-                        geom = ["point","text"],
+                        alpha_ind = 1,
+                        col_ind ="black",
+                        fill_ind = None,
+                        shape_ind = "o",
+                        point_size_ind = 1.5,
+                        text_size_ind = 8,
+                        stroke_ind = 0.5,
+                        text_type_ind = "text",
                         gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                        palette = None,
-                        point_size = 1.5,
-                        text_size = 8,
-                        text_type = "text",
-                        marker = "o",
-                        add_grid =True,
-                        ind_sup=True,
-                        color_sup = "blue",
-                        marker_sup = "^",
                         legend_title = None,
                         habillage = None,
+                        palette = None,
                         add_ellipses = False, 
                         ellipse_type = "t",
                         confint_level = 0.95,
                         geom_ellipse = "polygon",
+                        ind_sup = True,
+                        alpha_ind_sup = 1,
+                        col_ind_sup = "blue",
+                        fill_ind_sup = None,
+                        shape_ind_sup = "^",
+                        point_size_ind_sup = 1.5,
+                        text_size_ind_sup = 8,
+                        stroke_ind_sup = 0.5,
+                        text_type_ind_sup = "text",
                         quali_sup = True,
-                        color_quali_sup = "red",
-                        marker_quali_sup = ">",
-                        add_hline = True,
-                        add_vline = True,
-                        hline_color = "black",
-                        hline_style = "dashed",
-                        vline_color = "black",
-                        vline_style = "dashed",
+                        alpha_quali_sup = 1,
+                        col_quali_sup = "red",
+                        fill_quali_sup = None,
+                        shape_quali_sup = ">",
+                        point_size_quali_sup = 1.5,
+                        text_size_quali_sup = 8,
+                        stroke_quali_sup = 0.5,
+                        text_type_quali_sup = "text",
+                        add_grid =True,
                         ha = "center",
                         va = "center",
-                        lim_cos2 = None,
-                        lim_contrib = None,
-                        repel = False,
-                        ggtheme = pn.theme_minimal()) -> pn:
+                        add_hline = True,
+                        alpha_hline = 0.5,
+                        col_hline = "black",
+                        size_hline = 0.5,
+                        linetype_hline = "dashed",
+                        add_vline = True,
+                        alpha_vline = 0.5,
+                        col_vline = "black",
+                        size_vline = 0.5,
+                        linetype_vline = "dashed",
+                        ggtheme = theme_minimal()):
     """
     Visualize Partial Principal Component Analysis (PartialPCA) - Graph of individuals
-    -----------------------------------------------------------------------------------
+    ----------------------------------------------------------------------------------
 
     Description
     -----------
@@ -56,119 +90,99 @@ def fviz_partialpca_ind(self,
     Usage
     -----
     ```python
-    >>> fviz_partialpca_ind(self,
-                            axis=[0,1],
-                            x_lim = None,
-                            y_lim = None,
-                            x_label = None,
-                            y_label = None,
-                            title = None,
-                            color ="black",
-                            geom = ["point","text"],
-                            gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                            palette : None,
-                            point_size = 1.5,
-                            text_size = 8,
-                            text_type = "text",
-                            marker = "o",
-                            add_grid = True,
-                            ind_sup = True,
-                            color_sup = "blue",
-                            marker_sup = "^",
-                            legend_title = None,
-                            habillage = None,
-                            add_ellipses=False, 
-                            ellipse_type = "t",
-                            confint_level = 0.95,
-                            geom_ellipse = "polygon",
-                            quali_sup = True,
-                            color_quali_sup = "red",
-                            marker_quali_sup = ">",
-                            add_hline = True,
-                            add_vline = True,
-                            hline_color = "black",
-                            hline_style = "dashed",
-                            vline_color = "black",
-                            vline_style = "dashed",
-                            ha = "center",
-                            va = "center",
-                            lim_cos2 = None,
-                            lim_contrib = None,
-                            repel = False,
-                            ggtheme = pn.theme_minimal())
-    ```
+    >>> fviz_partialpca_ind(self,**kwargs)
+        ```
 
     Parameters
     ----------
-    `self` : an object of class PartialPCA
+    `self`: an object of class PartialPCA
 
-    `axis` : a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
+    `axis`: a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
 
-    `x_lim` : a numeric list of length 2 specifying the range of the plotted 'x' values (by default = None).
-
-    `y_lim` : a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
-
-    `x_label` : a string specifying the label text of x (by default = None and a x_label is chosen).
-
-    `y_label` : a string specifying the label text of y (by default = None and a x_label is chosen).
-
-    `title` : a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
-
-    `color` : a color for the active individuals points(by default = "black").
-
-    `geom` : a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
+    `geom`: a string specifying the geometry to be used for the graph. Allowed values are the combinaison of ["point","text"]. Use "point"  (to show only points); "text" to show only labels; ["point","text"] to show both types.
     
-    `gradient_cols` :  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+    `repel`: a boolean, whether to avoid overplotting text labels or not (by default == False)
 
-    `palette` :  a list or tuple specifying the color palette to be used for coloring or filling by groups.
+    `lim_cos2`: a numeric specifying the square cosinus limit (by default = None).
+
+    `lim_contrib`: a numeric specifying the relative contribution limit (by default = None),
+
+    `x_lim`: a numeric list of length 2 specifying the range of the plotted 'x' values (by default = None).
+
+    `y_lim`: a numeric list of length 2 specifying the range of the plotted 'Y' values (by default = None).
+
+    `x_label`: a string specifying the label text of x (by default = None and a x_label is chosen).
+
+    `y_label`: a string specifying the label text of y (by default = None and a x_label is chosen).
+
+    `title`: a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
+
+    `alpha_ind`: a numeric to controls the transparency of individuals colors. The value can variate from 0 (total transparency) to 1 (no transparency). Default value is 1.
+
+    `col_ind`: a color for the active individuals points (by default = "black"). Can be a continuous variable or a labels from sciikit-learn KMeans functions. Possible values include also: "cos2", "contrib". 
+        In this case, the colors for active individuals are automatically controlled by their qualities of representation ("cos2") or contributions ("contrib"). To use automatic coloring (by cos2, contrib), make sure that habillage = None.
+
+    `gradient_cols`:  a list/tuple of 3 colors for low, mid and high correlation values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
+
+    `palette`:  a list or tuple specifying the color palette to be used for coloring or filling by groups.
     
-    `point_size` : a numeric value specifying the marker size (by default = 1.5).
+    `point_size`: a numeric value specifying the marker size (by default = 1.5).
     
-    `text_size` : a numeric value specifying the label size (by default = 8).
+    `text_size`: a numeric value specifying the label size (by default = 8).
 
-    `text_type` :  a string specifying either `geom_text` or `geom_label` (by default = "text"). Allowed values are : "text" or "label".
+    `text_type`:  a string specifying either `geom_text` or `geom_label` (by default = "text"). Allowed values are : "text" or "label".
 
-    `marker` : the marker style (by default = "o").
+    `marker`: the marker style (by default = "o").
     
-    `add_grid` : a boolean to either add or not a grid customization (by default = True).
+    `add_grid`: a boolean to either add or not a grid customization (by default = True).
 
-    `ind_sup` : a boolean to either add or not supplementary individuals (by default = True).
+    `ind_sup`: a boolean to either add or not supplementary individuals (by default = True).
 
-    `color_sup` : a color for the supplementary individuals points (by default = "blue").
+    `ind_sup_color`: a color for the supplementary individuals points (by default = "blue").
 
-    `marker_sup` :  a marker style for the supplementary individuals points (by default = "^").
+    `ind_sup_marker`:  a marker style for the supplementary individuals points (by default = "^").
 
-    `legend_title` : a string corresponding to the title of the legend (by default = None).
+    `ind_sup_point_size`: a numeric value specifying the supplementary individuals marker size (by default = 1.5).
+    
+    `ind_sup_text_size`: a numeric value specifying the supplementary individuals label size (by default = 8).
 
-    `add_ellipses` : a boolean to either add or not ellipses (by default = False). 
+    `legend_title`: a string corresponding to the title of the legend (by default = None).
 
-    `ellipse_type` : ellipse multivariate distribution (by default = "t" for t-distribution). However, you can set type = "norm" to assume a multivariate normal distribution or type = "euclid" for an euclidean ellipse.
+    `habillage`: a string or an integer specifying the variables of indexe for coloring the observations by groups. Default value is None.
 
-    `confint_level` : ellipse confindence level (by default = 0.95).
+    `add_ellipses`: a boolean to either add or not ellipses (by default = False). 
 
-    `geom_ellipse` : ellipse geometry (by default = "polygon").
+    `ellipse_type`: ellipse multivariate distribution (by default = "t" for t-distribution). However, you can set type = "norm" to assume a multivariate normal distribution or type = "euclid" for an euclidean ellipse.
 
-    `add_hline` : a boolean to either add or not a horizontal ligne (by default = True).
+    `confint_level`: ellipse confindence level (by default = 0.95).
 
-    `add_vline` : a boolean to either add or not a vertical ligne (by default = True).
+    `geom_ellipse`: ellipse geometry (by default = "polygon").
 
-    `hline_color` : a string specifying the horizontal ligne color (by default = "black").
+    `quali_sup`: a boolean to either add or not supplementary categorical variable (by default = True).
 
-    `hline_style` : a string specifying the horizontal ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+    `quali_sup_color`: a color for the supplementary categorical variables points (by default = "red").
 
-    `vline_color` : a string specifying the vertical ligne color (by default = "black").
+    `quali_sup_marker`:  a marker style for the supplementary categorical variables points (by default = ">").
 
-    `vline_style` : a string specifying the vertical ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+    `quali_sup_point_size`: a numeric value specifying the supplementary categorical variables marker size (by default = 1.5).
+    
+    `quali_sup_text_size`: a numeric value specifying the supplementary categorical variables label size (by default = 8).
 
-    `ha` : horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
+    `add_hline`: a boolean to either add or not a horizontal ligne (by default = True).
 
-    `va` : vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
+    `add_vline`: a boolean to either add or not a vertical ligne (by default = True).
 
-    `lim_cos2` : a numeric specifying the square cosinus limit (by default = None).
+    `hline_color`: a string specifying the horizontal ligne color (by default = "black").
 
-    `lim_contrib` : a numeric specifying the relative contribution limit (by default = None),
+    `hline_style`: a string specifying the horizontal ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
 
-    `repel` : a boolean, whether to avoid overplotting text labels or not (by default == False)
+    `vline_color`: a string specifying the vertical ligne color (by default = "black").
+
+    `vline_style`: a string specifying the vertical ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+
+    `ha`: horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
+
+    `va`: vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
 
     `ggtheme`: function, plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes : theme_gray(), theme_bw(), theme_classic(), theme_void(),...
 
@@ -183,46 +197,35 @@ def fviz_partialpca_ind(self,
     Examples
     --------
     ```python
-    >>> # load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA, fviz_partialpca_ind
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=["CYL"],parallelize=False)
-    >>> res_partialpca.fit(D)
-    >>> # Graph of individuals
-    >>> p = fviz_partialpca_ind(res_partialpca)
-    >>> print(p)
+    >>> from scientisttools import autos2006, PartialPCA, fviz_partialpca_ind
+    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
+    >>> #graph of individuals
+    >>> print(fviz_partialpca_ind(res_partialpca,repel=True))
     ```
     """
     # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
     
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.call_.n_components-1)  or
-        (axis[0] > axis[1])) :
+    if ((len(axis) !=2) or (axis[0] < 0) or (axis[1] > self.call_.n_components-1)  or (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
 
-    # Extract individuals coordinates
-    coord = self.ind_.coord
-
-    # Add Active Data
-    coord = pd.concat([coord,self.call_.X],axis=1)
+    #individuals factor coordinates and active data
+    coord = concat([self.ind_.coord,self.call_.X],axis=1)
 
     # Add supplementary quantitatives columns
     if self.quanti_sup is not None:
         X_quanti_sup = self.call_.Xtot.loc[:,self.call_.quanti_sup].astype("float")
         if self.ind_sup is not None:
             X_quanti_sup = X_quanti_sup.drop(index=self.call_.ind_sup)
-        coord = pd.concat([coord,X_quanti_sup],axis=1)
+        coord = concat([coord,X_quanti_sup],axis=1)
     
-    ################ Add supplementary qualitatives columns
+    # Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_.Xtot.loc[:,self.call_.quali_sup].astype("object")
+        X_quali_sup = self.call_.Xtot.loc[:,self.call_.quali_sup]
         if self.ind_sup is not None:
             X_quali_sup = X_quali_sup.drop(index=self.call_.ind_sup)
-        coord = pd.concat([coord,X_quali_sup],axis=1)
+        coord = concat([coord,X_quali_sup],axis=1)
     
     # Using lim cos2
     if lim_cos2 is not None:
@@ -244,192 +247,165 @@ def fviz_partialpca_ind(self,
         else:
             raise TypeError("'lim_contrib' must be a float or an integer")
 
-    # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
-
-    if isinstance(color,str):
-        if color == "cos2":
+    if isinstance(col_ind,str):
+        if col_ind == "cos2":
             c = self.ind_.cos2.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "cos2"
-        elif color == "contrib":
+        elif col_ind == "contrib":
             c = self.ind_.contrib.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Contrib"
-        elif color in coord.columns.tolist():
-            if not np.issubdtype(coord[color].dtype, np.number):
+        elif col_ind in coord.columns.tolist():
+            if not issubdtype(coord[col_ind].dtype,number):
                 raise TypeError("'color' must me a numeric variable.")
-            c = coord[color].values
+            c = coord[col_ind].values
             if legend_title is None:
-                legend_title = color
-    elif isinstance(color,np.ndarray):
-        c = np.asarray(color)
+                legend_title = col_ind
+    elif isinstance(col_ind,ndarray):
+        c = asarray(col_ind)
         if legend_title is None:
             legend_title = "Cont_Var"
+    elif hasattr(col_ind,"labels_"):
+        if legend_title is None:
+            legend_title = "Cluster"
+        coord.loc[:,legend_title] = [str(x+1) for x in col_ind.labels_]
+        index = coord[legend_title].unique().tolist()
+        coord[legend_title] = Categorical(coord[legend_title],categories=sorted(index),ordered=True)
 
-    if habillage is None :  
-        if (isinstance(color,str) and color in [*["cos2","contrib"],*coord.columns]) or (isinstance(color,np.ndarray)):
-            # Add gradients colors
-            if "point" in geom:
-                p = p + pn.geom_point(pn.aes(color=c),shape=marker,size=point_size,show_legend=False)+ pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
-            if "text" in geom:
-                if repel :
-                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
-                else:
-                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
-        elif hasattr(color, "labels_"):
-            c = [str(x+1) for x in color.labels_]
-            if legend_title is None:
-                legend_title = "Cluster"
-
-            # Set palette
-            index = np.unique(c).tolist()
-            if palette is None:
-                palette = [x for x in list_colors if x not in [color,color_sup,color_quali_sup]][:len(index)]
-            elif not isinstance(palette,(list,tuple)):
-                raise TypeError("'palette' must be a list or a tuple of colors")
-            elif len(palette) != len(index):
-                raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
-            
-            if "point" in geom:
-                p = p + pn.geom_point(pn.aes(color=c,linetype = c),size=point_size)+ pn.guides(color=pn.guide_legend(title=legend_title))
-            if "text" in geom:
-                if repel :
-                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','lw':1.0}})
-                else:
-                    p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
-            #set color manual
-            p = p + pn.scale_color_manual(values=palette)
-        else:
-            if "point" in geom:
-                p = p + pn.geom_point(color=color,shape=marker,size=point_size,show_legend=False)
-            if "text" in geom:
-                if repel :
-                    p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color,'lw':1.0}})
-                else:
-                    p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
-    else:
-        if habillage not in coord.columns:
-            raise ValueError(f"{habillage} not in DataFrame.")
-        
-        # Set palette
-        index = np.unique(coord.loc[:,habillage]).tolist()
+    #set palette and shape
+    if habillage is not None or hasattr(col_ind,"labels_"):    
+        if habillage is not None:
+            index = coord[habillage].unique().tolist()
         if palette is None:
-            palette = [x for x in list_colors if x not in [color,color_sup,color_quali_sup]][:len(index)]
+            palette = [x for x in list_colors if x not in [col_ind,col_ind_sup,col_quali_sup]][:len(index)]
         elif not isinstance(palette,(list,tuple)):
             raise TypeError("'palette' must be a list or a tuple of colors")
         elif len(palette) != len(index):
             raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
         
+        if isinstance(shape_ind,str):
+            shape_ind = [shape_ind]*len(index)
+        elif isinstance(shape_ind,(list,tuple)):
+            if len(shape_ind) != len(index):
+                raise TypeError(f"'shape_ind' must be a list or tuple with length {len(index)}.")
+
+    # Initialize
+    p = ggplot(data=coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
+
+    if habillage is None :  
+        if (isinstance(col_ind,str) and col_ind in [*["cos2","contrib"],*coord.columns]) or (isinstance(col_ind,ndarray)):
+            if "point" in geom:
+                p = (p + geom_point(aes(color=c),alpha=alpha_ind,fill=fill_ind,shape=shape_ind,size=point_size_ind,stroke=stroke_ind,show_legend=False) 
+                       + scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
+            if "text" in geom:
+                p = p + text_label(text_type_ind,repel,mapping=aes(color=c),size=text_size_ind,ha=ha,va=va)
+        elif hasattr(col_ind, "labels_"):
+            if "point" in geom:
+                p = (p + geom_point(aes(color=legend_title,fill=legend_title,shape=legend_title),alpha=alpha_ind,size=point_size_ind,stroke=stroke_ind,show_legend=True)
+                       + guides(color=guide_legend(title=legend_title)))
+            if "text" in geom:
+                p = p + text_label(text_type_ind,repel,mapping=aes(color=legend_title),size=text_size_ind,ha=ha,va=va)
+        else:
+            if "point" in geom:
+                p = p + geom_point(alpha=alpha_ind,color=col_ind,fill=fill_ind,size=point_size_ind,stroke=stroke_ind,show_legend=False)
+            if "text" in geom:
+                p = p + text_label(text_type_ind,repel,color=col_ind,size=text_size_ind,va=va,ha=ha)
+    else:
+        if habillage not in coord.columns:
+            raise ValueError(f"{habillage} not in DataFrame.")
         if "point" in geom:
-            p = p + pn.geom_point(pn.aes(color = habillage,linetype = habillage),size=point_size)
+            p = p + geom_point(aes(color=habillage,fill=habillage,shape=habillage),alpha=alpha_ind,size=point_size_ind,stroke=stroke_ind,show_legend=True)
         if "text" in geom:
-            if repel:
-                p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
-            else:
-                p = p + text_label(text_type,mapping=pn.aes(color=habillage),size=text_size,va=va,ha=ha)
-         
-        # Add ellipse
+            p = p + text_label(text_type_ind,repel,mapping=aes(color=habillage),size=text_size_ind,va=va,ha=ha)
         if add_ellipses:
-            p = p + pn.stat_ellipse(geom=geom_ellipse,mapping=pn.aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
-        
-        #set color manual
-        p = p + pn.scale_color_manual(values=palette)
-    
-    ##### Add supplementary individuals coordinates
+            p = p + stat_ellipse(geom=geom_ellipse,mapping=aes(fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
+
+    if habillage is not None or hasattr(col_ind,"labels_"):
+        p = p + scale_color_manual(values=palette,labels=index)+scale_fill_manual(values=palette,labels=index)+scale_shape_manual(values=shape_ind,labels=index)
+
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ##Add supplementary individuals coordinates
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if ind_sup:
         if hasattr(self, "ind_sup_"):
             ind_sup_coord = self.ind_sup_.coord
             if "point" in geom:
-                p = p + pn.geom_point(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = color_sup,shape = marker_sup,size=point_size)
+                p = p + geom_point(ind_sup_coord,aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),alpha=alpha_ind_sup,color = col_ind_sup,fill=fill_ind_sup,shape = shape_ind_sup,size=point_size_ind_sup,stroke=stroke_ind_sup,show_legend=False)
             if "text" in geom:
-                if repel:
-                    p = p + text_label(text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                        color=color_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_sup,'lw':1.0}})
-                else:
-                    p = p + text_label(text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = color_sup,size=text_size,va=va,ha=ha)
-                    
-    # Add supplementary qualitatives/categories
+                p = p + text_label(text_type_ind_sup,repel,data=ind_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = col_ind_sup,size=text_size_ind_sup,ha=ha,va=va)
+
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #add supplementary categorical variables coordinates
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if quali_sup:
         if hasattr(self, "quali_sup_"):
-            if habillage is None:
-                quali_sup_coord = self.quali_sup_.coord
-                if "point" in geom:
-                    p = p + pn.geom_point(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),color=color_quali_sup,shape = marker_quali_sup,size=point_size)
-                if "text" in geom:
-                    if repel:
-                        p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                           color=color_quali_sup,size=text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': color_quali_sup,'lw':1.0}})
-                    else:
-                        p = p + text_label(text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                           color =color_quali_sup,size=text_size,va=va,ha=ha)
+            quali_sup_coord = self.quali_sup_.coord
+            if "point" in geom:
+                p = p + geom_point(quali_sup_coord,aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),alpha=alpha_quali_sup,color = col_quali_sup,fill=fill_quali_sup,shape = shape_quali_sup,size=point_size_quali_sup,stroke=stroke_quali_sup,show_legend=False)
+            if "text" in geom:
+                p = p + text_label(text_type_quali_sup,repel,data=quali_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),color = col_quali_sup,size=text_size_quali_sup,ha=ha,va=va)
 
-    # Add additionnal        
-    proportion = self.eig_.iloc[:,2].values
-    # Set x label
-    if x_label is None:
-        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    # Set y label
-    if y_label is None:
-        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-    # Set title
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ##add additionnal informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if title is None:
         title = "Individuals Factor Map - PartialPCA"
-    p = p + pn.labs(title=title,x=x_label,y = y_label)
-    
-    # Set x limits
-    if x_lim is not None:
-        p = p + pn.xlim(x_lim)
-    # Set y limits
-    if y_lim is not None:
-        p = p + pn.ylim(y_lim)
-
-    if add_hline:
-        p = p + pn.geom_hline(yintercept=0,colour=hline_color,linetype =hline_style)    
-    if add_vline:
-        p = p + pn.geom_vline(xintercept=0,colour=vline_color,linetype =vline_style)
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
-    # Add theme
-    p = p + ggtheme
+    p = fviz_add(p,self,axis,x_label,y_label,title,x_lim,y_lim,add_hline,alpha_hline,col_hline,linetype_hline,size_hline,add_vline,alpha_vline,col_vline,linetype_vline,size_vline,add_grid,ggtheme)     
     
     return p
 
+# Variables Factor Map
 def fviz_partialpca_var(self,
                         axis=[0,1],
+                        geom = ["arrow","text"],
+                        lim_cos2 = None,
+                        lim_contrib = None,
                         x_label = None,
                         y_label = None,
                         title =None,
-                        color ="black",
-                        geom = ["arrow","text"],
-                        gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
-                        palette = None,
+                        alpha_var = 1,
+                        col_var ="black",
+                        linetype_var = "solid",
+                        line_size_var = 0.5,
+                        text_size_var = 8,
+                        text_type_var = "text",
+                        arrow_angle_var = 10,
+                        arrow_length_var = 0.1,
+                        arrow_type_var = "closed",
                         scale = 1,
+                        gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                         legend_title = None,
-                        text_type = "text",
-                        text_size = 8,
-                        add_grid =True,
+                        palette = None,
                         quanti_sup=True,
-                        color_sup = "blue",
-                        linestyle_sup="dashed",
+                        alpha_quanti_sup = 1,
+                        col_quanti_sup = "blue",
+                        linetype_quanti_sup = "dashed",
+                        line_size_quanti_sup = 0.5,
+                        text_size_quanti_sup = 8,
+                        text_type_quanti_sup = "text",
+                        arrow_angle_quanti_sup = 10,
+                        arrow_length_quanti_sup = 0.1,
+                        arrow_type_quanti_sup = "closed",
+                        add_circle = True,
+                        col_circle = "gray",
+                        add_grid =True,
                         add_hline = True,
+                        alpha_hline = 0.5,
+                        col_hline = "black",
+                        size_hline = 0.5,
+                        linetype_hline = "dashed",
                         add_vline = True,
-                        hline_color = "black",
-                        hline_style = "dashed",
-                        vline_color = "black",
-                        vline_style ="dashed",
+                        alpha_vline = 0.5,
+                        col_vline = "black",
+                        size_vline = 0.5,
+                        linetype_vline = "dashed",
                         ha = "center",
                         va = "center",
-                        add_circle = True,
-                        color_circle = "gray",
-                        arrow_angle = 10,
-                        arrow_length = 0.1,
-                        lim_cos2 = None,
-                        lim_contrib = None,
-                        ggtheme=pn.theme_minimal()) -> pn:
+                        ggtheme=theme_minimal()):
     """
-    Visualize Partial Principal Component Analysis (PCA) - Graph of variables
-    -------------------------------------------------------------------------
+    Visualize Partial Principal Component Analysis (PartialPCA) - Graph of variables
+    --------------------------------------------------------------------------------
 
     Description
     -----------
@@ -438,45 +414,14 @@ def fviz_partialpca_var(self,
     Usage
     -----
     ```python
-    >>> fviz_pca_var(self,
-                    axis = [0,1],
-                    x_label = None,
-                    y_label = None,
-                    title = None,
-                    color = "black",
-                    geom = ["arrow","text"],
-                    gradient_cols = ("#00 AFBB", "#E7B800", "#FC4E07"),
-                    palette = None,
-                    scale = 1,
-                    legend_title = None,
-                    text_type = "text",
-                    text_size = 8,
-                    add_grid = True,
-                    quanti_sup=True,
-                    color_sup = "blue",
-                    linestyle_sup="dashed",
-                    add_hline = True,
-                    add_vline = True,
-                    hline_color = "black",
-                    hline_style = "dashed",
-                    vline_color = "black",
-                    vline_style ="dashed",
-                    ha = "center",
-                    va = "center",
-                    add_circle = True,
-                    color_circle = "gray",
-                    arrow_angle = 10,
-                    arrow_length = 0.1,
-                    lim_cos2 = None,
-                    lim_contrib = None,
-                    ggtheme=pn.theme_minimal())
+    >>> fviz_partialpca_var(self,**kwargs)
     ```
 
     Parameters
     ----------
-    `self` : an object of class PartialPCA
+    `self`: an object of class PartialPCA
 
-    `axis` : a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
+    `axis`: a numeric list/tuple of length 2 specifying the dimensions to be plotted (by default = [0,1]).
 
     `x_label` : a string specifying the label text of x (by default = None and a x_label is chosen).
 
@@ -504,9 +449,11 @@ def fviz_partialpca_var(self,
 
     `quanti_sup` : a boolean to either add or not supplementary quantitatives variables (by default = True).
 
-    `color_sup` : a color for the supplementary quantitatives variables (by default = "blue").
+    `quanti_sup_color` : a color for the supplementary quantitatives quantitative variables (by default = "blue").
 
-    `linestyle_sup` : a string specifying the supplementary variables line style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+    `quanti_sup_linestyle` : a string specifying the supplementary quantitative variables line style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
+
+    `quanti_sup_text_size` : a numeric value specifying the supplementary quantitative variables label size (by default = 8).
 
     `add_hline` : a boolean to either add or not a horizontal ligne (by default = True).
 
@@ -520,21 +467,21 @@ def fviz_partialpca_var(self,
 
     `vline_style` : a string specifying the vertical ligne style (by default = "dashed"). Allowed values are : "solid", "dashed", "dashdot" or "dotted"
 
-    `ha` : horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
+    `ha`: horizontal alignment (by default = "center"). Allowed values are : "left", "center" or "right"
 
-    `va` : vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
+    `va`: vertical alignment (by default = "center"). Allowed values are : "top", "center", "bottom" or "baseline"
 
     `add_circle` : a boolean, whether to add or not a circle to plot.
 
-    `color_circle` : a string specifying the color for the correlation circle (by default = "gray")
+    `circle_color` : a string specifying the color for the correlation circle (by default = "gray")
 
     `arrow_angle` : a numeric specifying the angle in degrees between the tail a single edge (by default = 10)
 
     `arrow_length` : a numeric specifying the length of the edge in "inches" (by default = 0.1)
 
-    `lim_cos2` : a numeric specifying the square cosinus limit (by default = None).
+    `lim_cos2`: a numeric specifying the square cosinus limit (by default = None).
 
-    `lim_contrib` : a numeric specifying the relative contribution limit (by default = None),
+    `lim_contrib`: a numeric specifying the relative contribution limit (by default = None),
 
     `ggtheme`: function, plotnine theme name. Default value is theme_minimal(). Allowed values include plotnine official themes : theme_gray(), theme_bw(), theme_classic(), theme_void(),...
 
@@ -549,26 +496,19 @@ def fviz_partialpca_var(self,
     Examples
     --------
     ```python
-    >>> # load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA, fviz_partialpca_var
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=["CYL"],parallelize=False)
-    >>> res_partialpca.fit(D)
-    >>> # Graph of variables
-    >>> p = fviz_partialpca_var(res_partialpca)
-    >>> print(p)
+    >>> from scientisttools import autos2006, PartialPCA, fviz_partialpca_var
+    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
+    >>> #graph of variables
+    >>> print(fviz_partialpca_var(res_ppca))
     """
     # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
     
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.call_.n_components-1)  or
-        (axis[0] > axis[1])) :
+    if ((len(axis) !=2) or (axis[0] < 0) or (axis[1] > self.call_.n_components-1)  or (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
 
+    #variables factor coordinates
     coord = self.var_.coord.mul(scale)
 
     # Using lim cos2
@@ -591,202 +531,170 @@ def fviz_partialpca_var(self,
         else:
             raise TypeError("'lim_contrib' must be a float or an integer.")
 
-    if isinstance(color,str):
-        if color == "cos2":
+    if isinstance(col_var,str):
+        if col_var == "cos2":
             c = self.var_.cos2.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "cos2"
-        elif color == "contrib":
+        elif col_var == "contrib":
             c = self.var_.contrib.iloc[:,axis].sum(axis=1).values
             if legend_title is None:
                 legend_title = "Contrib"
-    elif isinstance(color,np.ndarray):
-        c = np.asarray(color)
+    elif isinstance(col_var,ndarray):
+        c = asarray(col_var)
         if legend_title is None:
             legend_title = "Cont_Var"
-    
-    # Initialize
-    p = pn.ggplot(data=coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
-
-    if (isinstance(color,str) and color in ["cos2","contrib"]) or (isinstance(color,np.ndarray)):
-        # Add gradients colors
-        if "arrow" in geom:
-            p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(angle=arrow_angle,length=arrow_length))+
-                     pn.scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
-        if "text" in geom:
-            p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
-    elif hasattr(color, "labels_"):
-        c = [str(x+1) for x in color.labels_]
+    elif hasattr(col_var, "labels_"):
         if legend_title is None:
             legend_title = "Cluster"
-        
-        # Set palette
-        index = np.unique(c).tolist()
+        coord.loc[:,legend_title] = [str(x+1) for x in col_var.labels_]
+        index = coord[legend_title].unique().tolist()
+        coord[legend_title] = Categorical(coord[legend_title],categories=sorted(index),ordered=True)
+
         if palette is None:
-            palette = [x for x in list_colors if x not in [color,color_sup]][:len(index)]
+            palette = [x for x in list_colors if x not in [col_var,col_quanti_sup]][:len(index)]
         elif not isinstance(palette,(list,tuple)):
             raise TypeError("'palette' must be a list or a tuple of colors")
         elif len(palette) != len(index):
             raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
-        
-        if "arrow" in geom:
-            p = (p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c), arrow = pn.arrow(length=arrow_length,angle=arrow_angle))+ 
-                     pn.guides(color=pn.guide_legend(title=legend_title)))
-        if "text" in geom:
-            p = p + text_label(text_type,mapping=pn.aes(color=c),size=text_size,va=va,ha=ha)
-        
-        #set color manual
-        p = p + pn.scale_color_manual(values=palette)
+    
+    # Initialize
+    p = ggplot(data=coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
+    if (isinstance(col_var,str) and col_var in ["cos2","contrib"]) or (isinstance(col_var,ndarray)):
+        # Add gradients colors
+        if "arrow" in geom:
+            p = (p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=c),alpha=alpha_var,linetype=linetype_var,size=line_size_var,arrow = arrow(angle=arrow_angle_var,length=arrow_length_var,type=arrow_type_var))
+                   + scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title))
+        if "text" in geom:
+            p = p + text_label(text_type_var,False,mapping=aes(color=c),size=text_size_var,va=va,ha=ha)
+    elif hasattr(col_var, "labels_"):
+        if "arrow" in geom:
+            p = (p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=legend_title),alpha=alpha_var,linetype=linetype_var,size=line_size_var,arrow = arrow(length=arrow_length_var,angle=arrow_angle_var,type=arrow_type_var))
+                   + guides(color=guide_legend(title=legend_title)))
+        if "text" in geom:
+            p = p + text_label(text_type_var,False,mapping=aes(color=legend_title),size=text_size_var,ha=ha,va=va)
+        p = p + scale_color_manual(values=palette)
     else:
         if "arrow" in geom:
-            p = p + pn.geom_segment(pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color)
+            p = p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"),alpha=alpha_var,color=col_var,linetype=linetype_var,size=line_size_var,arrow = arrow(length=arrow_length_var,angle=arrow_angle_var,type=arrow_type_var))
         if "text" in geom:
-            p = p + text_label(text_type,color=color,size=text_size,va=va,ha=ha)
+            p = p + text_label(text_type_var,False,color=col_var,size=text_size_var,ha=ha,va=va)
+
+    # Create circle
+    if add_circle:
+        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=col_circle, fill=None)
     
-    # Add supplmentary continuous variables
+    #----------------------------------------------------------------------------------------------------------------------------------------
+    ##Add supplmentary continuous variables
+    #----------------------------------------------------------------------------------------------------------------------------------------
     if quanti_sup:
         if hasattr(self, "quanti_sup_"):
             sup_coord = self.quanti_sup_.coord.mul(scale)
             if "arrow" in geom:
-                p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
-                                    arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=color_sup,linetype=linestyle_sup)
+                p  = p + annotate("segment",x=0,y=0,xend=asarray(sup_coord.iloc[:,axis[0]]),yend=asarray(sup_coord.iloc[:,axis[1]]),alpha=alpha_quanti_sup,color=col_quanti_sup,linetype=linetype_quanti_sup,size=line_size_quanti_sup,arrow = arrow(length=arrow_length_quanti_sup,angle=arrow_angle_quanti_sup,type=arrow_type_quanti_sup))
             if "text" in geom:
-                p  = p + text_label(text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=color_sup,size=text_size,va=va,ha=ha)
-    # Create circle
-    if add_circle:
-        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=color_circle, fill=None)
-    
-    # Add additionnal        
-    proportion = self.eig_.iloc[:,2].values
-    if x_label is None:
-        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    if y_label is None:
-        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
+                p  = p + text_label(text_type_quanti_sup,False,data=sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),color=col_quanti_sup,size=text_size_quanti_sup,ha=ha,va=va)
+
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ##add additionnal informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if title is None:
         title = "Variables Factor Map - PartialPCA"
+    p = fviz_add(p,self,axis,x_label,y_label,title,(-1,1),(-1,1),add_hline,alpha_hline,col_hline,linetype_hline,size_hline,add_vline,alpha_vline,col_vline,linetype_vline,size_vline,add_grid,ggtheme)     
     
-    p = p + pn.xlim((-1,1))+ pn.ylim((-1,1))+pn.labs(title=title,x=x_label,y=y_label)
-
-    if add_hline:
-        p = p + pn.geom_hline(yintercept=0, colour=hline_color, linetype =hline_style)
-    if add_vline:
-        p = p+ pn.geom_vline(xintercept=0, colour=vline_color, linetype =vline_style)
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
-    # Add theme
-    p = p + ggtheme
-
     return p
-
+    
 def fviz_partialpca_biplot(self,
                             axis=[0,1],
-                            x_label = None,
-                            y_label = None,
+                            geom_ind = ["point","text"],
+                            geom_var = ["arrow","text"],
+                            repel_ind = False,
                             x_lim = None,
                             y_lim = None,
-                            marker = "o",
-                            ind_text_size = 8,
-                            var_text_size = 8,
-                            ind_text_type = "text",
-                            var_text_type = "text",
-                            ind_point_size = 1.5,
-                            ind_geom = ["point","text"],
-                            var_geom = ["arrow","text"],
-                            ind_color = "black",
-                            var_color = "steelblue",
+                            x_label = None,
+                            y_label = None,
+                            title = "PartialPCA - Biplot",
+                            alpha_ind = 1,
+                            col_ind = "black",
+                            fill_ind = None,
+                            shape_ind = "o",
+                            point_size_ind = 1.5,
+                            stroke_ind = 0.5,
+                            text_type_ind = "text",
+                            text_size_ind = 8,
+                            alpha_var = 1,
+                            col_var = "steelblue",
+                            linetype_var = "solid",
+                            line_size_var = 0.5,
+                            arrow_angle_var = 10,
+                            arrow_length_var = 0.1,
+                            arrow_type_var = "closed",
+                            text_type_var = "text",
+                            text_size_var = 8,
                             habillage = None,
-                            add_circle = False,
-                            var_color_circle="gray",
-                            ind_sup = True,
-                            ind_color_sup = "blue",
-                            ind_marker_sup = "^",
-                            quali_sup = True,
-                            quali_sup_color = "red",
-                            quali_sup_marker = "v",
-                            quanti_sup = True,
-                            var_color_sup = "blue",
-                            var_linestyle_sup="dashed",
-                            repel = True,
-                            add_ellipses=False, 
+                            palette = None,
+                            add_ellipses = False, 
                             ellipse_type = "t",
                             confint_level = 0.95,
                             geom_ellipse = "polygon",
-                            title = "PartialPCA - Biplot",
-                            arrow_angle=10,
-                            arrow_length =0.1,
+                            add_circle = False,
+                            col_circle = "gray",
+                            ind_sup = True,
+                            alpha_ind_sup = 1,
+                            col_ind_sup = "blue",
+                            fill_ind_sup = None,
+                            shape_ind_sup = "^",
+                            point_size_ind_sup = 1.5,
+                            stroke_ind_sup = 0.5,
+                            text_type_ind_sup = "text",
+                            text_size_ind_sup = 8,
+                            quali_sup = True,
+                            alpha_quali_sup = 1,
+                            col_quali_sup = "red",
+                            fill_quali_sup = None,
+                            shape_quali_sup = "v",
+                            point_size_quali_sup = 1.5,
+                            stroke_quali_sup = 0.5,
+                            text_type_quali_sup = "text",
+                            text_size_quali_sup = 8,
+                            quanti_sup = True,
+                            alpha_quanti_sup = 1,
+                            col_quanti_sup = "darkred",
+                            linetype_quanti_sup = "dashed",
+                            line_size_quanti_sup = 0.5,
+                            text_size_quanti_sup = 8,
+                            text_type_quanti_sup = "text",
+                            arrow_angle_quanti_sup = 10,
+                            arrow_length_quanti_sup = 0.1,
+                            arrow_type_quanti_sup = "closed",
+                            add_grid =True,
                             add_hline = True,
-                            add_vline=True,
-                            add_grid = True,
-                            ha="center",
-                            va="center",
-                            hline_color="black",
-                            hline_style="dashed",
-                            vline_color="black",
-                            vline_style ="dashed",
-                            ggtheme=pn.theme_minimal()) ->pn :
+                            alpha_hline = 0.5,
+                            col_hline = "black",
+                            size_hline = 0.5,
+                            linetype_hline = "dashed",
+                            add_vline = True,
+                            alpha_vline = 0.5,
+                            col_vline = "black",
+                            size_vline = 0.5,
+                            linetype_vline = "dashed",
+                            ha_ind = "center",
+                            va_ind = "center",
+                            ha_var = "center",
+                            va_var = "center",
+                            ggtheme=theme_minimal()):
     """
     Visualize Partial Principal Component Analysis (PartialPCA) - Biplot of individuals and variables
     -------------------------------------------------------------------------------------------------
 
     Description
     -----------
-    Partial Principal components analysis (PartialPCA) reduces the dimensionality of multivariate data using partial correlation matrix, to two or three that can be visualized graphically with minimal loss of information. fviz_partialpca_biplot provides plotnine based elegant visualization of PartialPCA outputs for individuals and variables.
-
-    Usage
-    -----
-    ```python
-    >>> fviz_partialpca_biplot(self,
-                                axis=[0,1],
-                                x_label = None,
-                                y_label = None,
-                                x_lim = None,
-                                y_lim = None,
-                                marker = "o",
-                                ind_text_size = 8,
-                                var_text_size = 8,
-                                ind_text_type = "text",
-                                var_text_type = "text",
-                                ind_point_size = 1.5,
-                                ind_geom = ["point","text"],
-                                var_geom = ["arrow","text"],
-                                ind_color = "black",
-                                var_color = "steelblue",
-                                habillage = None,
-                                add_circle = False,
-                                var_color_circle="gray",
-                                ind_sup = True,
-                                ind_color_sup = "blue",
-                                ind_marker_sup = "^",
-                                quali_sup = True,
-                                quali_sup_color = "red",
-                                quali_sup_marker = "v",
-                                quanti_sup = True,
-                                var_color_sup = "blue",
-                                var_linestyle_sup="dashed",
-                                repel = True,
-                                add_ellipses=False, 
-                                ellipse_type = "t",
-                                confint_level = 0.95,
-                                geom_ellipse = "polygon",
-                                title = "PartialPCA - Biplot",
-                                arrow_angle=10,
-                                arrow_length =0.1,
-                                add_hline = True,
-                                add_vline=True,
-                                add_grid = True,
-                                ha="center",
-                                va="center",
-                                hline_color="black",
-                                hline_style="dashed",
-                                vline_color="black",
-                                vline_style ="dashed",
-                                ggtheme=pn.theme_minimal())
-    ```
+     Partial Principal components analysis (PartialPCA) reduces the dimensionality of multivariate data using partial correlation matrix, to two or three that can be visualized graphically with minimal loss of information. fviz_partialpca_biplot provides plotnine based elegant visualization of PartialPCA outputs for individuals and variables.
 
     Parameters
     ----------
-    see fviz_partialpca_ind, fviz_partialpca_var
+    see `fviz_partialpca_ind`, `fviz_partialpca_var`.
 
     Returns
     -------
@@ -796,203 +704,151 @@ def fviz_partialpca_biplot(self,
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
 
+    Examples
+    --------
     ```python
-    >>> # load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> D = load_cars2006(which="actif")
-    >>> from scientisttools import PartialPCA, fviz_partialpca_biplot
-    >>> res_partialpca = PartialPCA(n_components=None,standardize=True,partial=["CYL"],parallelize=False)
-    >>> res_partialpca.fit(D)
-    >>> # Graph of individuals and variables
-    >>> p = fviz_partialpca_biplot(res_partialpca)
-    >>> print(p)
+    >>> from scientisttools import autos2006, PartialPCA, fviz_partialpca_biplot
+    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
+    >>> #biplot of individuals and variables
+    >>> print(fviz_partialpca_biplot(res_ppca))
     ```
     """
     # Check if self is an object of class PartialPCA
     if self.model_ != "partialpca":
         raise TypeError("'self' must be an object of class PartialPCA")
     
-    if ((len(axis) !=2) or 
-        (axis[0] < 0) or 
-        (axis[1] > self.call_.n_components-1)  or
-        (axis[0] > axis[1])) :
+    if ((len(axis) !=2) or (axis[0] < 0) or (axis[1] > self.call_.n_components-1)  or (axis[0] > axis[1])) :
         raise ValueError("You must pass a valid 'axis'.")
     
-    # Individuals coordinates
-    ind = self.ind_.coord.iloc[:,axis]
-    ind.columns = ["x","y"]
-    # variables coordinates
-    var = self.var_.coord.iloc[:,axis]
-    var.columns = ["x","y"]
+    # Individuals and variables coordinates
+    ind, var = self.ind_.coord.iloc[:,axis], self.var_.coord.iloc[:,axis]
+    ind.columns, var.columns = ["x","y"], ["x","y"]
 
     # Rescale variables coordinates
-    xscale = (np.max(ind["x"]) - np.min(ind["x"]))/(np.max(var["x"]) - np.min(var["x"]))
-    yscale = (np.max(ind["y"]) - np.min(ind["y"]))/(np.max(var["y"]) - np.min(var["y"]))
+    xscale, yscale = (max(ind["x"])-min(ind["x"]))/(max(var["x"])-min(var["x"])), (max(ind["y"])-min(ind["y"]))/(max(var["y"])-min(var["y"]))
     scale = min(xscale, yscale)
 
-    #### Extract individuals coordinates
-    ind_coord = self.ind_.coord
+    #Extract individuals and variables coordinates
+    ind_coord, var_coord = self.ind_.coord, self.var_.coord.mul(scale)
 
     # Add supplementary qualitatives columns
     if self.quali_sup is not None:
-        X_quali_sup = self.call_.Xtot.loc[:,self.call_.quali_sup].astype("object")
+        X_quali_sup = self.call_.Xtot.loc[:,self.call_.quali_sup]
         if self.ind_sup is not None:
             X_quali_sup = X_quali_sup.drop(index=self.call_.ind_sup)
-        ind_coord = pd.concat([ind_coord,X_quali_sup],axis=1)
+        ind_coord = concat([ind_coord,X_quali_sup],axis=1)
     
-    # Variables coordinates
-    var_coord = self.var_.coord.mul(scale)
+   # Initialize
+    p = ggplot(data=ind_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index))
 
-    p = pn.ggplot()
-
-    #####################################################################################################################################################
-    # Individuals Informations
-    #####################################################################################################################################################
-
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ##add individuals informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #acctive individuals
     if habillage is None :  
-        if "point" in ind_geom:
-            p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}"),color=ind_color,shape=marker,size=ind_point_size,show_legend=False)
-        if "text" in ind_geom:
-            if repel :
-                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),
-                                   color=ind_color,size=ind_text_size,va=va,ha=ha,
-                                   adjust_text={'arrowprops': {'arrowstyle': '-','color': ind_color,'lw':1.0}})
-            else:
-                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_coord.index),
-                                   color=ind_color,size=ind_text_size,va=va,ha=ha)
+        if "point" in geom_ind:
+            p = p + geom_point(alpha=alpha_ind,color=col_ind,fill=fill_ind,shape=shape_ind,size=point_size_ind,stroke=stroke_ind,show_legend=False)
+        if "text" in geom_ind:
+            p = p + text_label(text_type_ind,repel_ind,color=col_ind,size=text_size_ind,ha=ha_ind,va=va_ind)
     else:
         if habillage not in ind_coord.columns:
             raise ValueError(f"{habillage} not in DataFrame.")
-        if "point" in ind_geom:
-            p = p + pn.geom_point(data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,linetype = habillage),
-                                  size=ind_point_size)
-        if "text" in ind_geom:
-            if repel:
-                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,label=ind_coord.index),
-                                   size=ind_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-',"lw":1.0}})
-            else:
-                p = p + text_label(ind_text_type,data=ind_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,label=ind_coord.index),
-                                   size=ind_text_size,va=va,ha=ha)
-        
+        index = ind_coord[habillage].unique().tolist()
+        if palette is None:
+            palette = [x for x in list_colors if x not in [col_ind,col_var,col_ind_sup,col_quali_sup,col_quanti_sup]][:len(index)]
+        elif not isinstance(palette,(list,tuple)):
+            raise TypeError("'palette' must be a list or a tuple of colors")
+        elif len(palette) != len(index):
+            raise TypeError(f"'palette' must be a list or tuple with length {len(index)}.")
+        if "point" in geom_ind:
+            p = p + geom_point(aes(color=habillage,fill=habillage,shape=habillage),alpha=alpha_ind,size=point_size_ind,stroke=stroke_ind,show_legend=True)
+        if "text" in geom_ind:
+            p = p + text_label(text_type_ind,repel_ind,mapping=aes(color=habillage),size=text_size_ind,ha=ha_ind,va=va_ind)
         if add_ellipses:
-            p = p + pn.stat_ellipse(data=ind_coord,geom=geom_ellipse,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",color = habillage,fill=habillage),
-                                    type = ellipse_type,alpha = 0.25,level=confint_level)
+            p = p + stat_ellipse(geom=geom_ellipse,mapping=aes(color = habillage,fill=habillage),type = ellipse_type,alpha = 0.25,level=confint_level)
+        p = p + scale_color_manual(values=palette) + scale_fill_manual(values=palette)
     
-    # Add supplementary individuals coordinates
+    #add supplementary individuals coordinates
     if ind_sup:
         if hasattr(self, "ind_sup_"):
             ind_sup_coord = self.ind_sup_.coord
-            if "point" in ind_geom:
-                p = p + pn.geom_point(ind_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color = ind_color_sup,shape = ind_marker_sup,size=ind_point_size)
-            if "text" in ind_geom:
-                if repel:
-                    p = p + text_label(ind_text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                        color=ind_color_sup,size=ind_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': ind_color_sup,'lw':1.0}})
-                else:
-                    p = p + text_label(ind_text_type,data=ind_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),
-                                        color = ind_color_sup,size=ind_text_size,va=va,ha=ha)
+            if "point" in geom_ind:
+                p = p + geom_point(ind_sup_coord,aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),alpha=alpha_ind_sup,color=col_ind_sup,fill=fill_ind_sup,shape=shape_ind_sup,size=point_size_ind_sup,stroke=stroke_ind_sup,show_legend=False)
+            if "text" in geom_ind:
+                p = p + text_label(text_type_ind_sup,repel_ind,data=ind_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=ind_sup_coord.index),color=col_ind_sup,size=text_size_ind_sup,ha=ha_ind,va=va_ind)
     
-    # Add supplementary qualitatives coordinates
+    #add supplementary qualitatives coordinates
     if quali_sup:
         if hasattr(self, "quali_sup_"):
-            if habillage is None:
-                quali_sup_coord = self.quali_sup_.coord
-                if "point" in ind_geom:
-                    p = p + pn.geom_point(quali_sup_coord,pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                          color=quali_sup_color,size=ind_point_size,shape=quali_sup_marker)
-                if "text" in ind_geom:
-                    if repel:
-                        p = p + text_label(ind_text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                           color=quali_sup_color,size=ind_text_size,va=va,ha=ha,adjust_text={'arrowprops': {'arrowstyle': '-','color': quali_sup_color,'lw':1.0}})
-                    else:
-                        p = p + text_label(ind_text_type,data=quali_sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),
-                                           color =quali_sup_color,size=ind_text_size,va=va,ha=ha)
+            quali_sup_coord = self.quali_sup_.coord
+            if "point" in geom_ind:
+                p = p + geom_point(quali_sup_coord,aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),alpha=alpha_quali_sup,color=col_quali_sup,fill=fill_quali_sup,shape=shape_quali_sup,size=point_size_quali_sup,stroke=stroke_quali_sup,show_legend=False)
+            if "text" in geom_ind:
+                p = p + text_label(text_type_quali_sup,repel_ind,data=quali_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quali_sup_coord.index),color=col_quali_sup,size=text_size_quali_sup,ha=ha_ind,va=va_ind)
     
-    #########################################################################################################################################################
-    #   Variables informations
-    ##########################################################################################################################################################
-
-    if "arrow" in var_geom:
-            p = p + pn.geom_segment(data=var_coord,mapping=pn.aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"), 
-                                    arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=var_color)
-    if "text" in var_geom:
-        p = p + text_label(var_text_type,data=var_coord,mapping=pn.aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_coord.index),
-                           color=var_color,size=var_text_size,va=va,ha=ha)
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ##add variables informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #add active variables
+    if "arrow" in geom_var:
+            p = p + annotate("segment",x=0,y=0,xend=asarray(var_coord.iloc[:,axis[0]]),yend=asarray(var_coord.iloc[:,axis[1]]),alpha=alpha_var,color=col_var,linetype=linetype_var,size=line_size_var,arrow=arrow(length=arrow_length_var,angle=arrow_angle_var,type=arrow_type_var))
+    if "text" in geom_var:
+        p = p + text_label(text_type_var,False,data=var_coord,mapping=aes(x=f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=var_coord.index),color=col_var,size=text_size_var,va=va_var,ha=ha_var)
     
-    # Add supplmentary continuous variables
+    #add supplmentary continuous variables
     if quanti_sup:
         if hasattr(self, "quanti_sup_"):
-            sup_coord = self.quanti_sup_.coord.mul(scale)
-            if "arrow" in var_geom:
-                p  = p + pn.annotate("segment",x=0,y=0,xend=np.asarray(sup_coord.iloc[:,axis[0]]),yend=np.asarray(sup_coord.iloc[:,axis[1]]),
-                                    arrow = pn.arrow(length=arrow_length,angle=arrow_angle),color=var_color_sup,linetype=var_linestyle_sup)
-            if "text" in var_geom:
-                p  = p + text_label(var_text_type,data=sup_coord,mapping=pn.aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=sup_coord.index),
-                                    color=var_color_sup,size=var_text_size,va=va,ha=ha)
+            quanti_sup_coord = self.quanti_sup_.coord.mul(scale)
+            if "arrow" in geom_var:
+                p  = p + annotate("segment",x=0,y=0,xend=asarray(quanti_sup_coord.iloc[:,axis[0]]),yend=asarray(quanti_sup_coord.iloc[:,axis[1]]),alpha=alpha_quanti_sup,color=col_quanti_sup,linetype=linetype_quanti_sup,size=line_size_quanti_sup,arrow=arrow(length=arrow_length_quanti_sup,angle=arrow_angle_quanti_sup,type=arrow_type_quanti_sup))
+            if "text" in geom_var:
+                p  = p + text_label(text_type_quanti_sup,False,data=quanti_sup_coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=quanti_sup_coord.index),color=col_quanti_sup,size=text_size_quanti_sup,ha=ha_var,va=va_var)
+    
     # Create circle
     if add_circle:
-        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=var_color_circle, fill=None)
-    
-    # Add additionnal        
-    proportion = self.eig_.iloc[:,2].values
-    # Set x label
-    if x_label is None:
-        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(proportion[axis[0]],2))+"%)"
-    # Set y label
-    if y_label is None:
-        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(proportion[axis[1]],2))+"%)"
-    # Set title
+        p = p + gg_circle(r=1.0, xc=0.0, yc=0.0, color=col_circle, fill=None)
+
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ##add additionnal informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if title is None:
         title = "PartialPCA - Biplot"
-    p = p + pn.labs(title=title,x=x_label,y = y_label)
-    
-    # Set x limits
-    if x_lim is not None:
-        p = p + pn.xlim(x_lim)
-    # Set y limits
-    if y_lim is not None:
-        p = p + pn.ylim(y_lim)
-
-    if add_hline:
-        p = p + pn.geom_hline(yintercept=0,colour=hline_color,linetype =hline_style)    
-    if add_vline:
-        p = p+ pn.geom_vline(xintercept=0,colour=vline_color,linetype =vline_style)
-    if add_grid:
-        p = p + pn.theme(panel_grid_major = pn.element_line(color = "black",size = 0.5,linetype = "dashed"))
-    # Add theme
-    p = p + ggtheme
+    p = fviz_add(p,self,axis,x_label,y_label,title,x_lim,y_lim,add_hline,alpha_hline,col_hline,linetype_hline,size_hline,add_vline,alpha_vline,col_vline,linetype_vline,size_vline,add_grid,ggtheme)     
     
     return p
-
-def fviz_partialpca(self,choice="biplot",**kwargs)->pn:
+    
+def fviz_partialpca(self,element="biplot",**kwargs):
     """
     Visualize Partial Principal Component Analysis (PartialPCA)
     -----------------------------------------------------------
 
     Description
     -----------
-    Plot the graphs for a Partial Principal Component Analysis (PartialPCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
+    Plot the graphs for a Partial Principal Component Analysis (PCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables.
 
-        * fviz_partialpca_ind() : Graph of individuals
-        * fviz_partialpca_var() : Graph of variables (Correlation circle)
-        * fviz_partialpca_biplot() : Biplot of individuals and variables
+        * `fviz_partialpca_ind()`: Graph of individuals
+        * `fviz_partialpca_var()`: Graph of variables (Correlation circle)
+        * `fviz_partialpca_biplot()`: Biplot of individuals and variables
 
     Usage
     -----
     ```python
-    >>> fviz_partialpca(self,choice=("ind","var","biplot","3D"))
+    >>> fviz_partialpca(self,element=("ind","var","biplot"),**kwargs)
+    >>> fviz_partialpca(self,"ind",**kwargs)
+    >>> fviz_partialpca(self,"var",**kwargs)
+    >>> fviz_partialpca(self,"biplot",**kwargs)
     ```
 
     Parameters
     ----------
-    `self` : an object of class PartialPCA
+    `self`: an object of class PartialPCA
 
-    `choice` : the elements to subset
+    `element`: the element to plot from the output. Allowed values are: 
         * 'ind' for the individuals graphs
-        * 'var' for the variables graphs (correlation circle)
+        * 'var' for the variables graphs (= Correlation circle)
         * 'biplot' for biplot of individuals and variables
     
-    `**kwargs` : further arguments passed to or from other methods
+    `**kwargs`: further arguments passed to or from other methods
 
     Returns
     ------
@@ -1001,17 +857,16 @@ def fviz_partialpca(self,choice="biplot",**kwargs)->pn:
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
-    """
-    # Check if self is an object of class PartialPCA
-    if self.model_ != "partialpca":
-        raise TypeError("'self' must be an object of class PartialPCA")
-    
-    if choice not in ["ind","var","biplot"]:
-        raise ValueError("'choice' should be one of 'ind', 'var', 'biplot'")
 
-    if choice == "ind":
+    Examples
+    --------
+    seff `fviz_partialpca_ind`, `fviz_partialpca_var`, `fviz_partialpca_biplot`
+    """
+    if element == "ind":
         return fviz_partialpca_ind(self,**kwargs)
-    elif choice == "var":
+    elif element == "var":
         return fviz_partialpca_var(self,**kwargs)
-    elif choice == "biplot":
+    elif element == "biplot":
         return fviz_partialpca_biplot(self,**kwargs)
+    else:
+        raise ValueError("'element' should be one of 'ind', 'var', 'biplot'")

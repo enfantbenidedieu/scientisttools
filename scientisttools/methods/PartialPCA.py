@@ -83,23 +83,20 @@ class PartialPCA(BaseEstimator,TransformerMixin):
 
     See Also
     --------
-    get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA, fviz_partialpca_ind, fviz_partialpca_var, fviz_partialpca_biplot, predictPartialPCA, supvarPartialPCA
+    `get_partialpca_ind`, `get_partialpca_var`, `get_partialpca`, `summaryPartialPCA`, `fviz_partialpca_ind`, fviz_partialpca_var, fviz_partialpca_biplot, predictPartialPCA, supvarPartialPCA
 
     Examples
     --------
     ```python
-    >>> #load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> cars = load_cars2006(element="all")
-    >>> from scientisttools import PartialPCA, summaryPartialPCA
+    >>> from scientisttools import autos2006, PartialPCA, summaryPartialPCA
     >>> #with integer
-    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(cars)
+    >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
     >>> #with string
-    >>> res_ppca = PartialPCA(partial="CYL",ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(cars)
+    >>> res_ppca = PartialPCA(partial="CYL",ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
     >>> #with list
-    >>> res_ppca = PartialPCA(partial=["CYL"],ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(cars)
+    >>> res_ppca = PartialPCA(partial=["CYL"],ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
     >>> #with tuple
-    >>> res_ppca = PartialPCA(partial=("CYL"),ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(cars)
+    >>> res_ppca = PartialPCA(partial=("CYL"),ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
     >>> summaryPartialPCA(res_ppca)
     ```
     """
@@ -138,6 +135,14 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         -------
         `self`: object
             Returns the instance itself
+
+        Examples
+        --------
+        ```python
+        >>> from scientisttools import autos2006, PartialPCA, summaryPartialPCA
+        >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8)
+        >>> res_ppca.fit(autos2006)
+        ```
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # Check if X is an instance of pd.DataFrame class
@@ -145,6 +150,9 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         if not isinstance(X,DataFrame):
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        #set index name as None
+        X.index.name = None
+
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if parallelize is a boolean
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -156,9 +164,6 @@ class PartialPCA(BaseEstimator,TransformerMixin):
             n_workers = -1
         else:
             n_workers = 1
-
-        # Set index name as None
-        X.index.name = None
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ## rop level if ndim greater than 1 and reset columns name
@@ -456,6 +461,13 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         -------
         `X_new`: pandas Dataframe of shape (n_samples, n_components)
             Transformed values.
+        
+        Examples
+        --------
+        ```python
+        >>> from scientisttools import autos2006, PartialPCA, summaryPartialPCA
+        >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8)
+        >>> ind_coord = res_ppca.fit_transform(autos2006)
         """
         self.fit(X)
         return self.ind_.coord
@@ -478,6 +490,16 @@ class PartialPCA(BaseEstimator,TransformerMixin):
         -------
         `X_new`: pandas Dataframe of shape (n_samples, n_components)
             Projection of X in the principal components where `n_samples` is the number of samples and `n_components` is the number of the components.
+
+        Examples
+        --------
+        Examples
+        --------
+        ```python
+        >>> from scientisttools import autos2006, PartialPCA, summaryPartialPCA
+        >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8)
+        >>> res_ppca.fit(autos2006)
+        >>> ind_coord = res_ppca.transform(res_pca.call_.X)
         """ 
         #check if X is a pandas DataFrame
         if not isinstance(X,DataFrame):
@@ -530,13 +552,13 @@ def predictPartialPCA(self,X=None) -> NamedTuple:
     
     Return
     ------
-    namedtuple of Dataframes containing all the results for the new individuals including:
+    a namedtuple of pandas Dataframes containing all the results for the new individuals including:
     
     `coord`: factor coordinates of the new individuals
 
-    `cos2`: square cosinus of the new individuals
+    `cos2`: squared cosinus of the new individuals
 
-    `dist`: square distance to origin for new individuals
+    `dist`: squared distance to origin for new individuals
     
     Author(s)
     ---------
@@ -545,14 +567,11 @@ def predictPartialPCA(self,X=None) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> cars = load_cars2006(element="actif")
-    >>> from scientisttools import PartialPCA, predictPartialPCA
-    >>> res_ppca = PartialPCA(partial="CYL")
-    >>> res_ppca.fit(cars)
+    >>> from scientisttools import load_autos2006, PartialPCA, predictPartialPCA
+    >>> autos2006 = load_autos2006("actif")
+    >>> res_ppca = PartialPCA(partial="CYL").fit(autos2006)
     >>> #load new individuals
-    >>> ind_sup = load_cars2006(element="ind_sup")
+    >>> ind_sup = load_autos2006("ind_sup")
     >>> predict = predictPartialPCA(res_ppca,X=ind_sup)
     >>> predict.coord.head() #coordinate of the new individuals
     >>> predict.cos2.head() #squared cosinus of the new individuals
@@ -622,19 +641,19 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
 
     Returns
     -------
-    namedtuple of namedtuple containing the results for supplementary variables including : 
+    a namedtuple of namedtuple containing the results for supplementary variables including : 
 
-    `quanti`: namedtuple containing the results of the supplementary quantitative variables including :
-        * `coord`: factor coordinates of the supplementary quantitative variables
-        * `cos2`: squared cosinus of the supplementary quantitative variables
+    `quanti`: a namedtuple of pandas DataFrames containing all the results of the supplementary quantitative variables including :
+        * `coord`: factor coordinates
+        * `cos2`: squared cosinus
         * `statistics`: statistics for linear regression between supplementary quantitative variables and partial variable
     
-    `quali`: namedtuple containing the results of the supplementary qualitative/categories variables including :
-        * `coord`: factor coordinates of the supplementary categories
-        * `cos2`: squared cosinus of the supplementary categories
-        * `vtest`: value-test of the supplementary categories
-        * `dist`: squared distance to origin of the supplementary categories
-        * `eta2`: squared correlation ratio of the supplementary qualitative variables
+    `quali`: a namedtuple of pandas DataFrames containing all the results of the supplementary qualitative/categories variables including :
+        * `coord`: factor coordinates
+        * `cos2`: squared cosinus
+        * `vtest`: value-test
+        * `dist`: squared distance to origin
+        * `eta2`: squared correlation ratio
 
     Author(s)
     ---------
@@ -643,14 +662,11 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
     Examples
     --------
      ```python
-    >>> #load cars2006 dataset
-    >>> from scientisttools import load_cars2006
-    >>> cars = load_cars2006(element="actif")
-    >>> from scientisttools import PartialPCA, supvarPartialPCA
-    >>> res_ppca = PartialPCA(partial="CYL")
-    >>> res_ppca.fit(cars)
+    >>> from scientisttools import load_autos2006, PartialPCA, supvarPartialPCA
+    >>> autos2006 = load_autos2006("actif")
+    >>> res_ppca = PartialPCA(partial="CYL").fit(autos2006)
     >>> #supplementary variables (quantitative & qualitative)
-    >>> X_quanti_sup, X_quali_sup = load_cars2006(element="quanti_sup"), load_cars2006(element="quali_sup")
+    >>> X_quanti_sup, X_quali_sup = load_autos2006("quanti_sup"), load_autos2006("quali_sup")
     >>> sup_var = supvarPartialPCA(res_ppca,X_quanti_sup=X_quanti_sup,X_quali_sup=X_quali_sup)
     ``` 
     """
@@ -686,11 +702,8 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
             ols_results.loc[k,:] = [*ols.params.values.tolist(),*[ols.rsquared,ols.rsquared_adj,mean_squared_error(X_quanti_sup[k],ols.fittedvalues,squared=False)]]
             quanti_sup_resid.loc[:,k] = ols.resid
         
-        # Standardize
-        d_quanti_sup = DescrStatsW(quanti_sup_resid,weights=self.call_.ind_weights,ddof=0)
-        Z_quanti_sup_resid = mapply(quanti_sup_resid,lambda x : (x - d_quanti_sup.mean)/d_quanti_sup.std,axis=1,progressbar=False,n_workers=self.call_.n_workers)
         #compute statistics for supplementary quantitative variables
-        quanti_sup_ = predict_quanti_sup(Z=Z_quanti_sup_resid,U=self.svd_.U,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
+        quanti_sup_ = predict_quanti_sup(X=quanti_sup_resid,row_coord=self.ind_.coord,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
         quanti_sup_["statistics"] = ols_results
         #convert to namedtuple
         quanti_sup =  namedtuple("quanti_stp",quanti_sup_.keys())(*quanti_sup_.values())
@@ -733,7 +746,7 @@ def supvarPartialPCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
         n_rows, n_k = X_quali_sup.shape[0], concat((X_quali_sup[q].value_counts().sort_index() for q in X_quali_sup.columns),axis=0)
         coef_k = sqrt(((n_rows-1)*n_k)/(n_rows-n_k))
         #statistics for supplementary categories
-        quali_sup_ = predict_quali_sup(X=X_quali_sup,Y=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
+        quali_sup_ = predict_quali_sup(X=X_quali_sup,row_coord=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
         #update value-test with squared eigenvalues
         quali_sup_["vtest"] = mapply(quali_sup_["vtest"],lambda x : x/self.svd_.vs[:self.call_.n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers)
         #merge dictionary
