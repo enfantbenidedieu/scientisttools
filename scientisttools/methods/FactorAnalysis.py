@@ -58,14 +58,14 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
     
     Attrbutes
     ---------
-    `call_`: namedtuple with some informations
-        * `Xtot`: pandas dataframe with all data (active and supplementary)
-        * `X`: pandas dataframe with active data
-        * `Z`: pandas dataframe with standardized data : Z = (X-center)/scale
-        * `ind_weights`: pandas series containing individuals weights
-        * `var_weights`: pandas series containing variables weights
-        * `center`: pandas series containing variables means
-        * `scale`: pandas series containing variables standard deviation : 
+    `call_`: a namedtuple with some informations
+        * `Xtot`: a pandas DataFrame with all data (active and supplementary)
+        * `X`: a pandas DataFrame with active data
+        * `Z`: a pandas DataFrame with standardized data : Z = (X-center)/scale
+        * `ind_weights`: a pandas Series containing individuals weights
+        * `var_weights`: a pandas Series containing variables weights
+        * `center`: a pandas Series containing variables means
+        * `scale`: a pandas Series containing variables standard deviation : 
         * `n_components`: an integer indicating the number of components kept
         * `min_error`: iterate until the change in communalities is less than min_error
         * `max_iter`: Maximum number of iterations for convergence
@@ -74,27 +74,27 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
         * `n_workers`: an integer indicating the maximum amount of workers (processes) to spawn. For more information see: https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
         * `ind_sup`: None or a list of string indicating names of the supplementary individuals
 
-    `eig_`: pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+    `eig_`: a pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    `eigval_`: namedtuple of array containing eigen values
+    `eigval_`: a namedtuple of numpy array containing eigen values
         * `original`: eigen values of the original matrix
         * `common`: eigen values of the common factor solution
 
-    `vaccounted_`: pandas DataFrame containing the variance accounted
+    `vaccounted_`: a pandas DataFrame containing the variance accounted
 
     `rotate_`: a namedtuple containing the rotation matrix and factor correlations matrix
         * `rotmat`: numpy array of rotation matrix (if a rotation has been performed. None otherwise.)
         * `phi`: pandas DataFrame of factor correlations matrix
 
-    `var_`: namedtuple of pandas dataframes containing all the results for the active variables
+    `var_`: a namedtuple of pandas DataFrames containing all the results for the active variables
         * `coord`: factor coordinates of the variables
         * `contrib`: relative contribution of the variables
         * `f_score`: normalized factor coefficients of the variables (factor scores)
 
-    `ind_`: namedtuple of pandas dataframes containing all the results for the active individuals
+    `ind_`: a namedtuple of pandas DataFrames containing all the results for the active individuals
         * `coord`: factor coordinates of the individuals
 
-    `corr_`: namedtuple of pandas DataFrame containing all the results of correlations
+    `corr_`: a namedtuple of pandas DataFrame containing all the results of correlations
         * `corrcoef`: pearson correlation coefficient
         * `model`: correlation matrix used by the model
         * `pcorrcoef`: partial pearson correlation coefficient
@@ -102,7 +102,7 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
         * `residual`: residual correlations after the factor model is applied.
         * `error`: sum of squared residuals
 
-    `others_`: namedtuple of pandas dataframes containing :
+    `others_`: a namedtuple of pandas DataFrames/Series containing :
         * `communalities_iterations`: the history of the communality estimates. Probably only useful for teaching what happens in the process of iterative fitting.
         * `r2_score`: the multiple R square between the factors and factor score estimates.
         * "communality": communality estimates for each item. These are merely the sum of squared factor loadings for that item.
@@ -111,10 +111,10 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
         * "explained_variance": variance explained by each factor (weighted and unweighted)
         * "inertia": total inertia
 
-    `ind_sup_`: namedtuple of pandas dataframes containing all the results for the supplementary individuals
+    `ind_sup_`: a namedtuple of pandas DataFrame containing all the results for the supplementary individuals
         * `coord`: factor coordinates of the supplementary individuals
 
-    `summary_quanti_`: summary statistics for quantitative variables
+    `summary_quanti_`: a pandas DataFrame with summary statistics for quantitative variables
 
     `model_`: string specifying the model fitted = 'fa'
 
@@ -205,12 +205,30 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
         -------
         `self`: object
             Returns the instance itself
+        
+        Examples
+        --------
+        ```python
+        >>> #load beer dataset
+        >>> from scientisttools import load_beer
+        >>> beer = load_beer()
+        >>> from scientisttools import FactorAnalysis, summaryFA
+        >>> #non iterative principal factor analysis (NIPFA)
+        >>> res_fa = FactorAnalysis(max_iter=1,rotation=None).fit(beer)
+        >>> #iterative principal factor analysis (IPFA)
+        >>> res_fa = FactorAnalysis(rotation=None).fit(beer)
+        >>> #harris component analysis (HCA)
+        >>> res_fa = FactorAnalysis(method = "harris",max_iter=1,rotation=None).fit(beer)
+        ```
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # Check if X is an instance of pd.DataFrame class
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not isinstance(X,DataFrame):
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        
+        # Set index name as None
+        X.index.name = None
          
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check max_iter is an integer
@@ -241,9 +259,6 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
             n_workers = -1
         else:
             n_workers = 1
-
-        # Set index name as None
-        X.index.name = None
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ## drop level if ndim greater than 1 and reset columns name
@@ -527,41 +542,24 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
         -------
         `X_new`: pandas Dataframe of shape (n_samples, n_components)
             Transformed values.
+        
+        Examples
+        --------
+        ```python
+        >>> #load beer dataset
+        >>> from scientisttools import load_beer
+        >>> beer = load_beer()
+        >>> from scientisttools import FactorAnalysis, summaryFA
+        >>> #non iterative principal factor analysis (NIPFA)
+        >>> ind_coord = FactorAnalysis(max_iter=1,rotation=None).fit_transform(beer)
+        >>> #iterative principal factor analysis (IPFA)
+        >>> ind_coord = FactorAnalysis(rotation=None).fit_transform(beer)
+        >>> #harris component analysis (HCA)
+        >>> ind_coord = FactorAnalysis(method = "harris",max_iter=1,rotation=None).fit_transform(beer)
+        ```
         """
         self.fit(X)
         return self.ind_.coord
-    
-    def inverse_transform(self,X:DataFrame) -> DataFrame:
-        """
-        Transform data back to its original space
-        -----------------------------------------
-
-        Description
-        -----------
-        In other words, return an input X_original whose transform would be X.
-
-        Parameters
-        ----------
-        `X`: pandas dataframe of shape (n_samples, n_components).
-            New data, where `n_samples` is the number of samples and `n_components` is the number of components.
-
-        Returns
-        -------
-        `X_original`: pandas dataframe of shape (n_samples, n_columns)
-            Original data, where ``n_samples` is the number of samples and `n_columns` is the number of columns
-        
-        """
-        # Check if X is a pandas DataFrame
-        if not isinstance(X,DataFrame):
-            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        # set number of components
-        n_components = min(X.shape[1],self.call_.n_components)
-
-        #inverse transform
-        X_original = X.iloc[:,:n_components].dot(mapply(self.var_.coord.iloc[:,:n_components],lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers).T)
-        X_original = mapply(X_original,lambda x : (x*self.call_.scale)+self.call_.center,axis=1,progressbar=False,n_workers=self.call_.n_workers)
-        return X_original
 
     def transform(self,X:DataFrame) -> DataFrame:
         """
@@ -581,11 +579,32 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
         -------
         `X_new`: pandas Dataframe of shape (n_samples, n_components)
             Projection of X in the principal factor where `n_samples` is the number of samples and `n_components` is the number of the components.
+        
+        Examples
+        --------
+        ```python
+        >>> #load beer dataset
+        >>> from scientisttools import load_beer
+        >>> beer = load_beer()
+        >>> from scientisttools import FactorAnalysis, summaryFA
+        >>> #non iterative principal factor analysis (NIPFA)
+        >>> res_nipfa = FactorAnalysis(max_iter=1,rotation=None).fit(beer)
+        >>> ind_coord = res_nipfa.transform(res_nipfa.call_.X)
+        >>> #iterative principal factor analysis (IPFA)
+        >>> res_ipfa = FactorAnalysis(rotation=None).fit(beer)
+        >>> ind_coord = res_ifa.transform(res_ipfa.call_.X)
+        >>> #harris component analysis (HCA)
+        >>> res_hca = FactorAnalysis(method = "harris",max_iter=1,rotation=None).fit(beer)
+        >>> ind_coord ) res_hca.transform(res_hca.call_.X)
+        ```
         """
         #check if X is a pandas DataFrame
         if not isinstance(X,DataFrame):
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        #set index name as None
+        X.index.name = None
+
         #check if all variables are numerics
         all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
         if not all_num:
@@ -595,10 +614,7 @@ class FactorAnalysis(BaseEstimator,TransformerMixin):
         if X.shape[1] != self.call_.X.shape[1]:
             raise ValueError("'columns' aren't aligned")
         
-        # Set index name as None
-        X.index.name = None
-        
-        #Standardize the data and apply transition relation
+        #standardize the data and apply transition relation
         coord = mapply(X,lambda x : ((x - self.call_.center)/self.call_.scale)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.var_.f_score)
         coord.columns = ["Dim."+str(x+1) for x in range(self.call_.n_components)]
         return coord
