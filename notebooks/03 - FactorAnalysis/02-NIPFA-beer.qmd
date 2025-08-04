@@ -21,8 +21,7 @@ init_notebook_mode(all_interactive=True)
 
 ```{python}
 #load beer dataset
-from scientisttools import load_beer
-beer = load_beer()
+from scientisttools import beer
 beer
 ```
 

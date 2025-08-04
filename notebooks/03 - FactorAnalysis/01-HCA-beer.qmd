@@ -10,9 +10,9 @@ jupyter: python3
 ---
 
 ```{python}
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-warnings.filterwarnings("ignore")
+from warnings import simplefilter, filterwarnings
+simplefilter(action='ignore', category=FutureWarning)
+filterwarnings("ignore")
 from itables import init_notebook_mode
 init_notebook_mode(all_interactive=True)
 ```
@@ -21,8 +21,7 @@ init_notebook_mode(all_interactive=True)
 
 ```{python}
 #load beer dataset
-from scientisttools import load_beer
-beer = load_beer()
+from scientisttools import beer
 beer
 ```
 
