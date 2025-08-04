@@ -25,7 +25,7 @@ def get_partialpca_ind(self) -> NamedTuple:
     -------
     a namedtuple of pandas Dataframes containing all the results for the active individuals including:
 
-    `coord`: factor coordinates (scores)
+    `coord`: factor coordinates
 
     `cos2`: squared cosine
 
@@ -46,9 +46,9 @@ def get_partialpca_ind(self) -> NamedTuple:
     >>> res_ppca.fit(cars)
     >>> #extract the results for individuals
     >>> ind = get_partialpca_ind(res_ppca)
-    >>> ind.coord.head() #coordinates of individuals
-    >>> ind.cos2.head() #cos2 of individuals
-    >>> ind.contrib.head() #contributions of individuals
+    >>> ind.coord.head() # coordinates of individuals
+    >>> ind.cos2.head() # cos2 of individuals
+    >>> ind.contrib.head() # contributions of individuals
     ```
     """
     # Check if self is an object of class PartialPCA
@@ -73,7 +73,7 @@ def get_partialpca_var(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an instance of class PartialPCA
+    `self`: an instance of class PartialPCA
 
     Returns
     -------
@@ -97,11 +97,11 @@ def get_partialpca_var(self) -> NamedTuple:
     >>> from scientisttools import autos2006, PartialPCA, get_partialpca_var
     >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
     >>> #extract results for variables
-    >>> var = get_partialpca_var(res_pca)
-    >>> var.coord.head() #coordinates of variables
-    >>> var.cos2.head() #cos2 of variables
-    >>> var.contrib.head() #contributions of variables
-    >>> var.infos.head() #additionals informations of variables
+    >>> var = get_partialpca_var(res_ppca)
+    >>> var.coord.head() # coordinates of variables
+    >>> var.cos2.head() # cos2 of variables
+    >>> var.contrib.head() # contributions of variables
+    >>> var.infos.head() # additionals informations of variables
     ```
     """
     # Check if self is an object of class PartialPCA
@@ -156,15 +156,18 @@ def get_partialpca(self,element = "ind")-> NamedTuple:
     >>> from scientisttools import autos2006, PartialPCA, get_partialpca
     >>> res_ppca = PartialPCA(partial=0,ind_sup=(18,19),quanti_sup=(6,7),quali_sup=8).fit(autos2006)
     >>> #extract results for individuals
-    >>> ind = get_partialpca(res_partialpca,"ind")
+    >>> ind = get_partialpca(res_ppca,"ind")
+    >>> ind.coord.head() # coordinates of individuals
+    >>> ind.cos2.head() # cos2 of individuals
+    >>> ind.contrib.head() # contributions of individuals
     >>> #extract results for variables
-    >>> var = get_partialpca(res_partialpca, "var")
+    >>> var = get_partialpca(res_ppca, "var")
+    >>> var.coord.head() # coordinates of variables
+    >>> var.cos2.head() # cos2 of variables
+    >>> var.contrib.head() # contributions of variables
+    >>> var.infos.head() # additionals informations of variables
     ```
     """
-    # Check if self is an object of class PartialPCA
-    if self.model_ != "partialpca":
-        raise TypeError("'self' must be an object of class PartialPCA")
-    
     if element == "ind":
         return get_partialpca_ind(self)
     elif element == "var":
