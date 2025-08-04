@@ -23,9 +23,9 @@ def get_fa_ind(self) -> NamedTuple:
 
     Returns
     -------
-    namedtuple of Dataframes containing all the results for the active individuals including:
+    a namedtuple of pandas Dataframe containing all the results for the active individuals including:
 
-    `coord`: factor coordinates (scores) of the individuals
+    `coord`: factor coordinates
     
     Author(s)
     ---------
@@ -34,14 +34,11 @@ def get_fa_ind(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load beer dataset
-    >>> from scientisttools import load_beer
-    >>> beer = load_beer()
-    >>> from scientisttools import FactorAnalysis, summaryFA
-    >>> #non iterative principal factor analysis
+    >>> from scientisttools import beer, FactorAnalysis, get_fa_ind
     >>> res_fa = FactorAnalysis(rotation=None,max_iter=1).fit(beer)
     >>> #extract the results for individuals
     >>> ind = get_fa_ind(res_fa)
+    >>> ind.coord.head() # coordinates of individuals
     ```
     """
     # Check if self is an object of class FactorAnalysis
@@ -70,13 +67,13 @@ def get_fa_var(self) -> NamedTuple:
 
     Returns
     -------
-    namedtuple of Dataframes containing all the results for the active variables including:
+    a namedtuple of pandas Dataframes containing all the results for the active variables including:
 
-    `coord`: factor coordinates of the variables
+    `coord`: factor coordinates
 
-    `contrib`: relative contribution of the variables
+    `contrib`: relative contribution
 
-    `f_score`: normalized factor coefficients of the variables
+    `f_score`: normalized factor coefficients
     
     Author(s)
     ---------
@@ -85,14 +82,13 @@ def get_fa_var(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load beer dataset
-    >>> from scientisttools import load_beer
-    >>> beer = load_beer()
-    >>> from scientisttools import FactorAnalysis, summaryFA
-    >>> #non iterative principal factor analysis
+    >>> from scientisttools import beer, FactorAnalysis, get_fa_var
     >>> res_fa = FactorAnalysis(rotation=None,max_iter=1).fit(beer)
     >>> #extract the results for variables
     >>> var = get_fa_var(res_fa)
+    >>> var.coord.head() # coordinates of variables (loadings)
+    >>> var.contrib.head() # contributions of variables
+    >>> var.f_score.head() # projection function
     ```
     """
     # Check if self is an object of class FactorAnalysis
@@ -100,7 +96,7 @@ def get_fa_var(self) -> NamedTuple:
         raise TypeError("'self' must be an object of class FactorAnalysis")
     return self.var_
 
-def get_fa(self,element= "ind")-> NamedTuple:
+def get_fa(self, element= "ind")-> NamedTuple:
     """
     Extract the results for individuals/variables - FactorAnalysis
     --------------------------------------------------------------
@@ -116,7 +112,9 @@ def get_fa(self,element= "ind")-> NamedTuple:
     Usage
     -----
     ```python
-    >>> get_fa(self,element=("ind","var"))
+    >>> get_fa(self, element = ("ind","var"))
+    >>> get_fa(self, element = "ind")
+    >>> get_fa(self, element = "var")
     ```
 
     Parameters
@@ -129,7 +127,7 @@ def get_fa(self,element= "ind")-> NamedTuple:
                 
     Returns
     -------
-    namedtuple of Dataframes containing all the results for the active individuals/variables
+    namedtuple of pandas Dataframes containing all the results for the active individuals/variables
 
     Author(s)
     ---------
@@ -138,11 +136,7 @@ def get_fa(self,element= "ind")-> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load beer dataset
-    >>> from scientisttools import load_beer
-    >>> beer = load_beer()
-    >>> from scientisttools import FactorAnalysis, summaryFA
-    >>> #non iterative principal factor analysis
+    >>> from scientisttools import beer, FactorAnalysis, get_fa
     >>> res_fa = FactorAnalysis(rotation=None,max_iter=1).fit(beer)
     >>> #extract the results for individuals
     >>> ind = get_fa(res_fa,element="ind")
@@ -151,13 +145,9 @@ def get_fa(self,element= "ind")-> NamedTuple:
     >>> var = get_fa(res_fa,element="var")
     >>> var.coord.head() # coordinates of variables (loadings)
     >>> var.contrib.head() # contributions of variables
-    >>> var.f_score.head() # factor score  
+    >>> var.f_score.head() # projection function  
     ```
     """
-    # Check if self is an object of class FactorAnalysis
-    if self.model_ != "fa":
-        raise TypeError("'self' must be an object of class FactorAnalysis")
- 
     if element == "ind":
         return get_fa_ind(self)
     elif element == "var":
@@ -190,7 +180,7 @@ def summaryFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pi
 
     `ncp`: int, default = 3. Number of components
 
-    `to_markdown`: Print DataFrame in Markdown-friendly format.
+    `to_markdown`: print DataFrame in Markdown-friendly format.
 
     `tablefmt`: Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
     
@@ -203,10 +193,7 @@ def summaryFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pi
     Examples
     --------
     ```python
-    >>> #load beer dataset
-    >>> from scientisttools import load_beer
-    >>> beer = load_beer()
-    >>> from scientisttools import FactorAnalysis, summaryFA
+    >>> from scientisttools import beer, FactorAnalysis, summaryFA
     >>> #non iterative principal factor analysis
     >>> res_fa = FactorAnalysis(rotation=None,max_iter=1).fit(beer)
     >>> summaryFA(res_fa)
