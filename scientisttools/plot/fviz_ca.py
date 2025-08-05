@@ -520,8 +520,8 @@ def fviz_ca_biplot(self,
                    linetype_vline = "dashed",
                    ggtheme = None):
     """
-    Visualize Correspondence Analysis - Biplot of row and columns variables
-    -----------------------------------------------------------------------
+    Visualize Correspondence Analysis (CA) - Biplot of row and columns variables
+    ----------------------------------------------------------------------------
 
     Usage
     -----
