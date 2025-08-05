@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-#intern functions
 from .fviz_add import fviz_point, fviz_add_point
 
 def fviz_ca_row(self,
