@@ -13,7 +13,7 @@ from .functions.fitfa import fitfa
 from .functions.recodecont import recodecont
 from .functions.revaluate_cat_variable import revaluate_cat_variable
 from .functions.summarize import sum_col_by
-from .functions.predict_sup import predict_ind_sup, predict_quali_sup
+from .functions.predict_sup import predict_ind_sup, predict_quanti_sup, predict_quali_sup
 
 class CA(BaseEstimator,TransformerMixin):
     """
@@ -150,18 +150,12 @@ class CA(BaseEstimator,TransformerMixin):
     Examples
     --------
     ```python
-    >>> #load children2 dataset
-    >>> from scientisttools import load_children2
-    >>> children2 = load_children2()
-    >>> from scientisttools import CA, summaryCA
+    >>> from scientisttools import children, CA, summaryCA
     >>> #with supplementary rows, supplementary columns and supplementary qualitative variables
-    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
-    >>> res_ca.fit(children2)
-    >>> #with supplementary rows, supplementary quantitative variables and supplementary qualitative variables
-    >>> res_ca2 = CA(row_sup=(14,15,16,17),quanti_sup=(5,6,7),quali_sup=8)
-    >>> res_ca2.fit(children2)
-    >>> #summary
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8).fit(children)
     >>> summaryCA(res_ca)
+    >>> #with supplementary rows, supplementary quantitative variables and supplementary qualitative variables
+    >>> res_ca2 = CA(row_sup=(14,15,16,17),quanti_sup=(5,6,7),quali_sup=8).fit(children)
     >>> summaryCA(res_ca2)
     ```
     """
@@ -203,16 +197,8 @@ class CA(BaseEstimator,TransformerMixin):
         Examples
         --------
         ```python
-        >>> #load children2 dataset
-        >>> from scientisttools import load_children2
-        >>> children2 = load_children2()
-        >>> from scientisttools import CA, summaryCA
-        >>> #with supplementary rows, supplementary columns and supplementary qualitative variables
-        >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8,parallelize=False)
-        >>> res_ca.fit(children2)
-        >>> #with supplementary rows, supplementary quantitative variables and supplementary qualitative variables
-        >>> res_ca2 = CA(row_sup=(14,15,16,17),quanti_sup=(5,6,7),quali_sup=8,parallelize=False)
-        >>> res_ca2.fit(children2)
+        >>> from scientisttools import children, CA
+        >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8).fit(children)
         ```
         """
         #check if X is an instance of pandas DataFrame
@@ -474,7 +460,7 @@ class CA(BaseEstimator,TransformerMixin):
             self.row_sup_ = namedtuple("row_sup",row_sup_.keys())(*row_sup_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## Statistics for supplementary columns
+        #statistics for supplementary columns points
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.col_sup is not None:
             X_col_sup = Xtot.loc[:,col_sup_label]
@@ -500,14 +486,11 @@ class CA(BaseEstimator,TransformerMixin):
             if self.row_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=row_sup_label)
             #convert to float and fill missing with mean
-            X_quanti_sup = recodecont(X_quanti_sup.astype("float")).X
-            #supplementary quantitative variables factor coordinates - factor correlation
-            wcorr = DescrStatsW(concat((X_quanti_sup,self.row_.coord),axis=1),weights=self.call_.row_marge,ddof=0).corrcoef[:X_quanti_sup.shape[1],X_quanti_sup.shape[1]:]
-            quanti_sup_coord = DataFrame(wcorr,index=quanti_sup_label,columns=["Dim."+str(x+1) for x in range(n_components)])
-            #supplementary quantitative variable ssquare cosinus
-            quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2),axis=0,progressbar=False,n_workers=n_workers)
+            X_quanti_sup = recodecont(X=X_quanti_sup).X
+            #statistics for supplementary quantitative variables
+            quanti_sup_ = predict_quanti_sup(X=X_quanti_sup,row_coord=self.row_.coord,row_weights=self.call_.row_marge,n_workers=self.call_.n_workers)
             #convert to namedtuple
-            self.quanti_sup_ = namedtuple("quanti_sup",["coord","cos2"])(quanti_sup_coord,quanti_sup_cos2)
+            self.quanti_sup_ = namedtuple("quanti_sup",quanti_sup_.keys())(*quanti_sup_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for supplementary categorical variables
@@ -538,7 +521,7 @@ class CA(BaseEstimator,TransformerMixin):
             else:
                 coef_k = sqrt(n_k)
             #statistics for supplementary categories
-            quali_sup_ = predict_quali_sup(X=X_quali_sup,Y=self.row_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.row_marge,n_workers=self.call_.n_workers)
+            quali_sup_ = predict_quali_sup(X=X_quali_sup,row_coord=self.row_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.row_marge,n_workers=self.call_.n_workers)
             #convert to namedtuple
             self.quali_sup_ = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
             
@@ -562,8 +545,15 @@ class CA(BaseEstimator,TransformerMixin):
 
         Returns
         -------
-        `X_new`: pandas dataframe of shape (n_rows, n_components)
+        `X_new`: pandas DataFrame of shape (n_rows, n_components)
             Transformed values.
+        
+        Examples
+        --------
+        ```python
+        >>> from scientisttools import children, CA, summaryCA
+        >>> row_coord = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8).fit_transform(children)
+        ```
         """
         self.fit(X)
         return self.row_.coord
@@ -584,8 +574,16 @@ class CA(BaseEstimator,TransformerMixin):
 
         Returns
         -------
-        `X_original`: pandas dataframe of shape (n_samples, n_columns)
+        `X_original`: pandas DataFrame of shape (n_samples, n_columns)
             Original data, where `n_samples` is the number of samples and `n_columns` is the number of columns
+
+        Examples
+        --------
+        ```python
+        >>> from scientisttools import children, CA, summaryCA
+        >>> res_ca = CA(n_components=None,row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8).fit(children)
+        >>> X_original = res_ca.inverse_transform(res_ca.row_.coord)
+        ```
         """
         #check if X is an instance of pandas DataFrame
         if not isinstance(X,DataFrame):
@@ -593,22 +591,10 @@ class CA(BaseEstimator,TransformerMixin):
         
         #set number of components
         n_components = min(X.shape[1],self.call_.n_components)
-        X_original = self.call_.X
-        freq = X_original.div(X_original.sum().sum())
-        col_marge, row_marge = freq.sum(axis=0), freq.sum(axis=1)
-        if n_components > 0:
-            row_coord, col_coord = X.iloc[:,:n_components], self.col_.coord.iloc[:,:n_components]
-            if isinstance(row_coord,Series):
-                row_coord, col_coord = row_coord.to_frame(), col_coord.to_frame()
-            U = mapply(mapply(row_coord,lambda x : x*sqrt(row_marge),axis=0,progressbar=False,n_workers=self.call_.n_workers),
-                       lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers)
-            V = mapply(mapply(col_coord,lambda x : x*sqrt(col_marge),axis=0,progressbar=False,n_workers=self.call_.n_workers),
-                       lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers)
-            S = mapply(U,lambda x : x*self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(V.T)
-            hatX = mapply(mapply(S,lambda x : x*sqrt(row_marge),axis=0,progressbar=False,n_workers=self.call_.n_workers),
-                          lambda x : x*sqrt(col_marge),axis=1,progressbar=False,n_workers=self.call_.n_workers).add(outer(row_marge,col_marge)).mul(self.call_.total)
-        else:
-            hatX = DataFrame(outer(row_marge,col_marge),index=X_original.index,columns=X_original.columns)
+        #extract elements
+        F, G, m = X.iloc[:,:n_components], self.col_.coord.iloc[:,:n_components], self.call_.col_marge
+        hatX = F.dot(mapply(G,lambda x : x/sqrt(G.pow(2).T.dot(m)),axis=1,progressbar=False,n_workers=self.call_.n_workers).T)
+        hatX = mapply(mapply(hatX.add(1),lambda x : x*self.call_.row_marge,axis=0,progressbar=False,n_workers=self.call_.n_workers),lambda x : (x*self.call_.col_marge),axis=1,progressbar=False,n_workers=self.call_.n_workers).mul(self.call_.total)
         return hatX
 
     def transform(self,X:DataFrame) -> DataFrame:
@@ -629,8 +615,19 @@ class CA(BaseEstimator,TransformerMixin):
         -------
         `X_new`: pandas DataFrame of shape (n_rows, n_components)
             Projection of X in the principal components where `n_rows` is the number of rows and `n_components` is the number of the components.
-        """
         
+        Examples
+        --------
+        ```python
+        >>> from scientisttools import load_children, CA, predictCA
+        >>> children = load_children("all")
+        >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
+        >>> res_ca.fit(children)
+        >>> #projection on supplementary rows
+        >>> row_sup = load_children("row_sup")
+        >>> row_sup_coord = res_ca.transform(row_sup)
+        ```
+        """
         # check if X is an instance of pandas DataFrame
         if not isinstance(X,DataFrame):
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
@@ -697,18 +694,16 @@ def predictCA(self,X:DataFrame) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load children2 dataset
-    >>> from scientisttools import load_children2
-    >>> children2 = load_children()
-    >>> from scientisttools import CA, predictCA
+    >>> from scientisttools import load_children, CA, predictCA
+    >>> children = load_children("all")
     >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
-    >>> res_ca.fit(children2)
-    >>> #Prediction on supplementary rows
-    >>> row_sup = load_children(element="row_sup")
+    >>> res_ca.fit(children)
+    >>> #prediction on supplementary rows
+    >>> row_sup = load_children("row_sup")
     >>> predict = predictCA(res_ca,X=row_sup)
-    >>> predict.coord.head() #new row coordinates
-    >>> predict.cos2.head() #new row cos2
-    >>> predict.dist.head() #new row squared distance to origin
+    >>> predict.coord.head() # new row coordinates
+    >>> predict.cos2.head() # new row cos2
+    >>> predict.dist.head() # new row squared distance to origin
     ```
     """
     #check if self is an object of class CA
@@ -799,31 +794,29 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None) -> NamedTu
     Examples
     --------
     ```python
-    >>> #Load children2 dataset
-    >>> from scientisttools import load_children2
-    >>> children2 = load_children2()
-    >>> from scientisttools import CA, supvarCA
+    >>> from scientisttools import load_children, CA, supvarCA
+    >>> children = load_children("all")
     >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
-    >>> res_ca.fit(children2)
+    >>> res_ca.fit(children)
     >>> #supplementary columns/variables projections
-    >>> X_col_sup, X_quali_sup = load_children2(element="col_sup"), load_children2(element="quali_sup")
+    >>> X_col_sup, X_quali_sup = load_children("col_sup"), load_children("quali_sup")
     >>> sup_var = supvarCA(res_ca,X_col_sup=X_col_sup,X_quanti_sup=X_col_sup,X_quali_sup=X_quali_sup)
     >>> #extract supplementary columns informations
     >>> col_sup = sup_var.col
-    >>> col_sup.coord.head() #factor coordinates
-    >>> col_sup.cos2.head() #squared cosinus
-    >>> col_sup.dist.head() #squared distance to origin
+    >>> col_sup.coord.head() # coordinates
+    >>> col_sup.cos2.head() # cos2
+    >>> col_sup.dist.head() # squared distance to origin
     >>> #extract supplementary quantitatives variables informations
     >>> quanti_sup = sup_var.quanti
-    >>> quanti_sup.coord.head() #factor coordinates
-    >>> quanti_sup.cos2.head() #squared cosinus
+    >>> quanti_sup.coord.head() # coordinates
+    >>> quanti_sup.cos2.head() # cos2
     >>> #extract supplementary qualitatives variables informations
     >>> quali_sup = sup_var.quali
-    >>> quali_sup.coord.head() #factor coordinates
-    >>> quali_sup.cos2.head() #squared cosinus
-    >>> quali_sup.vtest.head() #value-test
-    >>> quali_sup.dist.head() #squared distance  to origin
-    >>> quali_sup.eta2.head() #squared correlation ratio
+    >>> quali_sup.coord.head() # coordinates
+    >>> quali_sup.cos2.head() # cos2
+    >>> quali_sup.vtest.head() # value-test
+    >>> quali_sup.dist.head() # squared distance  to origin
+    >>> quali_sup.eta2.head() # eta2
     ```
     """
     # Check if self is and object of class CA
@@ -866,7 +859,7 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None) -> NamedTu
         col_sup = None
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    ##statistics for supplementary quantitative variables
+    #statistics for supplementary quantitative variables
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if X_quanti_sup is not None:
         #if pandas Series, convert to pandas dataframe
@@ -887,19 +880,16 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None) -> NamedTu
             raise TypeError("All columns must be numeric")
         
         #fill missing with mean
-        X_quanti_sup = recodecont(X_quanti_sup.astype("float")).X
-        #supplementary quantitative variables factor coordinates - factor correlation
-        wcorr = DescrStatsW(concat((X_quanti_sup,self.row_.coord),axis=1),weights=self.call_.row_marge,ddof=0).corrcoef[:X_quanti_sup.shape[1],X_quanti_sup.shape[1]:]
-        quanti_sup_coord = DataFrame(wcorr,index=X_quanti_sup.columns,columns=["Dim."+str(x+1) for x in range(self.call_.n_components)])
-        #supplementary quantitative variable square cosinus
-        quanti_sup_cos2 = mapply(quanti_sup_coord,lambda x : (x**2),axis=0,progressbar=False,n_workers=self.call_.n_workers)
+        X_quanti_sup = recodecont(X=X_quanti_sup).X
+        #statistics for supplementary quantitative variables
+        quanti_sup_ = predict_quanti_sup(X=X_quanti_sup,row_coord=self.row_.coord,row_weights=self.call_.row_marge,n_workers=self.call_.n_workers)
         #convert to namedtuple
-        quanti_sup = namedtuple("quanti_sup",["coord","cos2"])(quanti_sup_coord,quanti_sup_cos2)
+        quanti_sup = namedtuple("quanti_sup",quanti_sup_.keys())(*quanti_sup_.values())
     else:
         quanti_sup = None
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    ##statistics for supplementary qualitative variables
+    #statistics for supplementary qualitative variables
     ##---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if X_quali_sup is not None:
         #if pandas series, transform to pandas dataframe
@@ -945,7 +935,7 @@ def supvarCA(self,X_col_sup=None,X_quanti_sup=None, X_quali_sup=None) -> NamedTu
         else:
             coef_k = sqrt(n_k)
         #statistics for supplementary categories
-        quali_sup_ = predict_quali_sup(X=X_quali_sup,Y=self.row_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.row_marge,n_workers=self.call_.n_workers)
+        quali_sup_ = predict_quali_sup(X=X_quali_sup,row_coord=self.row_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.row_marge,n_workers=self.call_.n_workers)
         #convert to namedtuple
         quali_sup = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
     else:
