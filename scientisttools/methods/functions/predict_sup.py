@@ -9,7 +9,7 @@ from statsmodels.stats.weightstats import DescrStatsW
 from .function_eta2 import function_eta2
 
 #----------------------------------------------------------------------------------------------------------------------------------------
-#predict supplementary individuals
+#predict supplementary rows/individuals
 #----------------------------------------------------------------------------------------------------------------------------------------
 def predict_ind_sup(Z,V,sqdisto,col_weights=None,n_workers=1):
     """
