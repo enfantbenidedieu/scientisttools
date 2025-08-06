@@ -221,6 +221,9 @@ class PCA(BaseEstimator,TransformerMixin):
         if not isinstance(X,DataFrame):
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
+        # Set index name as None
+        X.index.name = None
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if standardize is a boolean
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -238,9 +241,6 @@ class PCA(BaseEstimator,TransformerMixin):
             n_workers = -1
         else:
             n_workers = 1
-
-        # Set index name as None
-        X.index.name = None
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ## rop level if ndim greater than 1 and reset columns name
