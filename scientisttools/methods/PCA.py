@@ -388,10 +388,10 @@ class PCA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set number of components
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # QR decomposition (to set maximum number of components)
+        #QR decomposition (to set maximum number of components)
         Q, R = linalg.qr(Z)
-        max_components = min(linalg.matrix_rank(Q),linalg.matrix_rank(R))
-
+        max_components = int(min(linalg.matrix_rank(Q),linalg.matrix_rank(R), n_rows - 1, n_cols))
+        #set number of components
         if self.n_components is None:
             n_components = int(max_components)
         elif not isinstance(self.n_components,int):
