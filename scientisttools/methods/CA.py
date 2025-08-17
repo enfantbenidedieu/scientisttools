@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from numpy import ones,ndarray,sqrt, mean, outer
+from numpy import ones,ndarray,sqrt, mean, linalg
 from scipy.stats import chi2, chi2_contingency, contingency
 from pandas import DataFrame, Categorical, Series, concat, get_dummies, api
-from statsmodels.stats.weightstats import DescrStatsW
 from collections import OrderedDict, namedtuple
 from typing import NamedTuple
 from mapply.mapply import mapply
@@ -343,12 +342,15 @@ class CA(BaseEstimator,TransformerMixin):
         #----------------------------------------------------------------------------------------------------------------------------------------
         #set number of components
         #----------------------------------------------------------------------------------------------------------------------------------------
-        max_components = int(min(n_rows-1,n_cols-1))
+        #QR decomposition (to set maximum number of components)
+        Q, R = linalg.qr(Z)
+        max_components = int(min(linalg.matrix_rank(Q),linalg.matrix_rank(R),n_rows-1,n_cols-1))
+        #set number of components
         if self.n_components is None:
             n_components = max_components
         elif not isinstance(self.n_components,int):
             raise TypeError("'n_components' must be an integer.")
-        elif self.n_components <= 0:
+        elif self.n_components < 1:
             raise TypeError("'n_components' must be equal or greater than 1.")
         else:
             n_components = int(min(self.n_components,max_components))
