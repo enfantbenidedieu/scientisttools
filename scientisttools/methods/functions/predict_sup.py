@@ -36,7 +36,7 @@ def predict_ind_sup(Z,V,sqdisto,col_weights=None,n_workers=1):
 
     `cos2`: squared cosinus
 
-    `dist`: squared distance to origin
+    `dist2`: squared distance to origin
 
     Author(s)
     ---------
@@ -51,7 +51,7 @@ def predict_ind_sup(Z,V,sqdisto,col_weights=None,n_workers=1):
     coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
     #squared cosine
     sqcos = mapply(coord,lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=n_workers)
-    return OrderedDict(coord=coord,cos2=sqcos,dist=sqdisto)
+    return OrderedDict(coord=coord,cos2=sqcos,dist2=sqdisto)
 
 #----------------------------------------------------------------------------------------------------------------------------------------
 #predict supplementary quantitative variables
@@ -110,11 +110,11 @@ def predict_quali_sup(X,row_coord,coord,sqdisto,col_coef,row_weights=None,n_work
 
     `coord`: a pandas DataFrame of categories factor coordinates
 
-    `sqdisto`: a pandas Series of categories square distance to origin
+    `sqdisto`: a pandas Series of categories squared distance to origin
 
     `col_coef`: a pandas Series of categories coefficients. Useful for categories value-test
 
-    `row_weights`: a pandas Series/ndarrya/list of rows weights (by default None)
+    `row_weights`: a pandas Series/ndarray/list of rows weights (by default None)
 
     `n_workers`: integer specifying maximum amount of workers (by default 1). See https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
 
@@ -128,7 +128,7 @@ def predict_quali_sup(X,row_coord,coord,sqdisto,col_coef,row_weights=None,n_work
 
     `vtest`: value-test.
 
-    `dist`: squared distance to origin
+    `dist2`: squared distance to origin
 
     `eta2`: squared correlation ratio
 
@@ -146,4 +146,4 @@ def predict_quali_sup(X,row_coord,coord,sqdisto,col_coef,row_weights=None,n_work
     sqcos = mapply(coord, lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=n_workers)
     #squared correlation ratio (eta2)
     sqeta = function_eta2(X=X,Y=row_coord,weights=row_weights,n_workers=n_workers)
-    return OrderedDict(coord=coord,cos2=sqcos,vtest=vtest,dist=sqdisto,eta2=sqeta)
+    return OrderedDict(coord=coord,cos2=sqcos,vtest=vtest,dist2=sqdisto,eta2=sqeta)
