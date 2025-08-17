@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-from numpy import array,ones,number,ndarray,c_,cumsum,sqrt,zeros, unique
-from pandas import DataFrame,Series,Categorical,concat,crosstab,get_dummies,api
+from numpy import array,ones,number,ndarray,c_,cumsum,sqrt,zeros, linalg
+from pandas import DataFrame,Series,Categorical,concat,get_dummies,api
 from itertools import chain, repeat
-from scipy.stats import chi2, chi2_contingency, contingency
 from collections import OrderedDict, namedtuple
 from typing import NamedTuple
 from mapply.mapply import mapply
-from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
 
 #intern functions
@@ -409,12 +407,15 @@ class MCA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ##set number of components
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        max_components = n_cat - n_cols
+        #QR decomposition (to set maximum number of components)
+        Q, R = linalg.qr(Z)
+        max_components = int(min(linalg.matrix_rank(Q),linalg.matrix_rank(R), n_cat - n_cols))
+        #set number of components
         if self.n_components is None:
             n_components =  int(max_components)
         elif not isinstance(self.n_components,int):
             raise ValueError("'n_components' must be an integer.")
-        elif self.n_components <= 0:
+        elif self.n_components < 1:
             raise ValueError("'n_components' must be equal or greater than 1.")
         else:
             n_components = int(min(self.n_components,max_components))
@@ -550,7 +551,7 @@ class MCA(BaseEstimator,TransformerMixin):
             #coefficients
             coef_k = sqrt(((n_rows-1)*quali_sup_n_k)/(n_rows-quali_sup_n_k))
             #statistics for supplementary categories
-            quali_sup_ = predict_quali_sup(X=X_quali_sup,Y=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
+            quali_sup_ = predict_quali_sup(X=X_quali_sup,row_coord=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
             #convert to namedtuple
             self.quali_sup_ = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
 
@@ -562,13 +563,9 @@ class MCA(BaseEstimator,TransformerMixin):
             if self.ind_sup is not None:
                 X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
             #fill missing with mean
-            X_quanti_sup = recodecont(X_quanti_sup.astype("float")).X
-            # Compute weighted average and and weighted standard deviation
-            d_quanti_sup = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
-            # Standardization
-            Z_quanti_sup = mapply(X_quanti_sup,lambda x : (x - d_quanti_sup.mean)/d_quanti_sup.std,axis=1,progressbar=False,n_workers=self.call_.n_workers)
+            X_quanti_sup = recodecont(X=X_quanti_sup).X
             #statistics for supplementary quantitative variables
-            quanti_sup_ = predict_quanti_sup(Z=Z_quanti_sup,U=self.svd_.U,row_weights=ind_weights,n_workers=self.call_.n_workers)
+            quanti_sup_ = predict_quanti_sup(X=X_quanti_sup,row_coord=self.ind_.coord,row_weights=ind_weights,n_workers=self.call_.n_workers)
             #convert to namedtuple
             self.quanti_sup_ = namedtuple("quanti_sup",quanti_sup_.keys())(*quanti_sup_.values())
 
@@ -605,11 +602,8 @@ class MCA(BaseEstimator,TransformerMixin):
         Examples
         --------
         ```python
-        >>> #load poison dataset
-        >>> from scientisttools import load_poison
-        >>> poison = load_poison()
         >>> #multiple correspondence analysis (MCA)
-        >>> from scientisttools import MCA
+        >>> from scientisttools import poison, MCA
         >>> res_mca = MCA(quali_sup=(2,3),quanti_sup =(0,1))
         >>> ind_coord = res_mca.fit_transform(poison)
         >>> #specific multiple correspondence analysis (SpecificMCA)
@@ -641,11 +635,8 @@ class MCA(BaseEstimator,TransformerMixin):
         
         Examples
         --------
-        ```
-        >>> #load poison dataset
-        >>> from scientisttools import load_poison
-        >>> poison = load_poison()
-        >>> from scientisttools import MCA
+        ```python
+        >>> from scientisttools import poison, MCA
         >>> res_mca = MCA(n_components=None,quali_sup=(2,3), quanti_sup=(0,1))
         >>> res_mca.fit(poison)
         >>> X_disjunctive = res_pca.inverse_transform(res_mca.ind_.coord)
@@ -657,8 +648,9 @@ class MCA(BaseEstimator,TransformerMixin):
 
         #set number of components
         n_components = min(X.shape[1],self.call_.n_components)
+        eigvals = self.var_.coord.pow(2).T.dot(self.call_.mod_weights)[:n_components]
         #inverse transform
-        X_original = X.iloc[:,:n_components].dot(mapply(self.var_.coord.iloc[:,:n_components],lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers).T)
+        X_original = X.iloc[:,:n_components].dot(mapply(self.var_.coord.iloc[:,:n_components],lambda x : x/sqrt(eigvals),axis=1,progressbar=False,n_workers=self.call_.n_workers).T)
         #estimation of standardize data
         X_original = mapply(X_original.add(1),lambda x : x*self.call_.dummies.mean(axis=0),axis=1,progressbar=False,n_workers=self.call_.n_workers)
         #disjunctive table
@@ -687,11 +679,8 @@ class MCA(BaseEstimator,TransformerMixin):
         Examples
         --------
         ```python
-        >>> #load poison dataset
-        >>> from scientisttools import load_poison
-        >>> poison = load_poison()
         >>> #multiple correspondence analysis (MCA)
-        >>> from scientisttools import MCA
+        >>> from scientisttools import poison, MCA
         >>> res_mca = MCA(quali_sup=(2,3),quanti_sup=(0,1))
         >>> res_mca.fit(poison)
         >>> ind_coord = res_mca.transform(res_mca.call_.X)
@@ -896,12 +885,8 @@ def supvarMCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
         
         #fill missing with mean
         X_quanti_sup = recodecont(X_quanti_sup).X
-        # Compute weighted average and and weighted standard deviation
-        d_quanti_sup = DescrStatsW(X_quanti_sup,weights=self.call_.ind_weights,ddof=0)
-        # Standardization
-        Z_quanti_sup = mapply(X_quanti_sup,lambda x : (x - d_quanti_sup.mean)/d_quanti_sup.std,axis=1,progressbar=False,n_workers=self.call_.n_workers)
         #statistics for supplementary quantitative variables
-        quanti_sup_ = predict_quanti_sup(Z=Z_quanti_sup,U=self.svd_.U,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
+        quanti_sup_ = predict_quanti_sup(X=X_quanti_sup,row_coord=self.ind_.coord,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
         #convert to namedtuple
         quanti_sup = namedtuple("quanti_sup",quanti_sup_.keys())(*quanti_sup_.values())
     else:
@@ -942,7 +927,7 @@ def supvarMCA(self,X_quanti_sup=None,X_quali_sup=None) -> NamedTuple:
         quali_sup_sqdisto.name = "Sq. Dist."
         #statistics for qualitative variables
         coef_k = sqrt(((X_quali_sup.shape[0] - 1)*dummies.sum(axis=0))/(X_quali_sup.shape[0] - dummies.sum(axis=0)))
-        quali_sup_ = predict_quali_sup(X=X_quali_sup,Y=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
+        quali_sup_ = predict_quali_sup(X=X_quali_sup,row_coord=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
         #convert to namedtuple
         quali_sup = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
     else:
