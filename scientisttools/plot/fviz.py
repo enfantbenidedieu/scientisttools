@@ -10,6 +10,8 @@ from plotnine import (
     guide_legend,
     stat_ellipse,
     scale_color_manual, scale_fill_manual,
+    scale_fill_continuous,
+    scale_fill_discete,
     arrow,
     annotate,
     theme_minimal,
@@ -71,33 +73,89 @@ def coord_adjust(coord:DataFrame,
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
+    index = None
     #set color
     if isinstance(color,str):
         if color == "cos2":
             if legend_title is None:
                 legend_title = "Cos2"
             coord.insert(coord.shape[1],legend_title,cos2.sum(axis=1))
+            high, low = max(cos2.sum(axis=1)), min(cos2.sum(axis=1))
+            midpoint = (high + low)/2
         elif color == "contrib":
             if legend_title is None:
                 legend_title = "Contrib"
             coord.insert(coord.shape[1],legend_title,contrib.sum(axis=1))
+            high, low = max(contrib.sum(axis=1)), min(contrib.sum(axis=1))
+            midpoint = (high + low)/2
         elif color == "coord":
             if legend_title is None:
                 legend_title = "Coord"
             coord.insert(coord.shape[1],legend_title,coord.iloc[:,:2].pow(2).sum(axis=1))
+            high, low = max(coord.iloc[:,:2].pow(2).sum(axis=1)), min(coord.iloc[:,:2].pow(2).sum(axis=1))
+            midpoint = (high + low)/2
         elif color in coord.columns.tolist():
             if not issubdtype(coord[color].dtype,number):
                 raise TypeError("'color' must me a numeric variable.")
             if legend_title is None:
                 legend_title = color
             coord = coord.rename(columns={color : legend_title})
-        index = None
+            high, low = max(coord[color]), min(coord[color])
+            midpoint = (high + low)/2
     elif isinstance(color,ndarray):
         if legend_title is None:
             legend_title = "Cont_Var"
         coord.insert(coord.shape[1],legend_title,asarray(color))
-        index = None
-    elif hasattr(color,"labels_"):
+        high, low = max(asarray(color)), min(asarray(color))
+        midpoint = (high + low)/2
+    if hasattr(color,"labels_"):
+        if legend_title is None:
+            legend_title = "Cluster"
+        coord.insert(coord.shape[1],legend_title,[str(x+1) for x in color.labels_])
+        index = coord[legend_title].unique().tolist()
+        coord[legend_title] = Categorical(coord[legend_title],categories=sorted(index),ordered=True)
+    elif isinstance(color,(list,tuple,Series)) and len(color) == coord.shape[0] and all(isinstance(x,str) for x in color):
+        if legend_title is None:
+            legend_title = "Group"
+        coord.insert(coord.shape[1],legend_title,[str(x+1) for x in color.labels_])
+        index = coord[legend_title].unique().tolist()
+        coord[legend_title] = Categorical(coord[legend_title],categories=sorted(index),ordered=True)
+
+    #set fill
+    if isinstance(color,str):
+        if color == "cos2":
+            if legend_title is None:
+                legend_title = "cos2"
+            coord.insert(coord.shape[1],legend_title,cos2.sum(axis=1))
+            high, low = max(cos2.sum(axis=1)), min(cos2.sum(axis=1))
+            midpoint = (high + low)/2
+        elif color == "contrib":
+            if legend_title is None:
+                legend_title = "Contrib"
+            coord.insert(coord.shape[1],legend_title,contrib.sum(axis=1))
+            high, low = max(contrib.sum(axis=1)), min(contrib.sum(axis=1))
+            midpoint = (high + low)/2
+        elif color == "coord":
+            if legend_title is None:
+                legend_title = "Coord"
+            coord.insert(coord.shape[1],legend_title,coord.iloc[:,:2].pow(2).sum(axis=1))
+            high, low = max(coord.iloc[:,:2].pow(2).sum(axis=1)), min(coord.iloc[:,:2].pow(2).sum(axis=1))
+            midpoint = (high + low)/2
+        elif color in coord.columns.tolist():
+            if not issubdtype(coord[color].dtype,number):
+                raise TypeError("'color' must me a numeric variable.")
+            if legend_title is None:
+                legend_title = color
+            coord = coord.rename(columns={color : legend_title})
+            high, low = max(coord[color]), min(coord[color])
+            midpoint = (high + low)/2
+    elif isinstance(color,ndarray):
+        if legend_title is None:
+            legend_title = "Cont_Var"
+        coord.insert(coord.shape[1],legend_title,asarray(color))
+        high, low = max(asarray(color)), min(asarray(color))
+        midpoint = (high + low)/2
+    if hasattr(color,"labels_"):
         if legend_title is None:
             legend_title = "Cluster"
         coord.insert(coord.shape[1],legend_title,[str(x+1) for x in color.labels_])
@@ -152,12 +210,15 @@ def fviz_scatter(self,
                  lim_cos2 = None,
                  lim_contrib = None,
                  color = "black",
+                 alpha = 1,
+                 fill = None,
                  point_args = dict(shape="o"),
                  text_args = dict(size=8),
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  habillage = None,
                  palette = None,
+                 cmap_name = "Blues",
                  add_ellipses = False, 
                  ellipse_level = 0.95,
                  ellipse_type = "norm",
@@ -225,18 +286,6 @@ def fviz_scatter(self,
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
-
-    Examples
-    --------
-    ```python
-    >>> from scientisttools import decathlon, PCA
-    >>> #instanciation
-    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
-    >>> res_pca.fit(decathlon)
-    >>> #graph of individuals
-    >>> from scientisttools import fviz_scatter
-    >>> p = fviz_scatter(res_pca,element="ind",repel=True)
-    >>> print(p)
     ```
     """
     #check if axis is an instance of list
@@ -256,7 +305,7 @@ def fviz_scatter(self,
         if len(intersect)==0:
             raise ValueError("The specified value(s) for the argument geom are not allowed")
     
-    #for individuals points (PCA, PartialPCA, FactorAnalysis)
+    #for individuals points (PCA, PartialPCA, MCA)
     if element == "ind":
         coord, cos2, contrib = concat((self.ind_.coord.iloc[:,axis],self.call_.Xtot),axis=1), self.ind_.cos2.iloc[:,axis], self.ind_.contrib.iloc[:,axis]
         if hasattr(self,"ind_sup_"):
@@ -274,10 +323,21 @@ def fviz_scatter(self,
         coord, cos2, contrib = self.var_.coord.iloc[:,axis], self.var_.cos2.iloc[:,axis], self.var_.contrib.iloc[:,axis]
     #for qualitative variables in FAMD, PCAMIX, MPCA, MFAMIX, MFAQUAL
     if element == "quali_var" and self.model_ in ("famd","pcamix","mpca","mfamix","mfaqual"):
+        coord, cos2, contrib = self.quali_var_.coord.iloc[:,axis], self.quali_var_.cos2.iloc[:,axis], self.quali_var_.contrib.iloc[:,axis]
+    #for variables in FAMD, PCAMIX, MPCA
+    if element == "var" and self.model_ in ("famd","pcamix","mpca"):
         coord, cos2, contrib = self.var_.coord.iloc[:,axis], self.var_.cos2.iloc[:,axis], self.var_.contrib.iloc[:,axis]
 
+    #add cos2, contrib,
+    coord.insert(coord.shape[1],"cos2",cos2.sum(axis=1)) 
+    coord.insert(coord.shape[1],"contrib",contrib.sum(axis=1)) 
+    coord.insert(coord.shape[1],"coord",coord.iloc[:,:2].pow(2).sum(axis=1))
+    if color in ["cos2","contrib","coord"]:
+        if legend_title is None:
+            legend_title = color
+
     #set text arguments
-    if repel:
+    if repel and "text" in geom:
         text_args = dict(**text_args,adjust_text=dict(arrowprops=dict(arrowstyle='-',lw=1.0)))
     
     #update coordinates
@@ -287,33 +347,62 @@ def fviz_scatter(self,
     p = ggplot(data=coord,mapping=aes(x = f"Dim.{axis[0]+1}",y=f"Dim.{axis[1]+1}",label=coord.index))
 
     if habillage is None : 
-        if (isinstance(color,str) and color in [*["cos2","contrib","coord"],*coord.columns]) or (isinstance(color,ndarray)):
-            if "point" in geom:
-                p = p + geom_point(aes(color=legend_title),**point_args) + scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
+        if (color in ["cos2","contrib","coord"]) or (isinstance(alpha,ndarray)) or hasattr(color,"labels_") or (isinstance(color,(list,tuple,Series)) and len(color) == coord.shape[0] and all(isinstance(x,str) for x in color)):
+            if (alpha in ["cos2","contrib","coord"]) or (isinstance(alpha,ndarray)) or hasattr(alpha,"labels_") or (isinstance(alpha,(list,tuple,Series)) and len(alpha) == coord.shape[0] and all(isinstance(x,str) for x in alpha)):
+                if (fill in ["cos2","contrib","coord"]) or (isinstance(fill,ndarray)):
+                    if "point" in geom:
+                        p = p + geom_point(aes(color=color,alpha=alpha,fill=fill),**point_args) + scale_fill_continuous(cmap_name=cmap_name)
+                if 
+                elif hasattr(fill,"labels_") or (isinstance(fill,(list,tuple,Series)) and len(fill) == coord.shape[0] and all(isinstance(x,str) for x in fill)):
+                    p = p + geom_point(aes(color=color,alpha=alpha,fill=fill),**point_args) + scale_fill_discrete(cmap_name=cmap_name)
+                else:
+                    if "point" in geom:
+                        p = p + geom_point(aes(color=color,alpha=alpha),fill=fill,**point_args)
+            else:
+                if (fill in ["cos2","contrib","coord"]) or (isinstance(fill,ndarray)) or hasattr(fill,"labels_") or (isinstance(fill,(list,tuple,Series)) and len(fill) == coord.shape[0] and all(isinstance(x,str) for x in fill)):
+                    if "point" in geom:
+                        p = p + geom_point(aes(color=color,fill=fill),alpha=alpha,**point_args) 
+                else:
+                    if "point" in geom:
+                        p = p + geom_point(aes(color=color),alpha=alpha,fill=fill,**point_args)
             if "text" in geom:
-                p = p + geom_text(aes(color=legend_title),**text_args)
-        elif hasattr(color,"labels_") or (isinstance(color,(list,tuple,Series)) and len(color) == coord.shape[0] and all(isinstance(x,str) for x in color)):
-            if "point" in geom:
-                p = p + geom_point(aes(color=legend_title,fill=legend_title),**point_args) + guides(color=guide_legend(title=legend_title))
-            if "text" in geom:
-                p = p + geom_text(aes(color=legend_title),**text_args)
+                p = p + geom_text(aes(color=color),**text_args)
+            #scale color gradient
+            if (color in ["cos2","contrib","coord"]) or (isinstance(alpha,ndarray)):
+                col_high, col_low = coord[color].max(), coord[color].min()
+                col_midpoint = (col_high + col_low)/2
+                p = p + scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],limits=(col_low,col_high),midpoint=col_midpoint,name = legend_title)
+            elif hasattr(color,"labels_") or (isinstance(color,(list,tuple,Series)) and len(color) == coord.shape[0] and all(isinstance(x,str) for x in color)):
+                p = p + guides(color=guide_legend(title=legend_title))
         else:
-            if "point" in geom:
-                p = p + geom_point(color=color,**point_args)
+            if (alpha in ["cos2","contrib","coord"]) or (isinstance(alpha,ndarray)) or hasattr(alpha,"labels_") or (isinstance(alpha,(list,tuple,Series)) and len(alpha) == coord.shape[0] and all(isinstance(x,str) for x in alpha)):
+                if (fill in ["cos2","contrib","coord"]) or (isinstance(fill,ndarray)) or hasattr(fill,"labels_") or (isinstance(fill,(list,tuple,Series)) and len(fill) == coord.shape[0] and all(isinstance(x,str) for x in fill)):
+                    if "point" in geom:
+                        p = p + geom_point(aes(color=color,alpha=alpha,fill=fill),**point_args) 
+                else:
+                    if "point" in geom:
+                        p = p + geom_point(aes(color=color,alpha=alpha),fill=fill,**point_args)
+            else:
+                if (fill in ["cos2","contrib","coord"]) or (isinstance(fill,ndarray)) or hasattr(fill,"labels_") or (isinstance(fill,(list,tuple,Series)) and len(fill) == coord.shape[0] and all(isinstance(x,str) for x in fill)):
+                    if "point" in geom:
+                        p = p + geom_point(aes(fill=fill),color=color,alpha=alpha,**point_args)
+                else:
+                    if "point" in geom:
+                        p = p + geom_point(color=color,alpha=alpha,fill=fill,**point_args)
             if "text" in geom:
                 p = p + geom_text(color=color,**text_args)
     else:
         if habillage not in coord.columns:
             raise ValueError(f"{habillage} not in DataFrame.")
         if "point" in geom:
-            p = p + geom_point(aes(color=habillage,fill=habillage),**point_args)
+            p = p + geom_point(aes(color=habillage,fill=habillage,alpha=habillage),**point_args)
         if "text" in geom:
             p = p + geom_text(aes(color=habillage),**text_args)
         if add_ellipses:
             p = p + stat_ellipse(mapping=aes(color=habillage,fill=habillage),type=ellipse_type,level=ellipse_level,alpha=ellipse_alpha)
     #set color manual
-    if habillage is not None or hasattr(color,"labels_") or (isinstance(color,(list,tuple,Series)) and len(color) == coord.shape[0] and all(isinstance(x,str) for x in color)):
-        p = p + scale_color_manual(values=palette,labels=index) + scale_fill_manual(values=palette,labels=index)
+    #if habillage is not None or hasattr(color,"labels_") or (isinstance(color,(list,tuple,Series)) and len(color) == coord.shape[0] and all(isinstance(x,str) for x in color)):
+    #    p = p + scale_color_manual(values=palette,labels=index) + scale_fill_manual(values=palette,labels=index)
     
     return p
 
@@ -343,7 +432,7 @@ def fviz_arrow(self,
                lim_cos2 = None,
                lim_contrib = None,
                color = "black",
-               segment_args = dict(linetype="solid",size=0.5,arrow = arrow(angle=10,length=0.1,type="closed")),
+               segment_args = dict(linetype="solid",size=0.5,alpha=1),
                text_args = dict(size=8),
                gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                legend_title = None,
@@ -430,8 +519,8 @@ def fviz_arrow(self,
         if len(intersect)==0:
             raise ValueError("The specified value(s) for the argument geom are not allowed")
     
-    #variables in PCA
-    if element == "var" and self.model_ == "pca":
+    #variables in PCA, PartialPCA
+    if element == "var" and self.model_ in ("pca","partialpca"):
         coord, cos2, contrib = self.var_.coord.iloc[:,axis].mul(scale), self.var_.cos2.iloc[:,axis], self.var_.contrib.iloc[:,axis]
     #variables in FAMD, PCAMIX, MPCA, MFA or MFAMIX
     if element == "quanti_var" and self.model_ in ("famd","pcamix","mpca","mfa","mfamix"):
@@ -441,7 +530,7 @@ def fviz_arrow(self,
     coord = overlap_coord(coord=coord,axis=axis,repel=repel)
 
     #update coordinates
-    coord, legend_title, index, palette = coord_adjust(coord=coord,cos2=cos2,contrib=contrib,color=color,legend_title=legend_title,habillage=None,palette=palette,lim_cos2=lim_cos2,lim_contrib=lim_contrib)
+    coord, legend_title, index, palette, high, low, midpoint = coord_adjust(coord=coord,cos2=cos2,contrib=contrib,color=color,legend_title=legend_title,habillage=None,palette=palette,lim_cos2=lim_cos2,lim_contrib=lim_contrib)
 
     #set x, y 
     if repel:
@@ -454,17 +543,17 @@ def fviz_arrow(self,
 
     if (isinstance(color,str) and color in [*["cos2","contrib","coord"],*coord.columns]) or (isinstance(color,ndarray)):
         if "arrow" in geom:
-            p = p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=legend_title),**segment_args)+scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],name = legend_title)
+            p = p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=legend_title),**segment_args,arrow = arrow(angle=30,length=0.2/2.54,type="open")) + scale_color_gradient2(low = gradient_cols[0],high = gradient_cols[2],mid = gradient_cols[1],limits=(low,high),midpoint=midpoint,name = legend_title)
         if "text" in geom:
             p = p + geom_text(aes(x=x_text,y=y_text,color=legend_title),**text_args)
     elif hasattr(color,"labels_") or (isinstance(color,(list,tuple,Series)) and len(color) == coord.shape[0] and all(isinstance(x,str) for x in color)):
         if "arrow" in geom:
-            p = p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=legend_title),**segment_args) + guides(color=guide_legend(title=legend_title))
+            p = p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}",color=legend_title),**segment_args,arrow = arrow(angle=30,length=0.2/2.54,type="open")) + guides(color=guide_legend(title=legend_title))
         if "text" in geom:
             p = p + geom_text(aes(x=x_text,y=y_text,color=legend_title),**text_args)
     else:
         if "arrow" in geom:
-            p = p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"),**segment_args)
+            p = p + geom_segment(aes(x=0,y=0,xend=f"Dim.{axis[0]+1}",yend=f"Dim.{axis[1]+1}"),color=color,**segment_args, arrow = arrow(angle=30,length=0.2/2.54,type="open"))
         if "text" in geom:
             p = p + geom_text(aes(x=x_text,y=y_text),color=color,**text_args)
 
@@ -565,7 +654,7 @@ def add_arrow(p,
               geom = ("arrow","text"),
               repel = False,
               color = "blue",
-              segment_args = dict(linetype="dashed",size=0.5,arrow = arrow(angle=10,length=0.1,type="closed")),
+              segment_args = dict(linetype="dashed",size=0.5),
               text_args = dict(size=8)):
     """
     Add elements (arrow & text) to plotnine graph
@@ -639,7 +728,7 @@ def add_arrow(p,
         x_text, y_text = f"Dim.{axis[0]+1}", f"Dim.{axis[1]+1}"
     #add segment with arrow
     if "arrow" in geom:
-        p  = p + annotate("segment",x=0,y=0,xend=asarray(data.iloc[:,axis[0]]),yend=asarray(data.iloc[:,axis[1]]),color=color,**segment_args)
+        p  = p + annotate("segment",x=0,y=0,xend=asarray(data.iloc[:,axis[0]]),yend=asarray(data.iloc[:,axis[1]]),color=color,arrow = arrow(angle=30,length=0.2/2.54,type="open"),**segment_args)
     #add texts
     if "text" in geom:
         p = p + geom_text(data=data,mapping=aes(x=x_text,y=y_text,label=data.index),color=color,**text_args)
@@ -685,9 +774,9 @@ def set_axis(p,
     
     `title`: a string corresponding to the title of the graph you draw (by default = None and a title is chosen).
 
-    `add_hline`: a boolean to either add or not a horizontal ligne (by default = True).
+    `add_hline`: a boolean to either add or not a horizontal line (by default = True).
 
-    `add_vline`: a boolean to either add or not a vertical ligne (by default = True).
+    `add_vline`: a boolean to either add or not a vertical line (by default = True).
 
     `add_grid`: a boolean to either add or not a grid customization (by default = True).
 
@@ -703,10 +792,10 @@ def set_axis(p,
     """
     #set x label
     if x_label is None:
-        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(self.eig_.iloc[axis[0],2],2))+"%)"
+        x_label = "Dim."+str(axis[0]+1)+" ("+str(round(self.eig_.iloc[axis[0],2],1))+"%)"
     #set y label
     if y_label is None:
-        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(self.eig_.iloc[axis[1],2],2))+"%)"
+        y_label = "Dim."+str(axis[1]+1)+" ("+str(round(self.eig_.iloc[axis[1],2],1))+"%)"
     #set title
     if title is None:
         title = "Map"

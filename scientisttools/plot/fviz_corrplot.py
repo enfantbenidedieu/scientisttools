@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 from pandas import DataFrame, Categorical
-from plotnine import ggplot, aes,geom_point,guides,coord_flip,scale_fill_gradient2,labs,theme, theme_minimal
+from plotnine import ggplot, aes, geom_point,guides,coord_flip,scale_fill_gradient2,labs,theme, theme_minimal
 
 #intern function
 from scientisttools.methods.functions.pivot_longer import pivot_longer
 
 def fviz_corrplot(X,
-                  x_label=None,
-                  y_label=None,
-                  title=None,
+                  x_label = None,
+                  y_label = None,
+                  title = None,
                   col_outline = "gray",
-                  gradient_cols = ["blue","white","red"],
+                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                   legend_title = "Corr",
                   show_legend = True,
                   ggtheme = theme_minimal()):
@@ -24,7 +24,7 @@ def fviz_corrplot(X,
     Usage
     -----
     ```python
-    >>> fviz_corrplot(X,x_label=None,y_label=None,title=None,col_outline = "gray",gradient_cols = ["blue","white","red"],legend_title = "Corr",show_legend = True,ggtheme = theme_minimal())
+    >>> fviz_corrplot(X,**kwargs)
     ```
 
     Parameters
@@ -39,7 +39,7 @@ def fviz_corrplot(X,
 
     `col_outline`: a string specifying the point outline color
 
-    `gradient_cols`:  a list/tuple of 3 colors for low, mid and high values (by default = ("blue", "white", "red")).
+    `gradient_cols`:  a list/tuple of 3 colors for low, mid and high values (by default = ("#00AFBB", "#E7B800", "#FC4E07")).
 
     `legend_title`: a string corresponding to the title of the legend (by default = "Corr").
 

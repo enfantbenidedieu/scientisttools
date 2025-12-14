@@ -25,13 +25,13 @@ def get_mca_ind(self) -> NamedTuple:
     -------
     a namedtuple of pandas DataFrames containing all the results for the active individuals including:
 
-    `coord`: factor coordinates
+    `coord`: factor coordinates of individuals,
 
-    `cos2`: squared cosinus
+    `cos2`: squared cosinus of individuals,
 
-    `contrib`: relative contributions
+    `contrib`: relative contributions of individuals,
 
-    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia)
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of individuals.
 
     Author(s)
     ---------
@@ -40,62 +40,61 @@ def get_mca_ind(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> from scientisttools import poison, MCA, get_mca_ind
-    >>> res_mca = MCA(quali_sup=(2,3),quanti_sup=(0,1))
+    >>> from scientisttools.datasets import poison
+    >>> from scientisttools import MCA, get_mca_ind
+    >>> res_mca = MCA(sup_var = range(4))
     >>> res_mca.fit(poison)
     >>> #extract results for the individuals
     >>> ind = get_mca_ind(res_mca) 
-    >>> ind.coord.head() #coordinates of individuals
-    >>> ind.cos2.head() #cos2 of individuals
-    >>> ind.contrib.head() #contributions of individuals
-    >>> ind.infos.head() #additionals informations of individuals
+    >>> ind.coord #coordinates of individuals
+    >>> ind.cos2 #cos2 of individuals
+    >>> ind.contrib #contributions of individuals
+    >>> ind.infos #additionals informations of individuals
     ```
     """
-    # Check if self is an object of class MCA
-    if self.model_ != "mca":
+    if self.model_ != "mca": #check if self is an object of class MCA
         raise TypeError("'self' must be an object of class MCA")
     return self.ind_
             
-def get_mca_var(self) -> NamedTuple:
+def get_mca_var(self, element = "var") -> NamedTuple:
     """
     Extract the results for the variables - MCA
     -------------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus, relative contributions and additionals informations) for the active variable categories from Multiple Correspondence Analysis (MCA) outputs.
+    Extract all the results (coordinates, squared cosinus, relative contributions and additionals informations) for the active variable categories from Multiple Correspondence Analysis (MCA) outputs.
 
     Usage
     -----
     ```python
-    >>> get_mca_var(self)
+    >>> get_mca_var(self, element = "var")
+    >>> get_mca_var(self, element = "quali_var")
     ```
 
     Parameters
     ----------
     `self`: an object of class MCA
 
+    `element`: a string indicating the element to subset from the output. Possible values are:
+        * "var" for levels, 
+        * "quali_var" for the qualitative variables.
+
     Returns
     -------
-    namedtuple of pandas DataFrames containing all the results for the active variable categories including :
+    a namedtuple of pandas DataFrames containing all the results for the active variables/levels including :
 
-    `coord`: factor coordinates
+    `coord`: coordinates of the levels/qualitative variables,
 
-    `coord_n`: corrected (normalized) factor coordinates
+    `coord_n`: normalized coordinates of the levels,
 
-    `cos2`: squared cosinus
+    `cos2`: squared cosinus of the levels,
 
-    `contrib`: relative contributions
+    `contrib`: relative contributions of the levels/qualitative variables,
 
-    `vtest`: value-test
+    `vtest`: value-test of the levels,
 
-    `eta2`: squared correlation ratio
-
-    `var_inertia`: variables inertia
-
-    `var_contrib`: contributions of the variables
-
-    `infos`: additionnal informations (weight, square distance to origin, inertia and percentage of inertia)
+    `infos`: additionnal informations (weight, square distance to origin, inertia and percentage of inertia) of levels/qualitative variables.
 
     Author(s)
     ---------
@@ -104,31 +103,36 @@ def get_mca_var(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load poison dataset
-    >>> from scientisttools import load_poison
-    >>> poison = load_poison()
+    >>> from scientisttools.datasets import poison
     >>> from scientisttools import MCA, get_mca_var
-    >>> res_mca = MCA(ind_sup=(50,51,52,53,54),quali_sup=(2,3),quanti_sup=(0,1))
+    >>> res_mca = MCA(sup_var=range(4))
     >>> res_mca.fit(poison)
     >>> #extract results for the variables
-    >>> var = get_mca_var(res_mca) 
-    >>> var.coord.head() #coordinates of the categories
-    >>> var.cos2.head() #cos2 of the categories
-    >>> var.contrib.head() #contributions of the categories
-    >>> var.cond_n.head() #corrected coordinates of the categories
-    >>> var.vtest.head() #value-test of the categories
-    >>> var.infos.head() #additionals informations of the categories
-    >>> var.eta2.head() #squared correlation ratio of the variables
-    >>> var.var_inertia.head() #inertia of the variables
-    >>> var.var_contrib.head() #contributions of the variables
+    >>> var = get_mca_var(res_mca, "var") 
+    >>> var.coord #coordinates of the levels
+    >>> var.coord_n #normalized coordinates of the levels
+    >>> var.cos2 #cos2 of the levels
+    >>> var.contrib #contributions of the levels
+    >>> var.vtest #vtest of the levels
+    >>> var.infos #additionals informations of the levels
+    >>> #extract results for the qualitative variables
+    >>> quali_var = get_mca_var(res_mca, "quali_var") 
+    >>> quali_var.coord #coordinates of the qualitative variables
+    >>> quali_var.contrib #contributions of the qualitative variables
+    >>> quali_var.infos #additionals informations of the qualitative variables
     ```
     """
-    # Check if self is an object of class MCA
-    if self.model_ != "mca":
+    if self.model_ != "mca": #check if self is an object of class MCA
         raise TypeError("'self' must be an object of class MCA")
-    return self.var_
     
-def get_mca(self,element="ind") -> NamedTuple:
+    if element == "var":
+        return self.var_
+    elif element == "quali_var":
+        return self.quali_var_
+    else:
+        raise ValueError("'element' should be one of 'var', 'quali_var'.")
+    
+def get_mca(self, element="ind") -> NamedTuple:
     """
     Extract the results for individuals/variables - MCA
     ---------------------------------------------------
@@ -139,34 +143,36 @@ def get_mca(self,element="ind") -> NamedTuple:
 
         * `get_mca()`: Extract the results for vriables and individuals
         * `get_mca_ind()`: Extract the results for individuals only
-        * `get_mca_var()`: Extract the results for variables/categories only
+        * `get_mca_var()`: Extract the results for qualitative variables/levels only
     
     Usage
     -----
     ```python
     >>> get_mca(self,element="ind")
     >>> get_mca(self,element="var")
+    >>> get_mca(self,element="quali_var")
     ```
 
     Parameters
     ----------
     `self`: an object of class MCA
 
-    `elment`: the element to subset from the output. Possible values are :
+    `element`: a string indicating the element to subset from the output. Possible values are:
         * "ind" for individuals, 
-        * "var" for variables/categories
+        * "var" for levels
+        * "quali_var" for qualitative variables
     
     Returns
     -------
     a namedtuple of pandas DataFrames containing all the results for the active individuals/variable categories including :
 
-    `coord`: coordinates for the individuals/variable categories
+    `coord`: coordinates for the individuals/levels/qualitative variables
 
-    `cos2`: squared cosinus for the individuals/variable categories
+    `cos2`: squared cosinus for the individuals/levels
 
-    `contrib`: relative contributions for the individuals/variable categories
+    `contrib`: relative contributions for the individuals/levels/qualitative variables
 
-    `infos`: additionals informations for the individuals/variable categories
+    `infos`: additionals informations for the individuals/levels/qualitative variables
 
     Author(s)
     ---------
@@ -175,41 +181,37 @@ def get_mca(self,element="ind") -> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load poison dataset
-    >>> from scientisttools import load_poison
-    >>> poison = load_poison()
+    >>> from scientisttools.datasets import poison
     >>> from scientisttools import MCA, get_mca
-    >>> res_mca = MCA(ind_sup=[50,51,52,53,54],quali_sup = [2,3],quanti_sup =[0,1])
+    >>> res_mca = MCA(sup_var=range(4))
     >>> res_mca.fit(poison)
     >>> #extract results for the individuals
     >>> ind = get_mca(res_mca, element = "ind")
-    >>> ind.coord.head() #coordinates of individuals
-    >>> ind.cos2.head() #cos2 of individuals
-    >>> ind.contrib.head() #contributions of individuals
-    >>> ind.infos.head() #additionals informations of individuals
-    >>> #extract results for the categories
+    >>> ind.coord #coordinates of individuals
+    >>> ind.cos2 #cos2 of individuals
+    >>> ind.contrib #contributions of individuals
+    >>> ind.infos #additionals informations of individuals
+    >>> #extract results for the levels
     >>> var = get_mca(res_mca, element = "var")
-    >>> var.coord.head() #coordinates of the categories
-    >>> var.cos2.head() #cos2 of the categories
-    >>> var.contrib.head() #contributions of the categories
-    >>> var.cond_n.head() #corrected coordinates of the categories
-    >>> var.vtest.head() #value-test of the categories
-    >>> var.infos.head() #additionals informations of the categories
-    >>> var.eta2.head() #squared correlation ratio of the variables
-    >>> var.var_inertia.head() #inertia of the variables
-    >>> var.var_contrib.head() #contributions of the variables
+    >>> var.coord #coordinates of the levels
+    >>> var.coord_n #normalized coordinates of the levels
+    >>> var.cos2 #cos2 of the levels
+    >>> var.contrib #contributions of the levels
+    >>> var.vtest #vtest of the levels
+    >>> var.infos #additionals informations of the levels
+    >>> #extract results for the qualitative variables
+    >>> quali_var = get_mca(res_mca, element = "quali_var")
+    >>> quali_var.coord #coordinates of the qualitative variables
+    >>> quali_var.contrib #contributions of the qualitative variables
+    >>> quali_var.infos #additionals informations of the qualitative variables
     ```
     """
-    # Check if self is an object of class MCA
-    if self.model_ != "mca":
-        raise TypeError("'self' must be an object of class MCA")
-
     if element == "ind":
         return get_mca_ind(self)
-    elif element == "var":
-        return get_mca_var(self)
+    elif element in ["var","quali_var"]:
+        return get_mca_var(self, element)
     else:
-        raise ValueError("'element' should be one of 'ind', 'var'")
+        raise ValueError("'element' should be one of 'ind', 'var', 'quali_var'")
     
 def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
@@ -249,16 +251,14 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     Examples
     --------
     ```python
-    >>> #load poison dataset
-    >>> from scientisttools import load_poison
-    >>> poison = load_poison()
+    >>> from scientisttools.datatsets import poison
     >>> from scientisttools import MCA, summaryMCA
-    >>> res_mca = MCA(ind_sup=(50,51,52,53,54),quali_sup = (2,3),quanti_sup=(0,1))
+    >>> res_mca = MCA(sup_var = (0,1,2,3))
     >>> res_mca.fit(poison)
     >>> summaryMCA(res_mca)
     ```
     """
-    # Check if self is an object of class MCA
+    #check if self is an object of class MCA
     if self.model_ != "mca":
         raise ValueError("'self' must be an object of class MCA")
 
@@ -292,7 +292,7 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         ind_coord, ind_cos2, ind_ctr = ind.coord.iloc[:,i], ind.cos2.iloc[:,i], ind.contrib.iloc[:,i]
         ind_cos2.name, ind_ctr.name = "cos2", "ctr"
         ind_infos = concat((ind_infos,ind_coord,ind_ctr,ind_cos2),axis=1)
-    ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
+    ind_infos = ind_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -307,12 +307,12 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
         else:
             print("\nSupplementary individuals\n")
-        ind_sup_infos = ind_sup.dist
+        ind_sup_infos = ind_sup.dist2
         for i in range(ncp):
             ind_sup_coord, ind_sup_cos2 = ind_sup.coord.iloc[:,i], ind_sup.cos2.iloc[:,i]
             ind_sup_cos2.name = "cos2"
             ind_sup_infos = concat((ind_sup_infos,ind_sup_coord,ind_sup_cos2),axis=1)
-        ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        ind_sup_infos = ind_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
@@ -328,26 +328,27 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         print("\nCategories\n")
     var_infos = var.infos
     for i in range(ncp):
-        var_coord, var_cos2, var_ctr, var_vtest = var.coord.iloc[:,i], var.cos2.iloc[:,i],  var.contrib.iloc[:,i], var.vtest.iloc[:,i]
-        var_cos2.name, var_ctr.name, var_vtest.name = "cos2", "ctr", "vtest"
-        var_infos = concat((var_infos,var_coord,var_ctr,var_cos2,var_vtest),axis=1)
-    var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
+        var_coord, var_sqcos, var_ctr, var_vtest = var.coord.iloc[:,i], var.cos2.iloc[:,i],  var.contrib.iloc[:,i], var.vtest.iloc[:,i]
+        var_sqcos.name, var_ctr.name, var_vtest.name = "cos2", "ctr", "vtest"
+        var_infos = concat((var_infos,var_coord,var_ctr,var_sqcos,var_vtest),axis=1)
+    var_infos = var_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(var_infos)
     
-    # Add variables
-    if var.var_inertia.shape[0] > nb_element:
-        print(f"\nCategorical variables (eta2) (the {nb_element} first)\n")
+    #add qualiattive variables
+    quali_var = self.quali_var_
+    if quali_var.coord.shape[0] > nb_element:
+        print(f"\nQualitative variables (the {nb_element} first)\n")
     else:
-        print("\nCategorical variables (eta2)\n")
-    quali_var_infos = var.var_inertia
+        print("\nQualitative variables \n")
+    quali_var_infos = quali_var.infos
     for i in range(ncp):
-        quali_var_eta2, quali_var_contrib = var.eta2.iloc[:,i], var.var_contrib.iloc[:,i]
-        quali_var_eta2.name, quali_var_contrib.name = "Dim."+str(i+1), "ctr"
-        quali_var_infos = concat((quali_var_infos,quali_var_eta2,quali_var_contrib),axis=1)
-    quali_var_infos = quali_var_infos.iloc[:nb_element,:].round(decimals=digits)
+        quali_var_coord, quali_var_ctr = quali_var.coord.iloc[:,i], quali_var.contrib.iloc[:,i]
+        quali_var_coord.name, quali_var_ctr.name = "Dim."+str(i+1), "ctr"
+        quali_var_infos = concat((quali_var_infos,quali_var_coord, quali_var_ctr),axis=1)
+    quali_var_infos = quali_var_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(quali_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -357,34 +358,34 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     ##add supplementary categories
     #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quali_sup_"):
-        var_sup = self.quali_sup_
-        if var_sup.coord.shape[0] > nb_element:
+        quali_sup = self.quali_sup_
+        if quali_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary categories (the {nb_element} first)\n")
         else:
             print("\nSupplementary categories\n")
-        var_sup_infos = var_sup.dist
+        quali_sup_infos = quali_sup.dist2
         for i in range(ncp):
-            var_sup_coord, var_sup_cos2, var_sup_vtest = var_sup.coord.iloc[:,i], var_sup.cos2.iloc[:,i], var_sup.vtest.iloc[:,i]
-            var_sup_cos2.name, var_sup_vtest.name = "cos2", "v.test"
-            var_sup_infos = concat((var_sup_infos,var_sup_coord,var_sup_cos2,var_sup_vtest),axis=1)
-        var_sup_infos = var_sup_infos.round(decimals=digits)
+            quali_sup_coord, quali_sup_sqcos, quali_sup_vtest = quali_sup.coord.iloc[:,i], quali_sup.cos2.iloc[:,i], quali_sup.vtest.iloc[:,i]
+            quali_sup_sqcos.name, quali_sup_vtest.name = "cos2", "v.test"
+            quali_sup_infos = concat((quali_sup_infos,quali_sup_coord,quali_sup_sqcos,quali_sup_vtest),axis=1)
+        quali_sup_infos = quali_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
-            print(var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
+            print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
-            print(var_sup_infos)
+            print(quali_sup_infos)
         
-        if var_sup.eta2.shape[0] > nb_element:
-            print(f"\nSupplementary categorical variables (eta2) (the {nb_element} first)\n")
+        if quali_sup.eta2.shape[0] > nb_element:
+            print(f"\nSupplementary qualitative variables (eta2) (the {nb_element} first)\n")
         else:
-            print("\nSupplementary categorical variables (eta2)\n")
-        quali_var_sup_infos = var_sup.eta2.iloc[:nb_element,:ncp].round(decimals=digits)
+            print("\nSupplementary qualitative variables (eta2)\n")
+        quali_var_sup_infos = quali_sup.eta2.head(nb_element).iloc[:,:ncp].round(decimals=digits)
         if to_markdown:
             print(quali_var_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(quali_var_sup_infos)
 
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add supplementary continuous variables informations
+    #add supplementary continuous variables informations
     #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
@@ -394,10 +395,10 @@ def summaryMCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print("\nSupplementary continuous variables\n")
         quanti_sup_infos = DataFrame().astype("float")
         for i in range(0,ncp,1):
-            quanti_sup_coord, quanti_sup_cos2 = quanti_sup.coord.iloc[:,i], quanti_sup.cos2.iloc[:,i]
-            quanti_sup_cos2.name = "cos2"
-            quanti_sup_infos = concat((quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2),axis=1)
-        quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+            quanti_sup_coord, quanti_sup_sqcos = quanti_sup.coord.iloc[:,i], quanti_sup.cos2.iloc[:,i]
+            quanti_sup_sqcos.name = "cos2"
+            quanti_sup_infos = concat((quanti_sup_infos,quanti_sup_coord,quanti_sup_sqcos),axis=1)
+        quanti_sup_infos = quanti_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:

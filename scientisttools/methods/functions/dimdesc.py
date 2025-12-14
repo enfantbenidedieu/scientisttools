@@ -23,19 +23,19 @@ def dimdesc(self,axis=None,proba=0.05):
 
     Parameters
     ----------
-    `self` : an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MPCA, MFA, MFAQUAL, MFAMIX, MFACT
+    `self`: an object of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, HillSmith, MPCA, MFA, MFAQUAL, MFAMIX, MFACT
 
-    `axis` : an integer or a list/tuple specifying the axis (by default = None)
+    `axis`: an integer or a list/tuple specifying the axis (by default = None)
 
-    `axis` : the significance threshold considered to characterized the dimension (by default 0.05)
+    `axis`: the significance threshold considered to characterized the dimension (by default 0.05)
 
     Returns
     -------
     dictionary of dataframes including :
 
-    `quanti` :  the description of the dimensions by the quantitative variables. The variables are sorted.
+    `quanti`:  the description of the dimensions by the quantitative variables. The variables are sorted.
     
-    `quali`	: the description of the dimensions by the categorical variables
+    `quali`: the description of the dimensions by the categorical variables
     
     Author(s)
     ---------
@@ -74,9 +74,9 @@ def dimdesc(self,axis=None,proba=0.05):
                 res["category"] = cat_desc.category
         return res
 
-    # Check if model is an instance of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MPCA, MFA, MFAQUAL, MFAMIX, MFACT
-    if self.model_ not in ["pca","ca","mca","specificmca","famd","pcamix","mpca","mfa","mfaqual","mfamix","mfact"]:
-        raise TypeError("`self` must be an instance of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, MPCA, MFA, MFAQUAL, MFAMIX, MFACT")
+    #check if model is an instance of class
+    if self.model_ not in ["pca","ca","mca","specificmca","famd","pcamix","hillsmith","mpca","mfa","mfaqual","mfamix","mfact"]:
+        raise TypeError("`self` must be an instance of class PCA, CA, MCA, SpecificMCA, FAMD, PCAMIX, HillSmith, MPCA, MFA, MFAQUAL, MFAMIX, MFACT")
     
     if self.model_ == "ca":
         # Extract rows and columns factor coordinates
@@ -86,7 +86,7 @@ def dimdesc(self,axis=None,proba=0.05):
         if self.row_sup is not None:
             row_coord = concat([row_coord,self.row_sup_.coord],axis=0)
         
-        # Add supplmentary columns
+        #ddd supplmentary columns
         if self.col_sup is not None:
             col_coord = concat([col_coord,self.col_sup_.coord],axis=0)
 

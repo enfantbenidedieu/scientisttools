@@ -63,7 +63,7 @@ def rotate_factors(loadings,
         
     Returns
     -------
-    `loadings`: pandas DataFrame of the rotated loadings
+    `loadings`: a pandas DataFrame of the rotated loadings
         The loadings matrix.
 
     `rotmat`: numpy array of the rotation matrix.

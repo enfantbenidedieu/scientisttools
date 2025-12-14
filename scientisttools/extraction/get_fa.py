@@ -4,12 +4,12 @@ from typing import NamedTuple
 
 def get_fa_ind(self) -> NamedTuple:
     """
-    Extract the results for individuals - FactorAnalysis
-    ----------------------------------------------------
+    Extract the results for individuals - FA
+    ----------------------------------------
 
     Description
     -----------
-    Extract all the results of the active individuals from Factor Analysis (FactorAnalysis) outputs.
+    Extract all the results of the active individuals from Factor Analysis (FA) outputs.
 
     Usage
     -----
@@ -19,13 +19,13 @@ def get_fa_ind(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self`: an object of class FactorAnalysis
+    `self`: an object of class FA
 
     Returns
     -------
     a namedtuple of pandas Dataframe containing all the results for the active individuals including:
 
-    `coord`: factor coordinates
+    `coord`: coordinates of the individuals
     
     Author(s)
     ---------
@@ -34,26 +34,27 @@ def get_fa_ind(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> from scientisttools import beer, FactorAnalysis, get_fa_ind
-    >>> res_fa = FactorAnalysis(rotation=None,max_iter=1).fit(beer)
+    >>> from scientisttools import load_dataset, FA, get_fa_ind
+    >>> beer = load_dataset("beer")
+    >>> res_fa = FA(n_components=2,max_iter=1)
+    >>> res_fa.fit(beer)
     >>> #extract the results for individuals
     >>> ind = get_fa_ind(res_fa)
-    >>> ind.coord.head() # coordinates of individuals
+    >>> ind.coord.head() # coordinates of the individuals
     ```
     """
-    # Check if self is an object of class FactorAnalysis
-    if self.model_ != "fa":
-        raise TypeError("'self' must be an object of class FactorAnalysis")
+    if self.model_ != "fa": #check if self is an object of class FA
+        raise TypeError("'self' must be an object of class FA")
     return self.ind_
 
 def get_fa_var(self) -> NamedTuple:
     """
-    Extract the results for variables - FactorAnalysis
-    --------------------------------------------------
+    Extract the results for variables - FA
+    --------------------------------------
 
     Description
     -----------
-    Extract all the results for the active variables from Factor Analysis (FactorAnalysis) outputs
+    Extract all the results for the active variables from Factor Analysis (FA) outputs
 
     Usage
     -----
@@ -63,17 +64,17 @@ def get_fa_var(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self`: an instance of class FactorAnalysis
+    `self`: an instance of class FA
 
     Returns
     -------
     a namedtuple of pandas Dataframes containing all the results for the active variables including:
 
-    `coord`: factor coordinates
+    `coord`: loadings or coordinates of the variables,
 
-    `contrib`: relative contribution
+    `contrib`: contribution of the variables
 
-    `f_score`: normalized factor coefficients
+    `f_score`: factor score coefficients of the variables
     
     Author(s)
     ---------
@@ -82,23 +83,24 @@ def get_fa_var(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> from scientisttools import beer, FactorAnalysis, get_fa_var
-    >>> res_fa = FactorAnalysis(rotation=None,max_iter=1).fit(beer)
+    >>> from scientisttools import load_dataset, FA, get_fa_var
+    >>> beer = load_dataset("beer")
+    >>> res_fa = FA(max_iter=1)
+    >>> res_fa.fit(beer)
     >>> #extract the results for variables
     >>> var = get_fa_var(res_fa)
-    >>> var.coord.head() # coordinates of variables (loadings)
-    >>> var.contrib.head() # contributions of variables
-    >>> var.f_score.head() # projection function
+    >>> var.coord #coordinates of variables (loadings)
+    >>> var.contrib #contributions of variables
+    >>> var.f_score #projection function
     ```
     """
-    # Check if self is an object of class FactorAnalysis
-    if self.model_ != "fa":
-        raise TypeError("'self' must be an object of class FactorAnalysis")
+    if self.model_ != "fa": #check if self is an object of class FA
+        raise TypeError("'self' must be an object of class FA")
     return self.var_
 
 def get_fa(self, element= "ind")-> NamedTuple:
     """
-    Extract the results for individuals/variables - FactorAnalysis
+    Extract the results for individuals/variables - FA
     --------------------------------------------------------------
 
     Description
@@ -119,7 +121,7 @@ def get_fa(self, element= "ind")-> NamedTuple:
 
     Parameters
     ---------
-    `self`: an instance of class FactorAnalysis
+    `self`: an instance of class FA
 
     `element`: the element to subset from the output. Allowed values are :
         * "ind" for individuals
@@ -127,7 +129,7 @@ def get_fa(self, element= "ind")-> NamedTuple:
                 
     Returns
     -------
-    namedtuple of pandas Dataframes containing all the results for the active individuals/variables
+    a namedtuple of pandas Dataframes containing all the results for the active individuals/variables
 
     Author(s)
     ---------
@@ -136,16 +138,18 @@ def get_fa(self, element= "ind")-> NamedTuple:
     Examples
     --------
     ```python
-    >>> from scientisttools import beer, FactorAnalysis, get_fa
-    >>> res_fa = FactorAnalysis(rotation=None,max_iter=1).fit(beer)
+    >>> from scientisttools import load_dataset, FA, get_fa
+    >>> beer = load_dataset("beer")
+    >>> res_fa = FA(n_components=2,max_iter=1)
+    >>> res_fa.fit(beer)
     >>> #extract the results for individuals
-    >>> ind = get_fa(res_fa,element="ind")
-    >>> ind.coord.head() # coordinates of individuals
+    >>> ind = get_fa(res_fa,"ind")
+    >>> ind.coord # coordinates of individuals
     >>> #extract the results for variables
-    >>> var = get_fa(res_fa,element="var")
-    >>> var.coord.head() # coordinates of variables (loadings)
-    >>> var.contrib.head() # contributions of variables
-    >>> var.f_score.head() # projection function  
+    >>> var = get_fa(res_fa, "var")
+    >>> var.coord #coordinates of variables (loadings)
+    >>> var.contrib #contributions of variables
+    >>> var.f_score #projection function  
     ```
     """
     if element == "ind":
@@ -162,7 +166,7 @@ def summaryFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pi
 
     Description
     -----------
-    Printing summaries of factor analysis (FactorAnalysis) objects
+    Printing summaries of factor analysis (FA) objects
 
     Usage
     -----
@@ -172,7 +176,7 @@ def summaryFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pi
 
     Parameters
     ----------
-    `self`: an object of class FactorAnalysis
+    `self`: an object of class FA
 
     `digits`: int, default=3. Number of decimal printed
 
@@ -193,39 +197,44 @@ def summaryFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pi
     Examples
     --------
     ```python
-    >>> from scientisttools import beer, FactorAnalysis, summaryFA
+    >>> from scientisttools import load_dataset, FA, summaryFA
+    >>> beer = load_dataset("beer")
     >>> #non iterative principal factor analysis
-    >>> res_fa = FactorAnalysis(rotation=None,max_iter=1).fit(beer)
+    >>> res_fa = FA(n_components=2,max_iter=1).fit(beer)
     >>> summaryFA(res_fa)
     ```
     """
-    # check if self is an object of class FactorAnalysis
-    if self.model_ != "fa":
-        raise TypeError("'self' must be an object of class FactorAnalysis")
+    if self.model_ != "fa": #check if self is an object of class FA
+        raise TypeError("'self' must be an object of class FA")
 
-    ncp = min(ncp,self.call_.n_components)
-    nb_element = min(nb_element,self.call_.X.shape[0])
+    #set number of components and number of elements
+    ncp, nb_element = min(ncp,self.call_.n_components), min(nb_element,self.call_.X.shape[0])
 
-    #Principa l Factor Analysis Results
+    #Factor Analysis Results
     print("                     Factor Analysis - Results                     \n")
-
-    # Add eigenvalues informations
+    
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #add eigenvalues informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     eig = self.eig_.iloc[:self.call_.n_components,:].T.round(decimals=digits)
     eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
     if to_markdown:
         print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(eig)
-
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #variance accounted
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     print("\nVariance accounted\n")
-    vaccounted = self.vaccounted_.T.round(decimals=digits)
+    vaccounted = self.vaccounted_.round(decimals=digits)
     if to_markdown:
         print(vaccounted.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(vaccounted)
     
-    # Add individuals informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #add individuals informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     ind = self.ind_
     if ind.coord.shape[0] > nb_element:
         print(f"\nIndividuals (the {nb_element} first)\n")
@@ -237,13 +246,15 @@ def summaryFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pi
     else:
         print(ind_coord)
 
-    # Add supplementary individuals
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #add supplementary individuals
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"ind_sup_"):
         ind_sup = self.ind_sup_
         if ind_sup.coord.shape[0] > nb_element:
-            print(f"\nSupplementary individuals (the {nb_element} first)\n")
+            print("\nSupplementary individuals (the {} first):".format(nb_element))
         else:
-            print("\nSupplementary individuals\n")
+            print("\nSupplementary individuals:")
         # Save all informations
         ind_sup_coord = ind_sup.coord.iloc[:nb_element,:ncp].round(decimals=digits)
         if to_markdown:
@@ -251,12 +262,14 @@ def summaryFA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pi
         else:
             print(ind_sup_coord)
 
-    # Add variables informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #add variables informations
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     var = self.var_
     if var.coord.shape[0]>nb_element:
-        print(f"\nVariables (the {nb_element} first)\n")
+        print("\nVariables (the {} first):".format(nb_element))
     else:
-         print("\nVariables\n")
+         print("\nVariables:")
     var_infos = self.others_.communality
     for i in range(ncp):
         var_coord, var_ctr = var.coord.iloc[:,i], var.contrib.iloc[:,i]

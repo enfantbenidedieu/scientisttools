@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
-from warnings import warn
 from scipy.stats import chi2
-from numpy import ndarray, array, ones, sqrt, linalg, log, flip,cumsum,mean, diag, c_, real, tril, insert, diff,nan, apply_along_axis, number
-from pandas import DataFrame, Series, Categorical, api, concat
-from typing import NamedTuple
+from numpy import ndarray, array, ones, average, sqrt, linalg, log, flip,cumsum,mean, diag, c_, tril, number, average, cov
+from pandas import DataFrame, Series
+from pandas.api.types import is_numeric_dtype
 from collections import namedtuple,OrderedDict
-from mapply.mapply import mapply
-from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
 
 #intern functions
-from .functions.recodecont import recodecont
-from .functions.summarize import summarize
-from .functions.svd_triplet import svd_triplet
-from .functions.rotate_factors import rotate_factors
-from .functions.pcorrcoef import pcorrcoef
+from .functions.preprocessing import preprocessing
+from .functions.get_sup_label import get_sup_label
+from .functions.gfa import gfa
+from .functions.wcorrcoef import wcorrcoef
+from .functions.wpcorrcoef import wpcorrcoef
 from .functions.kaiser_msa import kaiser_msa
-from .functions.predict_sup import predict_ind_sup, predict_quanti_sup, predict_quali_sup
-from .functions.revaluate_cat_variable import revaluate_cat_variable
-from .functions.conditional_average import conditional_average
+from .functions.predict_sup import predict_sup
+from .functions.splitmix import splitmix
+from .functions.recodecat import recodecat
+from .functions.function_eta2 import function_eta2
+from .functions.summarize import summarize, conditional_wmean
 from .functions.association import association
+from .functions.corrmatrix import corrmatrix
+from .functions.utils import is_dataframe
 
 class PCA(BaseEstimator,TransformerMixin):
     """
@@ -29,106 +30,113 @@ class PCA(BaseEstimator,TransformerMixin):
 
     Description
     -----------
-    Performs Principal Component Analysis (PCA) with supplementary individuals, supplementary quantitative variables and supplementary categorical variables. Missing values are replaced by the column mean.
+    Performs Principal Component Analysis (PCA) with supplementary individuals and/or supplementary variables (numerics and/or categoricals). Missing values are replaced by the column mean.
 
     Usage
     -----
     ```python
-    >>> PCA(standardize = True, n_components = 5, ind_weights = None, var_weights = None, ind_sup = None, quanti_sup = None, quali_sup = None, rotate = 'varimax', rotation_kwargs = None, parallelize=False)
+    >>> PCA(standardize = True, n_components = 5, ind_weights = None, var_weights = None, ind_sup = None, sup_var = None)
     ```
     
     Parameters
     ----------
-    `standardize`: a boolean, default = True
+    `standardize`: a boolean indicating if the data should be scaled to unit variance (by default True)
         * If `True`: the data are scaled to unit variance.
         * If `False`: the data are not scaled to unit variance.
 
-    `n_components`: number of dimensions kept in the results (by default 5)
+    `n_components`: an integer indicating the number of dimensions kept in the results (by default 5)
     
-    `ind_weights`: an optional individuals weights (by default, a list/tuple/array/Series of 1/(number of active individuals) for uniform individuals weights), the weights are given only for active individuals.
+    `ind_weights`: None or a list or a tuple or a 1-D array or a pandas Series indicating individuals weights. The weights are given only for active individuals.
     
-    `var_weights`: an optional variables weights (by default, a list/tuple/array/Series of 1 for uniform variables weights), the weights are given only for the active variables
+    `var_weights`: None or a list or a tuple or a 1-D arry or a pandas Series indicating variables weights. The weights are given only for the active variables
     
-    `ind_sup`: an integer/string/list/tuple indicating the indexes/names of the supplementary individuals
+    `ind_sup`: None or an integer or a string or a list or a tuple or a range indicating the indexes or the names of the supplementary individuals
 
-    `quanti_sup`: an integer/string/list/tuple indicating the indexes/names of the supplementary quantitative variables
-
-    `quali_sup`: an integer/string/list/tuple indicating the indexes/names of the supplementary categorical variables
-
-    `rotate`: the type of rotation to performn after fitting the factor analysis model (by default 'varimax'). 
-        If set to `None`, no rotation will be performed. Allowed values include: `varimax`, `promax`, `oblimin`, `oblimax`, `quartimin`, `quartimax` and `equamax`.
-
-    `rotate_kwargs`: optional
-        Dictionary containing keyword arguments for the rotation method.
-
-    `parallelize`: boolean, default = False. If model should be parallelize
-        * If `True`: parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
-        * If `False`: parallelize using pandas apply
+    `sup_var`: None or an integer or a string or a list or a tuple or a range indicating the indexes or the names of the supplementary variables
 
     Attributes
     ----------
-    `call_`: namedtuple with some informations
-        * `Xtot`: pandas DataFrame with all data (active and supplementary)
-        * `X`: pandas DataFrame with active data
-        * `Z`: pandas DataFrame with standardized data : Z = (X-center)/scale
-        * `ind_weights`: pandas Series containing individuals weights
-        * `var_weights`: pandas Series containing variables weights
-        * `center`: pandas Series containing variables means
-        * `scale`: pandas Series containing variables standard deviation : 
-            * If `standardize = True`, then standard deviation are computed using variables standard deviation
+    `call_`: a namedtuple with some informations, including:
+        * `Xtot`: a pandas DataFrame with all data (active and supplementary)
+        * `X`: a pandas DataFrame with active data
+        * `Z`: a pandas DataFrame with standardized data : Z = (X - center)/scale
+        * `ind_weights`: a pandas Series containing individuals weights
+        * `var_weights`: a pandas Series containing variables weights
+        * `center`: a pandas Series containing variables weighted average
+        * `scale`: a pandas Series containing variables weighted standard deviation : 
+            * If `standardize = True`, then standard deviation are computed using variables weighted standard deviation
             * If `standardize = False`, then standard deviation are a vector of ones with length number of variables.
-        * `n_components`: integer indicating the number of components kept
-        * `rotate`: None or string specifying the rotation method
-        * `rotate_kwargs`: empty dict or dictionary containing keyword arguments for the rotation method
-        * `n_workers`: integer indicating the maximum amount of workers (processes) to spawn. For more information see: https://mapply.readthedocs.io/en/0.1.28/_code_reference/mapply.html
-        * `ind_sup`: None or a list of string indicating names of the supplementary individuals
-        * `quanti_sup`: None or a list of string indicating names of the supplementary quantitative variables
-        * `quali_sup`: None or a list of string indicating names of the supplementary qualitative variables
+        * `n_components`: an integer indicating the number of components kepted
+        * `ind_sup`: None or a list of string containing names of the supplementary individuals
+        * `sup_var`: None or a list of string containing names of the supplementary variables
     
-    `svd_`: namedtuple of matrices containing all the results of the generalized singular value decomposition (GSVD)
-        * `vs`: 1D numpy array containing the singular values
-        * `U`: 2D numpy array whose columns contain the left singular vectors
-        * `V`: 2D numpy array whose columns contain the right singular vectors.
+    `svd_`: a namedtuple of matrices containing all the results of the generalized singular value decomposition (GSVD), including
+        * `vs`: a 1-D numpy array containing the singular values
+        * `U`: a 2-D numpy array whose columns contains the left singular vectors
+        * `V`: a 2-D numpy array whose columns contains the right singular vectors.
 
     `eig_`: pandas DataFrame containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
 
-    `eigval_`: namedtuple of array containing eigen values
-        * `original`: eigen values of the original matrix
-        * `common`: eigen values of the common factor solution
+    `ind_`: a namedtuple of pandas DataFrames containing all the results for the active individuals, including:
+        * `coord`: coordinates of the individuals,
+        * `cos2`: squared cosinus of the individuals,
+        * `contrib`: relative contributions of the individuals,
+        * `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals.
 
-    `vaccounted_`: pandas DataFrame containing the variance accounted
+    `var_`: a namedtuple of pandas DataFrames containing all the results for the active variables, including:
+        * `coord`: coordinates of the variables,
+        * `cos2`: squared cosinus of the variables,
+        * `contrib`: relative contributions of the variables,
+        * `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the variables.
 
-    `rotate_`: a namedtuple containing the rotation matrix and factor correlations matrix
-        * `rotmat`: numpy array of rotation matrix (if a rotation has been performed. None otherwise.)
-        * `phi`: pandas DataFrame of factor correlations matrix
+    `corr_`: a namedtuple of pandas DataFrame containing all the results for the correlation, including:  
+        * `corrcoef`: Pearson correlation coefficient matrix
+        * `pcorrcoef`: partial pearson correlation coefficient matrix
+        * `reconst`: reconstitution pearson correlation coefficient matrix
+        * `residual`: residual correlation matrix
+        * `error`: error
 
-    `ind_`: `namedtuple of pandas DataFrames containing all the results for the active individuals.
-        * `coord`: factor coordinates (scores) of the individuals
-        * `cos2`: squared cosinus of the individuals
-        * `contrib`: relative contributions of the individuals
-        * `infos`: additionals informations (weight, squared distance to origin and inertia) of the individuals
+    `others_`: a namedtuple of others statistics, including:
+        * `r2_score`: the multiple R square between the factor score estimates,
+        * `communality`: communality estimates for each variable. These are merely the sum of squared factor loadings for that variable,
+        * `communalities`: total amount of common variance,
+        * `uniquenesses`: uniquenesse estimates for each variable, 
+        * `bartlett`: Bartlett's test of Spericity, 
+        * `kaiser`: a namedtuple of numerics containing the Kaiser threshold, including:
+            * `threshold`: kaiser threshold,
+            * `proportion`: kaiser threshold in proportion
+        * `kaiser_msa`: Kaiser measure of sampling adequacy,
+        * `kss`: Karlis-Saporta-Spinaki,
+        * `broken`: broken's stick threshold
 
-    `var_`: namedtuple of pandas DataFrames containing all the results for the active variables
-        * `coord`: factor coordinates (scores) of the variables
-        * `cos2`: squared cosinus of the variables
-        * `contrib`: relative contributions of the variables
-        * `infos`: additionals informations (weight, squared distance to origin and inertia) of the variables
+    `ind_sup_`: a namedtuple of pandas DataFrames/Series containing all the results for the supplementary individuals, including:
+        * `coord`: coordinates of the supplementary individuals, 
+        * `cos2`: squared cosinus of the supplementary individuals,
+        * `dist2`: squared distance to origin of the supplementary individuals.
 
-    `others_`: namedtuple of others statistics (Bartlett's test of Spericity, Kaiser threshold, ...)
+    `quanti_sup_`: a namedtuple of pandas DataFrames containing all the results for the supplementary quantitative variables, including:
+        * `coord`: coordinates of the supplementary quantitative variables, 
+        * `cos2`: squared cosinus of the supplementary quantitative variables.
 
-    `ind_sup_`: namedtuple of pandas DataFrames containing all the results for the supplementary individuals (coordinates, square cosinus)
+    `quali_sup_`: a namedtuple of pandas DataFrames/Series containing all the results for the supplementary qualitative variables/levels, including:
+        * `coord`: coordinates of the supplementary levels,
+        * `cos2`: squared cosinus of the supplementary levels,
+        * `vtest`: value-test (which is a criterion with a Normal distribution) of the supplementary levels,
+        * `eta2`: squared correlation ratio of the supplementary qualitative variables, which is the square correlation coefficient between a qualitative variable and a dimension
+        * `dist2`: squared distance to origin of the supplementary levels.
 
-    `quanti_sup_`: namedtuple of pandas DataFrames containing all the results for the supplementary quantitative variables (coordinates, correlation between variables and axes, square cosinus)
+    `summary_quali_`: a pandas DataFrame containing the frequencies distribution of supplementary levels
 
-    `quali_sup_`: namedtuple of pandas DataFrames containing all the results for the supplementary categorical variables (coordinates of each categories of each variables, vtest which is a criterion with a Normal distribution, and eta2 which is the square correlation coefficient between a qualitative variable and a dimension)
+    `association_`; a nametuple of pandas DataFrames containing all the results of association between qualitative variables, including:
+        * `chi2`: Pearson's chi-squared test
+        * `gtest`: log-likelihood ratio (i.e the "G-test")
+        * `association`: degree of association between two nominal variables ("cramer", "tschuprow", "pearson")
 
-    `summary_quali_`: summary statistics for supplementary qualitative variables if `quali_sup` is not None
+    `summary_quanti_`: a pandas DataFrame containing the descriptive statistics of quantitative variables
 
-    `chi2_test_`: chi-squared test. If supplementary qualitative are greater than 2. 
+    `corrtest_`: a pandas DataFrame containing correlation tests
 
-    `summary_quanti_`: summary statistics for quantitative variables (actives and supplementary)
-
-    `model_`: string specifying the model fitted = 'pca'
+    `model_`: a string indicating the model fitted = 'pca'
 
     Author(s)
     ---------
@@ -156,13 +164,14 @@ class PCA(BaseEstimator,TransformerMixin):
     
     See Also
     --------
-    `predictPCA`, `supvarPCA`, `get_pca_ind`, `get_pca_var`, `get_pca`, `summaryPCA`, `dimdesc`, `reconst`, `fviz_pca_ind`, `fviz_pca_var`, `fviz_pca_biplot`, `fviz_pca3d_ind`
+    `predictPCA`, `supvarPCA`, `get_pca_ind`, `get_pca_var`, `get_pca`, `summaryPCA`, `dimdesc`, `reconst`, `fviz_pca_ind`, `fviz_pca_var`, `fviz_pca_biplot`
 
     Examples
     --------
     ```python
-    >>> from scientisttools import decathlon, PCA, summaryPCA
-    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> from scientisttools import load_dataset, PCA, summaryPCA
+    >>> decathlon = load_dataset("decathlon")
+    >>> res_pca = PCA(ind_sup=range(41,46), sup_var=(10,11,12))
     >>> res_pca.fit(decathlon)
     >>> summaryPCA(res_pca)
     ```
@@ -173,21 +182,13 @@ class PCA(BaseEstimator,TransformerMixin):
                  ind_weights = None,
                  var_weights = None,
                  ind_sup = None,
-                 quanti_sup = None,
-                 quali_sup = None,
-                 rotate = "varimax",
-                 rotate_kwargs = dict(),
-                 parallelize=False):
+                 sup_var = None):
         self.standardize = standardize
         self.n_components = n_components
         self.ind_weights = ind_weights
         self.var_weights = var_weights
         self.ind_sup = ind_sup
-        self.quanti_sup = quanti_sup
-        self.quali_sup = quali_sup
-        self.rotate = rotate
-        self.rotate_kwargs = rotate_kwargs
-        self.parallelize = parallelize
+        self.sup_var = sup_var
 
     def fit(self,X:DataFrame,y=None):
         """
@@ -196,34 +197,22 @@ class PCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        `X`: pandas DataFrame of shape (n_samples, n_columns)
-            Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
+        `X`: a pandas DataFrame of shape (n_samples, n_columns)
+            Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns (quantitative and/or qualitative).
 
         `y`: None
             y is ignored
 
         Returns
         -------
-        `self` : object
+        `self`: object
             Returns the instance itself
-        
-        Examples
-        --------
-        ```python
-        >>> from scientisttools import decathlon, PCA, summaryPCA
-        >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
-        >>> res_pca.fit(decathlon)
-        ```
         """ 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # Check if X is an instance of pd.DataFrame class
+        #preprocessing
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if not isinstance(X,DataFrame):
-            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        # Set index name as None
-        X.index.name = None
-        
+        X = preprocessing(X=X)
+       
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if standardize is a boolean
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -231,139 +220,54 @@ class PCA(BaseEstimator,TransformerMixin):
             raise TypeError("'standardize' must be a boolean.")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if parallelize is a boolean
+        #check if supplementary elements
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if not isinstance(self.parallelize,bool):
-            raise TypeError("'parallelize' must be a boolean.")
+        #get supplementary individuals labels
+        ind_sup_label = get_sup_label(X=X, indexes=self.ind_sup, axis=0)
 
-        # set parallelize
-        if self.parallelize:
-            n_workers = -1
-        else:
-            n_workers = 1
+        #get supplementary variables labels
+        sup_var_label = get_sup_label(X=X, indexes=self.sup_var, axis=1)
 
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## rop level if ndim greater than 1 and reset columns name
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if X.columns.nlevels > 1:
-            X.columns = X.columns.droplevel()
-        
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## checks if categoricals variables is in X
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        is_quali = X.select_dtypes(include=["object","category"])
-        if is_quali.shape[1]>0:
-            for q in is_quali.columns:
-                X[q] = Categorical(X[q],categories=sorted(X[q].dropna().unique().tolist()),ordered=True)
-        
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## check if supplementary qualitatives variables
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.quali_sup is not None:
-            if isinstance(self.quali_sup,str):
-                quali_sup_label = [self.quali_sup]
-            elif isinstance(self.quali_sup,(int,float)):
-                quali_sup_label = [X.columns[int(self.quali_sup)]]
-            elif isinstance(self.quali_sup,(list,tuple)):
-                if all(isinstance(x,str) for x in self.quali_sup):
-                     quali_sup_label = [str(x) for x in self.quali_sup]
-                elif all(isinstance(x,(int,float)) for x in self.quali_sup):
-                    quali_sup_label = X.columns[[int(x) for x in self.quali_sup]].tolist()
-        else:
-            quali_sup_label = None
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## Check if supplementary quantitatives variables
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.quanti_sup is not None:
-            if isinstance(self.quanti_sup,str):
-                quanti_sup_label = [self.quanti_sup]
-            elif isinstance(self.quanti_sup,(int,float)):
-                quanti_sup_label = [X.columns[int(self.quanti_sup)]]
-            elif isinstance(self.quanti_sup,(list,tuple)):
-                if all(isinstance(x,str) for x in self.quanti_sup):
-                    quanti_sup_label = [str(x) for x in self.quanti_sup]
-                elif all(isinstance(x,(int,float)) for x in self.quanti_sup):
-                    quanti_sup_label = X.columns[[int(x) for x in self.quanti_sup]].tolist()
-        else:
-            quanti_sup_label = None
-        
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## Check if individuls supplementary
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.ind_sup is not None:
-            if isinstance(self.ind_sup,str):
-                ind_sup_label = [self.ind_sup]
-            elif isinstance(self.ind_sup,(int,float)):
-                ind_sup_label = [X.index[int(self.ind_sup)]]
-            elif isinstance(self.ind_sup,(list,tuple)):
-                if all(isinstance(x,str) for x in self.ind_sup):
-                    ind_sup_label = [str(x) for x in self.ind_sup]
-                elif all(isinstance(x,(int,float)) for x in self.ind_sup):
-                    ind_sup_label = X.index[[int(x) for x in self.ind_sup]].tolist()
-        else:
-            ind_sup_label = None
-        
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## Check if missing values in quantitatives variables
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if X.isnull().any().any():
-            if self.quali_sup is None:
-                X = recodecont(X).X
-            else:
-                col_list = [k for k in X.columns if k not in quali_sup_label]
-                for k in col_list:
-                    if X.loc[:,k].isnull().any():
-                        X.loc[:,k] = X.loc[:,k].fillna(X.loc[:,k].mean())
-
-        # Make a copy of the original data
+        #make a copy of the original data
         Xtot = X.copy()
 
-        # Drop supplementary qualitative variables
-        if self.quali_sup is not None:
-            X = X.drop(columns=quali_sup_label)
+        #drop supplementary variables (quantitative and/or qualitative)
+        if self.sup_var is not None:
+            X_sup_var, X = X.loc[:,sup_var_label], X.drop(columns=sup_var_label)
         
-        # Drop supplementary quantitative variables
-        if self.quanti_sup is not None:
-            X = X.drop(columns=quanti_sup_label)
-        
-        # Drop supplementary individuals
+        #drop supplementary individuals
         if self.ind_sup is not None:
-            X_ind_sup = X.loc[ind_sup_label,:]
-            X = X.drop(index=ind_sup_label)
+            X_ind_sup, X = X.loc[ind_sup_label,:], X.drop(index=ind_sup_label)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## Principal Components Analysis (PCA)
+        #principal components analysis (PCA)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if all variables are numerics
-        all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
-        if not all_num:
-            raise TypeError("All columns must be numeric")
+        if not all(is_numeric_dtype(X[k]) for k in X.columns): #check if all active variables are numerics
+            raise TypeError("All active variables must be numeric")
 
-        # Number of rows/columns
+        #number of rows/columns
         n_rows, n_cols = X.shape
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## Set individuals weights
+        #set individuals and variables weights
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set individuals weights
         if self.ind_weights is None:
             ind_weights = ones(n_rows)/n_rows
         elif not isinstance(self.ind_weights,(list,tuple,ndarray,Series)):
-            raise TypeError("'ind_weights' must be a list/tuple/array/Series of individuals weights.")
+            raise TypeError("'ind_weights' must be a list or a tuple or a 1-D array or a pandas Series of individuals weights.")
         elif len(self.ind_weights) != n_rows:
-            raise ValueError(f"'ind_weights' must be a list/tuple/array/Series with length {n_rows}.")
+            raise ValueError(f"'ind_weights' must be a list or a tuple or a 1-D array or a pandas Series with length {n_rows}.")
         else:
             ind_weights = array([x/sum(self.ind_weights) for x in self.ind_weights])
         
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## Set variables weights
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set variables weights
         if self.var_weights is None:
             var_weights = ones(n_cols)
         elif not isinstance(self.var_weights,(list,tuple,ndarray,Series)):
-            raise TypeError("'var_weights' must be a list/tuple/array/Series of variables weights.")
+            raise TypeError("'var_weights' must be a list or a tuple or a 1-D array or a pandas Series of variables weights.")
         elif len(self.var_weights) != n_cols:
-            raise ValueError(f"'var_weights' must be a list/tuple/array/Series with length {n_cols}.")
+            raise ValueError(f"'var_weights' must be a list or a tuple or a 1-D array or a pandas Series with length {n_cols}.")
         else:
             var_weights = array(self.var_weights)
 
@@ -371,19 +275,19 @@ class PCA(BaseEstimator,TransformerMixin):
         ind_weights, var_weights =  Series(ind_weights,index=X.index,name="weight"), Series(var_weights,index=X.columns,name="weight")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ## Standardize
+        #standardization: Z = (X - mu)/sigma
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # Compute weighted average and standard deviation
-        d1 = DescrStatsW(X,weights=ind_weights,ddof=0)
+        #compute weighted average and weighted standard deviation
+        center = average(X,axis=0,weights=ind_weights)
         if self.standardize:
-            scale = d1.std
+            scale = array([sqrt(cov(X.iloc[:,k],rowvar=False,aweights=ind_weights,ddof=0)) for k in range(n_cols)])
         else:
-            scale = ones(X.shape[1])
+            scale = ones(n_cols)
         #convert to Series
-        center, scale, wcorr = Series(d1.mean,index=X.columns,name="center"), Series(scale,index=X.columns,name="scale"), DataFrame(d1.corrcoef,index=X.columns,columns=X.columns)
+        center, scale = Series(center,index=X.columns,name="center"), Series(scale,index=X.columns,name="scale")
         
-        # Standardization : Z = (X - mu)/sigma
-        Z = mapply(X,lambda x : (x - center)/scale,axis=1,progressbar=False,n_workers=n_workers)
+        #standardization: Z = (X - mu)/sigma
+        Z = X.sub(center,axis=1).div(scale,axis=1)
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set number of components
@@ -393,134 +297,54 @@ class PCA(BaseEstimator,TransformerMixin):
         max_components = int(min(linalg.matrix_rank(Q),linalg.matrix_rank(R), n_rows - 1, n_cols))
         #set number of components
         if self.n_components is None:
-            n_components = int(max_components)
+            n_components = max_components
         elif not isinstance(self.n_components,int):
             raise TypeError("'n_components' must be an integer.")
         elif self.n_components < 1:
             raise ValueError("'n_components' must be equal or greater than 1.")
         else:
-            n_components = int(min(self.n_components,max_components))
+            n_components = min(self.n_components,max_components)
         
         #Store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Z=Z,ind_weights=ind_weights,var_weights=var_weights,center=center,scale=scale,n_components=n_components,
-                            rotate=self.rotate,rotate_kwargs=self.rotate_kwargs,n_workers=n_workers,ind_sup=ind_sup_label,quanti_sup=quanti_sup_label,quali_sup=quali_sup_label)
+        call_ = OrderedDict(Xtot=Xtot,X=X,Z=Z,ind_weights=ind_weights,var_weights=var_weights,center=center,scale=scale,n_components=n_components,max_components=max_components,
+                            ind_sup=ind_sup_label,sup_var=sup_var_label)
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ##generalized singular value decomposition (GSVD)
+        #fit generalized factor analysis model and extract all elements
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        svd = svd_triplet(X=Z,row_weights=ind_weights,col_weights=var_weights,n_components=n_components)
+        fit_ = gfa(X=Z,row_weights=ind_weights,col_weights=var_weights,max_components=max_components,n_components=n_components)
+
         #extract elements
-        U, vs, V = svd.U[:,:n_components], svd.vs[:max_components], svd.V[:,:n_components]
+        self.svd_, self.eig_, ind_, var_ = fit_.svd, fit_.eig, fit_.row, fit_.col
 
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #eigen values informations
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        eigen_values = vs[:max_components]**2
-        difference, proportion = insert(-diff(eigen_values),len(eigen_values)-1,nan), 100*eigen_values/sum(eigen_values)
-        #store all informations
-        self.eig_ = DataFrame(c_[eigen_values,difference,proportion,cumsum(proportion)],columns=["Eigenvalue","Difference","Proportion","Cumulative"],index = ["Dim."+str(x+1) for x in range(max_components)])
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #variables informations
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #variables squared distance to origin
-        var_sqdisto = mapply(Z,lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
-        #variables inertia
-        var_inertia = var_sqdisto*var_weights
-        #variables percentage of inertia
-        var_inertia_pct = 100*var_inertia/sum(var_inertia)
-        #vconvert to DataFrame
-        var_infos = DataFrame(c_[var_weights,var_sqdisto,var_inertia,var_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","% Inertia"],index=Z.columns)
-        #variable factor coordinates
-        var_coord = DataFrame(V.dot(diag(vs[:n_components])),index=Z.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
-        #add rotation
-        if self.rotate is not None:
-            if n_components <= 1:
-                warn("No rotation will be performed when the number of factors equals 1.")
-            else:
-                rot = rotate_factors(loadings=var_coord,method=self.rotate,**self.rotate_kwargs)
-                var_coord, rotmat, phi = rot.loadings, rot.rotmat, rot.phi
-                self.rotate_ = namedtuple("rotate",["rotmat","phi"])(rotmat,phi)
-                #update V
-                V =  apply_along_axis(func1d=lambda x : x*sqrt(var_coord.pow(2).sum(axis=0)),axis=1,arr=linalg.inv(wcorr).dot(var_coord))
-        
         #convert to namedtuple
-        self.svd_ = namedtuple("svd_tripletResult",["vs","U","V"])(vs,U,V)
-
-        #variables contributions
-        var_ctr = mapply(mapply(var_coord,lambda x : 100*(x**2)*var_weights,axis=0,progressbar=False,n_workers=n_workers), lambda x : x/var_coord.pow(2).sum(axis=0),axis=1,progressbar=False,n_workers=n_workers)
-        #variables squared cosine
-        var_cos2 = mapply(var_coord,  lambda x : (x**2)/var_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
-        #convert to ordered dictionary
-        var_ = OrderedDict(zip(["coord","cos2","contrib","infos"],[var_coord,var_cos2,var_ctr,var_infos]))
-        #convert to namedtuple
-        self.var_ = namedtuple("var",var_.keys())(*var_.values())
+        self.ind_, self.var_ = namedtuple("ind",ind_.keys())(*ind_.values()), namedtuple("var",var_.keys())(*var_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #variance accounted
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ss_loadings = mapply(var_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
-        prop_var, prop_expl = 100*ss_loadings/n_cols, 100*ss_loadings/sum(ss_loadings)
-        self.vaccounted_ = DataFrame(c_[ss_loadings,prop_var,cumsum(prop_var),prop_expl,cumsum(prop_expl)],index = ["Dim."+str(x+1) for x in range(n_components)],
-                                     columns=["SS loadings","Proportion Var","Cumulative Var","Proportion Explained","Cumulative Proportion"])
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #individuals informations
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #individuals squared distance to origin
-        ind_sqdisto = mapply(Z,lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
-        #individuals inertia
-        ind_inertia = ind_sqdisto*ind_weights
-        #indivduals percentage of inertia
-        ind_inertia_pct = 100*ind_inertia/sum(ind_inertia)
-        #convert to DataFrame
-        ind_infos = DataFrame(c_[ind_weights,ind_sqdisto,ind_inertia,ind_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","% Inertia"],index=Z.index)
-        #individuals factor coordinates
-        ind_coord = ind_coord = mapply(Z,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(V)
-        ind_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
-        #individuals contributions
-        ind_ctr = mapply(mapply(ind_coord,lambda x : 100*(x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers),lambda x : x/var_coord.pow(2).T.dot(var_weights),axis=1,progressbar=False,n_workers=n_workers)
-        #individuals squared cosine
-        ind_cos2 = mapply(ind_coord,lambda x : (x**2)/ind_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
-        #convert to ordered dictionary
-        ind_ = OrderedDict(zip(["coord","cos2","contrib","infos"],[ind_coord,ind_cos2,ind_ctr,ind_infos]))
-        #convert to namedtuple
-        self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
-        
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ##correlation matrix
+        #correlation matrix
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #corrcoef, reproduces and partial corrcoef correlations
-        rcorr, pcorr = var_coord.dot(var_coord.T), pcorrcoef(X=X)
+        wcorr, rcorr, pcorr = wcorrcoef(X=X,weights=ind_weights), var_["coord"].dot(var_["coord"].T), wpcorrcoef(X=X,weights=ind_weights)
         #residual correlation
         residual_corr = wcorr.sub(rcorr)
         #error
-        error = sum(tril(residual_corr,-1)**2)
+        error = (tril(residual_corr,-1)**2).sum().sum()
         #convert to ordered dictionary
         corr_ = OrderedDict(corrcoef=wcorr,pcorrcoef=pcorr,reconst=rcorr,residual=residual_corr,error=error)
         self.corr_ = namedtuple("correlation",corr_.keys())(*corr_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #eigen values
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        eigvals, _ = linalg.eig(rcorr)
-        eigvals = Series(sorted(real(eigvals),reverse=True),index=["Dim."+str(x+1) for x in range(n_cols)],name="common")
-        self.eigval_ = namedtuple("eigval",["original","common"])(eigen_values,eigvals)
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ##others informations
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #fidélité des facteurs - variance of the scores - R2
-        f_fidelity = var_coord.mul(V).sum(axis=0)
+        f_fidelity = var_["coord"].mul(fit_.svd.V).sum(axis=0)
         f_fidelity.name = "R2"
-        #Variance explained by each factor
-        explained_variance = DataFrame(c_[eigen_values[:n_components],ss_loadings],index=["Dim."+str(x+1) for x in range(n_components)],columns=["Weighted","Unweighted"])
         #Initial community
         init_comm = 1 - 1/diag(linalg.inv(wcorr))
         #estimated communalities
-        final_comm = mapply(var_coord,lambda x : x**2,axis=0,progressbar=False,n_workers=n_workers).sum(axis=1)
+        final_comm = var_["coord"].pow(2).sum(axis=1)
         #communality
         communality = DataFrame(c_[init_comm,final_comm],columns=["Prior","Final"],index=Z.columns)
         #communalities
@@ -529,18 +353,18 @@ class PCA(BaseEstimator,TransformerMixin):
         uniquenesses = 1 - final_comm
         uniquenesses.name = "Uniqueness"
         #Bartlett - statistics
-        bartlett_stats = -(n_rows-1-(2*n_cols+5)/6)*sum(log(eigen_values))
+        bartlett_stats = -(n_rows-1-(2*n_cols+5)/6)*sum(log(fit_.eig.iloc[:,0]))
         bs_dof = n_cols*(n_cols-1)/2
         bs_pvalue = 1 - chi2.cdf(bartlett_stats,df=bs_dof)
-        bartlett = DataFrame([[sum(log(eigen_values)),bartlett_stats,bs_dof,bs_pvalue]],columns=["|CORR.MATRIX|","CHISQ","dof","p-value"],index=["Bartlett's test"])
+        bartlett = DataFrame([[sum(log(fit_.eig.iloc[:,0])),bartlett_stats,bs_dof,bs_pvalue]],columns=["|CORR.MATRIX|","CHISQ","dof","p-value"],index=["Bartlett's test"])
         #Kaiser threshold
-        kaiser = namedtuple("kaiser",["threshold","proportion"])(mean(eigen_values),100/sum(var_inertia))
+        kaiser = namedtuple("kaiser",["threshold","proportion"])(mean(fit_.eig.iloc[:,0]),100/sum(fit_.col["infos"].iloc[:,2]))
         #Karlis - Saporta - Spinaki threshold
-        kss_threshold =  1 + 2*sqrt((n_cols-1)/(n_rows-1)) 
+        kss_threshold =  1 + 2*sqrt((n_cols-1)/(n_rows-1))
         #broken-stick crticial values
-        broken = Series(flip(cumsum(list(map(lambda x : 1/x,range(n_cols,0,-1)))))[:max_components],name="Broken-stick crit. val.",index=["Dim.".format(x+1) for x in range(max_components)])
+        broken = Series(flip(cumsum([1/x for x in range(n_cols,0,-1)]))[:max_components],name="Broken-stick crit. val.",index=["Dim.".format(x+1) for x in range(max_components)])
         #convert to ordered dictionnary
-        others_ = OrderedDict(r2_score=f_fidelity,explained_variance=explained_variance,communality=communality,communalities=communalities,uniquenesses=uniquenesses, bartlett=bartlett, kaiser=kaiser,kaiser_msa=kaiser_msa(X=X),kss=kss_threshold,broken=broken)
+        others_ = OrderedDict(r2_score=f_fidelity,communality=communality,communalities=communalities,uniquenesses=uniquenesses, bartlett=bartlett, kaiser=kaiser,kaiser_msa=kaiser_msa(X=X),kss=kss_threshold,broken=broken)
         #convert to namedtuple
         self.others_ = namedtuple("others",others_.keys())(*others_.values())
         
@@ -548,77 +372,85 @@ class PCA(BaseEstimator,TransformerMixin):
         #statistics for supplementary individuals
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
-            #standardize the data
-            Z_ind_sup = mapply(X_ind_sup,lambda x : (x - self.call_.center)/self.call_.scale,axis=1,progressbar=False,n_workers=self.call_.n_workers)
-            #square distance to origin
-            ind_sup_sqdisto = mapply(Z_ind_sup, lambda x : (x**2)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
-            ind_sup_sqdisto.name = "Sq. Dist."
+            #standardization: Z = (X-mu)/sigma
+            Z_ind_sup = X_ind_sup.sub(center,axis=1).div(scale,axis=1)
             #statistics for supplementary individuals
-            ind_sup_ = predict_ind_sup(Z=Z_ind_sup,V=self.svd_.V,sqdisto=ind_sup_sqdisto,col_weights=self.call_.var_weights,n_workers=self.call_.n_workers)
+            ind_sup_ = predict_sup(X=Z_ind_sup,Y=fit_.svd.V,weights=var_weights,axis=0)
             #convert to namedtuple
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for supplementary quantitative variables
+        #statistics for supplementary variables (quantitative and/or qualitative)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.quanti_sup is not None:
-            X_quanti_sup = Xtot.loc[:,quanti_sup_label]
+        if self.sup_var is not None:
             if self.ind_sup is not None:
-                X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
-            #fill missing with mean
-            X_quanti_sup = recodecont(X=X_quanti_sup).X
+                X_sup_var = X_sup_var.drop(index=ind_sup_label)
+
+            #split X_sup_var
+            split_X_sup_var = splitmix(X=X_sup_var)
+            X_quanti_sup, X_quali_sup, n_quanti_sup, n_quali_sup = split_X_sup_var.quanti, split_X_sup_var.quali, split_X_sup_var.k1, split_X_sup_var.k2
+            
             #statistics for supplementary quantitative variables
-            quanti_sup_ = predict_quanti_sup(X=X_quanti_sup,row_coord=self.ind_.coord,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
-            #convert to namedtuple
-            self.quanti_sup_ = namedtuple("quanti_sup",quanti_sup_.keys())(*quanti_sup_.values())
-    
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for supplementary qualitative variables
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.quali_sup is not None:
-            X_quali_sup = Xtot.loc[:,quali_sup_label]
-            if self.ind_sup is not None:
-                X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
-            #check if two columns have the same categories
-            X_quali_sup, n_quali_sup = revaluate_cat_variable(X_quali_sup), len(quali_sup_label)
-            #conditional mean - Barycenter of original data
-            barycentre = conditional_average(X=X,Y=X_quali_sup,weights=self.call_.ind_weights)
-            #standardize the barycenter
-            Z_quali_sup = mapply(barycentre,lambda x : (x - self.call_.center)/self.call_.scale,axis=1,progressbar=False,n_workers=self.call_.n_workers)
-            #factor coordinates (scores)
-            quali_sup_coord = mapply(Z_quali_sup, lambda x : x*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.svd_.V)
-            quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(self.call_.n_components)]
-            #squared distance to origin
-            quali_sup_sqdisto  = mapply(Z_quali_sup, lambda x : (x**2)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
-            quali_sup_sqdisto.name = "Sq. Dist."
-            #categories coefficients
-            n_k = concat((X_quali_sup[q].value_counts().sort_index() for q in X_quali_sup.columns),axis=0)
-            coef_k = sqrt(((n_rows-1)*n_k)/(n_rows-n_k))
-            #statistics for supplementary categories
-            quali_sup_ = predict_quali_sup(X=X_quali_sup,row_coord=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
-            #update value-test with squared eigenvalues
-            quali_sup_["vtest"] = mapply(quali_sup_["vtest"],lambda x : x/sqrt(self.var_.coord.pow(2).T.dot(self.call_.var_weights)),axis=1,progressbar=False,n_workers=self.call_.n_workers)
-            #merge dictionary
-            quali_sup_ = OrderedDict(**OrderedDict(barycentre=barycentre),**quali_sup_)
-            #convert to namedtuple
-            self.quali_sup_ = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
+            if n_quanti_sup > 0:
+                #compute weighted average for supplementary quantitative variables
+                center_sup = average(X_quanti_sup,axis=0,weights=ind_weights)
+                if self.standardize:
+                    scale_sup = array([sqrt(cov(X_quanti_sup.iloc[:,k],rowvar=False,aweights=ind_weights,ddof=0)) for k in range(n_quanti_sup)])
+                else:
+                    scale_sup = ones(n_quanti_sup)
+                #convert to pandas Series
+                center_sup, scale_sup = Series(center_sup,index=X_quanti_sup.columns,name="center"), Series(scale_sup,index=X_quanti_sup.columns,name="scale")
+                #standardization : Z = (X - mu)/sigma
+                Z_quanti_sup = X_quanti_sup.sub(center_sup,axis=1).div(scale_sup,axis=1)
+                #statistics for supplementary quantitative variables
+                quanti_sup_ = predict_sup(X=Z_quanti_sup,Y=fit_.svd.U,weights=ind_weights,axis=1)
+                del quanti_sup_['dist2'] #delete dist2
+                #convert to namedtuple
+                self.quanti_sup_ = namedtuple("quanti_sup",quanti_sup_.keys())(*quanti_sup_.values())
 
-            #descriptive descriptive of qualitative variables
-            self.summary_quali_ = summarize(X=X_quali_sup)
+            #statistics for supplementary qualitative variables/levels
+            if n_quali_sup > 0:
+                #recode
+                rec = recodecat(X=X_quali_sup)
+                X_quali_sup, dummies_sup = rec.X, rec.dummies
+                #conditional mean - Barycenter of original data
+                X_levels_sup = conditional_wmean(X=X,Y=X_quali_sup,weights=ind_weights)
+                #standardization: Z = (X - mu)/sigma
+                Z_levels_sup = X_levels_sup.sub(center,axis=1).div(scale,axis=1)
+                #statistics for supplementary levels
+                quali_sup_ = predict_sup(X=Z_levels_sup,Y=fit_.svd.V,weights=var_weights,axis=0)
+                #vtest for the supplementary levels
+                p_k_sup = dummies_sup.mul(ind_weights,axis=0).sum(axis=0)
+                levels_sup_vtest = quali_sup_["coord"].mul(sqrt((n_rows-1)/(1/p_k_sup).sub(1)),axis=0).div(fit_.svd.vs[:n_components],axis=1)
+                #eta2 for the supplementary qualitative variables
+                quali_sup_sqeta = function_eta2(X=X_quali_sup,Y=fit_.row["coord"],weights=ind_weights,excl=None)
+                #convert to ordered dictionary
+                quali_sup_ = OrderedDict(barycentre=X_levels_sup,coord=quali_sup_["coord"],cos2=quali_sup_["cos2"],vtest=levels_sup_vtest,eta2=quali_sup_sqeta,dist2=quali_sup_["dist2"])
+                #convert to namedtuple
+                self.quali_sup_ = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
+                
+                #descriptive descriptive of qualitative variables
+                self.summary_quali_ = summarize(X=X_quali_sup)
 
-            #degree of association
-            if n_quali_sup>1:
-                self.association_ = association(X=X_quali_sup) 
+                #degree of association - multivariate goodness
+                if n_quali_sup > 1:
+                    self.association_ = association(X=X_quali_sup) 
 
         #all quantitative variables in original dataframe
-        is_quanti = Xtot.select_dtypes(include=number)
-        #multivariate goodness of fit
+        all_quanti = Xtot.select_dtypes(include=number)
+        #drop supplementary individuals
         if self.ind_sup is not None:
-            is_quanti = is_quanti.drop(index=ind_sup_label)
+            all_quanti = all_quanti.drop(index=ind_sup_label)
         #descriptive statistics of quantitatives variables 
-        self.summary_quanti_ = summarize(X=is_quanti)
-        self.model_ = "pca"
+        self.summary_quanti_ = summarize(X=all_quanti)
 
+        #correlation tests
+        all_vars = Xtot.copy()
+        if self.ind_sup is not None:
+            all_vars = all_vars.drop(index=ind_sup_label)
+        self.corrtest_ = corrmatrix(X=all_vars,weights=ind_weights)
+
+        self.model_ = "pca"
         return self
     
     def fit_transform(self,X:DataFrame,y=None) -> DataFrame:
@@ -628,7 +460,7 @@ class PCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        `X`: pandas DataFrame of shape (n_samples, n_columns)
+        `X`: a pandas DataFrame of shape (n_samples, n_columns)
             Training data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
         
         `y`: None
@@ -636,16 +468,8 @@ class PCA(BaseEstimator,TransformerMixin):
         
         Returns
         -------
-        `X_new`: pandas DataFrame of shape (n_samples, n_components)
+        `X_new`: a pandas DataFrame of shape (n_samples, n_components)
             Transformed values.
-        
-        Examples
-        --------
-        ```python
-        >>> from scientisttools import decathlon, PCA, summaryPCA
-        >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
-        >>> ind_coord = res_pca.fit_transform(decathlon)
-        ```
         """
         self.fit(X)
         return self.ind_.coord
@@ -661,33 +485,20 @@ class PCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        `X`: pandas DataFrame of shape (n_samples, n_components).
+        `X`: a pandas DataFrame of shape (n_samples, n_components).
             New data, where `n_samples` is the number of samples and `n_components` is the number of components.
 
         Returns
         -------
-        `X_original`: pandas DataFrame of shape (n_samples, n_columns)
+        `X_original`: a pandas DataFrame of shape (n_samples, n_columns)
             Original data, where `n_samples` is the number of samples and `n_columns` is the number of columns
-        
-        Examples
-        --------
-        ```python
-        >>> from scientisttools import decathlon, PCA, summaryPCA
-        >>> res_pca = PCA(n_components=None,ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
-        >>> res_pca.fit(decathlon)
-        >>> X_original = res_pca.inverse_transform(res_pca.ind_.coord)
-        ```
         """
-        # Check if X is a pandas DataFrame
-        if not isinstance(X,DataFrame):
-            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        #set number of components
-        n_components = min(X.shape[1],self.call_.n_components)
+        is_dataframe(X=X) #check if X is a pandas DataFrame
+        
+        n_components = min(X.shape[1],self.call_.n_components) #set number of components
         eigvals = self.var_.coord.pow(2).T.dot(self.call_.var_weights)[:n_components]
         #inverse transform
-        X_original = X.iloc[:,:n_components].dot(mapply(self.var_.coord.iloc[:,:n_components],lambda x : x/sqrt(eigvals),axis=1,progressbar=False,n_workers=self.call_.n_workers).T)
-        X_original = mapply(X_original,lambda x : (x*self.call_.scale)+self.call_.center,axis=1,progressbar=False,n_workers=self.call_.n_workers)
+        X_original = X.iloc[:,:n_components].dot(self.var_.coord.iloc[:,:n_components].div(sqrt(eigvals),axis=1).T).mul(self.call_.scale,axis=1).add(self.call_.center,axis=1)
         return X_original
 
     def transform(self,X:DataFrame) -> DataFrame:
@@ -701,286 +512,30 @@ class PCA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        `X`: pandas Dataframe of shape (n_samples, n_columns)
+        `X`: a pandas Dataframe of shape (n_samples, n_columns)
             New data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
 
         Returns
         -------
-        `X_new` : pandas Dataframe of shape (n_samples, n_components)
+        `X_new`: a pandas Dataframe of shape (n_samples, n_components)
             Projection of X in the principal components where `n_samples` is the number of samples and `n_components` is the number of the components.
-        
-        Examples
-        --------
-        ```python
-        >>> from scientisttools import load_decathlon, PCA, summaryPCA
-        >>> decathlon = load_decathlon("all")
-        >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
-        >>> res_pca.fit(decathlon)
-        >>> #load supplementary individuals
-        >>> ind_sup = load_decathlon("ind_sup")
-        >>> ind_sup_coord = res_pca.transform(ind_sup) #coordinate of new individuals
-        ```
         """
-        #check if X is a pandas DataFrame
-        if not isinstance(X,DataFrame):
-            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        is_dataframe(X=X) #check if X is a pandas DataFrame
         
-        #set index name as None
-        X.index.name = None
+        X.index.name = None #set index name as None
 
-        #check if X.shape[1] == ncols
-        if X.shape[1] != self.call_.X.shape[1]:
+        if X.shape[1] != self.call_.X.shape[1]: #check if X.shape[1] == n_cols
             raise ValueError("'columns' aren't aligned")
         
-        #check if all variables are numerics
-        all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
-        if not all_num:
-            raise TypeError("All columns must be numeric")
+        if not all(is_numeric_dtype(X[k]) for k in X.columns): #check if all variables are numerics
+            raise TypeError("All columns in X must be numerics")
         
-        #find intersect
-        intersect_col = [x for x in X.columns if x in self.call_.X.columns]
+        intersect_col = list(set(X.columns) & set(self.call_.X.columns)) #find intersect
         if len(intersect_col) != self.call_.X.shape[1]:
             raise ValueError("The names of the variables is not the same as the ones in the active variables of the PCA result")
-        #reorder columns
-        X = X.loc[:,self.call_.X.columns]
+        X = X.loc[:,self.call_.X.columns] #reorder columns
 
         #standardisation and apply transition relation
-        coord = mapply(X,lambda x : ((x - self.call_.center)/self.call_.scale)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.svd_.V)
-        coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
-        return coord
-    
-def predictPCA(self,X:DataFrame) -> NamedTuple:
-    """
-    Predict projection for new individuals with Principal Component Analysis (PCA)
-    ------------------------------------------------------------------------------
-
-    Description
-    -----------
-    Performs the coordinates, squared cosinus and squared distance to origin of new individuals with Principal Component Analysis (PCA)
-
-    Usage
-    -----
-    ```python
-    >>> predictPCA(self,X:DataFrame)
-    ```
-
-    Parameters
-    ----------
-    `self`: an object of class PCA
-
-    `X`: pandas DataFrame in which to look for variables with which to predict. X must contain columns with the same names as the original data.
-    
-    Return
-    ------
-    namedtuple of pandas DataFrame/Series containing all the results for the new individuals including:
-    
-    `coord`: factor coordinates
-
-    `cos2`: squared cosinus
-
-    `dist`: squared distance to origin
-    
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
-
-    Examples
-    --------
-    ```python
-    >>> from scientisttools import load_decathlon, PCA, predictPCA
-    >>> decathlon = load_decathlon("actif")
-    >>> res_pca = PCA(rotation=None)
-    >>> res_pca.fit(decathlon)
-    >>> #load supplementary individuals
-    >>> ind_sup = load_decathlon("ind_sup")
-    >>> predict = predictPCA(res_pca,X=ind_sup)
-    >>> predict.coord.head() #coordinate of new individuals
-    >>> predict.cos2.head() #squared cosinus of new individuals
-    >>> predict.dist.head() #squared distance to origin of new individuals
-    ```
-    """
-    #check if self is an object of class PCA
-    if self.model_ != "pca":
-        raise TypeError("'self' must be an object of class PCA")
-    
-    #check if X is an instance of pd.DataFrame class
-    if not isinstance(X,DataFrame):
-        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-    
-    #set index name as None
-    X.index.name = None
-
-    #check if X.shape[1] == n_cols
-    if X.shape[1] != self.call_.X.shape[1]:
-        raise ValueError("'columns' aren't aligned")
-    
-    #check if all variables are numerics
-    all_num = all(api.types.is_numeric_dtype(X[k]) for k in X.columns)
-    if not all_num:
-        raise TypeError("All columns must be numeric")
-
-    #find intersect
-    intersect_col = [x for x in X.columns if x in self.call_.X.columns]
-    if len(intersect_col) != self.call_.X.shape[1]:
-        raise ValueError("The names of the variables is not the same as the ones in the active variables of the PCA result")
-    #reorder columns
-    X = X.loc[:,self.call_.X.columns]
-
-    #standardize data
-    Z = mapply(X,lambda x : (x - self.call_.center)/self.call_.scale,axis=1,progressbar=False,n_workers=self.call_.n_workers)
-    #square distance to origin
-    sqdisto = mapply(Z, lambda x : (x**2)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
-    sqdisto.name = "Sq. Dist."
-    #statistics for supplementary individuals
-    ind_sup_ = predict_ind_sup(Z=Z,V=self.svd_.V,sqdisto=sqdisto,col_weights=self.call_.var_weights,n_workers=self.call_.n_workers)
-    return namedtuple("predictPCAResult",ind_sup_.keys())(*ind_sup_.values())
-
-def supvarPCA(self,X_quanti_sup=None, X_quali_sup=None) -> NamedTuple:
-    """
-    Supplementary variables in Principal Components Analysis (PCA)
-    --------------------------------------------------------------
-
-    Description
-    -----------
-    Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables with Principal Components Analysis (PCA)
-
-    Usage
-    -----
-    ```python
-    >>> supvarPCA(self,X_quanti_sup=None, X_quali_sup=None)
-    ```
-
-    Parameters
-    ----------
-    `self`: an object of class PCA
-
-    `X_quanti_sup`: pandas DataFrame of supplementary quantitative variables (default None)
-
-    `X_quali_sup`: pandas DataFrame of supplementary qualitative variables (default None)
-
-    Returns
-    -------
-    a namedtuple of namedtuple containing the results for supplementary variables including : 
-
-    `quanti`: a namedtuple of pandas DataFrame containing the results of the supplementary quantitative variables including :
-        * `coord`: factor coordinates
-        * `cos2`: squared cosinus
-    
-    `quali`: a namedtuple of pandas DataFrame/Series containing the results of the supplementary qualitative/categories variables including :
-        * `coord`: factor coordinates
-        * `cos2`: squares cosinus
-        * `vtest`: value-test
-        * `dist`: squared distance to origin
-        * `eta2`: squared correlation ratio
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
-
-    Examples
-    --------
-    ```python
-    >>> from scientisttools import load_decathlon, PCA, supvarPCA
-    >>> decathlon = load_decathlon("actif")
-    >>> res_pca = PCA(rotation=None)
-    >>> res_pca.fit(decathlon)
-    >>> #supplementary quantitative and qualitative variables
-    >>> X_quanti_sup, X_quali_sup = load_decathlon("quanti_sup"), load_decathlon("quali_sup")
-    >>> sup_var = supvarPCA(res_pca,X_quanti_sup=X_quanti_sup,X_quali_sup=X_quali_sup)
-    >>> quanti_sup = sup_var.quanti
-    >>> quanti_sup.coord #factor coordinates
-    >>> quanti_sup.vos2 #squared cosinus
-    >>> quali_sup = sup_var.quali
-    >>> quali_sup.coord #factor coordinates
-    >>> quali_sup.cos2 #squared cosinus
-    >>> quali_sup.vtest #value-test
-    >>> quali_sup.dist #squared distance to origin
-    >>> quali_sup.eta2 # squared correlation ratio
-    ```
-    """
-    #check if self is and object of class PCA
-    if self.model_ != "pca":
-        raise TypeError("'self' must be an object of class PCA")
-    
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    ## Statistics for supplementary quantitatives variables
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    if X_quanti_sup is not None:
-        # If pandas series, transform to pandas dataframe
-        if isinstance(X_quanti_sup,Series):
-            X_quanti_sup = X_quanti_sup.to_frame()
-        
-        # Check if X_quanti_sup is an instance of pd.DataFrame class
-        if not isinstance(X_quanti_sup,DataFrame):
-            raise TypeError(f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        #check if X_quanti_sup.shape[0] = nrows
-        if X_quanti_sup.shape[0] != self.call_.X.shape[0]:
-            raise ValueError("'rows' aren't aligned")
-
-        #check if all variables are numerics
-        all_num = all(api.types.is_numeric_dtype(X_quanti_sup[k]) for k in X_quanti_sup.columns)
-        if not all_num:
-            raise TypeError("All columns in `X_quanti_sup` must be numeric")
-        
-        #fill missing with mean
-        X_quanti_sup = recodecont(X_quanti_sup).X
-        #statistics for supplementary quantitative variables
-        quanti_sup_ = predict_quanti_sup(X=X_quanti_sup,row_coord=self.ind_.coord,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
-        #convert to namedtuple
-        quanti_sup =  namedtuple("quanti_stp",quanti_sup_.keys())(*quanti_sup_.values())
-    else:
-        quanti_sup = None
-    
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    ## Statistics for supplementary qualitative
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    if X_quali_sup is not None:
-        # If pandas series, transform to pandas dataframe
-        if isinstance(X_quali_sup,Series):
-            X_quali_sup = X_quali_sup.to_frame()
-        
-        # Check if X_quali_sup is an instance of pd.DataFrame class
-        if not isinstance(X_quali_sup,DataFrame):
-            raise TypeError(f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-        #check if X_quali_sup.shape[0] = nrows
-        if X_quali_sup.shape[0] != self.call_.X.shape[0]:
-            raise ValueError("'rows' aren't aligned")
-        
-        # Check if all columns are categoricals
-        all_cat = all(api.types.is_string_dtype(X_quali_sup[q]) for q in X_quali_sup.columns)
-        if not all_cat:
-            raise TypeError("All columns in `X_quali_sup` must be categoricals")
-        
-        #convert to factor
-        for q in X_quali_sup.columns:
-            X_quali_sup[q] = Categorical(X_quali_sup[q],categories=sorted(X_quali_sup[q].dropna().unique().tolist()),ordered=True)
-        # Check if two columns have the same categories
-        X_quali_sup = revaluate_cat_variable(X_quali_sup)
-        # conditional average of original data
-        barycentre = conditional_average(X=self.call_.X,Y=X_quali_sup,weights=self.call_.ind_weights)
-        #standardize the data
-        Z_quali_sup = mapply(barycentre,lambda x : (x - self.call_.center)/self.call_.scale,axis=1,progressbar=False,n_workers=self.call_.n_workers)
-        #categories factor coordinates (scores)
-        quali_sup_coord = mapply(Z_quali_sup, lambda x : x*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.svd_.V)
-        quali_sup_coord.columns = ["Dim."+str(x+1) for x in range(self.call_.n_components)]
-        #squared distance to origin
-        quali_sup_sqdisto  = mapply(Z_quali_sup, lambda x : (x**2)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
-        quali_sup_sqdisto.name = "Sq. Dist."
-        #categories coefficients
-        n_k =  concat((X_quali_sup[q].value_counts().sort_index() for q in X_quali_sup.columns),axis=0)
-        coef_k = sqrt(((X_quali_sup.shape[0] - 1)*n_k)/(X_quali_sup.shape[0] - n_k))
-        #statistics for supplementary categories
-        quali_sup_ = predict_quali_sup(X=X_quali_sup,row_coord=self.ind_.coord,coord=quali_sup_coord,sqdisto=quali_sup_sqdisto,col_coef=coef_k,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
-        #update value-test with squared eigenvalues
-        quali_sup_["vtest"] = mapply(quali_sup_["vtest"],lambda x : x/sqrt(self.var_.coord.pow(2).T.dot(self.call_.var_weights)),axis=1,progressbar=False,n_workers=self.call_.n_workers)
-        #merge dictionary
-        quali_sup_ = OrderedDict(**OrderedDict(barycentre=barycentre),**quali_sup_)
-        #convert to namedtuple
-        quali_sup = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
-    else:
-        quali_sup = None
-    
-    #convert to namedtuple
-    return namedtuple("supvarPCAResult",["quanti","quali"])(quanti_sup,quali_sup)
+        X_new = X.sub(self.call_.center,axis=1).div(self.call_.scale,axis=1).mul(self.call_.var_weights,axis=1).dot(self.svd_.V)
+        X_new.columns = ["Dim."+str(x+1) for x in range(self.call_.n_components)]
+        return X_new

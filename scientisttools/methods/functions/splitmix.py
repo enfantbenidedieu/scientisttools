@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
+from numpy import number
+from pandas import DataFrame, Series, Categorical, concat
 from collections import namedtuple
 from typing import NamedTuple
 
 def splitmix(X) -> NamedTuple:
     """
-    Split mixed data
+    Split Mixed Data
     ----------------
 
     Description
@@ -21,15 +21,21 @@ def splitmix(X) -> NamedTuple:
     
     Parameters
     ----------
-    `X` : pandas dataframe of mixed data
+    `X`: a pandas dataframe of shape (n_row, n_columns)
 
     Return
     ------
-    nametuple of two dataframe containing : 
+    nametuple containing: 
 
-    `quanti`: pandas dataframe containing only the quantitative variables or None
+    `quanti`: None or a pandas DataFrame containing only the quantitative variables
 
-    `quali` : pandas dataframe containing only the qualitative variables or None
+    `quali`: None or a pandas DataFrame containing only the qualitative variables
+
+    `n`: a numeric value indicating the number of rows.
+
+    `k1`: a numeric value indicating the number of quantitative variables
+
+    `k2`: a numeric value indicating the number of qualitative variables
 
     Author(s)
     ---------
@@ -38,33 +44,36 @@ def splitmix(X) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> from scientisttools import load_gironde, splitmix
-    >>> gironde = load_gironde()
-    >>> X_quanti = splitmix(X=gironde).quanti
-    >>> X_quali = splitmix(X=girdone).quali
+    >>> from scientisttools.datasets import wine
+    >>> from scientisttools import splitmix
+    >>> split_x = splitmix(wine)
+    >>> X_quanti, X_quali, n_quanti, n_quali = split_x.quanti, split_x.quali, split_x.k1, split_x.k2
     ```
     """
-    # Check if pandas dataframe
-    if not isinstance(X,pd.DataFrame):
-        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
-                        "pd.DataFrame. For more information see: "
-                        "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-
-    # select object of category
-    quali = X.select_dtypes(include=["object","category"])
-    if quali.shape[1]==0:
-        X_quali = None
-    else:
-        for col in quali.columns:
-            quali[col] = pd.Categorical(quali[col],categories=sorted(np.unique(quali[col])),ordered=True)
-        X_quali = quali
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #check if X is an instance of pd.DataFrame class
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
     
-    # exclude object of category
-    quanti = X.select_dtypes(exclude=["object","category"])
-    if quanti.shape[1]==0:
-        X_quanti = None
-    else:
-        for col in quanti.columns:
-            quanti[col] = quanti[col].astype("float")
-        X_quanti = quanti
-    return namedtuple("SplitmixResult",["quanti","quali"])(X_quanti,X_quali)
+    #initialisation
+    X_quali, X_quanti, n_quali, n_quanti = None, None, 0, 0
+
+    #select object or category
+    is_quali = X.select_dtypes(include=["object","category"])
+    if not is_quali.empty:
+        X_quali = concat((Series(Categorical(is_quali[q],categories=sorted(is_quali[q].dropna().unique().tolist()),ordered=True),index=is_quali.index,name=q) for q in is_quali.columns),axis=1)
+        if isinstance(X_quali, Series):
+            X_quali = X_quali.to_frame()
+        n_quali = X_quali.shape[1]
+    
+    #select all numerics columns
+    is_quanti = X.select_dtypes(include=number)
+    if not is_quanti.empty:
+        X_quanti = concat((is_quanti[k].astype(float) for k in is_quanti.columns),axis=1)
+        if isinstance(X_quanti, Series):
+            X_quanti = X_quanti.to_frame()
+        n_quanti = X_quanti.shape[1]
+
+    #convert to namedtuple
+    return namedtuple("SplitmixResult",["quanti","quali","n","k1","k2"])(X_quanti,X_quali,X.shape[0],n_quanti, n_quali)

@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-import itertools
-import numpy as np
-import pandas as pd
-import polars as pl
-from mapply.mapply import mapply
-import pingouin as pg
+from numpy import number, array, ones, ndarray, linalg
+from collections import namedtuple, OrderedDict
+from itertools import chain, repeat
+from pandas import DataFrame, Series, concat
+from pandas.api.types import is_numeric_dtype, is_string_dtype
 from statsmodels.stats.weightstats import DescrStatsW
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from .pca import PCA
-from .mca import MCA
-from .famd import FAMD
-from .revaluate_cat_variable import revaluate_cat_variable
-from .weightedcorrcoef import weightedcorrcoef
-from .recodecont import recodecont
-from .splitmix import splitmix
-from .function_lg import function_lg
-from .coeffRV import coeffRV
-from .conditional_average import conditional_average
-from .function_eta2 import function_eta2
+from .PCA import PCA
+from .MCA import MCA
+from .FAMD import FAMD
+from .functions.revalue import revaluate_cat_variable
+from .functions.recodecont import recodecont
+#from .weightedcorrcoef import weightedcorrcoef
+
+#from .splitmix import splitmix
+#from .function_lg import function_lg
+#from .coeffRV import coeffRV
+#from .conditional_average import conditional_average
+#from .function_eta2 import function_eta2
 
 class MFA(BaseEstimator,TransformerMixin):
     """
@@ -145,8 +145,7 @@ class MFA(BaseEstimator,TransformerMixin):
                  num_group_sup = None,
                  ind_sup = None,
                  ind_weights = None,
-                 var_weights_mfa = None,
-                 parallelize=False):
+                 var_weights = None):
         self.n_components = n_components
         self.group = group
         self.name_group = name_group
@@ -154,17 +153,16 @@ class MFA(BaseEstimator,TransformerMixin):
         self.num_group_sup = num_group_sup
         self.ind_sup = ind_sup
         self.ind_weights = ind_weights
-        self.var_weights_mfa = var_weights_mfa
-        self.parallelize = parallelize
+        self.var_weights = var_weights
 
-    def fit(self,X,y=None):
+    def fit(self,X:DataFrame,y=None):
         """
         Fit the model to X
         ------------------
 
         Parameters
         ----------
-        `X` : pandas/polars DataFrame of shape (n_samples, n_columns)
+        `X` : pandas DataFrame of shape (n_samples, n_columns)
             Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
         `y` : None
@@ -175,91 +173,101 @@ class MFA(BaseEstimator,TransformerMixin):
         `self` : object
             Returns the instance itself
         """
-        # check if X is an instance of polars dataframe
-        if isinstance(X,pl.DataFrame):
-            X = X.to_pandas()
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X is an instance of pd.DataFrame class
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not isinstance(X,DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Check if X is an instance of pandas DataFrame
-        if not isinstance(X,pd.DataFrame):
-            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with "
-                            "pd.DataFrame. For more information see: "
-                            "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        # Set index name to None
-        X.index.name = None
-        
-        # set parallelize
-        if self.parallelize:
-            n_workers = -1
-        else:
-            n_workers = 1
-
-        # Drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
-            
-        # Checks if categoricals variables is in X
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #fill NA with mean
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        is_quanti = X.select_dtypes(include=number)
+        if is_quanti.shape[1]>0:
+            is_quanti = recodecont(X=is_quanti).X
+            for k in is_quanti.columns:
+                X[k] = is_quanti[k]
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #convert categorical variables to factor
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         is_quali = X.select_dtypes(include=["object","category"])
         if is_quali.shape[1]>0:
-            for col in is_quali.columns.tolist():
-                X[col] = X[col].astype("object")
+            is_quali = revaluate_cat_variable(is_quali)
+            for j in is_quali.columns:
+                X[j] = is_quali[j]
         
-        # Transform all quantitatives columns to float
-        is_quanti = X.select_dtypes(exclude=["object","category"])
-        for col in is_quanti.columns.tolist():
-            X[col] = X[col].astype("float")
-        
-        #   check if two categoricals variables have same categories
-        X = revaluate_cat_variable(X)
-
-        #   Check if group is None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if group is None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group is None:
             raise ValueError("'group' must be assigned.")
-        elif not (isinstance(self.group, list) or isinstance(self.group,tuple)):
+        elif not isinstance(self.group, (list,tuple)):
             raise ValueError("'group' must be a list or a tuple with the number of variables in each group")
         else:
             nb_elt_group = [int(x) for x in self.group]
 
-        # Remove supplementary group
-        if self.num_group_sup is not None:
-            if isinstance(self.num_group_sup,int):
-                num_group_sup = [int(self.num_group_sup)]
-            elif ((isinstance(self.num_group_sup,list) or isinstance(self.num_group_sup,tuple)) and len(self.num_group_sup)>=1):
-                num_group_sup = [int(x) for x in self.num_group_sup]
-
-        # Check if individuls supplementary
-        if self.ind_sup is not None:
-            if (isinstance(self.ind_sup,int) or isinstance(self.ind_sup,float)):
-                ind_sup = [int(self.ind_sup)]
-            elif ((isinstance(self.ind_sup,list) or isinstance(self.ind_sup,tuple)) and len(self.ind_sup)>=1):
-                ind_sup = [int(x) for x in self.ind_sup]
-            ind_sup_label = X.index[ind_sup]
-        else:
-            ind_sup_label = None
-
-        #   Check if group type in not None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if group type in not None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group_type is None:
             raise ValueError("'group_type' must be assigned")
         
         if len(self.group) != len(self.group_type):
             raise TypeError("Not convenient group definition")
         
-        #  Assigned group name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #assigned group name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.name_group is None:
             group_name = ["Gr"+str(x+1) for x in range(len(nb_elt_group))]
-        elif not (isinstance(self.name_group,list) or isinstance(self.name_group,tuple)):
+        elif not isinstance(self.name_group,(list,tuple)):
             raise TypeError("'name_group' must be a list or a tuple with name of group")
         else:
             group_name = [x for x in self.name_group]
         
-        # check if group name is an integer
-        for i in range(len(group_name)):
-            if isinstance(group_name[i],int) or isinstance(group_name[i],float):
+        #check if group name is an integer
+        for i, g in enumerate(group_name):
+            if isinstance(g, (int,float)):
                 group_name[i] = "Gr"+str(i+1)
-        
-        # Assigned group name to label
-        group_active_dict = {}
-        group_sup_dict = {}
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if supplementary groups
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.num_group_sup is not None:
+            if isinstance(self.num_group_sup,int):
+                num_group_sup = [int(self.num_group_sup)]
+            elif isinstance(self.num_group_sup,(list,tuple)) and len(self.num_group_sup)>=1:
+                num_group_sup = [int(x) for x in self.num_group_sup]
+        else:
+            num_group_sup = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if individuals supplementary
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.ind_sup is not None:
+            if isinstance(self.ind_sup,str):
+                ind_sup_label = [self.ind_sup]
+            elif isinstance(self.ind_sup,(int,float)):
+                ind_sup_label = [X.index[int(self.ind_sup)]]
+            elif isinstance(self.ind_sup,(list,tuple)):
+                if all(isinstance(x,str) for x in self.ind_sup):
+                    ind_sup_label = [str(x) for x in self.ind_sup]
+                elif all(isinstance(x,(int,float)) for x in self.ind_sup):
+                    ind_sup_label = X.index[[int(x) for x in self.ind_sup]].tolist()
+        else:
+            ind_sup_label = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #assigned group name to label
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        group_active_dict, group_sup_dict = OrderedDict(), OrderedDict()
         debut = 0
         for i in range(len(nb_elt_group)):
             X_group = X.iloc[:,(debut):(debut+nb_elt_group[i])]
@@ -274,199 +282,194 @@ class MFA(BaseEstimator,TransformerMixin):
                 group_active_dict[group_name[i]] = X_group.columns
             debut = debut + nb_elt_group[i]
 
-        # Create group label
-        group_label = pd.DataFrame(columns=["group name","variable"])
-        for grp in group_active_dict.keys():
-            row_grp = pd.Series(group_active_dict[grp],name='variable').to_frame()
-            row_grp.insert(0,"group name",grp)
-            group_label = pd.concat((group_label,row_grp),axis=0,ignore_index=True)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #create group label
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        group_label = DataFrame(columns=["group name","variable"])
+        for g in group_active_dict.keys():
+            row_grp = Series(group_active_dict[g],name='variable').to_frame()
+            row_grp.insert(0,"group name",g)
+            group_label = concat((group_label,row_grp),axis=0,ignore_index=True)
         
-        # Add supplementary group
+        #add supplementary group
         if self.num_group_sup is not None:
-            for grp in group_sup_dict.keys():
-                row_grp = pd.Series(group_sup_dict[grp],name='variable').to_frame()
-                row_grp.insert(0,"group name",grp)
-                group_label = pd.concat((group_label,row_grp),axis=0,ignore_index=True)
+            for g in group_sup_dict.keys():
+                row_grp = Series(group_sup_dict[g],name='variable').to_frame()
+                row_grp.insert(0,"group name",g)
+                group_label = concat((group_label,row_grp),axis=0,ignore_index=True)
         
         self.group_label_ = group_label
 
-        # Store data
+        #store data
         Xtot = X.copy()
 
-       # Drop supplementary groups columns
+        #drop supplementary groups columns
         if self.num_group_sup is not None:
-            X = X.drop(columns=list(itertools.chain.from_iterable(group_sup_dict.values())))
-            # Select supplementary columns
-            X_group_sup = Xtot[list(itertools.chain.from_iterable(group_sup_dict.values()))]
+            X_group_sup, X = X[list(chain.from_iterable(group_sup_dict.values()))], X.drop(columns=list(chain.from_iterable(group_sup_dict.values())))
+            #drop supplementary individuals
             if self.ind_sup is not None:
                 X_group_sup = X_group_sup.drop(index=ind_sup_label)
         
-        # Drop supplementary individuals
+        #drop supplementary individuals
         if self.ind_sup is not None:
-            # Extract supplementary individuals
+            #extract supplementary individuals
             X_ind_sup = X.loc[ind_sup_label,:]
-            # Drop supplementary individuals
+            #drop supplementary individuals
             X = X.drop(index=ind_sup_label)
-        
-        # Fill NA with means
-        X = recodecont(X=X)["Xcod"]
-        
-        # Check if an active group has only one columns
-        for grp, cols in group_active_dict.items():
-            if len(cols)==1:
-                raise ValueError(f"{grp} group should have at least two columns")
-        
-        # Check if all columns are numerics
-        all_num = all(pd.api.types.is_numeric_dtype(X[c]) for c in X.columns)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #multiple factor analysis (MFA)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if all columns are numerics
+        all_num = all(is_numeric_dtype(X[k]) for k in X.columns)
         if not all_num:
             raise TypeError("All actives columns must be numeric")
-
-        # Summary quantitative variables
-        summary_quanti = pd.DataFrame().astype("float")
-        for grp, cols in group_active_dict.items():
-            summary = X[cols].describe().T.reset_index().rename(columns={"index" : "variable"})
-            summary["count"] = summary["count"].astype("int")
-            summary.insert(0,"group name", grp)
-            summary.insert(0,"group",group_name.index(grp))
-            summary_quanti = pd.concat((summary_quanti,summary),axis=0,ignore_index=True)
-        self.summary_quanti_ = summary_quanti
-
-        # Set individuals weights
+        
+        #check if an active group has only one columns
+        for g, cols in group_active_dict.items():
+            if len(cols)==1:
+                raise ValueError(f"{g} group should have at least two columns")
+        
+        #number of rows/columns
+        n_rows, n_cols = X.shape
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set individuals weights
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_weights is None:
-            ind_weights = np.ones(X.shape[0])/X.shape[0]
-        elif not isinstance(self.ind_weights,list):
-            raise ValueError("'ind_weights' must be a list of individuals weights.")
-        elif len(self.ind_weights) != X.shape[0]:
-            raise ValueError(f"'ind_weights' must be a list with length {X.shape[0]}.")
+            ind_weights = ones(n_rows)/n_rows
+        elif not isinstance(self.ind_weights,(list,tuple,ndarray,Series)):
+            raise TypeError("'ind_weights' must be a list or a tuple or a 1D array or a pandas Series of individuals weights.")
+        elif len(self.ind_weights) != n_rows:
+            raise ValueError(f"'ind_weights' must be a list or a tuple or a 1D array or a pandas Series with length {n_rows}.")
         else:
-            ind_weights = np.array([x/np.sum(self.ind_weights) for x in self.ind_weights])
+            ind_weights = array([x/sum(self.ind_weights) for x in self.ind_weights])
 
-        # Set columns weight 
-        var_weights_mfa = pd.Series(name="weight").astype("float")
-        if self.var_weights_mfa is None:
-            weights_mfa = pd.Series(np.ones(X.shape[1]),index=X.columns,name="weight")
-            var_weights_mfa = pd.concat((var_weights_mfa,weights_mfa),axis=0)
-        elif not isinstance(self.var_weights_mfa,pd.Series):
-            raise TypeError("'var_weights_mfa' must be a pandas series where series are columns names and values are variables weights.")
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set variables weights
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.var_weights is None:
+            var_weights = ones(n_cols)
+        elif not isinstance(self.var_weights,(list,tuple,ndarray,Series)):
+            raise TypeError("'var_weights' must be a list or a tuple or a 1D array or a pandas Series of variables weights.")
+        elif len(self.var_weights) != n_cols:
+            raise ValueError(f"'var_weights' must be a list or a tuple or a 1D array or a pandas Series with length {n_cols}.")
         else:
-            if len(self.var_weights_mfa)!= X.shape[1]:
-                raise TypeError("Not aligned")
-            var_weights_mfa = pd.concat((var_weights_mfa,self.var_weights_mfa),axis=0)
-        
-        # Run a principal component analysis (center or scale) in each group
-        model = {}
-        for grp, cols in group_active_dict.items():
-            if self.group_type[group_name.index(grp)]=="c":
-                # Center Principal Components Anlysis (PCA)
-                fa = PCA(standardize=False,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=var_weights_mfa[cols].values.tolist(),parallelize=self.parallelize)
-            elif self.group_type[group_name.index(grp)]=="s":
-                # Scale Principal Components Anlysis (PCA)
-                fa = PCA(standardize=True,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=var_weights_mfa[cols].values.tolist(),parallelize=self.parallelize)
-            else:
+            var_weights = array(self.var_weights)
+
+        #convert weights to Series
+        ind_weights, var_weights =  Series(ind_weights,index=X.index,name="weight"), Series(var_weights,index=X.columns,name="weight")
+
+        #run a principal component analysis (center or scale) in each group
+        model = OrderedDict()
+        for g, cols in group_active_dict.items():
+            if self.group_type[group_name.index(g)] not in ["c","s"]:
                 raise TypeError("For active group 'group_type' should be one of 'c', 's'")
-            model[grp] = fa.fit(X[cols])
+            Xc = X[cols]
+            #add supplementary individuals
+            if self.ind_sup is not None:
+                Xc = concat((Xc,X_ind_sup[cols]),axis=0)
+            #set standardize
+            if self.group_type[group_name.index(g)] == "c":
+                standardize = False
+            else:
+                standardize = True
+            #fit principal components analysis (PCA)
+            model[g] = PCA(standardize=standardize,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=var_weights[cols],ind_sup=self.ind_sup,rotate=None).fit(Xc)
 
-            # Add supplementary individuals
-            if self.ind_sup is not None:
-                # Transform to float
-                X_ind_sup = X_ind_sup.astype("float")
-                if self.group_type[group_name.index(grp)]=="c":
-                    # Center Principal Components Anlysis (PCA)
-                    fa = PCA(standardize=False,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=var_weights_mfa[cols].values.tolist(),ind_sup=self.ind_sup,parallelize=self.parallelize)
-                elif self.group_type[group_name.index(grp)]=="s":
-                    # Scale Principal Components Anlysis (PCA)
-                    fa = PCA(standardize=True,n_components=self.n_components,ind_weights=self.ind_weights,var_weights=var_weights_mfa[cols].values.tolist(),ind_sup=self.ind_sup,parallelize=self.parallelize)
-                else:
-                    raise TypeError("For active group 'group_type' should be one of 'c', 's'")
-                # Fit the model
-                model[grp] = fa.fit(pd.concat((X[cols],X_ind_sup[cols]),axis=0))
-        
-        # Separate general factor analysis for supplementary groups
+        #run separate generalized factor analysis for supplementary groups
         if self.num_group_sup is not None:
-            X_group_sup = Xtot[list(itertools.chain.from_iterable(group_sup_dict.values()))]
-            if self.ind_sup is not None:
-                X_group_sup = X_group_sup.drop(index=ind_sup_label)
-            
-            # General factor analysis
-            for grp, cols in group_sup_dict.items():
-                if all(pd.api.types.is_numeric_dtype(X_group_sup[col]) for col in cols):
-                    if self.group_type[group_name.index(grp)]=="c":
-                        # Center principal component analysis (PCA)
-                        fa = PCA(standardize=False,n_components=self.n_components,ind_weights=self.ind_weights,parallelize=self.parallelize)
-                    elif self.group_type[group_name.index(grp)]=="s":
-                        # Scale principal component analysis (PCA)
-                        fa = PCA(standardize=True,n_components=self.n_components,ind_weights=self.ind_weights,parallelize=self.parallelize)
-                    else:
-                        raise TypeError("For continues variables 'group_type' should be one of 'c', 's'")
-                elif all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols):
-                    if self.group_type[group_name.index(grp)]=="n":
-                        # Multiple correspondence analysis (MCA)
-                        fa = MCA(n_components=self.n_components,ind_weights=self.ind_weights,benzecri=False,greenacre=False,parallelize=self.parallelize)
-                    else:
-                        raise TypeError("For categoricals variables 'group_type' should be 'n'")
+            for g, cols in group_sup_dict.items():
+                if all(is_numeric_dtype(X_group_sup[k]) for k in cols):
+                    if self.group_type[group_name.index(g)] not in ["c","s"]:
+                        raise TypeError("For quantitative variables 'group_type' should be one of 'c', 's'")
+                    if self.group_type[group_name.index(g)]=="c": #centered principal component analysis
+                        standardize = False
+                    else: #normed principal component analysis
+                        standardize = True
+                    fa = PCA(standardize=standardize,n_components=self.n_components,ind_weights=self.ind_weights,rotate=None)   
+                elif all(is_string_dtype(X_group_sup[q]) for q in cols):
+                    if self.group_type[group_name.index(g)]!="n":
+                        raise TypeError("For qualitative variables 'group_type' should be 'n'")
+                    #multiple correspondence analysis (MCA)
+                    fa = MCA(n_components=self.n_components,ind_weights=self.ind_weights)     
                 else:
-                    if self.group_type[group_name.index(grp)]=="m":
-                        # Factor analysis of mixed data (FAMD)
-                        fa = FAMD(n_components=self.n_components,ind_weights=self.ind_weights,parallelize=self.parallelize)
-                    else:
+                    if self.group_type[group_name.index(g)] != "m":
                         raise TypeError("For mixed variables 'group_type' should be 'm'")
-                # Fit the model
-                model[grp] = fa.fit(X_group_sup[cols])
+                    #factor analysis of mixed data (FAMD)
+                    fa = FAMD(n_components=self.n_components,ind_weights=self.ind_weights)   
+                #fit the model
+                model[g] = fa.fit(X_group_sup[cols])
 
-        # Square distance to origin for active group
-        group_dist2 = pd.Series([np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_active_dict.keys())],index=list(group_active_dict.keys()),name="Sq. Dist.")
+        #squared distance to origin for active group
+        group_dist2 = Series([sum(model[g].eig_.iloc[:,0]**2)/model[g].eig_.iloc[0,0]**2 for g in list(group_active_dict.keys())],index=list(group_active_dict.keys()),name="Sq. Dist.")
 
-        # Square distance to origin for supplementary group
+        #square distance to origin for supplementary group
         if self.num_group_sup is not None:
-            group_sup_dist2 = pd.Series([np.sum(model[grp].eig_.iloc[:,0]**2)/model[grp].eig_.iloc[0,0]**2 for grp in list(group_sup_dict.keys())],index=list(group_sup_dict.keys()),name="Sq. Dist.")
+            group_sup_dist2 = Series([sum(model[g].eig_.iloc[:,0]**2)/model[g].eig_.iloc[0,0]**2 for g in list(group_sup_dict.keys())],index=list(group_sup_dict.keys()),name="Sq. Dist.")
 
-        # Store separate analysis
+        #store separate analysis
         self.separate_analyses_ = model
 
-        # Standardize Data for active group
-        means = pd.Series().astype("float")
-        std = pd.Series().astype("float")
-        base = pd.DataFrame().astype("float")
-        var_weights = pd.Series(name="weight").astype("float")
-        columns_dict = {}
-        for grp,cols in group_active_dict.items():
-            Z = model[grp].call_["Z"]
-            base = pd.concat([base,Z],axis=1)
-            means = pd.concat((means,model[grp].call_["means"]),axis=0)
-            std = pd.concat((std,model[grp].call_["std"]),axis=0)
-            weights = var_weights_mfa[cols].values*pd.Series([1/model[grp].eig_.iloc[0,0]]*Z.shape[1],index=Z.columns)
-            var_weights = pd.concat((var_weights,weights),axis=0)
-            columns_dict[grp] = Z.columns
+        #
+        Z = concat((model[g].call_.Z for g in list(group_active_dict.keys())),axis=1)
+        center, scale = concat((model[g].call_.center for g in list(group_active_dict.keys())),axis=0), concat((model[g].call_.scale for g in list(group_active_dict.keys())),axis=0)
+        nb_cols, eigvals = [model[g].call_.Z.shape[1] for g in list(group_active_dict.keys())], [model[g].eig_.iloc[0,0] for g in list(group_active_dict.keys())]
+        #repeat eigen values
+        eigvals2 = array(list(chain(*[repeat(i,k) for i, k in zip(eigvals,nb_cols)])))
+        #set variables weights for multiple factor analysis
+        var_weights_mfa = array([x*(1/y) for x,y in zip(var_weights,eigvals2)])
+        #columns dictionary
+        columns_dict = {g : model[g].call_.Z.columns for g in list(group_active_dict.keys())}
 
-        # Standardize data for supplementary columns
+        #standardize Data for active group
+        #means = pd.Series().astype("float")
+        #std = pd.Series().astype("float")
+        #base = pd.DataFrame().astype("float")
+        #var_weights = pd.Series(name="weight").astype("float")
+        #columns_dict = {}
+        #for grp,cols in group_active_dict.items():
+        #    Z = model[grp].call_["Z"]
+        #    base = pd.concat([base,Z],axis=1)
+        #    means = pd.concat((means,model[grp].call_["means"]),axis=0)
+        #    std = pd.concat((std,model[grp].call_["std"]),axis=0)
+        #    weights = var_weights_mfa[cols].values*pd.Series([1/model[grp].eig_.iloc[0,0]]*Z.shape[1],index=Z.columns)
+        #    var_weights = pd.concat((var_weights,weights),axis=0)
+        #    columns_dict[grp] = Z.columns
+
+        #standardize data for supplementary columns
         if self.num_group_sup is not None:
-            base_sup = pd.DataFrame().astype("float")
+            Z_sup, cols_sup_dict = concat((model[g].call_.Z for g in list(group_sup_dict.keys())),axis=1), {g : model[g].call_.Z.columns for g in list(group_sup_dict.keys())}
+            
             columns_sup_dict = {}
             var_sup_weights = pd.Series().astype("float")
             for grp, cols in group_sup_dict.items():
                 Z_sup = model[grp].call_["Z"]
                 base_sup = pd.concat((base_sup,Z_sup),axis=1)
-                if all(pd.api.types.is_string_dtype(X_group_sup[col]) for col in cols):
+                if all(is_string_dtype(X_group_sup[col]) for col in cols):
                     weights = model[grp].call_["dummies"].mean(axis=0)/(len(cols)*model[grp].eig_.iloc[0,0])
                 else:
                     weights = pd.Series([1/model[grp].eig_.iloc[0,0]]*Z_sup.shape[1],index=Z_sup.columns)
                 var_sup_weights = pd.concat((var_sup_weights,weights),axis=0)
                 columns_sup_dict[grp] = Z_sup.columns
         
-        # QR decomposition (to set maximum number of components)
-        Q, R = np.linalg.qr(base)
-        max_components = min(np.linalg.matrix_rank(Q),np.linalg.matrix_rank(R))
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set number of components
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #QR decomposition (to set maximum number of components)
+        Q, R = linalg.qr(Z)
+        max_components = int(min(linalg.matrix_rank(Q),linalg.matrix_rank(R)))
         
-        # Set number of components
+        #set number of components
         if self.n_components is None:
-            n_components = int(max_components)
+            n_components = max_components
         else:
             n_components = int(min(self.n_components,max_components))
 
         # Save
         self.call_ = {"Xtot" : Xtot,
                       "X" : X, 
-                      "Z" : base,
+                      "Z" : Z,
                       "n_components" : n_components,
                       "ind_weights" : pd.Series(ind_weights,index=X.index,name="weight"),
                       "var_weights_mfa" : var_weights_mfa,
@@ -478,8 +481,8 @@ class MFA(BaseEstimator,TransformerMixin):
                       "group_name" : group_name,
                       "ind_sup" : ind_sup_label}
         
-        # Global PCA without supplementary element
-        global_pca = PCA(standardize = False,n_components = n_components,ind_weights = self.ind_weights,var_weights = var_weights.values.tolist(),parallelize = self.parallelize).fit(base)
+        #global PCA without supplementary element
+        res = PCA(standardize = False,n_components = n_components,ind_weights = self.ind_weights,var_weights = var_weights.values.tolist(),parallelize = self.parallelize).fit(base)
 
         # Statistics for supplementary individuals
         if self.ind_sup is not None:

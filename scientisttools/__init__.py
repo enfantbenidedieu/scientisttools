@@ -2,23 +2,32 @@
 from __future__ import annotations
 
 #----------------------------------------------------------------------------------------------------------------------------------------
-## Methods
+#methods
 #----------------------------------------------------------------------------------------------------------------------------------------
 #generalized factor analysis (GFA)
-from scientisttools.methods.PCA import PCA, predictPCA, supvarPCA
-#from scientisttools.methods.PartialPCA import PartialPCA, predictPartialPCA, supvarPartialPCA
-#from scientisttools.methods.FactorAnalysis import FactorAnalysis
-#from scientisttools.methods.CA import CA, predictCA, supvarCA
-from scientisttools.methods.MCA import MCA, predictMCA, supvarMCA
-#from scientisttools.methods.FAMD import FAMD, predictFAMD, supvarFAMD
-#from .pcamix import PCAMIX, predictPCAMIX, supvarPCAMIX
-#from .mpca import MPCA, predictMPCA, supvarMPCA
-#from .mfa import MFA, predictMFA, supvarMFA
-#from .mfaqual import MFAQUAL
-#from .mfamix import MFAMIX
-#from .mfact import MFACT, predictMFACT, supvarMFACT
-#from .dmfa import DMFA
-#from .cca import CCA
+from .methods import *
+#from .methods.PCA import PCA
+#from .methods.PCArot import PCArot
+#from .methods.pPCA import pPCA
+#from .methods.PCAiv import PCAiv
+#from .methods.PCAoiv import PCAoiv
+#from .methods.bcPCA import bcPCA
+#from .methods.wcPCA import wcPCA
+#from .methods.FA import FA
+#from .methods.CA import CA
+#from .methods.MCA import MCA
+#from .methods.MCAIV import MCAIV
+#from .methods.FAMD import FAMD, predictFAMD, supvarFAMD
+#from .methods.PCAMIX import PCAMIX, predictPCAMIX, supvarPCAMIX
+#from .methods.HillSmith import HillSmith
+#from .methods.MPCA import MPCA, predictMPCA, supvarMPCA
+#from .methods.MFA import MFA, predictMFA, supvarMFA
+#from .methods.CATMFA import CATMFA
+#from .methods.MFAMD import MFAMD
+#from .methods.MFACT import MFACT, predictMFACT, supvarMFACT
+#from .methods.DMFA import DMFA, predictDMFA, supvarDMFA
+#from .methods.CATDMFA import CATDMFA
+#from .methods.CANCORR import CANCORR
 
 #multidimensional 
 #from .smacof import SMACOF
@@ -31,35 +40,67 @@ from scientisttools.methods.MCA import MCA, predictMCA, supvarMCA
 #from .catvarhca import CATVARHCA
 #from .varhcpc import VARHCPC
 
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#projection for the new rows
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+from .methods.predictPCA import predictPCA
+from .methods.predictPCArot import predictPCArot
+from .methods.predictpPCA import predictpPCA
+from .methods.predictbcPCA import predictbcPCA
+from .methods.predictwcPCA import predictwcPCA
+#from .methods.predictCA import predictCA
+#from .methods.predictMCA import predictMCA
 
+
+
+
+
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#projection for the supplementary variables
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+from .methods.supvarPCA import supvarPCA
+from .methods.supvarPCArot import supvarPCArot
+from .methods.supvarpPCA import supvarpPCA
+from .methods.supvarPCAiv import supvarPCAiv
+from .methods.supvarbcPCA import supvarbcPCA
+from .methods.supvarwcPCA import supvarwcPCA
+#from .methods.supvarMCA import supvarMCA
 
 #----------------------------------------------------------------------------------------------------------------------------------------
 ## Extraction
 #----------------------------------------------------------------------------------------------------------------------------------------
-from scientisttools.extraction.get_eig import get_eig,get_eigenvalue
-from scientisttools.extraction.get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
-#from scientisttools.extraction.get_partialpca import get_partialpca_ind, get_partialpca_var, get_partialpca, summaryPartialPCA
-#from scientisttools.extraction.get_fa import get_fa_ind, get_fa_var, get_fa, summaryFA
-#from scientisttools.extraction.get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
-from scientisttools.extraction.get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
-#from scientisttools.extraction.get_famd import get_famd_ind, get_famd_var, get_famd, summaryFAMD
-#from .get_pcamix import get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX
-#from .get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
+from .extraction.get_eig import get_eig, get_eigenvalue
+from .extraction.get_pca import get_pca_ind, get_pca_var, get_pca, summaryPCA
+from .extraction.get_pcarot import get_pcarot_ind, get_pcarot_var, get_pcarot, summaryPCArot
+from .extraction.get_ppca import get_ppca_ind, get_ppca_var, get_ppca, summarypPCA
+from .extraction.get_pcaiv import get_pcaiv_ind, get_pcaiv_var, get_pcaiv, summaryPCAiv
+from .extraction.get_pcaoiv import get_pcaoiv_ind, get_pcaoiv_var, get_pcaoiv, summaryPCAoiv
+from .extraction.get_bcpca import get_bcpca_ind, get_bcpca_var, get_bcpca_group, get_bcpca, summarybcPCA
+from .extraction.get_wcpca import get_wcpca_ind, get_wcpca_var, get_wcpca, summarywcPCA
+from .extraction.get_fa import get_fa_ind, get_fa_var, get_fa, summaryFA
+from .extraction.get_ca import get_ca_row, get_ca_col, get_ca, summaryCA
+from .extraction.get_mca import get_mca_ind, get_mca_var, get_mca, summaryMCA
+from .extraction.get_mcaiv import get_mcaiv_ind, get_mcaiv_var, get_mcaiv, summaryMCAIV
+from .extraction.get_famd import get_famd_ind, get_famd_var, get_famd, summaryFAMD
+from .extraction.get_pcamix import get_pcamix_ind, get_pcamix_var, get_pcamix, summaryPCAMIX
+from .extraction.get_mpca import get_mpca_ind, get_mpca_var, get_mpca, summaryMPCA
 #from .get_mfa import get_mfa_ind, get_mfa_var, get_mfa_partial_axes, get_mfa, summaryMFA
-#from .get_dmfa import get_dmfa_ind,get_dmfa_var,get_dmfa,summaryDMFA
+from .extraction.get_dmfa import get_dmfa_ind,get_dmfa_var,get_dmfa,summaryDMFA
 
 #from .get_mds import get_mds
 
 
 #----------------------------------------------------------------------------------------------------------------------------------------
-## Visualization
+#visualization
 #----------------------------------------------------------------------------------------------------------------------------------------
-from scientisttools.plot.fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot,fviz_pca
+#from scientisttools.plot.fviz import fviz_scatter, fviz_arrow, add_scatter, add_arrow, fviz_circle, set_axis
+#from scientisttools.plot.fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_biplot, fviz_pca
 #from scientisttools.plot.fviz_partialpca import fviz_partialpca_ind, fviz_partialpca_var, fviz_partialpca_biplot,fviz_partialpca
-#from scientisttools.plot.fviz_efa import fviz_efa_ind, fviz_efa_var, fviz_efa_biplot, fviz_efa
+#from scientisttools.plot.fviz_fa import fviz_fa_ind, fviz_fa_var, fviz_fa_biplot, fviz_fa
 #from scientisttools.plot.fviz_ca import fviz_ca_row, fviz_ca_col, fviz_ca_biplot, fviz_ca
-#from scientisttools.plot.fviz_mca import fviz_mca_ind, fviz_mca_mod, fviz_mca_var, fviz_mca_biplot, fviz_mca
-#from .fviz_famd import fviz_famd_ind, fviz_famd_col, fviz_famd_mod, fviz_famd_var, fviz_famd
+#from scientisttools.plot.fviz_mca import fviz_mca_ind, fviz_mca_var, fviz_mca_quali_var, fviz_mca_biplot, fviz_mca
+#from scientisttools.plot.fviz_famd import fviz_famd_ind, fviz_famd_var, fviz_famd
 #from .fviz_pcamix import fviz_pcamix_ind, fviz_pcamix_col, fviz_pcamix_mod, fviz_pcamix_var, fviz_pcamix
 #from .fviz_mpca import fviz_mpca_ind, fviz_mpca_col, fviz_mpca_mod, fviz_mpca_var, fviz_mpca
 #from .fviz_mfa import fviz_mfa_ind, fviz_mfa_var, fviz_mfa_axes,fviz_mfa_group, fviz_mfa
@@ -80,18 +121,17 @@ from scientisttools.plot.fviz_pca import fviz_pca_ind, fviz_pca_var, fviz_pca_bi
 
 
 #others functions of visualization
-from scientisttools.plot.fviz_eig import fviz_eig,fviz_screeplot
-from scientisttools.plot.fviz_contrib import fviz_contrib
-from scientisttools.plot.fviz_cos2 import fviz_cos2
-from scientisttools.plot.fviz_corrplot import fviz_corrplot
-from scientisttools.plot.fviz_corrcircle import fviz_corrcircle
-
+#from scientisttools.plot.fviz_eig import fviz_eig,fviz_screeplot
+#from scientisttools.plot.fviz_contrib import fviz_contrib
+#from scientisttools.plot.fviz_cos2 import fviz_cos2
+#from scientisttools.plot.fviz_corrplot import fviz_corrplot
+#from scientisttools.plot.fviz_corrcircle import fviz_corrcircle
 
 #----------------------------------------------------------------------------------------------------------------------------------------
 ## Others functions
 #----------------------------------------------------------------------------------------------------------------------------------------
 # Others functions
-from scientisttools.methods.functions.association import association
+#from scientisttools.methods.functions.association import association
 #from .auto_cut_tree import auto_cut_tree
 #from .catdesc import catdesc
 #from .coeffLg import coeffLg
@@ -100,7 +140,7 @@ from scientisttools.methods.functions.association import association
 #from .contdesc import contdesc
 #from scientisttools.methods.functions.coord_ellipse import coord_ellipse
 #from .covariance_to_correlation import covariance_to_correlation
-from scientisttools.methods.functions.dimdesc import dimdesc
+from .methods.functions.dimdesc import dimdesc
 #from .eta2 import eta2
 #from .function_eta2 import function_eta2
 #from .function_lg import function_lg
@@ -112,57 +152,20 @@ from scientisttools.methods.functions.dimdesc import dimdesc
 #from .recodecont import recodecont
 #from .recodevar import recodevar
 #from .recodevarfamd import recodevarfamd
-from scientisttools.methods.functions.reconst import reconst
+from .methods.functions.reconst import reconst
 #from .revaluate_cat_variable import revaluate_cat_variable
+from .methods.functions.varimax import varimax
 #from scientisttools.methods.functions.rotate_factors import rotate_factors
 #from .sim_dist import sim_dist
-#from scientisttools.methods.functions.splitmix import splitmix
+from scientisttools.methods.functions.splitmix import splitmix
 #from .svd_triplet import svd_triplet
 #from scientisttools.methods.functions.wpearsonr import wpearsonr
 #from .weightedcorrtest import weightedcorrtest
 
+#
+from .datasets import load_dataset
 
-## Load all datasets
-from .datasets import (
-    load_autos1990,
-    load_autos2005,
-    load_autos2006,
-    load_autosmds,
-    load_beer,
-    load_body,
-    load_burgundywines,
-    load_children2,
-    load_congressvotingrecords,
-    load_decathlon,
-    load_femmetravail,
-    load_gironde,
-    load_housetasks,
-    load_jobrate,
-    load_lifecyclesavings,
-    load_madagascar,
-    load_mortality,
-    load_mushroom,
-    load_music,
-    load_olympic,
-    load_poison,
-    load_protein,
-    load_qtevie,
-    load_racescanines,
-    load_tea,
-    load_temperature,
-    load_tennis,
-    load_usarrests,
-    load_uscrime,
-    load_wine,
-    load_womenwork,
-    #DataFrame
-    autos1990,
-    decathlon,
-    poison,
-    racescanines
-)
-
-__version__ = '0.1.6'
+__version__ = '1.0'
 __name__ = "scientisttools"
 __author__ = 'Duverier DJIFACK ZEBAZE'
 __email__ = 'djifacklab@gmail.com'

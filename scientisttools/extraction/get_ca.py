@@ -9,7 +9,7 @@ def get_ca_row(self)-> NamedTuple:
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus, relative contributions) of the active row variables from Correspondence Analysis (CA) outputs.
+    Extract all the results (coordinates, square cosinus, relative contributions and additionals informations) for the active rows from Correspondence Analysis (CA) outputs.
 
     Usage
     -----
@@ -23,15 +23,15 @@ def get_ca_row(self)-> NamedTuple:
 
     Return
     -------
-    a namedtuple of pandas DataFrame containing the results for the active rows including: 
+    a namedtuple of pandas DataFrames containing all the results for the active rows including: 
 
-    `coord`: factor coordinates
+    `coord`: coordinates for the active rows,
 
-    `cos2`: squared cosinus
+    `cos2`: squared cosinus for the active rows,
 
-    `contrib`: relative contributions
+    `contrib`: relative contributions for the active rows,
 
-    `infos`: additionnal informations (weights, margin, square distance to origin and inertia)
+    `infos`: additionnals informations (weights, margin, square distance to origin, inertia and percentage of inertia) for the active rows. 
     
     Author(s)
     ---------
@@ -40,12 +40,10 @@ def get_ca_row(self)-> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load children2 dataset
-    >>> from scientisttools import load_children2
-    >>> children2 = load_children2()
+    >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, get_ca_row
-    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
-    >>> res_ca.fit(children2)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
+    >>> res_ca.fit(children)
     >>> #extract the results of rows
     >>> row = get_ca_row(res_ca)
     >>> row.coord.head() #row coordinates
@@ -54,8 +52,7 @@ def get_ca_row(self)-> NamedTuple:
     >>> row.infos.head() #row additionals informations
     ```
     """
-    #Check if self is an object of class CA
-    if self.model_ != "ca":
+    if self.model_ != "ca": #check if self is an object of class CA
         raise TypeError("'self' must be an object of class CA")
     return self.row_
             
@@ -66,7 +63,7 @@ def get_ca_col(self)-> NamedTuple:
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus, relative contributions) of the active columns variables from Correspondence Analysis (CA) outputs.
+    Extract all the results (coordinates, square cosinus, relative contributions and additionals informations) for the active columns from Correspondence Analysis (CA) outputs.
 
     Usage
     -----
@@ -80,15 +77,15 @@ def get_ca_col(self)-> NamedTuple:
 
     Returns
     -------
-    namedtuple of dataframes containing the results for the columns including : 
+    namedtuple of pandas DataFrames containing all the results for the active columns including: 
 
-    `coord`: factor coordinates
+    `coord`: coordinates for the active columns,
 
-    `cos2`: square cosinus
+    `cos2`: square cosinus for the active columns, 
 
-    `contrib`: relative contributions
+    `contrib`: relative contributions for the active columns,
     
-    `infos`: additionals informations (margin, square distance to origin and inertia)
+    `infos`: additionals informations (margin, square distance to origin, inertia and percentage of inertia) for the active columns.
     
     Author(s)
     ---------
@@ -97,12 +94,10 @@ def get_ca_col(self)-> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load children2 dataset
-    >>> from scientisttools import load_children2
-    >>> children2  = load_children2()
+    >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, get_ca_col
-    >>> res_ca = CA(n_components=None,row_sup=[14,15,16,17],col_sup=[5,6,7],quali_sup=8)
-    >>> res_ca.fit(children2)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
+    >>> res_ca.fit(children)
     >>> #extract the results of columns
     >>> col = get_ca_col(res_ca)
     >>> col.coord.head() #column coordinates
@@ -111,8 +106,7 @@ def get_ca_col(self)-> NamedTuple:
     >>> col.infos.head() #column additionals informations
     ```
     """
-    #check if self is an object of class CA
-    if self.model_ != "ca":
+    if self.model_ != "ca": #check if self is an object of class CA
         raise TypeError("'self' must be an object of class CA")
     return self.col_
 
@@ -123,7 +117,7 @@ def get_ca(self, element = "row")-> NamedTuple:
 
     Description
     -----------
-    Extract all the results (factor coordinates, square cosinus, relative contributions) for the active row/column variables from Correspondence Analysis (CA) outputs.
+    Extract all the results (coordinates, square cosinus, relative contributions and additionals informations) for the active rows/columns from Correspondence Analysis (CA) outputs.
 
         * `get_ca()`: Extract the results for rows and columns
         * `get_ca_row()`: Extract the results for rows only
@@ -132,30 +126,29 @@ def get_ca(self, element = "row")-> NamedTuple:
     Usage
     -----
     ```python
-    >>> get_ca(self, element = ("row", "col"))
-    >>> get_ca_row(self)
-    >>> get_ca_col(self) 
+    >>> get_ca(self, element = "row")
+    >>> get_ca(self, element = "col")
     ```
 
     Parameters
     ----------
     `self`: an object of class CA
 
-    `element`: the element to subset from the output. Possible values are : 
+    `element`: the element to subset from the output. Possible values are: 
         * "row" for active rows
         * "col" for active columns
 
     Return
     ------
-    namedtuple of dataframes containing the results for the active rows/columns including :
+    namedtuple of pandas DataFrames containing all the results for the active rows/columns including :
 
-    `coord`: factor coordinates for the rows/columns
+    `coord`: coordinates for the active rows/columns,
 
-    `cos2`: square cosinus for the rows/columns
+    `cos2`: square cosinus for the active rows/columns,
 
-    `contrib`: relative contributions of the rows/columns
+    `contrib`: relative contributions of the active rows/columns,
 
-    `infos`: additionals informations of the rows/columns
+    `infos`: additionals informations of the active rows/columns.
 
     Author(s)
     ---------
@@ -164,12 +157,10 @@ def get_ca(self, element = "row")-> NamedTuple:
     Examples
     --------
     ```python
-    >>> #load children2 dataset
-    >>> from scientisttools import load_children2
-    >>> children2 = load_children2()
+    >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, get_ca
-    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
-    >>> res_ca.fit(children2)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
+    >>> res_ca.fit(children)
     >>> #extract the results of rows
     >>> row = get_ca(res_ca, element = "row")
     >>> row.coord.head() #row coordinates
@@ -184,10 +175,6 @@ def get_ca(self, element = "row")-> NamedTuple:
     >>> col.infos.head() #column additionals informations
     ```
     """
-    #check if self is an object of class CA
-    if self.model_ != "ca":
-        raise TypeError("'self' must be an object of class CA")
-    
     if element == "row":
         return get_ca_row(self)
     elif element == "col":
@@ -233,17 +220,14 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     Examples
     --------
     ```python
-    >>> #load children2 dataset
-    >>> from scientisttools import load_children2
-    >>> children2 = load_children2()
+    >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, summaryCA
-    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
-    >>> res_ca.fit(children2)
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
+    >>> res_ca.fit(children)
     >>> summaryCA(res_ca)
     ```
     """
-    #check if self is an object of class CA
-    if self.model_ != "ca":
+    if self.model_ != "ca": #check if self is an object of class CA
         raise TypeError("'self' must be an object of class CA")
 
     #set number of components and number of elements
@@ -255,7 +239,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
     print("                     Correspondence Analysis - Results                     \n")
 
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add eigenvalues informations
+    #add eigenvalues informations
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("Eigenvalues")
     eig = self.eig_.T.round(decimals=digits)
@@ -266,7 +250,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         print(eig)
     
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add chi-squared test
+    #add chi-squared test
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("\nChi-squared test\n")
     chi2_test = self.goodness_.chi2
@@ -276,7 +260,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         print(chi2_test)
 
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add log-likelihood test
+    #add log-likelihood test
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("\nlog-likelihood test\n")
     g_test = self.goodness_.gtest
@@ -286,7 +270,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         print(g_test)
 
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##others measure of association
+    #others measure of association
     #----------------------------------------------------------------------------------------------------------------------------------------
     print("\nOthers measure of association\n")
     association = self.goodness_.association.round(decimals=digits)
@@ -296,7 +280,7 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         print(association)
 
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add rows informations
+    #add rows informations
     #----------------------------------------------------------------------------------------------------------------------------------------
     row = self.row_
     if row.coord.shape[0] > nb_element:
@@ -308,14 +292,14 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         row_coord, row_cos2, row_ctr = row.coord.iloc[:,i], row.cos2.iloc[:,i], row.contrib.iloc[:,i]
         row_cos2.name, row_ctr.name = "cos2", "ctr"
         row_infos = concat([row_infos,row_coord,row_ctr,row_cos2],axis=1)
-    row_infos = row_infos.iloc[:nb_element,:].round(decimals=digits)
+    row_infos = row_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(row_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(row_infos)
 
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add supplementary rows informations
+    #add supplementary rows informations
     #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"row_sup_"):
         row_sup = self.row_sup_
@@ -323,12 +307,12 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
             print(f"\nSupplementary rows (the {nb_element} first)\n")
         else:
             print("\nSupplementary rows\n")
-        row_sup_infos = row_sup.dist
+        row_sup_infos = row_sup.dist2
         for i in range(ncp):
             row_sup_coord, row_sup_cos2 = row_sup.coord.iloc[:,i], row_sup.cos2.iloc[:,i]
             row_sup_cos2.name = "cos2"
             row_sup_infos = concat([row_sup_infos,row_sup_coord,row_sup_cos2],axis=1)
-        row_sup_infos = row_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        row_sup_infos = row_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(row_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
@@ -347,14 +331,14 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
         col_coord, col_cos2, col_ctr = col.coord.iloc[:,i], col.cos2.iloc[:,i], col.contrib.iloc[:,i]
         col_cos2.name, col_ctr.name = "cos2", "ctr"
         col_infos = concat([col_infos,col_coord,col_ctr,col_cos2],axis=1)
-    col_infos = col_infos.iloc[:nb_element,:].round(decimals=digits)
+    col_infos = col_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(col_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(col_infos)
     
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add supplementary columns informations
+    #add supplementary columns informations
     #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"col_sup_"):
         col_sup = self.col_sup_
@@ -362,39 +346,39 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
             print(f"\nSupplementary columns (the {nb_element} first)\n")
         else:
             print("\nSupplementary columns\n")
-        col_sup_infos = col_sup.dist
+        col_sup_infos = col_sup.dist2
         for i in range(ncp):
             col_sup_coord, col_sup_cos2 = col_sup.coord.iloc[:,i], col_sup.cos2.iloc[:,i]
             col_sup_cos2.name = "cos2"
             col_sup_infos = concat([col_sup_infos,col_sup_coord,col_sup_cos2],axis=1)
-        col_sup_infos = col_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        col_sup_infos = col_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(col_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(col_sup_infos)
     
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add supplementary quantitatives informations
+    #add supplementary quantitatives informations
     #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
         if quanti_sup.coord.shape[0]> nb_element:
-            print(f"\nSupplementary quantitatives columns (the {nb_element})\n")
+            print(f"\nSupplementary quantitative variables (the {nb_element})\n")
         else:
-            print("\nSupplementary quantitatives columns\n")
+            print("\nSupplementary quantitative variables\n")
         quanti_sup_infos = DataFrame().astype("float")
         for i in range(ncp):
             quanti_sup_coord, quanti_sup_cos2 = quanti_sup.coord.iloc[:,i], quanti_sup.cos2.iloc[:,i]
             quanti_sup_cos2.name = "cos2"
             quanti_sup_infos = concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
-        quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        quanti_sup_infos = quanti_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(quanti_sup_infos)
     
     #----------------------------------------------------------------------------------------------------------------------------------------
-    ##add supplementary qualitatives informations
+    #add supplementary qualitatives informations
     #----------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quali_sup_"):
         quali_sup = self.quali_sup_
@@ -402,22 +386,22 @@ def summaryCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt="pipe
             print(f"\nSupplementary categories (the {nb_element} first)\n")
         else:
             print("\nSupplementary categories\n")
-        quali_sup_infos = quali_sup.dist
+        quali_sup_infos = quali_sup.dist2
         for i in range(ncp):
             quali_sup_coord, quali_sup_cos2, quali_sup_vtest = quali_sup.coord.iloc[:,i], quali_sup.cos2.iloc[:,i], quali_sup.vtest.iloc[:,i]
             quali_sup_cos2.name, quali_sup_vtest.name = "cos2", "vtest"
             quali_sup_infos = concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
-        quali_sup_infos = quali_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        quali_sup_infos = quali_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(quali_sup_infos)
         
-        # Add supplementary qualitatives - correlation ratio
+        #Add supplementary qualitatives - correlation ratio
         if quali_sup.eta2.shape[0] > nb_element:
-            print(f"\nSupplementary qualitatives variables (eta2) (the {nb_element} first)\n")
+            print(f"\nSupplementary qualitative variables (eta2) (the {nb_element} first)\n")
         else:
-            print("\nSupplementary qualitatives variables (eta2)\n")
+            print("\nSupplementary qualitative variables (eta2)\n")
         quali_sup_eta2 = quali_sup.eta2.iloc[:nb_element,:ncp].round(decimals=digits)
         if to_markdown:
             print(quali_sup_eta2.to_markdown(tablefmt=tablefmt))

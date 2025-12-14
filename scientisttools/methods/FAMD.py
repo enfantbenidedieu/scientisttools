@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
-from numpy import number,array,ndarray,average,sqrt,linalg,zeros,insert,diff,nan,c_,diag,ones,cumsum
-from pandas import DataFrame,Categorical,concat,Series,crosstab
+from numpy import number,array,ndarray,average,sqrt,linalg,zeros,ones
+from pandas import DataFrame,concat,Series
+from itertools import chain, repeat
 from collections import OrderedDict, namedtuple
-from scipy.stats import chi2_contingency
-from mapply.mapply import mapply
-from statsmodels.stats.weightstats import DescrStatsW
+from typing import NamedTuple
 from sklearn.base import BaseEstimator, TransformerMixin
 
 #intern functions
-from .PCA import PCA
+from .functions.gfa import gfa
 from .functions.splitmix import splitmix
-from .functions.recodevarfamd import recodevarfamd
+from .functions.recodevar import recodevarfamd
 from .functions.recodecont import recodecont
-from .functions.revaluate_cat_variable import revaluate_cat_variable
-from .functions.namedtuplemerge import namedtuplemerge
-from .functions.predict_sup import predict_ind_sup, predict_quanti_sup, predict_quali_sup
-from .functions.conditional_average import conditional_average
+from .functions.summarize import summarize
+from .functions.association import association
+from .functions.revalue import revaluate_cat_variable
+from .functions.conditional_wmean import conditional_wmean
+from .functions.function_eta2 import function_eta2
+from .functions.corrmatrix import corrmatrix
 
 class FAMD(BaseEstimator,TransformerMixin):
     """
@@ -43,61 +44,32 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     Missing values are replaced by means for quantitative variables. Note that, when all the variable are qualitative, the factor coordinates of the individuals are equal to the factor scores
     of standard MCA times squares root of J (the number of qualitatives variables) and the eigenvalues are then equal to the usual eigenvalues of MCA times J.
-    When all the variables are quantitative, FAMD gives exactly the same results as standard PCA.
+    When all the variables are quantitative, FAMD gives exactly the same results as normed PCA.
 
     Usage
     -----
     ```python
-    >>> FAMD(n_components = 5, ind_weights = None,ind_sup=None,quanti_sup=None,quali_sup=None,parallelize = False)
+    >>> FAMD(n_components = 5, ind_weights = None, quanti_weights = None, quali_weights = None, ind_sup = None, sup_var = None, parallelize = False)
     ```
 
     Parameters
     ----------
-    `n_components` : number of dimensions kept in the results (by default 5)
+    `n_components` : None or an integer indicating the number of dimensions kept in the results (by default 5)
 
     `ind_weights` : an optional individuals weights (by default, a list/tuple/array/Series of 1/(number of active individuals) for uniform individuals weights), the weights are given only for active individuals.
     
-    `ind_sup` : an integer or a list/tuple indicating the indexes of the supplementary individuals
+    `quanti_weights`: an optional quantitative variables weights (by default, a list/tuple/array/Series of 1 for uniform quantitative variables weights), the weights are given only for the active quantitative variables
 
-    `quanti_sup` : an integer or a list/tuple indicating the indexes of the quantitative supplementary variables
+    `quali_weights`: an optional qualitative variables weights (by default, a list/tuple/array/Series of 1 for uniform qualitative variables weights), the weights are given only for the active qualitative variables
 
-    `quali_sup` : an integer or a list/tuple indicating the indexes of the categorical supplementary variables
+    `ind_sup`: an integer/string/list/tuple indicating the indexes/names of the supplementary individuals
 
-    `disjunctive` : a pandas dataframe obtained from `imputeFAMD` function of the `missmdatools` package that allows to handle mmissing values.
-
-    `parallelize` : boolean, default = False. If model should be parallelize
-        * If `True` : parallelize using mapply (see https://mapply.readthedocs.io/en/stable/README.html#installation)
-        * If `False` : parallelize using pandas apply
+    `sup_var`: an integer/string/list/tuple indicating the indexes/names of the supplementary variables (quantitative and/or qualitative)
 
     Attributes
     ----------
-    `eig_`  : pandas dataframe containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
-
-    `svd_` : dictionary of matrices containing all the results of the singular value decomposition
-
-    `var_`  : dictionary of pandas dataframe containing all the results for the variables considered as group (coordinates, square cosine, contributions)
-
-    `ind_` : dictionary of pandas dataframe with all the results for the individuals (coordinates, square cosine, contributions)
-
-    `ind_sup_` : dictionary of pandas dataframe containing all the results for the supplementary individuals (coordinates, square cosine)
-
-    `quali_var_` : namedtuple of pandas dataframe with all the results for the categorical variables (coordinates, square cosine, contributions, v.test)
-
-    `quali_sup_` : namedtuple of pandas dataframe with all the results for the supplementary categorical variables (coordinates, square cosine, v.test)
     
-    `quanti_var_` : namedtuple of pandas dataframe with all the results for the quantitative variables (coordinates, correlation, square cosine, contributions)
-
-    `quanti_sup_` : namedtuple of pandas dataframe with all the results for the supplementary quantitative variables (coordinates, correlation, square cosine)
-
-    `call_` : dictionary with some statistics
-
-    `summary_quanti_` : descriptive statistics of quantitatives variables
-
-    `summary_quali_` : statistics of categories variables
-
-    `chi2_test_` : chi2 statistics test
-
-    `model_` : string specifying the model fitted = 'famd'
+    `model_`: a string specifying the model fitted = 'famd'
 
     Author(s)
     ---------
@@ -105,21 +77,21 @@ class FAMD(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    * Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
 
-    Husson F., Le S. and Pagès J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    * Husson F., Le S. and Pagès J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
 
-    Husson F., Josse L, Lê S. & Mazet J. (2009). FactoMineR : Factor Analysis and Data Mining iwith R. R package version 2.11
+    * Husson F., Josse L, Lê S. & Mazet J. (2009). FactoMineR : Factor Analysis and Data Mining iwith R. R package version 2.11
 
-    Lebart L., Piron M. & Morineau A. (2006). Statistique exploratoire multidimensionelle. Dunod Paris 4ed
+    * Lebart L., Piron M. & Morineau A. (2006). Statistique exploratoire multidimensionelle. Dunod Paris 4ed
 
-    Lê, S., Josse, J., & Husson, F. (2008). FactoMineR: An R Package for Multivariate Analysis. Journal of Statistical Software, 25(1), 1–18. https://doi.org/10.18637/jss.v025.i01
+    * Lê, S., Josse, J., & Husson, F. (2008). FactoMineR: An R Package for Multivariate Analysis. Journal of Statistical Software, 25(1), 1–18. https://doi.org/10.18637/jss.v025.i01
 
-    Pagès J. (2004). Analyse factorielle de donnees mixtes. Revue Statistique Appliquee. LII (4). pp. 93-111.
+    * Pagès J. (2004). Analyse factorielle de donnees mixtes. Revue Statistique Appliquee. LII (4). pp. 93-111.
 
-    Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. edp sciences
+    * Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. edp sciences
 
-    Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2, Version 1.0
+    * Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2, Version 1.0
 
     See Also
     --------
@@ -128,130 +100,112 @@ class FAMD(BaseEstimator,TransformerMixin):
     Examples
     --------
     ```python
-    >>> # Load gironde dataset
-    >>> from scientisttools import load_gironde, splitmix
-    >>> gironde = load_gironde()
-    >>> # Split data
-    >>> X_quant, X_qual = splitmix(gironde).quanti, splitmix(gironde).quali
+    >>> from scientisttools.datasets import autos2005, decathlon, canines
     >>> from scientisttools import FAMD
-    >>> # PCA with FAMD function
-    >>> res_pca = FAMD().fit(X_quant)
-    >>> # MCA with FAMD function
-    >>> res_mca = FAMD().fit(X_qual)
-    >>> # FAMD with FAMD function
-    >>> res_famd = FAMD().fit(gironde)
+    >>> #PCA with FAMD function
+    >>> res_pca = FAMD(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    >>> res_pca.fit(decathlon)
+    >>> #MCA with FAMD function
+    >>> res_mca = FAMD(ind_sup=(27,28,29,30,31,32),sup_var=(6,7))
+    >>> res_mca.fit(canines)
+    >>> #Mixed Data with FAMD function
+    >>> res_mix = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
+    >>> res_mix.fit(autos2005)
     ```
     """
     def __init__(self,
                  n_components = 5,
                  ind_weights = None,
+                 quanti_weights = None,
+                 quali_weights = None,
                  ind_sup = None,
-                 quanti_sup = None,
-                 quali_sup = None,
-                 disjunctive = None,
-                 parallelize = False):
+                 sup_var = None):
         self.n_components = n_components
         self.ind_weights = ind_weights
+        self.quanti_weights = quanti_weights
+        self.quali_weights = quali_weights
         self.ind_sup = ind_sup
-        self.quanti_sup = quanti_sup
-        self.quali_sup = quali_sup
-        self.disjunctive = disjunctive
-        self.parallelize = parallelize
+        self.sup_var = sup_var
 
-    def fit(self,X, y=None):
+    def fit(self,X:DataFrame, y=None):
         """
         Fit the model to X
         ------------------
 
         Parameters
         ----------
-        `X` : pandas DataFrame of shape (n_samples, n_columns)
+        `X`: pandas DataFrame of shape (n_samples, n_columns)
             Training data, where `n_samples` in the number of samples and `n_columns` is the number of columns.
 
-        `y` : None
+        `y`: None
             y is ignored
 
         Returns
         -------
-        `self` : object
+        `self`: object
             Returns the instance itself
         """
-        #check if X is an instance of class pd.DataFrame
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X is an instance of pd.DataFrame class
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not isinstance(X,DataFrame):
            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        #check if disjunctive is not None and is an instance of class pd.DataFrame
-        if self.disjunctive is not None and not isinstance(self.disjunctive,DataFrame):
-            raise TypeError(f"{type(self.disjunctive)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        # Set parallelize
-        if self.parallelize:
-            n_workers = -1
-        else:
-            n_workers = 1
-        
-        # Set index name as None
+        #set index name as None
         X.index.name = None
-
-        # Drop level if ndim greater than 1 and reset columns name
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
         
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##checks if quantitatives variables are in X
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #fill NA with mean
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         is_quanti = X.select_dtypes(include=number)
         if is_quanti.shape[1]>0:
-            for j in is_quanti.columns.tolist():
-                X[j] = X[j].astype("float")
+            is_quanti = recodecont(X=is_quanti).X
+            for k in is_quanti.columns:
+                X[k] = is_quanti[k]
         
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##convert categorical variables to factor
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #convert categorical variables to factor
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         is_quali = X.select_dtypes(include=["object","category"])
-        for j in is_quali.columns:
-            X[j] = Categorical(X[j],categories=sorted(X[j].dropna().unique().tolist()),ordered=True)
+        if is_quali.shape[1]>0:
+            is_quali = revaluate_cat_variable(is_quali)
+            for j in is_quali.columns:
+                X[j] = is_quali[j]
 
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ## Check if supplementary qualitatives variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        if self.quali_sup is not None:
-            if isinstance(self.quali_sup,str):
-                quali_sup_label = [self.quali_sup]
-            elif isinstance(self.quali_sup,(int,float)):
-                quali_sup_label = [X.columns[int(self.quali_sup)]]
-            elif isinstance(self.quali_sup,(list,tuple)):
-                if all(isinstance(x,str) for x in self.quali_sup):
-                     quali_sup_label = [str(x) for x in self.quali_sup]
-                elif all(isinstance(x,(int,float)) for x in self.quali_sup):
-                    quali_sup_label = X.columns[[int(x) for x in self.quali_sup]].tolist()
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if supplementary variables (quantitative and/or qualitative)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.sup_var is not None:
+            if isinstance(self.sup_var,str):
+                sup_var_label = [self.sup_var]
+            elif isinstance(self.sup_var,(int,float)):
+                sup_var_label = [X.columns[int(self.sup_var)]]
+            elif isinstance(self.sup_var,range): #this is a range
+                sup_var_label = X.columns[list(self.sup_var)].tolist()
+            elif isinstance(self.sup_var,(list,tuple)):
+                if all(isinstance(x,str) for x in self.sup_var):
+                    sup_var_label = [str(x) for x in self.sup_var]
+                elif all(isinstance(x,(int,float)) for x in self.sup_var):
+                    sup_var_label = X.columns[[int(x) for x in self.sup_var]].tolist()
         else:
-            quali_sup_label = None
-        
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ## Check if supplementary quantitatives variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        if self.quanti_sup is not None:
-            if isinstance(self.quanti_sup,str):
-                quanti_sup_label = [self.quanti_sup]
-            elif isinstance(self.quanti_sup,(int,float)):
-                quanti_sup_label = [X.columns[int(self.quanti_sup)]]
-            elif isinstance(self.quanti_sup,(list,tuple)):
-                if all(isinstance(x,str) for x in self.quanti_sup):
-                    quanti_sup_label = [str(x) for x in self.quanti_sup]
-                elif all(isinstance(x,(int,float)) for x in self.quanti_sup):
-                    quanti_sup_label = X.columns[[int(x) for x in self.quanti_sup]].tolist()
-        else:
-            quanti_sup_label = None
-        
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ## Check if supplementary individuals
-        #----------------------------------------------------------------------------------------------------------------------------------------
+            sup_var_label = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if supplementary individuals
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
             if isinstance(self.ind_sup,str):
                 ind_sup_label = [self.ind_sup]
             elif isinstance(self.ind_sup,(int,float)):
                 ind_sup_label = [X.index[int(self.ind_sup)]]
+            elif isinstance(self.ind_sup,range): #this is a range
+                ind_sup_label = X.index[list(self.ind_sup)].tolist()
             elif isinstance(self.ind_sup,(list,tuple)):
                 if all(isinstance(x,str) for x in self.ind_sup):
                     ind_sup_label = [str(x) for x in self.ind_sup]
@@ -263,38 +217,24 @@ class FAMD(BaseEstimator,TransformerMixin):
         #make a copy of original data
         Xtot = X.copy()
 
-        ##Drop supplementary qualitative variables
-        if self.quali_sup is not None:
-            X = X.drop(columns=quali_sup_label)
+        #drop supplementary variables (quantitative and/or qualitative)
+        if self.sup_var is not None:
+            X_sup_var, X = X.loc[:,sup_var_label], X.drop(columns=sup_var_label)
         
-        #Drop supplementary quantitatives columns
-        if self.quanti_sup is not None:
-            X = X.drop(columns=quanti_sup_label)
-        
-        #drop supplementary individuls  
+        #drop supplementary individuals
         if self.ind_sup is not None:
-            X_ind_sup = X.loc[ind_sup_label,:]
-            X = X.drop(index=ind_sup_label)
+            X_ind_sup, X = X.loc[ind_sup_label,:], X.drop(index=ind_sup_label)
 
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##Factor Analysis of Mixed Data (FAMD)
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        # recode variable for Factor Analysis of Mixed Data
-        rec = recodevarfamd(X)
 
-        # Extract elements
-        X, X_quanti, X_quali, nb_moda = rec.X, rec.quanti, rec.quali, rec.nb_moda
-        n_rows, n_quanti, n_quali = rec.n, rec.k1, rec.k2
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #Factor Analysis of Mixed Data (FAMD)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set number of individuals
+        n_rows = X.shape[0]
 
-        #disjunctive table
-        if self.disjunctive is not None:
-            dummies = self.disjunctive
-        else:
-            dummies = rec.dummies
-        
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##set individuals weights
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set individuals weights
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_weights is None:
             ind_weights = ones(n_rows)/n_rows
         elif not isinstance(self.ind_weights,(list,tuple,ndarray,Series)):
@@ -303,124 +243,141 @@ class FAMD(BaseEstimator,TransformerMixin):
             raise ValueError(f"'ind_weights' must be a list/tuple/array/Series with length {n_rows}.")
         else:
             ind_weights = array(list(map(lambda x : x/sum(self.ind_weights),self.ind_weights)))
-            
+             
         #convert to Series
         ind_weights = Series(ind_weights,index=X.index,name="weight")
 
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##Create Z, center and scale
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        Xcod, center, scale = DataFrame().astype("float"), Series(name="center").astype("float"), Series(name="scale").astype("float")
+        #recode variables
+        rec = recodevarfamd(X=X,weights=ind_weights)
 
-        #for quantitative variables
-        if n_quanti > 0:
-            # Compute weighted average and standard deviation
-            d_quanti = DescrStatsW(X_quanti,weights=ind_weights,ddof=0) 
-            # Concatenate
-            Xcod = concat((Xcod,X_quanti),axis=1)
-            center = concat((center,Series(d_quanti.mean,index=X_quanti.columns,name="center")),axis=0)
-            scale = concat((scale,Series(d_quanti.std,index=X_quanti.columns,name="scale")),axis=0)
-            
-            # Summary quantitatives variables 
-            summary_quanti = X_quanti.describe().T.reset_index().rename(columns={"index" : "variable"})
-            summary_quanti["count"] = summary_quanti["count"].astype("int")
-            self.summary_quanti_ = summary_quanti
+        #extract elements
+        X, Z, X_quanti, X_quali, dummies, nb_moda, n_quanti, n_quali, center, scale  = rec.X, rec.Z, rec.quanti ,rec.quali, rec.dummies, rec.nb_moda, rec.k1, rec.k2, rec.center, rec.scale
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set variables weights
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        var_weights = Series(name="weight").astype("float")
         
-        # Set categoricals variables weights
-        if n_quali > 0:
-            # Concatenate
-            Xcod = concat((Xcod,dummies),axis=1)
-            center = concat((center, Series(average(dummies,axis=0,weights=ind_weights),index=dummies.columns,name="center")),axis=0) 
-            scale = concat((scale,Series(sqrt(average(dummies,axis=0,weights=ind_weights)),index=dummies.columns,name="scale")),axis=0)
-
-            # Compute statistiques
-            summary_quali = DataFrame()
-            for j in X_quali.columns:
-                eff = X_quali[j].value_counts().to_frame("count").reset_index().rename(columns={j : "categorie"}).assign(proportion = lambda x : x["count"]/sum(x["count"]))
-                eff.insert(0,"variable",j)
-                summary_quali = concat([summary_quali,eff],axis=0,ignore_index=True)
-            summary_quali["count"] = summary_quali["count"].astype("int")
-            self.summary_quali_ = summary_quali
+        #set quantitative variables weights
+        if n_quanti > 0:
+            if self.quanti_weights is None:
+                quanti_weights = ones(n_quanti)
+            elif not isinstance(self.quanti_weights,(list,tuple,ndarray,Series)):
+                raise TypeError("'quanti_weights' must be a list/tuple/1darray/Series of quantitative variables weights")
+            elif len(self.quanti_weights) != n_quanti:
+                raise TypeError(f"'quanti_weights' must be a list/tuple/1darray/Series with length {n_quanti}.")
+            else:
+                quanti_weights = array(self.quanti_weights)
             
-            # Chi2 statistic test
-            if n_quali >1:
-                chi2_test = DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
-                idx = 0
-                for i in range(n_quali-1):
-                    for j in range(i+1,n_quali):
-                        chi = chi2_contingency(crosstab(X_quali.iloc[:,i],X_quali.iloc[:,j]),correction=False)
-                        row_chi2 = DataFrame(OrderedDict(variable1=X_quali.columns[i],variable2=X_quali.columns[j],statistic=chi.statistic,dof=chi.dof,pvalue=chi.pvalue),index=[idx])
-                        chi2_test = concat((chi2_test,row_chi2),axis=0,ignore_index=True)
-                        idx = idx + 1
-                # Transform to int
-                chi2_test["dof"] = chi2_test["dof"].astype("int")
-                self.chi2_test_ = chi2_test
+            #convert to Series
+            quanti_weights = Series(quanti_weights,index=X_quanti.columns)
+            #concatenate
+            var_weights = concat((var_weights,quanti_weights),axis=0)
+            
+        #set levels weights
+        if n_quali > 0:
+            if self.quali_weights is None:
+                quali_weights = ones(n_quali)
+            elif not isinstance(self.quali_weights,(list,tuple,ndarray,Series)):
+                raise ValueError("'quali_weights' must be a list/tuple/1darray/Series of qualitative variables weights")
+            elif len(self.quali_weights) != n_quali:
+                raise TypeError(f"'quali_weights' must be a list/tuple/1darray/Series with length {n_quali}.")
+            else:
+                quali_weights = array(self.quali_weights)
+            #duplicate according to number of levels
+            quali_weights = Series(array(list(chain(*[repeat(i,k) for i, k in zip(quali_weights,nb_moda)]))),index=dummies.columns)
+            #concatenate
+            var_weights = concat((var_weights,quali_weights),axis=0)
 
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##standardization : Z = (Xcod - center)/scale
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        Z = mapply(Xcod, lambda x : (x - center)/scale, axis=1, progressbar=False,n_workers=n_workers)
-
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##set variables weights
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        var_weights = Series(ones(Z.shape[1]),index=Z.columns,name="weight")
-
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##set number of components
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        # QR decomposition (to set maximum number of components)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set number of components
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #QR decomposition (to set maximum number of components)
         Q, R = linalg.qr(Z)
-        max_components = min(linalg.matrix_rank(Q),linalg.matrix_rank(R))
-
+        max_components = int(min(linalg.matrix_rank(Q),linalg.matrix_rank(R), n_rows - 1, Z.shape[1] - n_quali))
+        #set number of components
         if self.n_components is None:
-            n_components =  int(max_components)
+            n_components =  max_components
         elif not isinstance(self.n_components,int):
             raise ValueError("'n_components' must be an integer.")
-        elif self.n_components <= 0:
+        elif self.n_components < 1:
             raise ValueError("'n_components' must be equal or greater than 1.")
         else:
-            n_components = int(min(self.n_components,max_components))
-        
+            n_components = min(self.n_components,max_components)
+
         #Store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Z=Z,ind_weights=ind_weights,var_weights=var_weights,center=center,scale=scale,n_components=n_components,n_workers=n_workers,
-                            ind_sup=ind_sup_label,quanti_sup=quanti_sup_label,quali_sup=quali_sup_label,rec=rec)
+        call_ = OrderedDict(Xtot=Xtot,X=X,dummies=dummies,k1=n_quanti,k2=n_quali,Z=Z,ind_weights=ind_weights,var_weights=var_weights,center=center,scale=scale,n_components=n_components,n_workers=n_workers,
+                            ind_sup=ind_sup_label,sup_var=sup_var_label)
         
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
-        
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##Run PCA with active elements
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        res = PCA(standardize=False,n_components=int(max_components),ind_weights=ind_weights,var_weights=var_weights).fit(Z)
 
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##statistics for active categories - active qualitative variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #fit factor analysis model and extract all elements
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        z_center = average(Z,axis=0,weights=ind_weights)
+        Zc = Z.sub(z_center,axis=1)
+        fit_ = gfa(Zc,ind_weights,var_weights,max_components,n_components,n_workers)
+        
+        #extract elements
+        self.svd_, self.eig_, self.ind_ = fit_.svd, fit_.eig, namedtuple("ind",fit_.row.keys())(*fit_.row.values())
+
+        #statistics for active quantitative variables
+        if n_quanti > 0:
+            quanti_var_coord, quanti_var_ctr, quanti_var_sqcos = fit_.col["coord"].iloc[:n_quanti,:], fit_.col["contrib"].iloc[:n_quanti,:], fit_.col["cos2"].iloc[:n_quanti,:]
+            #convert to ordered dictionary
+            quanti_var_ = OrderedDict(coord=quanti_var_coord, contrib=quanti_var_ctr, cos2=quanti_var_sqcos,infos=fit_.col["infos"].iloc[:n_quanti,:])
+            #convert to namedtuple
+            self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
+
+        #statistics for active levels - active qualitative variables
         if n_quali > 0:
-            Z_quali = concat((Z,X_quali),axis=1)
-            index = [Z_quali.columns.tolist().index(x) for x in X_quali.columns]
-            #Update PCA with supplementary qualitative variables
-            res = PCA(standardize=False,n_components=int(max_components),ind_weights=ind_weights,var_weights=var_weights,quali_sup=index).fit(Z_quali)
-            quali_var_eta2 = res.quali_sup_.eta2.iloc[:,:n_components]
-            quali_var_ = OrderedDict(coord=res.quali_sup_.coord.iloc[:,:n_components],contrib=res.var_.contrib.iloc[n_quanti:,:n_components],cos2=res.quali_sup_.cos2.iloc[:,:n_components],
-                                     vtest=res.quali_sup_.vtest.iloc[:,:n_components],dist=res.quali_sup_.dist)
+            #proportion  of levels
+            p_k = mapply(dummies, lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+            #coordinates for the levels
+            levels_coord = mapply(mapply(fit_.col["coord"].iloc[n_quanti:,:],lambda x : x/sqrt(p_k),axis=0,progressbar=False,n_workers=n_workers),
+                                  lambda x : x*self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+            #vtest for the levels
+            levels_vtest = mapply(mapply(levels_coord,lambda x : x*sqrt((n_rows-1)/(1/p_k).sub(1)),axis=0,progressbar=False,n_workers=n_workers),
+                                  lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+            #eta2 for the qualitative variables
+            quali_var_sqeta = function_eta2(X=X_quali,Y=self.ind_.coord,weights=ind_weights,n_workers=n_workers)
+            #dist2 for levels
+            barycentre = conditional_average(X=Z,Y=X_quali,weights=ind_weights)
+            levels_sqdisto = mapply(barycentre, lambda x : ((x - z_center)**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+            levels_sqdisto.name = "Sq. Dist."
+            #cos2 for the levels
+            levels_sqcos = mapply(levels_coord, lambda x : (x**2)/levels_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
+            #convert to dictionary
+            quali_var_ = OrderedDict(coord=levels_coord,contrib=fit_.col["contrib"].iloc[n_quanti:,:],cos2=levels_sqcos,vtest=levels_vtest,dist2=levels_sqdisto)
+            # Add to qualitatives/categoricals variables if not continuous variables
+            if n_quanti == 0:
+                quali_var_["eta2"] = quali_var_sqeta
+            #convert to namedtuple
             self.quali_var_ = namedtuple("quali_var",quali_var_.keys())(*quali_var_.values())
 
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##statistics for supplementary individuals
-        #----------------------------------------------------------------------------------------------------------------------------------------
+        #statistics for variables
+        if all(x > 0 for x in [n_quanti,n_quali]):
+            #contrib of the qualitative variables
+            quali_var_ctr = mapply(quali_var_sqeta,lambda x : 100*(x/self.eig_.iloc[:n_components,0]),axis=1,progressbar=False,n_workers=n_workers)
+            #cos2 of the qualitative variables
+            quali_var_sqcos = mapply(quali_var_sqeta,lambda x : (x**2)/(nb_moda -1),axis=0,progressbar=False,n_workers=n_workers)
+            #concatenate
+            var_coord, var_ctr, var_sqcos = concat((quanti_var_sqcos,quali_var_sqeta),axis=0), concat((quanti_var_ctr,quali_var_ctr),axis=0), concat((quanti_var_sqcos.pow(2),quali_var_sqcos),axis=0)
+            #convert to namedtuple
+            self.var_ = namedtuple("var",["coord","contrib","cos2"])(var_coord,var_ctr,var_sqcos)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #statistics for supplementary individuals
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
             #split data
             split_ind_sup = splitmix(X_ind_sup)
             X_ind_sup_quanti, X_ind_sup_quali = split_ind_sup.quanti, split_ind_sup.quali
-
-            # Initialize the data
+            #initialize the data
             Xcod_ind_sup = DataFrame().astype("float")
-
-            if n_quanti > 0:
+            if n_quanti > 0 and X_ind_sup_quanti is not None:
                 Xcod_ind_sup = concat((Xcod_ind_sup,X_ind_sup_quanti),axis=1)
-            
-            if n_quali > 0:
+            if n_quali > 0 and X_ind_sup_quali is not None:
                 #create disjunctive table
                 dummies_ind_sup = DataFrame(zeros((len(ind_sup_label),dummies.shape[1])),columns=dummies.columns,index=ind_sup_label)
                 for i in range(len(ind_sup_label)):
@@ -430,182 +387,115 @@ class FAMD(BaseEstimator,TransformerMixin):
                             dummies_ind_sup.iloc[i,k] = 1
                 Xcod_ind_sup = concat((Xcod_ind_sup,dummies_ind_sup),axis=1)
             
-            # Standardize the data
-            Z_ind_sup = mapply(Xcod_ind_sup,lambda x : (x - self.call_.center)/self.call_.scale,axis=1,progressbar=False,n_workers=n_workers)
-            # Update PCA with supplementary individuals
-            res = PCA(standardize=False,n_components=int(max_components),ind_weights=ind_weights,var_weights=var_weights,ind_sup=ind_sup_label).fit(concat((Z,Z_ind_sup),axis=0))
-            #convert to ordered dictionary
-            ind_sup_ = OrderedDict(coord=res.ind_sup_.coord.iloc[:,:n_components],cos2=res.ind_sup_.cos2.iloc[:,:n_components],dist=res.ind_sup_.dist)
+            #standardize the data (Z=(X-center)/scale)
+            Z_ind_sup = mapply(Xcod_ind_sup,lambda x : ((x - center)/scale) - z_center,axis=1,progressbar=False,n_workers=n_workers)
+            #coordinates for the supplementary individuals
+            ind_sup_coord = mapply(Z_ind_sup,lambda x : x*var_weights,axis=1,progressbar=False,n_workers=n_workers).dot(self.svd_.V)
+            ind_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+            #dist2 for the supplementary individuals
+            ind_sup_sqdisto = mapply(Z_ind_sup, lambda x : (x**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+            ind_sup_sqdisto.name = "Sq. Dist."
+            #cos2 for the supplementary individuals
+            ind_sup_sqcos = mapply(ind_sup_coord,lambda x : (x**2)/ind_sup_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
             #convert to namedtuple
-            self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
-        
+            self.ind_sup_ = namedtuple("ind_sup",["coord","cos2","dist2"])(ind_sup_coord, ind_sup_sqcos, ind_sup_sqdisto)
+
         #----------------------------------------------------------------------------------------------------------------------------------------
-        ##statistics for supplementary quantitative variables
+        #statistics for supplementary variables (quantitative and/or qualitative)
         #----------------------------------------------------------------------------------------------------------------------------------------
-        if self.quanti_sup is not None:
-            X_quanti_sup = Xtot.loc[:,quanti_sup_label]
+        if self.sup_var is not None:
+            X_sup_var = Xtot.loc[:,sup_var_label]
             if self.ind_sup is not None:
-                X_quanti_sup = X_quanti_sup.drop(index=ind_sup_label)
-            
-            #Recode to fill NA
-            X_quanti_sup = recodecont(X_quanti_sup).X
-            # Standardize
-            d_quanti_sup = DescrStatsW(X_quanti_sup,weights=ind_weights,ddof=0)
-            Z_quanti_sup = mapply(X_quanti_sup,lambda x : (x - d_quanti_sup.mean)/d_quanti_sup.std,axis=1,progressbar=False,n_workers=n_workers)
-            # Update PCA with supplementary quantitative variables
-            res = PCA(standardize=False,n_components=int(max_components),ind_weights=ind_weights,var_weights=var_weights,quanti_sup=quanti_sup_label).fit(concat((Z,Z_quanti_sup),axis=1))
-            #convert to ordered dictionary
-            quanti_sup_ = OrderedDict(coord=res.quanti_sup_.coord.iloc[:,:n_components],cos2=res.quanti_sup_.cos2.iloc[:,:n_components])
-            #convert to namedtuple
-            self.quanti_sup_ = namedtuple("quanti_sup",quanti_sup_.keys())(*quanti_sup_.values())
+                X_sup_var = X_sup_var.drop(index=ind_sup_label)
 
-            # Summary statistics with supplementary quantitatives variables
-            summary_quanti_sup = X_quanti_sup.describe().T.reset_index().rename(columns={"index" : "variable"})
-            summary_quanti_sup["count"] = summary_quanti_sup["count"].astype("int")
+            #recode supplementary variables
+            rec2 = recodevarfamd(X=X_sup_var,weights=ind_weights)
 
-            # Store
-            if n_quanti > 0:
-                self.summary_quanti_.insert(0,"group","active")
-                summary_quanti_sup.insert(0,"group","sup")
-                self.summary_quanti_ = concat((self.summary_quanti_,summary_quanti_sup),axis=0,ignore_index=True)
-            elif n_quanti == 0:
-                self.summary_quanti_ = summary_quanti_sup
-        
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##statistics for supplementary qualitative variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        if self.quali_sup is not None:
-            X_quali_sup = Xtot.loc[:,quali_sup_label]
-            if self.ind_sup is not None:
-                X_quali_sup = X_quali_sup.drop(index=ind_sup_label)
+            #extract elements
+            Z_sup_var, X_quali_sup, dummies_sup, n_quanti_sup, n_quali_sup  = rec2.Z, rec2.quali, rec2.dummies, rec2.k1, rec2.k2
 
-            # Update PCA with supplementary qualitative variables
-            res = PCA(standardize=False,n_components=int(max_components),ind_weights=ind_weights,var_weights=var_weights,quali_sup=quali_sup_label).fit(concat((Z,X_quali_sup),axis=1))
-            #convert to ordered dictionary
-            quali_sup_ = OrderedDict(coord=res.quali_sup_.coord.iloc[:,:n_components],cos2=res.quali_sup_.cos2.iloc[:,:n_components],vtest=res.quali_sup_.vtest.iloc[:,:n_components],
-                                     eta2=res.quali_sup_.eta2.iloc[:,:n_components],dist=res.quali_sup_.dist)
-            #convert to namedtuple
-            self.quali_sup_ = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
-            
-            # Chi-squared test between new categorie
-            n_quali_sup = X_quali_sup.shape[1]
-            if n_quali_sup > 1:
-                chi2_sup_test = DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"]).astype("float")
-                cpt = 0
-                for i in range(n_quali_sup-1):
-                    for j in range(i+1,n_quali_sup):
-                        chi = chi2_contingency(crosstab(X_quali_sup.iloc[:,i],X_quali_sup.iloc[:,j]),correction=False)
-                        row_chi2 = DataFrame(OrderedDict(variable1=X_quali_sup.columns[i],variable2=X_quali_sup.columns[j],statistic=chi.statistic,dof=chi.dof,pvalue=chi.pvalue),index=[cpt])
-                        chi2_sup_test  = concat([chi2_sup_test,row_chi2],axis=0)
-                        cpt = cpt + 1
-                chi2_sup_test["dof"] = chi2_sup_test["dof"].astype("int")
-            
-            # Chi-squared between old and new qualitatives variables
-            if n_quali > 0:
-                chi2_sup_test2 = DataFrame(columns=["variable1","variable2","statistic","dof","pvalue"])
-                cpt = 0
-                for i in range(n_quali_sup):
-                    for j in range(n_quali):
-                        chi = chi2_contingency(crosstab(X_quali_sup.iloc[:,i],X_quali.iloc[:,j]),correction=False)
-                        row_chi2 = DataFrame(OrderedDict(variable1=X_quali_sup.columns[i],variable2=X_quali.columns[j],statistic=chi.statistic,dof=chi.dof,pvalue=chi.pvalue),index=[cpt])
-                        chi2_sup_test2 = concat([chi2_sup_test2,row_chi2],axis=0,ignore_index=True)
-                        cpt = cpt + 1
-                chi2_sup_test2["dof"] = chi2_sup_test2["dof"].astype("int")
-            
-            if n_quali > 1:
-                if n_quali_sup > 1 :
-                    chi2_sup_test = concat([chi2_sup_test,chi2_sup_test2],axis=0,ignore_index=True)
-                else:
-                    chi2_sup_test = chi2_sup_test2
-                self.chi2_test_ = concat((self.chi2_test_,chi2_sup_test),axis=0,ignore_index=True)
-            else:
-                if n_quali_sup > 1 :
-                    self.chi2_test_ = chi2_sup_test
+            #coordinates for the supplementary columns
+            col_sup_coord = mapply(Z_sup_var,lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers).T.dot(self.svd_.U)
+            col_sup_coord.columns = ["Dim."+str(x+1) for x in range(n_components)]
+            #dist2 for the supplementary levels
+            col_sup_sqdisto  = mapply(Z_sup_var, lambda x : (x**2)*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+            col_sup_sqdisto.name = "Sq. Dist."
+            #cos2 for the supplementary columns
+            col_sup_sqcos = mapply(col_sup_coord, lambda x : (x**2)/col_sup_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
 
-            # Compute statistiques
-            summary_quali_sup = DataFrame()
-            for j in X_quali_sup.columns:
-                eff = X_quali_sup[j].value_counts().to_frame("count").reset_index().rename(columns={j : "categorie"}).assign(proportion=lambda x : x["count"]/sum(x["count"]))
-                eff.insert(0,"variable",j)
-                summary_quali_sup = concat([summary_quali_sup,eff],axis=0,ignore_index=True)
-            summary_quali_sup["count"] = summary_quali_sup["count"].astype("int")
-
-            if n_quali == 0:
-                self.summary_quali_ = summary_quali_sup
-            elif n_quali > 0:
-                summary_quali_sup.insert(0,"group","sup")
-                self.summary_quali_.insert(0,"group","active")
-                self.summary_quali_ = concat([self.summary_quali_,summary_quali_sup],axis=0,ignore_index=True)
-
-        #Generalized Singular Values Decomposition (GSVD)
-        svd_ = res.svd_
-        self.svd_ = namedtuple("svd",["vs","U","V"])(svd_.vs[:max_components], svd_.U[:,:n_components],svd_.V[:,:n_components])
-
-        # Eigen - values
-        eigen_values = self.svd_.vs**2
-        difference, proportion = insert(-diff(eigen_values),len(eigen_values)-1,nan), 100*eigen_values/sum(eigen_values)
-        cumulative = cumsum(proportion)
-        self.eig_ = DataFrame(c_[eigen_values,difference,proportion,cumulative],columns=["eigenvalue","difference","proportion","cumulative"],index=list(map(lambda x : "Dim."+str(x+1),range(max_components))))
-
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##statistics for individuals
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ind_ = OrderedDict(coord=res.ind_.coord.iloc[:,:n_components],contrib=res.ind_.contrib.iloc[:,:n_components],cos2=res.ind_.cos2.iloc[:,:n_components],infos=res.ind_.infos)
-        self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
-        
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##statistics for quantitative variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        if n_quanti > 0:
-            quanti_var_ctr, quanti_var_cos2 = res.var_.contrib.iloc[:n_quanti,:n_components], res.var_.cos2.iloc[:n_quanti,:n_components]
-            #convert to ordered dictionary
-            quanti_var_ = OrderedDict(coord=res.var_.coord.iloc[:n_quanti,:n_components],contrib=quanti_var_ctr,cos2=quanti_var_cos2,infos=res.var_.infos.iloc[:n_quanti,:])
-            #convert to namedtuple
-            self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
-        
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        ##statistics for variables
-        #----------------------------------------------------------------------------------------------------------------------------------------
-        if n_quali > 0:
-            # Add to qualitatives/categoricals variables if not continuous variables
-            if n_quanti == 0:
-                self.quali_var_ = namedtuplemerge("quali_var",self.quali_var_,namedtuple("quali_var",["eta2"])(quali_var_eta2))
-            elif n_quanti > 0:
-                # Qualitative variables contributions (contrib) in FAMD
-                quali_var_ctr = mapply(quali_var_eta2,lambda x : 100*x/eigen_values[:n_components],axis=1,progressbar=False,n_workers=n_workers)
-                # Qualitative variables square cosinus (cos2) in FAMD
-                quali_var_cos2 = mapply(quali_var_eta2,lambda x : (x**2)/(nb_moda -1),axis=0,progressbar=False,n_workers=n_workers)
-                #concatenate
-                var_coord, var_ctr, var_cos2 = concat((quanti_var_cos2,quali_var_eta2),axis=0), concat((quanti_var_ctr,quali_var_ctr),axis=0), concat((quanti_var_cos2.pow(2),quali_var_cos2),axis=0)
+            #statistics for supplementary quantitative variables
+            if n_quanti_sup > 0:
                 #convert to namedtuple
-                self.var_ = namedtuple("var",["coord","contrib","cos2"])(var_coord,var_ctr,var_cos2)      
+                self.quanti_sup_ = namedtuple("quanti_sup",["coord","cos2"])(col_sup_coord.iloc[:n_quanti_sup,:],col_sup_sqcos.iloc[:n_quanti_sup,:])
 
+            #statistics for supplementary levels - supplementary qualitative variables
+            if n_quali_sup > 0:
+                #proportion of supplementary levels
+                p_k_sup = mapply(dummies_sup, lambda x : x*ind_weights,axis=0,progressbar=False,n_workers=n_workers).sum(axis=0)
+                #coordinates for the supplementary levels
+                levels_sup_coord = mapply(mapply(col_sup_coord.iloc[n_quanti_sup:,:],lambda x : x/sqrt(p_k_sup),axis=0,progressbar=False,n_workers=n_workers),
+                                          lambda x : x*self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+                #vtest for the supplementary levels
+                levels_sup_vtest = mapply(mapply(levels_sup_coord,lambda x : x*sqrt((n_rows-1)/(1/p_k_sup).sub(1)),axis=0,progressbar=False,n_workers=n_workers),
+                                          lambda x : x/self.svd_.vs[:n_components],axis=1,progressbar=False,n_workers=n_workers)
+                #eta2 for the supplementary qualitative variables
+                quali_sup_sqeta = function_eta2(X=X_quali_sup,Y=self.ind_.coord,weights=ind_weights,n_workers=n_workers)
+                #dist2 for supplementary levels
+                bary_sup = conditional_average(X=Z,Y=X_quali_sup,weights=ind_weights)
+                levels_sup_sqdisto = mapply(bary_sup, lambda x : ((x - z_center)**2)*var_weights,axis=1,progressbar=False,n_workers=n_workers).sum(axis=1)
+                levels_sup_sqdisto.name = "Sq. Dist."
+                #cos2 for the supplementary levels
+                levels_sup_sqcos = mapply(levels_sup_coord, lambda x : (x**2)/levels_sup_sqdisto,axis=0,progressbar=False,n_workers=n_workers)
+                #convert to dictionary
+                quali_sup_ = OrderedDict(coord=levels_sup_coord,cos2=levels_sup_sqcos,vtest=levels_sup_vtest,dist2=levels_sup_sqdisto,eta2=quali_sup_sqeta)
+                #convert to namedtuple
+                self.quali_sup_ = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
+            
+        #descriptive statistics for the quantitative variables
+        if is_quanti.shape[1] > 0:
+            if self.ind_sup is not None:
+                is_quanti = is_quanti.drop(index=ind_sup_label)
+            self.summary_quanti_ = summarize(X=is_quanti)
+
+        #multivariate goodness of fit
+        if is_quali.shape[1] > 0:
+            if self.ind_sup is not None:
+                is_quali = is_quali.drop(index=ind_sup_label)
+            self.summary_quali_ = summarize(X=is_quali)
+            if is_quali.shape[1] > 1:
+                self.goodness_ = association(X=is_quali,alpha=0.05)
+        
+        #correlation tests
+        is_all = Xtot.copy()
+        if self.ind_sup is not None:
+            is_all = is_all.drop(index=ind_sup_label)
+        self.corrtest_ = corrmatrix(X=is_all,weights=ind_weights)
+                  
         self.model_ = "famd"
-
         return self
 
-    def fit_transform(self,X,y=None):
+    def fit_transform(self,X:DataFrame,y=None) -> DataFrame:
         """
         Fit the model with X and apply the dimensionality reduction on X
         ----------------------------------------------------------------
 
         Parameters
         ----------
-        `X` : pandas dataframe of shape (n_samples, n_columns)
+        `X`: pandas DataFrame of shape (n_samples, n_columns)
             Training data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
         
-        `y` : None
+        `y`: None
             y is ignored.
         
         Returns
         -------
-        `X_new` : pandas dataframe of shape (n_samples, n_components)
+        `X_new`: pandas DataFrame of shape (n_samples, n_components)
             Transformed values.
         """
         self.fit(X)
         return self.ind_.coord
     
-    def transform(self,X):
+    def transform(self,X:DataFrame) -> DataFrame:
         """
         Apply the dimensionality reduction on X
         ---------------------------------------
@@ -616,38 +506,42 @@ class FAMD(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        X : pandas dataframe of shape (n_samples, n_columns)
+        `X`: pandas DataFrame of shape (n_samples, n_columns)
             New data, where `n_samples` is the number of samples and `n_columns` is the number of columns.
 
         Returns
         -------
-        `X_new` : pandas dataframe of shape (n_samples, n_components)
+        `X_new`: pandas DataFrame of shape (n_samples, n_components)
             Projection of X in the principal components where `n_samples` is the number of samples and `n_components` is the number of the components.
         """
-        # check if X is a pandas DataFrame
-        if not isinstance(X,DataFrame):
+        if not isinstance(X,DataFrame): #check if X is a pandas DataFrame
             raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
-        # Set index name as None
-        X.index.name = None
+        X.index.name = None #set index name as None
 
-        #split X
-        split_x = splitmix(X)
+        if X.shape[1] != self.call_.X.shape[1]: #check if X.shape[1] == ncols
+            raise ValueError("'columns' aren't aligned")
+        
+        intersect_col = list(set(X.columns) & set(self.call_.X.columns)) #find intersect
+        if len(intersect_col) != self.call_.X.shape[1]:
+            raise ValueError("The names of the variables is not the same as the ones in the active variables of the PCA result")
+
+        split_x = splitmix(X) #split X
         X_quanti, X_quali = split_x.quanti, split_x.quali
         
-        # Extract active elements
-        dummies, n_quanti, n_quali = self.call_.rec.dummies, self.call_.rec.k1, self.call_.rec.k2
+        #extract active elements
+        dummies, n_quanti, n_quali = self.call_.dummies, self.call_.k1, self.call_.k2
 
         #create code variables
         Xcod = DataFrame().astype("float")
         if X_quanti is not None :
             if n_quanti != X_quanti.shape[1]:
-                raise TypeError("The number of continuous columns must be the same")
+                raise TypeError("The number of quantitative variables must be the same")
             Xcod = concat((Xcod,X_quanti),axis=1)
         
         if X_quali is not None:
             if n_quali != X_quali.shape[1]:
-                raise TypeError("The number of qualitatives columns must be the same")
+                raise TypeError("The number of qualitative variables must be the same")
             
             X_quali = revaluate_cat_variable(X_quali)
             #create disjunctive table
@@ -658,42 +552,43 @@ class FAMD(BaseEstimator,TransformerMixin):
                     if dummies.columns[k] in values:
                         dummies_sup.iloc[i,k] = 1
             Xcod = concat((Xcod,dummies_sup),axis=1)
-        
-        # Standardize the data
-        coord = mapply(Xcod,lambda x : (((x - self.call_.center)/self.call_.scale) - self.call_.Z.mean(axis=0))*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.svd_.V)
-        coord.columns = ["Dim."+str(x+1) for x in range(coord.shape[1])]
+        #average of Z
+        z_center = average(self.call_.Z,axis=0,weights=self.call_.ind_weights)
+        #standardize the data
+        coord = mapply(Xcod,lambda x : (((x - self.call_.center)/self.call_.scale) - z_center)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.svd_.V)
+        coord.columns = ["Dim."+str(x+1) for x in range(self.call_.n_components)]
         return coord
 
-def predictFAMD(self,X=None):
+def predictFAMD(self,X:DataFrame) -> NamedTuple:
     """
     Predict projection for new individuals with Factor Analysis of Mixed Data (FAMD)
     --------------------------------------------------------------------------------
 
     Description
     -----------
-    Performs the coordinates, squared cosinus and square distance to origin of new individuals with Factor Analysis of Mixed Data (FAMD)
+    Performs the coordinates, squared cosinus and squared distance to origin for new individuals with Factor Analysis of Mixed Data (FAMD)
 
     Usage
     -----
     ```python
-    >>> predictFAMD(self,X=None)
+    >>> predictFAMD(self,X)
     ```
 
     Parameters
     ----------
-    `self` : an object of class FAMD
+    `self`: an object of class FAMD
 
-    `X` : pandas dataframe in which to look for variables with which to predict. X must contain columns with the same names as the original data.
+    `X`: a pandas DataFrame in which to look for variables with which to predict. X must contain columns with the same names as the original data.
     
     Return
     ------
-    namedtuple of dataframes containing all the results for the new individuals including:
+    namedtuple of pandas Dataframes/Series containing all the results for the new individuals including:
     
-    `coord` : factor coordinates of the new individuals
+    `coord`: coordinates for the new individuals,
 
-    `cos2` : square cosinus of the new individuals
+    `cos2`: squared cosinus for the new individuals,
 
-    `dist` : square distance to origin for new individuals
+    `dist2`: squared distance to origin for the new individuals.
     
     Author(s)
     ---------
@@ -702,29 +597,39 @@ def predictFAMD(self,X=None):
     Examples
     --------
     ```python
-    >>> from scientisttools import FAMD, predictFAMD, load_gironde
-    >>> gironde = load_gironde()
-    >>> res_famd = FAMD().fit(gironde)
-    >>> predict = predictFAMD(res_famd,X=gironde)
+    >>> from scientisttools.datasets import load_autos2005
+    >>> from scientisttools import FAMD, predictFAMD
+    >>> autos2005 = load_autos2005()
+    >>> res_famd = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
+    >>> res_famd.fit(autos2005)
+    >>> #prediction for the new individuals
+    >>> X_ind_sup = load_autos2005("ind_sup")
+    >>> predict = predictFAMD(res_famd,X=X_ind_sup)
+    >>> predict.coord.head() #coord of new individuals
+    >>> predict.cos2.head() #cos2 of new individuals
+    >>> predict.contrib.head() #contrib of new individuals
     ```
     """
-    # Check if self is an object of class FAMD
-    if self.model_ != "famd":
+    if self.model_ != "famd": #check if self is an object of class FAMD
         raise TypeError("'self' must be an object of class FAMD")
 
-    # check if X is a pandas DataFrame
-    if not isinstance(X,DataFrame):
+    if not isinstance(X,DataFrame): #check if X is a pandas DataFrame
         raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
     
-    # Set index name as None
-    X.index.name = None
+    X.index.name = None #set index name as None
 
-    #split X
-    split_x = splitmix(X)
+    if X.shape[1] != self.call_.X.shape[1]: #check if X.shape[1] == ncols
+        raise ValueError("'columns' aren't aligned")
+    
+    intersect_col = list(set(X.columns) & set(self.call_.X.columns)) #find intersect
+    if len(intersect_col) != self.call_.X.shape[1]:
+        raise ValueError("The names of the variables is not the same as the ones in the active variables of the FAMD result")
+
+    split_x = splitmix(X) #split X
     X_quanti, X_quali = split_x.quanti, split_x.quali
 
     # Extract active elements
-    dummies, n_quanti, n_quali = self.call_.rec.dummies, self.call_.rec.k1, self.call_.rec.k2
+    dummies, n_quanti, n_quali = self.call_.dummies, self.call_.k1, self.call_.k2
 
     #create code variables
     Xcod = DataFrame().astype("float")
@@ -746,53 +651,57 @@ def predictFAMD(self,X=None):
                 if dummies.columns[k] in values:
                     dummies_sup.iloc[i,k] = 1
         Xcod = concat((Xcod,dummies_sup),axis=1)
-    
-    # Standardize the data
-    Z = mapply(Xcod,lambda x : ((x - self.call_.center)/self.call_.scale) - self.call_.Z.mean(axis=0),axis=1,progressbar=False,n_workers=self.call_.n_workers)
-    #square distance to origin
+
+    #average of Z
+    z_center = average(self.call_.Z,axis=0,weights=self.call_.ind_weights)
+    #standardize the data
+    Z = mapply(Xcod,lambda x : ((x - self.call_.center)/self.call_.scale) - z_center,axis=1,progressbar=False,n_workers=self.call_.n_workers)
+    #coord for the new individuals
+    coord = mapply(Z,lambda x : x*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).dot(self.svd_.V)
+    coord.columns = ["Dim."+str(x+1) for x in range(self.call_.n_components)]
+    #dist2 for the new individuals
     sqdisto = mapply(Z, lambda x : (x**2)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
     sqdisto.name = "Sq. Dist."
-    #statistics for 
-    ind_sup_ = predict_ind_sup(Z=Z,V=self.svd_.V,sqdisto=sqdisto,col_weights=self.call_.var_weights,n_workers=self.call_.n_workers)
-    return namedtuple("predictFAMDResult",ind_sup_.keys())(*ind_sup_.values())
+    #cos2 for the new individuals
+    sqcos = mapply(coord,lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=self.call_.n_workers)
+    #return namedtuple
+    return namedtuple("predictFAMDResult",["coord","cos2","dist2"])(coord,sqcos,sqdisto)
 
-def supvarFAMD(self,X_quanti_sup=None, X_quali_sup=None):
+def supvarFAMD(self,X:DataFrame) -> NamedTuple:
     """
     Supplementary variables in Factor Analysis of Mixed Data (FAMD)
     ---------------------------------------------------------------
 
     Description
     -----------
-    Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables with Factor Analysis of Mixed Data (FAMD)
+    Performs the coordinates, squared cosinus and squared distance to origin of supplementary variables (quantitative and/or qualitative) with Factor Analysis of Mixed Data (FAMD)
 
     Usage
     -----
     ```python
-    >>> supvarFAMD(self,X_quanti_sup=None, X_quali_sup=None)
+    >>> supvarFAMD(self,X)
     ```
 
     Parameters
     ----------
-    `self` : an object of class FAMD
+    `self`: an object of class FAMD
 
-    `X_quanti_sup` : pandas/polars dataframe of supplementary quantitatives variables (default = None)
-
-    `X_quali_sup` : pandas/polars dataframe of supplementary qualitatives variables (default = None)
+    `X`: pandas DataFrame of supplementary variables (quantitative and/or qualitative)
 
     Returns
     -------
-    namedtuple of dictionary containing the results for supplementary variables including : 
+    namedtuple of namedtuple containing all the results for supplementary variables (quantitative and/or qualitative) including : 
 
-    `quanti` : namedtuple containing the results of the supplementary quantitatives variables including :
-        * coord : factor coordinates of the supplementary quantitatives variables
-        * cos2 : square cosinus of the supplementary quantitatives variables
+    `quanti`: namedtuple of pandas DataFrame containing all the results for the supplementary quantitative variables including :
+        * `coord`: coordinates for the supplementary quantitative variables,
+        * `cos2`: square cosinus for the supplementary quantitative variables.
     
-    `quali` : namedtuple containing the results of the supplementary qualitatives/categories variables including :
-        * coord : factor coordinates of the supplementary categories
-        * cos2 : square cosinus of the supplementary categories
-        * vtest : value-test of the supplementary categories
-        * dist : square distance to origin of the supplementary categories
-        * eta2 : square correlation ratio of the supplementary qualitatives variables
+    `quali`: namedtuple pf pandas DataFrame/Series containing all the results for the supplementary qualitative variables including :
+        * `coord`: coordinates for the supplementary levels,
+        * `cos2`: square cosinus for the supplementary levels,
+        * `vtest`: value-test for the supplementary levels,
+        * `dist2`: squared distance to origin for the supplementary levels,
+        * `eta2`: squared correlation ratio for the supplementary qualitative variables.
 
     Author(s)
     ---------
@@ -801,90 +710,84 @@ def supvarFAMD(self,X_quanti_sup=None, X_quali_sup=None):
     Examples
     --------
     ```python
-    >>> from scientisttools import FAMD, supvarFAMD, load_gironde, splitmix
-    >>> gironde = load_gironde()
-    >>> res_famd = FAMD().fit(gironde)
-    >>> X_quant, X_qual = splitmix(gironde).quanti, splitmix(gironde).quali
-    >>> supvar_famd = supvaFAMD(res_famd, X_quali_sup=X_qual, X_quanti_sup=X_quant)
+    >>> from scientisttools.datasets import load_autos2005
+    >>> from scientisttools import FAMD, supvarFAMD
+    >>> autos2005 = load_autos2005()
+    >>> res_famd = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
+    >>> res_famd.fit(autos2005)
+    >>> #predict for the supplementary variables (quantitative and qualitative)
+    >>> X_sup_var = load_autos2005("sup_var")
+    >>> sup_var_predict = supvarFAMD(res_famd, X=X_sup_var)
+    >>> quanti_sup = sup_var_predict.quanti
+    >>> quanti_sup.coord.head() #coordinates of the supplementary quantitative variables
+    >>> quanti_sup.vos2.head() #cos2 of the supplementary quantitative variables
+    >>> quali_sup = sup_var_predict.quali
+    >>> quali_sup.coord.head() #coordinates of the supplementary levels
+    >>> quali_sup.cos2.head() #cos2 of the supplementary levels
+    >>> quali_sup.vtest.head() #vtest of the supplementary levels
+    >>> quali_sup.dist2.head() #dist2 of the supplementary levels
+    >>> quali_sup.eta2.head() #eta2 of the supplementary qualitative variables
     ```
     """
-    # Check if self is and object of class FAMD
-    if self.model_ != "famd":
+    if self.model_ != "famd": #check if self is an object of class FAMD
         raise TypeError("'self' must be an object of class FAMD")
-
-    #----------------------------------------------------------------------------------------------------------------------------------------
-    ##statistics for supplementary quantitative variables
-    #----------------------------------------------------------------------------------------------------------------------------------------
-    if X_quanti_sup is not None:
-        # If pandas series, transform to pandas dataframe
-        if isinstance(X_quanti_sup,Series):
-            X_quanti_sup = X_quanti_sup.to_frame()
+    
+    if isinstance(X,Series): #if pandas series, transform to pandas dataframe
+        X = X.to_frame()
         
-        # Check if X_quanti_sup is an instance of pd.DataFrame class
-        if not isinstance(X_quanti_sup,DataFrame):
-            raise TypeError(f"{type(X_quanti_sup)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        # Set index name as None
-        X_quanti_sup.index.name = None
-        
-        #fill missing with mean
-        X_quanti_sup = recodecont(X_quanti_sup.astype("float")).X
+    if not isinstance(X,DataFrame): #check if X is an instance of pd.DataFrame class
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-        # Compute weighted average and standard deviation
-        d_quanti_sup = DescrStatsW(X_quanti_sup,weights=self.call_.ind_weights,ddof=0)
+    if X.shape[0] != self.call_.X.shape[0]: #check if X.shape[0] = nrows
+        raise ValueError("'rows' aren't aligned")
+    
+    #recode variables
+    rec = recodevarfamd(X=X,weights=self.call_.ind_weights)
 
-        # Standardization data
-        Z_quanti_sup = mapply(X_quanti_sup,lambda x : (x - d_quanti_sup.mean)/d_quanti_sup.std,axis=1,progressbar=False,n_workers=self.call_.n_workers)
-        #statistics for 
-        quanti_sup_ = predict_quanti_sup(Z=Z_quanti_sup,U=self.svd_.U,row_weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
+    #extract elements
+    Z, X_quali, dummies, n_rows, n_quanti, n_quali  = rec.Z, rec.quali, rec.dummies, rec.n, rec.k1, rec.k2
+
+    #coordinates for the supplementary columns
+    coord = mapply(Z,lambda x : x*self.call_.ind_weights,axis=0,progressbar=False,n_workers=self.call_.n_workers).T.dot(self.svd_.U)
+    coord.columns = ["Dim."+str(x+1) for x in range(self.call_.n_components)]
+    #dist2 for the supplementary levels
+    sqdisto  = mapply(Z, lambda x : (x**2)*self.call_.ind_weights,axis=0,progressbar=False,n_workers=self.call_.n_workers).sum(axis=0)
+    sqdisto.name = "Sq. Dist."
+    #cos2 for the supplementary columns
+    sqcos = mapply(coord, lambda x : (x**2)/sqdisto,axis=0,progressbar=False,n_workers=self.call_.n_workers)
+
+    #statistics for supplementary quantitative variables
+    if n_quanti > 0:
         #convert to namedtuple
-        quanti_sup =  namedtuple("quanti_stp",quanti_sup_.keys())(*quanti_sup_.values())
+        quanti_sup = namedtuple("quanti_sup",["coord","cos2"])(coord.iloc[:n_quanti,:],sqcos.iloc[:n_quanti,:])
     else:
         quanti_sup = None
-    
-    #----------------------------------------------------------------------------------------------------------------------------------------
-    ##statistics for supplementary qualitative variables
-    #----------------------------------------------------------------------------------------------------------------------------------------
-    if X_quali_sup is not None:
-        # If pandas series, transform to pandas dataframe
-        if isinstance(X_quali_sup,Series):
-            X_quali_sup = X_quali_sup.to_frame()
-        
-        # Check if X_quali_sup is an instance of pd.DataFrame class
-        if not isinstance(X_quali_sup,DataFrame):
-            raise TypeError(f"{type(X_quali_sup)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
-        
-        # Set index name as None
-        X_quali_sup.index.name = None
 
-        #convert to factor - categorie
-        for j in X_quali_sup.columns:
-            X_quali_sup[j] = Categorical(X_quali_sup[j],categories=sorted(X_quali_sup[j].dropna().unique().tolist()),ordered=True)
-        
-        # Check if two columns have the same categories
-        X_quali_sup = revaluate_cat_variable(X_quali_sup)
-        #barycenter of Z
-        barycentre = conditional_average(X=self.call_.Z,Y=X_quali_sup,weights=self.call_.ind_weights)
-        #center the data
-        Z_quali_sup = mapply(barycentre,lambda x : x - self.call_.Z.mean(axis=0),axis=1,progressbar=False,n_workers=self.call_.n_workers)
-        #categories square distance
-        quali_sup_sqdisto  = mapply(Z_quali_sup, lambda x : (x**2),axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
-        quali_sup_sqdisto.name = "Sq. Dist."
-
-        #categories coefficients
-        n_k = concat((X_quali_sup[j].value_counts().sort_index() for j in X_quali_sup.columns),axis=0)
-        n_rows = X_quali_sup.shape[0]
-        coef_k = sqrt(((n_rows-1)*n_k)/(n_rows-n_k))
-
-        #statistics for supplementary categories
-        quali_sup_ = predict_quali_sup(X=X_quali_sup,Z=Z_quali_sup,Y=self.ind_.coord,V=self.svd_.V,col_coef=coef_k,sqdisto=quali_sup_sqdisto,
-                                       row_weights=self.call_.ind_weights,col_weights=self.call_.var_weights,n_workers=self.call_.n_workers)
-        #update value-test with squared eigenvalues
-        quali_sup_["vtest"] = mapply(quali_sup_["vtest"],lambda x : x/self.svd_.vs[:self.call_.n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers)
+    #statistics for supplementary levels - supplementary qualitative variables
+    if n_quali > 0:
+        #proportion of supplementary levels
+        p_k = mapply(dummies, lambda x : x*self.call_.ind_weights,axis=0,progressbar=False,n_workers=self.call_.n_workers).sum(axis=0)
+        #coordinates for the supplementary levels
+        levels_coord = mapply(mapply(coord.iloc[n_quanti:,:],lambda x : x/sqrt(p_k),axis=0,progressbar=False,n_workers=self.call_.n_workers),
+                                    lambda x : x*self.svd_.vs[:self.call_.n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers)
+        #vtest for the supplementary levels
+        levels_vtest = mapply(mapply(levels_coord,lambda x : x*sqrt((n_rows-1)/(1/p_k).sub(1)),axis=0,progressbar=False,n_workers=self.call_.n_workers),
+                                    lambda x : x/self.svd_.vs[:self.call_.n_components],axis=1,progressbar=False,n_workers=self.call_.n_workers)
+        #eta2 for the supplementary qualitative variables
+        quali_var_sqeta = function_eta2(X=X_quali,Y=self.ind_.coord,weights=self.call_.ind_weights,n_workers=self.call_.n_workers)
+        #dist2 for supplementary levels
+        bary = conditional_average(X=self.call_.Z,Y=X_quali,weights=self.call_.ind_weights)
+        z_center = average(self.call_.Z,axis=0,weights=self.call_.ind_weights)
+        levels_sqdisto = mapply(bary, lambda x : ((x - z_center)**2)*self.call_.var_weights,axis=1,progressbar=False,n_workers=self.call_.n_workers).sum(axis=1)
+        levels_sqdisto.name = "Sq. Dist."
+        #cos2 for the supplementary levels
+        levels_sqcos = mapply(levels_coord, lambda x : (x**2)/levels_sqdisto,axis=0,progressbar=False,n_workers=self.call_.n_workers)
+        #convert to dictionary
+        quali_sup_ = OrderedDict(coord=levels_coord,cos2=levels_sqcos,vtest=levels_vtest,dist2=levels_sqdisto,eta2=quali_var_sqeta)
         #convert to namedtuple
         quali_sup = namedtuple("quali_sup",quali_sup_.keys())(*quali_sup_.values())
     else:
         quali_sup = None
-    
+
     #convert to namedtuple
     return namedtuple("supvarFAMDResult",["quanti","quali"])(quanti_sup,quali_sup)

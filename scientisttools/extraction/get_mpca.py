@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
+from pandas import DataFrame, concat
+from typing import NamedTuple
 
-def get_mpca_ind(self) -> dict:
+def get_mpca_ind(self) -> NamedTuple:
     """
     Extract the results for individuals - MPCA
     ------------------------------------------
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosinus and relative contributions) for the individuals from Mixed Principal Component Analysis (MPCA) outputs.
+    Extract all the results (coordinates, squared cosinus, relative contributions and additonals informations) for the individuals from Mixed Principal Component Analysis (MPCA) outputs.
 
     Usage
     -----
@@ -19,19 +19,19 @@ def get_mpca_ind(self) -> dict:
 
     Parameters
     ----------
-    `self` : an object of class MPCA
+    `self`: an object of class MPCA
 
     Returns
     -------
-    dictionary of dataframes containing the results for the individuals, including :
+    a namedtuple of pandas DataFrame containing all the results for the active individuals, including:
 
-    `coord` : factor coordinates of individuals.
+    `coord`: coordinates for the individuals.
 
-    `cos2`	: square cosinus representing the quality of representation on the factor map.
+    `cos2`: squared cosinus for the individuals,
     
-    `contrib` : relative contributions of individuals to the principal components.
+    `contrib`: relative contributions for the individuals,
 
-    `infos` : additionals informations (weight, squared distance to origin and inertia) of the individuals
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of initia) for the individuals.
 
     Author(s)
     ---------
@@ -40,53 +40,52 @@ def get_mpca_ind(self) -> dict:
     Examples
     --------
     ```python
-    >>> # Load cars dataset
-    >>> from scientisttools import load_cars
-    >>> cars = load_cars()
+    >>> from scientisttools.datasets import autos1990
     >>> from scientisttools import MPCA, get_mpca_ind
-    >>> res_mpca = MPCA().fit(cars)
-    >>> # results for individuals
+    >>> res_mpca = MPCA().fit(autos1990)
+    >>> #results for the individuals
     >>> ind = get_mpca_ind(res_mpca)
     ```
     """
-    # Check if self is an object of class MPCA
-    if self.model_ != "mpca":
+    if self.model_ != "mpca": #check if self is an object of class MPCA
         raise ValueError("'self' must be an object of class MPCA")
     return self.ind_
     
-def get_mpca_var(self, choice="var") -> dict:
+def get_mpca_var(self, element = "var") -> NamedTuple:
     """
     Extract the results for variables - MPCA
     ----------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosinus and relative contributions) for quantitative and qualitative variables from Mixed Principal Component Analysis (MPCA) outputs.
+    Extract all the results (coordinates, squared cosinus, relative contributions and additionals informations) for variables from Mixed Principal Component Analysis (MPCA) outputs.
 
     Usage
     -----
-    ```
-    >>> get_mpca_var(self,choice=("var","quanti_var", "quali_var"))
+    ```python
+    >>> get_mpca_var(self, element = "var")
+    >>> get_mpca_var(self, element = "quanti_var")
+    >>> get_mpca_var(self, element = "quali_var")
     ```
 
     Parameters
     ----------
-    `self` : an object of class MPCA
+    `self`: an object of class MPCA
 
-    `choice` : the element to subset from the output. Possible values are :
+    `element`: a string indicating the element to subset from the output. Possibles values are:
         * "var" for active variables
         * "quanti_var" for active quantitatives variables
         * "quali_var" for active qualitatives variables (categories)
 
     Returns
     -------
-    dictionary of dataframes containing the results for the active variables, including :
+    a namedtuple of dataframes containing the results for the active variables, including :
 
-    `coord`	: factor coordinates of variables.
+    `coord`: factor coordinates of variables.
 
-    `cos2` : squared cosinus values representing the quality of representation on the factor map.
+    `cos2`: squared cosinus values representing the quality of representation on the factor map.
 
-    `contrib` : relative contributions of variables to the principal components.
+    `contrib`: relative contributions of variables to the principal components.
 
     Author(s)
     ---------
@@ -95,53 +94,44 @@ def get_mpca_var(self, choice="var") -> dict:
     Examples
     --------
     ```python
-    >>> # Load cars dataset
-    >>> from scientisttools import load_cars
-    >>> cars = load_cars()
-    >>> from scientisttools import MPCA, get_mpca_var
-    >>> res_mpca = MPCA().fit(cars)
-    >>> # Results for quantitatives variables
-    >>> quanti_var = get_mpca_var(res_mpca, choice = "quanti_var")
-    >>> # Results for qualitatives variables
-    >>> quali_var = get_mpca_var(res_mpca, choice = "quali_var")
-    >>> # Results for variables
-    >>> var = get_mpca_var(res_mpca, choice = "var")
+    
     ```
     """
-    # Check if self is an object of class MPCA
-    if self.model_ != "mpca":
+    if self.model_ != "mpca": #check if self is an object of class MPCA
         raise ValueError("'self' must be an object of class MPCA")
     
-    if choice not in ["quanti_var","quali_var","var"]:
-        raise ValueError("'choice' should be one of 'quanti_var', 'quali_var', 'var'")
-    
-    if choice == "quanti_var":
+    if element == "quanti_var":
         return self.quanti_var_
-    elif choice == "quali_var":
+    elif element == "quali_var":
         return self.quali_var_
-    elif choice == "var":
+    elif element == "var":
         return self.var_
+    else:
+        raise ValueError("'element' should be one of 'quanti_var', 'quali_var', 'var'")
 
-def get_mpca(self,choice = "ind")-> dict:
+def get_mpca(self, element = "ind")-> dict:
     """
     Extract the results for individuals and variables - MPCA
     --------------------------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosine and relative contributions) for the individuals and variables from Mixed Principal Component Analysis (MPCA) outputs.
+    Extract all the results (coordinates, squared cosine, relative contributions and additionals informations) for the individuals and variables from Mixed Principal Component Analysis (MPCA) outputs.
 
     Usage
     -----
     ```python
-    >>> get_mpca(self, choice = ("ind", "var", "quanti_var", "quali_var"))
+    >>> get_mpca(self, element = "ind")
+    >>> get_mpca(self, element = "var")
+    >>> get_mpca(self, element = "quanti_var")
+    >>> get_mpca(self, element = "quali_var")
     ```
 
     Parameters
     ----------
-    `self` : an object of class MPCA
+    `self`: an object of class MPCA
 
-    `choice` : the element to subset from the output. Possibles values are :
+    `element`: a string indicating the element to subset from the output. Possibles values are:
         * "ind" for individuals
         * "var" for active variables
         * "quanti_var" for active quantitatives variables
@@ -149,13 +139,15 @@ def get_mpca(self,choice = "ind")-> dict:
 
     Return
     ------
-    dictionary of dataframes containing the results for the active individuals and variables, including :
+    namedtuple of pandas DataFrame containing all the results for the active individuals and variables, including :
     
-    `coord` : factor coordinates of individuals/variables.
+    `coord`: coordinates of individuals/variables.
     
-    `cos2` : square cosinus values representing the quality of representation on the factor map.
+    `cos2`: square cosinus values representing the quality of representation on the factor map.
     
-    `contrib` : relative contributions of individuals/variables to the principal components.
+    `contrib`: relative contributions of individuals/variables to the principal components.
+
+    `infos`: additionals informations
 
     Author(s)
     ---------
@@ -164,32 +156,15 @@ def get_mpca(self,choice = "ind")-> dict:
     Examples
     --------
     ```python
-    >>> # Load cars dataset
-    >>> from scientisttools import load_cars
-    >>> cars = load_cars()
-    >>> from scientisttools import MPCA, get_mpca
-    >>> res_mpca = MPCA().fit(cars)
-    >>> # Results for individuals
-    >>> ind = get_mpca(res_mpca,choice = "ind")
-    >>> # Results for quantitatives variables
-    >>> quanti_var = get_mpca(res_mpca, choice = "quanti_var")
-    >>> # Results for qualitatives variables
-    >>> quali_var = get_mpca(res_mpca, choice = "quali_var")
-    >>> # Results for variables
-    >>> var = get_mpca(res_mpca, choice = "var")
+    
     ```
     """
-    # Check if self is an object of class MPCA
-    if self.model_ != "mpca":
-        raise ValueError("'self' must be an object of class MPCA")
-    
-    if choice not in ["ind","quanti_var","quali_var","var"]:
-        raise ValueError("'choice' should be one of 'ind', 'ind_sup', 'quanti_var', 'quali_var', 'var'")
-    
-    if choice == "ind":
+    if element == "ind":
         return get_mpca_ind(self)
+    elif element in ["var","quanti_var","quali_var"]:
+        return get_mpca_var(self, element=element)
     else:
-        return get_mpca_var(self,choice=choice)
+        raise ValueError("'element' should be one of 'ind', 'quanti_var', 'quali_var', 'var'")
 
 def summaryMPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
@@ -208,19 +183,19 @@ def summaryMPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
 
     Parameters
     ----------
-    `self` : an object of class MPCA
+    `self`: an object of class MPCA
 
-    `digits` : int, default=3. Number of decimal printed
+    `digits`: int, default=3. Number of decimal printed
 
-    `nb_element` : int, default = 10. Number of element
+    `nb_element`: int, default = 10. Number of element
 
-    `ncp` : int, default = 3. Number of components
+    `ncp`: int, default = 3. Number of components
 
-    `to_markdown` : Print DataFrame in Markdown-friendly format
+    `to_markdown`: Print DataFrame in Markdown-friendly format
 
-    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt`: Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
     
-    `**kwargs` : These parameters will be passed to tabulate.
+    `**kwargs`: These parameters will be passed to tabulate.
 
     Author(s)
     ---------
@@ -229,134 +204,114 @@ def summaryMPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     Examples
     --------
     ```python
-    >>> # Load cars dataset
-    >>> from scientisttools import load_cars
-    >>> cars = load_cars()
-    >>> from scientisttools import MPCA, summaryMPCA
-    >>> res_mpca = MPCA().fit(cars)
-    >>> summaryMPCA(res_mpca)
+    
     ```
     """
-    # check if self is an object of class MPCA
-    if self.model_ != "mpca":
+    if self.model_ != "mpca": #check if self is an object of class MPCA
         raise ValueError("'self' must be an object of class MPCA")
 
-    ncp = min(ncp,self.call_["n_components"])
-    nb_element = min(nb_element,self.call_["X"].shape[0])
+    ncp, nb_element = min(ncp,self.call_.n_components), min(nb_element,self.call_.X.shape[0])
 
     print("                Mixed Principal Component Analysis - Results                   \n")
 
-    # Add eigenvalues informations
+    #add eigen values informations
     print("Importance of components")
-    eig = self.eig_.iloc[:self.call_["n_components"],:].T.round(decimals=digits)
+    eig = self.eig_.iloc[:self.call_.n_components,:].T.round(decimals=digits)
     eig.index = ["Variance","Difference","% of var.","Cumulative of % of var."]
     if to_markdown:
         print(eig.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(eig)
     
-    # Add individuals informations
+    #add individuals informations
     ind = self.ind_
-    if ind["coord"].shape[0] > nb_element:
+    if ind.coord.shape[0] > nb_element:
         print(f"\nIndividuals (the {nb_element} first)\n")
     else:
         print("\nIndividuals\n")
-    ind_infos = ind["infos"]
-    for i in np.arange(0,ncp,1):
-        ind_coord = ind["coord"].iloc[:,i]
-        ind_cos2 = ind["cos2"].iloc[:,i]
-        ind_cos2.name = "cos2"
-        ind_ctr = ind["contrib"].iloc[:,i]
-        ind_ctr.name = "ctr"
-        ind_infos = pd.concat([ind_infos,ind_coord,ind_ctr,ind_cos2],axis=1)
-    ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
+    ind_infos = ind.infos
+    for i in range(ncp):
+        ind_coord, ind_sqcos, ind_ctr = ind.coord.iloc[:,i], ind.cos2.iloc[:,i], ind.contrib.iloc[:,i]
+        ind_sqcos.name, ind_ctr.name = "cos2", "ctr"
+        ind_infos = concat((ind_infos,ind_coord,ind_ctr,ind_sqcos),axis=1)
+    ind_infos = ind_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(ind_infos)
 
-    # Add supplementary individuals
+    #add supplementary individuals
     if hasattr(self,"ind_sup_"):
         ind_sup = self.ind_sup_
-        if ind["coord"].shape[0] > nb_element:
+        if ind.coord.shape[0] > nb_element:
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
         else:
             print("\nSupplementary individuals\n")
-        ind_sup_infos = ind_sup["dist"]
-        for i in np.arange(0,ncp,1):
-            ind_sup_coord = ind_sup["coord"].iloc[:,i]
-            ind_sup_cos2 = ind_sup["cos2"].iloc[:,i]
-            ind_sup_cos2.name = "cos2"
-            ind_sup_infos = pd.concat([ind_sup_infos,ind_sup_coord,ind_sup_cos2],axis=1)
-        ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        ind_sup_infos = ind_sup.dist2
+        for i in range(ncp):
+            ind_sup_coord, ind_sup_sqcos = ind_sup.coord.iloc[:,i], ind_sup.cos2.iloc[:,i]
+            ind_sup_sqcos.name = "cos2"
+            ind_sup_infos = concat((ind_sup_infos,ind_sup_coord,ind_sup_sqcos),axis=1)
+        ind_sup_infos = ind_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(ind_sup_infos)
 
-    # Add variables informations
+    #add quantitative variables informations
     quanti_var = self.quanti_var_
-    if quanti_var["coord"].shape[0]>nb_element:
+    if quanti_var.coord.shape[0]>nb_element:
         print(f"\nContinuous variables (the {nb_element} first)\n")
     else:
         print("\nContinuous variables\n")
-    quanti_var_infos = pd.DataFrame().astype("float")
-    for i in np.arange(0,ncp,1):
-        quanti_var_coord = quanti_var["coord"].iloc[:,i]
-        quanti_var_cos2 = quanti_var["cos2"].iloc[:,i]
-        quanti_var_cos2.name = "cos2"
-        quanti_var_ctr = quanti_var["contrib"].iloc[:,i]
-        quanti_var_ctr.name = "ctr"
-        quanti_var_infos = pd.concat([quanti_var_infos,quanti_var_coord,quanti_var_ctr,quanti_var_cos2],axis=1)
-    quanti_var_infos = quanti_var_infos.iloc[:nb_element,:].round(decimals=digits)
+    quanti_var_infos = DataFrame().astype("float")
+    for i in range(ncp):
+        quanti_var_coord, quanti_var_sqcos, quanti_var_ctr = quanti_var.coord.iloc[:,i], quanti_var.cos2.iloc[:,i], quanti_var.contrib.iloc[:,i]
+        quanti_var_sqcos.name, quanti_var_ctr.name = "cos2", "ctr"
+        quanti_var_infos = concat((quanti_var_infos,quanti_var_coord,quanti_var_ctr,quanti_var_sqcos),axis=1)
+    quanti_var_infos = quanti_var_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(quanti_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(quanti_var_infos)
     
-    # Add supplementary continuous variables informations
+    #add supplementary continuous variables informations
     if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
-        if quanti_sup["coord"].shape[0] > nb_element:
+        if quanti_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary continuous variables (the {nb_element} first)\n")
         else:
             print("\nSupplementary continuous variables\n")
-        quanti_sup_infos = pd.DataFrame().astype("float")
-        for i in np.arange(0,ncp,1):
-            quanti_sup_coord = quanti_sup["coord"].iloc[:,i]
-            quanti_sup_cos2 = quanti_sup["cos2"].iloc[:,i]
-            quanti_sup_cos2.name = "cos2"
-            quanti_sup_infos =pd.concat([quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2],axis=1)
-        quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        quanti_sup_infos = DataFrame().astype("float")
+        for i in range(ncp):
+            quanti_sup_coord, quanti_sup_sqcos = quanti_sup.coord.iloc[:,i], quanti_sup.cos2.iloc[:,i]
+            quanti_sup_sqcos.name = "cos2"
+            quanti_sup_infos = concat((quanti_sup_infos,quanti_sup_coord,quanti_sup_sqcos),axis=1)
+        quanti_sup_infos = quanti_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(quanti_sup_infos)
     
-    # Add qualitatives variables
+    #add qualitatives variables
     quali_var = self.quali_var_
-    if quali_var["coord"].shape[0] > nb_element:
+    if quali_var.coord.shape[0] > nb_element:
         print(f"\nCategories (the {nb_element} first)\n")
     else:
         print("\nCategories\n")
-    quali_var_infos = pd.DataFrame()
-    for i in np.arange(ncp):
-        quali_var_coord = quali_var["coord"].iloc[:,i]
-        quali_var_cos2 = quali_var["cos2"].iloc[:,i]
-        quali_var_cos2.name = "cos2"
-        quali_var_ctr = quali_var["contrib"].iloc[:,i]
-        quali_var_ctr.name = "ctr"
-        quali_var_vtest = quali_var["vtest"].iloc[:,i]
-        quali_var_vtest.name = "vtest"
-        quali_var_infos = pd.concat([quali_var_infos,quali_var_coord,quali_var_ctr,quali_var_cos2,quali_var_vtest],axis=1)
-    quali_var_infos = quali_var_infos.iloc[:nb_element,:].round(decimals=digits)
+    quali_var_infos = DataFrame().astype("float")
+    for i in range(ncp):
+        quali_var_coord, quali_var_sqcos, quali_var_ctr, quali_var_vtest = quali_var.coord.iloc[:,i], quali_var.cos2.iloc[:,i], quali_var.contrib.iloc[:,i], quali_var.vtest.iloc[:,i]
+        quali_var_sqcos.name, quali_var_ctr.name, quali_var_vtest.name = "cos2", "ctr", "vtest"
+        quali_var_infos = concat((quali_var_infos,quali_var_coord,quali_var_ctr,quali_var_sqcos,quali_var_vtest),axis=1)
+    quali_var_infos = quali_var_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(quali_var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(quali_var_infos)
     
-    # Add categoricals variables square correlation ratio
-    quali_var_eta2 = self.var_["coord"].drop(index=self.quanti_var_["coord"].index)
+    #add categoricals variables square correlation ratio
+    quali_var_eta2 = self.var_.coord.drop(index=self.quanti_var_.coord.index)
     if quali_var_eta2.shape[0] > nb_element:
         print(f"\nCategoricals variables (eta2) (the {nb_element} first)\n")
     else:
@@ -367,33 +322,30 @@ def summaryMPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     else:
         print(quali_var_eta2)
     
-    # Add Supplementary categories – Variable illustrative qualitative
+    #add supplementary categories – Variable supplementary qualitative
     if hasattr(self,"quali_sup_"):
         quali_sup = self.quali_sup_
-        if quali_sup["coord"].shape[0] > nb_element:
+        if quali_sup.coord.shape[0] > nb_element:
             print(f"\nSupplementary categories (the {nb_element} first)\n")
         else:
             print("\nSupplementary categories\n")
-        quali_sup_infos = quali_sup["dist"]
-        for i in np.arange(0,ncp,1):
-            quali_sup_coord = quali_sup["coord"].iloc[:,i]
-            quali_sup_cos2 = quali_sup["cos2"].iloc[:,i]
-            quali_sup_cos2.name = "cos2"
-            quali_sup_vtest = quali_sup["vtest"].iloc[:,i]
-            quali_sup_vtest.name = "v.test"
-            quali_sup_infos = pd.concat([quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest],axis=1)
-        quali_sup_infos = quali_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        quali_sup_infos = quali_sup.dist2
+        for i in range(ncp):
+            quali_sup_coord,quali_sup_sqcos, quali_sup_vtest = quali_sup.coord.iloc[:,i], quali_sup.cos2.iloc[:,i], quali_sup.vtest.iloc[:,i]
+            quali_sup_sqcos.name, quali_sup_vtest.name = "cos2", "v.test"
+            quali_sup_infos = concat((quali_sup_infos,quali_sup_coord,quali_sup_sqcos,quali_sup_vtest),axis=1)
+        quali_sup_infos = quali_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
             print(quali_sup_infos)
         
-        # Add supplementary qualitatives - square correlation ratio
-        if quali_sup["eta2"].shape[0] > nb_element:
+        #add supplementary qualitative variables square correlation ratio
+        if quali_sup.eta2.shape[0] > nb_element:
             print(f"\nSupplementary categorical variables (eta2) (the {nb_element} first)\n")
         else:
             print("\nSupplementary categorical variables (eta2)\n")
-        quali_sup_eta2 = self.quali_sup_["eta2"].iloc[:nb_element,:ncp].round(decimals=digits)
+        quali_sup_eta2 = self.quali_sup_.eta2.iloc[:nb_element,:ncp].round(decimals=digits)
         if to_markdown:
             print(quali_sup_eta2.to_markdown(tablefmt=tablefmt))
         else:

@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
-import numpy as np
+from numpy import ones, array, sum, sqrt, abs, c_
 from scipy import stats
-from statsmodels.stats.weightstats import DescrStatsW
 from collections import namedtuple
+from typing import NamedTuple
+from pandas import DataFrame
 
-def wpearsonr(x,y,weights=None):
+#intern function
+from .wcorrcoef import wcorrcoef
+
+def wpearsonr(x,y,weights=None) -> NamedTuple:
     """
-    Weighted Pearson correlation coefficient and p-value for testing non-correlation.
+    Weighted pearson correlation coefficient and p-value for testing non-correlation.
     ---------------------------------------------------------------------------------
 
     Description
@@ -21,18 +25,21 @@ def wpearsonr(x,y,weights=None):
 
     Parameters
     ----------
-    `x` : numpy array or pandas series
+    `x`: numpy array or pandas series
 
-    `y` : numpy array or pandas series
+    `y`: numpy array or pandas series
 
-    `weights` : an optional individuals weights 
+    `weights`: an optional individuals weights 
 
-    Return
-    ------
-    nametuple containing estimates of the weighted correlation, the degree of freedom and the pvalue associated :
-        * statistic : weighted Pearson product-moment correlation coefficient
-        * dof : degre of freedom   
-        * pvalue : the p-value associated
+    Return(s)
+    ---------
+    nametuple containing estimates of the weighted correlation, the degree of freedom and the pvalue associated:
+    
+    `statistic`: a numeric (=float) value indicating the weighted Pearson product-moment correlation coefficient
+    
+    `dof`: an integer indicating the degre of freedom   
+    
+    `pvalue`: a numeric (=float) value indicating the p-value associated
     
     Author(s)
     ---------
@@ -51,13 +58,13 @@ def wpearsonr(x,y,weights=None):
     ...WPearsonRResult(statistic=-0.24253562503633294, dof=8, pvalue=0.49957589436325933)
     ```
     """
-     # Set weights
+    #set weights
     if weights is None:
-        weights = np.ones(x.shape[0])/x.shape[0]
+        weights = ones(x.shape[0])/x.shape[0]
     else:
-        weights = np.array([x/np.sum(weights) for x in weights])
-    
-    statistic = DescrStatsW(np.c_[x,y],weights=weights).corrcoef[0,1]
-    t_stat, dof = statistic*np.sqrt(((len(x)-2)/(1- statistic**2))), len(x) - 2
-    pvalue = 2*(1 - stats.t.cdf(np.abs(t_stat),dof))
+        weights = array([x/sum(weights) for x in weights])
+
+    statistic = wcorrcoef(DataFrame(c_[x,y]),weights=weights).iloc[0,1]
+    t_stat, dof = statistic*sqrt(((len(x)-2)/(1- statistic**2))), len(x) - 2
+    pvalue = 2*(1 - stats.t.cdf(abs(t_stat),dof))
     return namedtuple("WPearsonRResult",["statistic","dof","pvalue"])(statistic,dof,pvalue)

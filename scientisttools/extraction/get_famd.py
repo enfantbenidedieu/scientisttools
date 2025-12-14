@@ -9,7 +9,7 @@ def get_famd_ind(self) -> NamedTuple:
 
     Description
     -----------
-    Extract all the results (coordinates, squared cosinus and relative contributions) for the individuals from Factor Analysis of Mixed Data (FAMD) outputs.
+    Extract all the results (coordinates, squared cosinus, relative contributions and additionals informations) for the individuals from Factor Analysis of Mixed Data (FAMD) outputs.
 
     Usage
     -----
@@ -19,19 +19,19 @@ def get_famd_ind(self) -> NamedTuple:
 
     Parameters
     ----------
-    `self` : an object of class FAMD
+    `self`: an object of class FAMD
 
     Returns
     -------
-    namedtuple of dataframes containing the results for the individuals, including :
+    namedtuple of pandas DataFrames containing all the results for the individuals including:
 
-    `coord` : factor coordinates of individuals.
+    `coord`: coordinates for the individuals,
 
-    `cos2`	: square cosinus representing the quality of representation on the factor map.
+    `cos2`: squared cosinus for the individuals,
     
-    `contrib` : relative contributions of individuals to the principal components.
+    `contrib`: relative contributions for the individuals,
 
-    `infos` : additionals informations (weight, squared distance to origin and inertia) of the individuals
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) for the individuals.
 
     Author(s)
     ---------
@@ -40,40 +40,43 @@ def get_famd_ind(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> # Load gironde dataset
-    >>> from scientisttools import load_gironde
-    >>> gironde = load_gironde()
+    >>> from scientisttools.datasets import autos2005
     >>> from scientisttools import FAMD, get_famd_ind
-    >>> res_famd = FAMD().fit(gironde)
-    >>> # results for individuals
+    >>> res_famd = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
+    >>> res_famd.fit(autos2005)
+    >>> #extract results for individuals
     >>> ind = get_famd_ind(res_famd)
+    >>> ind.coord.head() #coordinates of individuals
+    >>> ind.cos2.head() #cos2 of individuals
+    >>> ind.contrib.head() #contributions of individuals
     ```
     """
-    # Check if self is an object of class FAMD
-    if self.model_ != "famd":
+    if self.model_ != "famd": #check if self is an object of class FAMD
         raise ValueError("'self' must be an object of class FAMD")
     return self.ind_
     
-def get_famd_var(self, choice="var") -> NamedTuple:
+def get_famd_var(self, element="var") -> NamedTuple:
     """
     Extract the results for variables - FAMD
     ----------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosinus and relative contributions) for quantitative and qualitative variables from Factor Analysis of Mixed Data (FAMD) outputs.
+    Extract all the results (coordinates, squared cosinus and relative contributions) for quantitative and qualitative variables from Factor Analysis of Mixed Data (FAMD) outputs.
 
     Usage
     -----
-    ```
-    >>> get_famd_var(self,choice=("var","quanti_var", "quali_var"))
+    ```python
+    >>> get_famd_var(self,choice="var")
+    >>> get_famd_var(self,choice="quanti_var")
+    >>> get_famd_var(self,choice="quali_var")
     ```
 
     Parameters
     ----------
-    `self` : an object of class FAMD
+    `self`: an object of class FAMD
 
-    `choice` : the element to subset from the output. Possible values are :
+    `element`: the element to subset from the output. Possible values are :
         * "var" for active variables
         * "quanti_var" for active quantitatives variables
         * "quali_var" for active qualitatives variables (categories)
@@ -82,11 +85,11 @@ def get_famd_var(self, choice="var") -> NamedTuple:
     -------
     namedtuple of dataframes containing the results for the active variables, including :
 
-    `coord`	: factor coordinates of variables.
+    `coord`: coordinates for the variables,
 
-    `cos2` : squared cosinus values representing the quality of representation on the factor map.
+    `cos2`: squared cosinus for the variables,
 
-    `contrib` : relative contributions of variables to the principal components.
+    `contrib`: relative contributions for the variables.
 
     Author(s)
     ---------
@@ -95,61 +98,72 @@ def get_famd_var(self, choice="var") -> NamedTuple:
     Examples
     --------
     ```python
-    >>> # Load gironde dataset
-    >>> from scientisttools import load_gironde
-    >>> gironde = load_gironde()
+    >>> from scientisttools.datasets import autos2005
     >>> from scientisttools import FAMD, get_famd_var
-    >>> res_famd = FAMD().fit(gironde)
-    >>> # Results for quantitatives variables
-    >>> quanti_var = get_famd_var(res_famd, choice = "quanti_var")
-    >>> # Results for qualitatives variables
-    >>> quali_var = get_famd_var(res_famd, choice = "quali_var")
-    >>> # Results for variables
-    >>> var = get_famd_var(res_famd, choice = "var")
+    >>> res_famd = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
+    >>> res_famd.fit(autos2005)
+    >>> #extract results for quantitatives variables
+    >>> quanti_var = get_famd_var(res_famd, element = "quanti_var")
+    >>> quanti_var.coord.head() #coordinates of quantitative variables
+    >>> quanti_var.cos2.head() #cos2 of quantitative variables
+    >>> quanti_var.contrib.head() #contribution of quantitative variables
+    >>> #extract results for qualitatives variables
+    >>> quali_var = get_famd_var(res_famd, element = "quali_var")
+    >>> quali_var.coord.head() #coordinates of categories/variables
+    >>> quali_var.cos2.head() #cos2 of categories/variables
+    >>> quali_var.contrib.head() #contribution of categories/variables
+    >>> quali_var.vtest.head() #value-test of categories/variables
+    >>> #extract results for variables
+    >>> var = get_famd_var(res_famd, element = "var")
+    >>> var.coord.head() #coordinates of variables
+    >>> var.cos2.head() #cos2 of cvariables
+    >>> var.contrib.head() #contribution of variables
     ```
     """
-    # Check if self is an object of class FAMD
-    if self.model_ != "famd":
+    if self.model_ != "famd": #check if self is an object of class FAMD
         raise ValueError("'self' must be an object of class FAMD")
     
-    if choice not in ["quanti_var","quali_var","var"]:
-        raise ValueError("'choice' should be one of 'quanti_var', 'quali_var', 'var'")
+    if element not in ["quanti_var","quali_var","var"]:
+        raise ValueError("'element' should be one of 'quanti_var', 'quali_var', 'var'")
     
-    if choice == "quanti_var":
+    if element == "quanti_var":
         if not hasattr(self,"quanti_var_"):
             raise ValueError("No quantitatives columns")
         return self.quanti_var_
     
-    if choice == "quali_var":
+    if element == "quali_var":
         if not hasattr(self,"quali_var_"):
             raise ValueError("No qualitatives columns")
         return self.quali_var_
     
-    if choice == "var":
+    if element == "var":
         if not hasattr(self,"var_"):
             raise ValueError("No mixed data")
         return self.var_
 
-def get_famd(self,choice = "ind")-> NamedTuple:
+def get_famd(self, element = "ind")-> NamedTuple:
     """
     Extract the results for individuals and variables - FAMD
     --------------------------------------------------------
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosine and relative contributions) for the individuals and variables from Factor Analysis of Mixed Data (FAMD) outputs.
+    Extract all the results (coordinates, squared cosine and relative contributions) for the individuals and variables from Factor Analysis of Mixed Data (FAMD) outputs.
 
     Usage
     -----
     ```python
-    >>> get_famd(self, choice = ("ind", "var", "quanti_var", "quali_var"))
+    >>> get_famd(self, element = "ind")
+    >>> get_famd(self, element = "var")
+    >>> get_famd(self, element = "quanti_var")
+    >>> get_famd(self, element = "quali_var")
     ```
 
     Parameters
     ----------
-    `self` : an object of class FAMD
+    `self`: an object of class FAMD
 
-    `choice` : the element to subset from the output. Possibles values are :
+    `element`: the element to subset from the output. Possibles values are :
         * "ind" for individuals
         * "var" for active variables
         * "quanti_var" for active quantitatives variables
@@ -159,11 +173,11 @@ def get_famd(self,choice = "ind")-> NamedTuple:
     ------
     namedtuple of dataframes containing the results for the active individuals and variables, including :
     
-    `coord` : factor coordinates of individuals/variables.
+    `coord`: coordinates for the individuals/variables.
     
-    `cos2` : square cosinus values representing the quality of representation on the factor map.
+    `cos2`: squared cosinus for the individuals/variables.
     
-    `contrib` : relative contributions of individuals/variables to the principal components.
+    `contrib`: relative contributions for the individuals/variables.
 
     Author(s)
     ---------
@@ -172,32 +186,39 @@ def get_famd(self,choice = "ind")-> NamedTuple:
     Examples
     --------
     ```python
-    >>> # Load gironde dataset
-    >>> from scientisttools import load_gironde
-    >>> gironde = load_gironde()
+    >>> from scientisttools.datasets import autos2005
     >>> from scientisttools import FAMD, get_famd
-    >>> res_famd = FAMD().fit(gironde)
-    >>> # Results for individuals
-    >>> ind = get_famd(res_famd,choice = "ind")
-    >>> # Results for quantitatives variables
-    >>> quanti_var = get_famd(res_famd, choice = "quanti_var")
-    >>> # Results for qualitatives variables
-    >>> quali_var = get_famd(res_famd, choice = "quali_var")
-    >>> # Results for variables
-    >>> var = get_famd(res_famd, choice = "var")
+    >>> res_famd = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
+    >>> res_famd.fit(autos2005)
+    >>> #extract results for individuals
+    >>> ind = get_famd(res_famd, "ind")
+    >>> ind.coord.head() #coordinates of individuals
+    >>> ind.cos2.head() #cos2 of individuals
+    >>> ind.contrib.head() #contributions of individuals
+    >>> #extract results for quantitatives variables
+    >>> quanti_var = get_famd(res_famd, element = "quanti_var")
+    >>> quanti_var.coord.head() #coordinates of quantitative variables
+    >>> quanti_var.cos2.head() #cos2 of quantitative variables
+    >>> quanti_var.contrib.head() #contribution of quantitative variables
+    >>> #extract results for qualitatives variables
+    >>> quali_var = get_famd(res_famd, element = "quali_var")
+    >>> quali_var.coord.head() #coordinates of categories/variables
+    >>> quali_var.cos2.head() #cos2 of categories/variables
+    >>> quali_var.contrib.head() #contribution of categories/variables
+    >>> quali_var.vtest.head() #value-test of categories/variables
+    >>> #extract results for variables
+    >>> var = get_famd(res_famd, element = "var")
+    >>> var.coord.head() #coordinates of variables
+    >>> var.cos2.head() #cos2 of cvariables
+    >>> var.contrib.head() #contribution of variables
     ```
     """
-    # Check if self is an object of class FAMD
-    if self.model_ != "famd":
-        raise ValueError("'self' must be an object of class FAMD")
-    
-    if choice not in ["ind","quanti_var","quali_var","var"]:
-        raise ValueError("'choice' should be one of 'ind', 'ind_sup', 'quanti_var', 'quali_var', 'var'")
-    
-    if choice == "ind":
+    if element == "ind":
         return get_famd_ind(self)
+    elif element in ("var","quali_var","quanti_var"):
+        return get_famd_var(self,element=element)
     else:
-        return get_famd_var(self,choice=choice)
+        raise ValueError("'element' should be one of 'ind', 'ind_sup', 'quanti_var', 'quali_var', 'var'")
 
 def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "pipe",**kwargs):
     """
@@ -216,19 +237,19 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
 
     Parameters
     ----------
-    `self` : an object of class FAMD
+    `self`: an object of class FAMD
 
-    `digits` : int, default=3. Number of decimal printed
+    `digits`: int, default=3. Number of decimal printed
 
-    `nb_element` : int, default = 10. Number of element
+    `nb_element`: int, default = 10. Number of element
 
-    `ncp` : int, default = 3. Number of components
+    `ncp`: int, default = 3. Number of components
 
-    `to_markdown` : Print DataFrame in Markdown-friendly format
+    `to_markdown`: Print DataFrame in Markdown-friendly format
 
-    `tablefmt` : Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
+    `tablefmt`: Table format. For more about tablefmt, see : https://pypi.org/project/tabulate/
     
-    `**kwargs` : These parameters will be passed to tabulate.
+    `**kwargs`: These parameters will be passed to tabulate.
 
     Author(s)
     ---------
@@ -237,20 +258,17 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
     Examples
     --------
     ```python
-    >>> # Load gironde dataset
-    >>> from scientisttools import load_gironde
-    >>> gironde = load_gironde()
+    >>> from scientisttools.datasets import autos2005
     >>> from scientisttools import FAMD, summaryFAMD
-    >>> res_famd = FAMD().fit(gironde)
+    >>> res_famd = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
+    >>> res_famd.fit(autos2005)
     >>> summaryFAMD(res_famd)
     ```
     """
-    # check if self is an object of class FAMD
-    if self.model_ != "famd":
+    if self.model_ != "famd": #check if self is an object of class FAMD
         raise ValueError("'self' must be an object of class FAMD")
 
-    ncp = min(ncp,self.call_.n_components)
-    nb_element = min(nb_element,self.call_.X.shape[0])
+    ncp, nb_element = min(ncp,self.call_.n_components), min(nb_element,self.call_.X.shape[0])
 
     # Title
     print("                     Factor Analysis of Mixed Data - Results                     \n")
@@ -288,7 +306,7 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
         else:
             print("\nSupplementary individuals\n")
-        ind_sup_infos = ind_sup.dist
+        ind_sup_infos = ind_sup.dist2
         for i in range(ncp):
             ind_sup_coord, ind_sup_cos2 = ind_sup.coord.iloc[:,i], ind_sup.cos2.iloc[:,i]
             ind_sup_cos2.name = "cos2"
@@ -341,7 +359,7 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
             print(f"\nCategories (the {nb_element} first)\n")
         else:
             print("\nCategories\n")
-        quali_var_infos = quali_var.dist
+        quali_var_infos = quali_var.dist2
         for i in range(ncp):
             quali_var_coord,quali_var_cos2,quali_var_ctr,quali_var_vtest= quali_var.coord.iloc[:,i],quali_var.cos2.iloc[:,i],quali_var.contrib.iloc[:,i],quali_var.vtest.iloc[:,i]
             quali_var_cos2.name, quali_var_ctr.name, quali_var_vtest.name  = "cos2", "ctr", "vtest"
@@ -375,7 +393,7 @@ def summaryFAMD(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "
             print(f"\nSupplementary categories (the {nb_element} first)\n")
         else:
             print("\nSupplementary categories\n")
-        quali_sup_infos = quali_sup.dist
+        quali_sup_infos = quali_sup.dist2
         for i in range(ncp):
             quali_sup_coord, quali_sup_cos2, quali_sup_vtest = quali_sup.coord.iloc[:,i], quali_sup.cos2.iloc[:,i], quali_sup.vtest.iloc[:,i]
             quali_sup_cos2.name, quali_sup_vtest.name = "cos2", "v.test"

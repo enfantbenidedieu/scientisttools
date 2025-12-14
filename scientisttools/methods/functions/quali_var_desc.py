@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
-import scipy as sp
-from mapply.mapply import mapply
+from numpy import abs, sqrt
+from pandas import DataFrame, concat, get_dummies, crosstab
+from scipy import stats
+from collections import OrderedDict
 
-def quali_var_desc(X,cluster,proba=0.05,n_workers=1):
+def quali_var_desc(X,cluster,proba=0.05):
     """
-    Description of qualitatuve variables
+    Description of qualitative variables
     ------------------------------------
 
     Description
     -----------
-    Performans description of qualitative variables
+    Performns description of qualitative variables
 
     Usage
     -----
@@ -21,13 +21,11 @@ def quali_var_desc(X,cluster,proba=0.05,n_workers=1):
 
     Parameters
     ----------
-    `X` : pandas dataframe of shape (n_rows, n_columns)
+    `X`: a pandas DataFrame of shape (n_rows, n_columns)
 
-    `cluster` : pandas series of shape(n_rows,)
+    `cluster`: a pandas Series of shape(n_rows,)
 
-    `proba` : the significance threshold considered to characterized the category (by default 0.05).
-
-    `n_workers` : maximum amount of workers (processes) to spawn. See https://mapply.readthedocs.io/en/stable/_code_reference/mapply.html
+    `proba`: a numeric indicating the significance threshold considered to characterized the category (by default 0.05).
 
     Returns
     -------
@@ -39,54 +37,55 @@ def quali_var_desc(X,cluster,proba=0.05,n_workers=1):
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-    ######## Tableau Disjonctif complex
-    dummies = pd.concat((pd.get_dummies(X[col],prefix=col,prefix_sep='=') for col in X.columns),axis=1)            
-    dummies_stats = dummies.agg(func=[np.sum,np.mean]).T
-    dummies_stats.columns = ["n(s)","p(s)"]
+    #disjunctive table
+    dummies = concat((get_dummies(X[q],prefix=q,prefix_sep='=',dtype=int) for q in X.columns),axis=1)  
+    n_s, p_s = dummies.sum(axis=0), dummies.mean(axis=0)  
+    n_s.name, p_s.name = "n(s)","p(s)"
 
-    # chi2 & Valeur - test
-    chi2_test = pd.DataFrame(columns=["statistic","dof","pvalue"]).astype("float")
-    v_test = pd.DataFrame().astype("float")
-    for col in X.columns:
-        # Crosstab
-        tab = pd.crosstab(X[col],cluster)
-        tab.index = [col+"="+x for x in tab.index]
+    #chi-squared & Value-test
+    chi2_test, v_test = DataFrame(columns=["statistic","dof","pvalue"]).astype("float"), DataFrame().astype("float")
+    for q in X.columns:
+        #crosstab
+        tab = crosstab(X[q],cluster)
+        tab.index = [q+"="+x for x in tab.index]
 
-        # Chi2 test
-        chi = sp.stats.chi2_contingency(tab,correction=False)
-        row_chi2 = pd.DataFrame({"statistic" : chi.statistic,"dof" : chi.dof,"pvalue" : chi.pvalue},index=[col])
-        chi2_test = pd.concat((chi2_test,row_chi2),axis=0)
+        #chi2 test
+        chi = stats.chi2_contingency(tab,correction=False)
+        row_chi2 = DataFrame(OrderedDict(statistic=chi.statistic,dof=chi.dof,pvalue=chi.pvalue),index=[q])
+        chi2_test = concat((chi2_test,row_chi2),axis=0)
 
-        # Valeur - test
+        #value-test (vtest)
         nj, nk, n = tab.sum(axis=1), tab.sum(axis=0), tab.sum().sum()
-        for j in tab.index.tolist():
-            for k in tab.columns.tolist():
+        for j in tab.index:
+            for k in tab.columns:
                 pi = (nj.loc[j]*nk.loc[k])/n
                 num, den = tab.loc[j,k] - pi, ((n-nk.loc[k])/(n-1))*(1-nj.loc[j]/n)*pi
-                tab.loc[j,k] = num/np.sqrt(den)
-        v_test = pd.concat((v_test,tab),axis=0) 
-    # Convert to int
+                tab.loc[j,k] = num/sqrt(den)
+        v_test = concat((v_test,tab),axis=0) 
+    #convert to int
     chi2_test["dof"] = chi2_test["dof"].astype(int)
-    # Filter using probability
+    #filter using probability
     chi2_test = chi2_test.sort_values(by="pvalue").query("pvalue < @proba")
 
-    # vtest probabilities
-    vtest_prob = mapply(v_test,lambda x : 2*(1-sp.stats.norm(0,1).cdf(np.abs(x))),axis=0,progressbar=False,n_workers=n_workers)
+    #vtest probabilities
+    def prob(x):
+        return 2*(1-stats.norm(0,1).cdf(abs(x)))
+    vtest_prob = v_test.transform(prob)
 
-    # Listing MOD/CLASS
-    dummies_classe = pd.concat([dummies,cluster],axis=1)
+    #listing MOD/CLASS
+    dummies_classe = concat([dummies,cluster],axis=1)
     mod_class = dummies_classe.groupby("clust").mean().T.mul(100)
 
-    # class/Mod
+    #class/Mod
     class_mod = dummies_classe.groupby("clust").sum().T
-    class_mod = class_mod.div(dummies_stats["n(s)"].values,axis="index").mul(100)
+    class_mod = class_mod.div(n_s.values,axis=0).mul(100)
 
-    var_category = {}
-    for i in np.unique(cluster):
-        df = pd.concat((class_mod.loc[:,i],mod_class.loc[:,i],dummies_stats["p(s)"].mul(100),vtest_prob.loc[:,i],v_test.loc[:,i]),axis=1)
+    var_category = OrderedDict()
+    for i in cluster.unique():
+        df = concat((class_mod.loc[:,i],mod_class.loc[:,i],p_s.mul(100),vtest_prob.loc[:,i],v_test.loc[:,i]),axis=1)
         df.columns = ["Class/Mod","Mod/Class","Global","pvalue","vtest"]
         df = df.sort_values(by="vtest",ascending=False).query("pvalue < @proba")
         if df.shape[0] == 0:
             df = None
         var_category[str(i)] = df
-    return chi2_test,var_category
+    return chi2_test, var_category

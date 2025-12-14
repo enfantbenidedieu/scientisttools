@@ -18,11 +18,11 @@ def get_eig(self) -> DataFrame:
 
     Parameters:
     -----------
-    `self`: an object of class PCA, PartialPCA, FactorAnalysis, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE
+    `self`: an object with attribute named `eig_`
 
     Returns
     -------
-    eigenvalue, difference, variance percent and cumulative variance of percent
+    a apndas DaatFrame conatining the eigenvalue, difference, variance percent and cumulative variance of percent
 
     Author(s)
     ---------
@@ -31,18 +31,16 @@ def get_eig(self) -> DataFrame:
     Examples
     --------
     ```python
-    >>> #load children dataset
-    >>> from scientisttools import load_children
-    >>> children = load_children()
-    >>> from scientisttools import CA, get_eig
-    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),quali_sup=8)
+    >>> from scientisttools import load_dataset, CA, get_eig
+    >>> children = load_dataset("children")
+    >>> res_ca = CA(row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
     >>> res_ca.fit(children)
     >>> eig = get_eig(res_ca)
     >>> print(eig)
     ```
     """
-    if self.model_ not in ["pca","partialpca","fa","ca","mca","specificmca","famd","mpca","pcamix","mfa","mfaqual","mfamix","mfact","dmfa","cmdscale"]:
-        raise TypeError("'self' must be an object of class PCA, PartialPCA, CA, MCA, SpecificMCA, FAMD, MPCA, PCAMIX, EFA, MFA, MFAQUAL, MFAMIX, MFACT, DMFA, CMDSCALE")
+    if not hasattr(self,"eig_"):
+        raise ValueError("{} does not have an attribute named `eig_`.".format(self.model_))
     return self.eig_
 
 def get_eigenvalue(self) -> DataFrame:

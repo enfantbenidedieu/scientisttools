@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
-from pandas import DataFrame, Categorical, concat, get_dummies
-from .revaluate_cat_variable import revaluate_cat_variable
+from pandas import Series, DataFrame, concat, get_dummies
 from collections import namedtuple
+from typing import NamedTuple
 
-def recodecat(X,dummy_na=False):
+#intern function
+from .revalue import revalue
+
+def recodecat(X,dummy_na=False) -> NamedTuple:
     """
-    Recoding of the categorical variables
-    -------------------------------------
+    Recoding of the categoricals variables
+    --------------------------------------
 
     Description
     -----------
-    Recoding of the categorical variables
+    Recoding of the categoricals variables
 
     Usage
     -----
@@ -21,34 +24,35 @@ def recodecat(X,dummy_na=False):
 
     Parameters
     ----------
-    `X` : pandas dataframe of categorical variables
+    `X`: a pandas DataFrame of shape (n_samples, n_columns)
+        X contains categoricals variables
 
-    `dummy_na` : Add a column to indicate NaNs, if False NaNs are ignored.
+    `dummy_na`: add a column to indicate NaNs, if False NaNs are ignored.
 
     Return
     ------
-    namedtuple of dataframe containing:
-    `X` : pandas dataframe of categorical data.
+    a namedtuple of pandas DataFrames containing:
 
-    `dummies` : pandas dataframe of disjunctive table.
+    `X`: a pandas DataFrame of categorical data.
+
+    `dummies`: a pandas DataFrame of disjunctive table.
 
     Author(s)
     ---------
     Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
     """
-    # Check if pandas dataframe
-    if not isinstance(X,DataFrame):
+    if isinstance(X,Series): #if pandas Series, convert to pandas DataFrame
+        X = X.to_frame()
+    
+    if not isinstance(X,DataFrame): #check if X is an instance of class pd.DataFrame
         raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-    # select object of category
-    X = X.select_dtypes(include=["object","category"])
+    X = X.select_dtypes(include=["object","category"]) #select object of category
     if X.empty:
         raise TypeError("All variables in X must be either object or category")
-    else:
-        for j in X.columns:
-            X[j] = Categorical(X[j],categories=sorted(X[j].dropna().unique().tolist()),ordered=True)
 
-    # Revaluate
-    X = revaluate_cat_variable(X)
-    dummies = concat((get_dummies(X[j],dtype=int,dummy_na=dummy_na) for j in X.columns),axis=1)
+    #revalue
+    X = revalue(X)
+    #disjunctive table
+    dummies = concat((get_dummies(X[q],dtype=int,dummy_na=dummy_na) for q in X.columns),axis=1)
     return namedtuple("recodecat",["X","dummies"])(X,dummies)

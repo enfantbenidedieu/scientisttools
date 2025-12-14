@@ -9,7 +9,7 @@ def get_pca_ind(self) -> NamedTuple:
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosinus, relative contributions and additionals informations) of the active individuals from Principal Component Analysis (PCA) outputs.
+    Extract all the results (coordinates, squared cosinus, relative contributions and additionals informations) of the active individuals from Principal Component Analysis (PCA) outputs.
 
     Usage
     -----
@@ -25,13 +25,13 @@ def get_pca_ind(self) -> NamedTuple:
     -------
     namedtuple of pandas DataFrames containing all the results for the active individuals including:
 
-    `coord`: factor coordinates
+    `coord`: coordinates of the individuals,
 
-    `cos2`: squared cosinus
+    `contrib`: relative contributions of the individuals,
 
-    `contrib`: relative contributions
+    `cos2`: squared cosinus of the individuals,
 
-    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia)
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals.
 
     Author(s)
     ---------
@@ -40,19 +40,19 @@ def get_pca_ind(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> from scientisttools import decathlon, PCA, get_pca_ind
-    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> from scientisttools.datasets import decathlon
+    >>> from scientisttools import PCA, get_pca_ind
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45), sup_var = (10,11,12), rotate=None)
     >>> res_pca.fit(decathlon)
     >>> #extract the results for individuals
     >>> ind = get_pca_ind(res_pca)
     >>> ind.coord.head() #coordinates of individuals
-    >>> ind.cos2.head() #cos2 of individuals
     >>> ind.contrib.head() #contributions of individuals
+    >>> ind.cos2.head() #cos2 of individuals
     >>> ind.infos.head() #additionals informations of individuals
     ```
     """
-    # Check if self is an object of class PCA
-    if self.model_ != "pca":
+    if self.model_ != "pca": #check if self is an object of class PCA
         raise TypeError("'self' must be an object of class PCA")
     return self.ind_
 
@@ -63,7 +63,7 @@ def get_pca_var(self) -> NamedTuple:
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosinus, contributions) for the active variables from Principal Component Analysis (PCA) outputs
+    Extract all the results (factor coordinates, squared cosinus, relative contributions and additionals informations) for the active variables from Principal Component Analysis (PCA) outputs
 
     Usage
     -----
@@ -79,13 +79,13 @@ def get_pca_var(self) -> NamedTuple:
     -------
     namedtuple of pandas DataFrames containing all the results for the active variables including:
 
-    `coord`: factor coordinates
+    `coord`: factor coordinates (scores) of the variables,
 
-    `cos2`: squared cosinus
+    `contrib`: relative contributions of the variables,
 
-    `contrib`: relative contributions
+    `cos2`: squared cosinus (cos2) of the variables,
 
-    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia)
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the variables.
     
     Author(s)
     ---------
@@ -94,14 +94,15 @@ def get_pca_var(self) -> NamedTuple:
     Examples
     --------
     ```python
-    >>> from scientisttools import decathlon, PCA, get_pca_var
-    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> from scientisttools.datasets import decathlon 
+    >>> from scientisttools import PCA, get_pca_var
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12),rotate=None)
     >>> res_pca.fit(decathlon)
     >>> #extract the results for variables
     >>> var = get_pca_var(res_pca)
     >>> var.coord.head() #coordinates of variables
-    >>> var.cos2.head() #cos2 of variables
     >>> var.contrib.head() #contributions of variables
+    >>> var.cos2.head() #cos2 of variables
     >>> var.infos.head() #additionals informations of variables
     ```
     """
@@ -117,7 +118,7 @@ def get_pca(self,element="ind")-> NamedTuple:
 
     Description
     -----------
-    Extract all the results (factor coordinates, squared cosinus, relative contributions) for the active individuals/variables from Principal Component Analysis (PCA) outputs.
+    Extract all the results (factor coordinates, squared cosinus, relative contributions and additionals informations) for the active individuals/variables from Principal Component Analysis (PCA) outputs.
 
         * `get_pca()`: Extract the results for variables and individuals
         * `get_pca_ind()`: Extract the results for individuals only
@@ -126,9 +127,8 @@ def get_pca(self,element="ind")-> NamedTuple:
     Usage
     -----
     ```python
-    >>> get_pca(self,element=("ind","var"))
-    >>> get_pca_ind(self)
-    >>> get_pca_var(self) 
+    >>> get_pca(self,element="ind")
+    >>> get_pca(self,element="var")
     ```
 
     Parameters
@@ -143,13 +143,13 @@ def get_pca(self,element="ind")-> NamedTuple:
     -------
     namedtuple of dataframes containing all the results for the active individuals/variables including:
 
-    `coord`: factor coordinates of the individuals/variables
+    `coord`: factor coordinates (scores) of the individuals/variables,
     
-    `cos2`: squared cosinus of the individuals/variables
-    
-    `contrib`: relative contributions of the individuals/variables
+    `contrib`: relative contributions of the individuals/variables,
 
-    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals/variables
+    `cos2`: squared cosinus (cos2) of the individuals/variables,
+
+    `infos`: additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals/variables.
 
     Author(s)
     ---------
@@ -158,27 +158,24 @@ def get_pca(self,element="ind")-> NamedTuple:
     Examples
     --------
     ```python
-    >>> from scientisttools import decathlon, PCA, get_pca
-    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> from scientisttools.datasets import decathlon
+    >>> from scientisttools import PCA, get_pca
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12),rotate=None)
     >>> res_pca.fit(decathlon)
     >>> #extract the results for individuals
     >>> ind = get_pca(res_pca, "ind")
     >>> ind.coord.head() #coordinates of individuals
-    >>> ind.cos2.head() #cos2 of individuals
     >>> ind.contrib.head() #contributions of individuals
+    >>> ind.cos2.head() #cos2 of individuals
     >>> ind.infos.head() #additionals informations of individuals
     >>> #extract the results for variables
     >>> var = get_pca(res_pca, "var") 
     >>> var.coord.head() #coordinates of variables
-    >>> var.cos2.head() #cos2 of variables
     >>> var.contrib.head() #contributions of variables
+    >>> var.cos2.head() #cos2 of variables
     >>> var.infos.head() #additionals informations of variables
     ```
     """
-    #check if self is an object of class PCA
-    if self.model_ != "pca":
-        raise TypeError("'self' must be an object of class PCA")
-
     if element == "ind":
         return get_pca_ind(self)
     elif element == "var":
@@ -224,8 +221,9 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
     Examples
     --------
     ```python
+    >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import decathlon, PCA, summaryPCA
-    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),quanti_sup=(10,11),quali_sup=12,rotate=None)
+    >>> res_pca = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12),rotate=None)
     >>> res_pca.fit(decathlon)
     >>> summaryPCA(res_pca)
     ```
@@ -270,7 +268,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         ind_coord, ind_cos2, ind_ctr = ind.coord.iloc[:,i], ind.cos2.iloc[:,i], ind.contrib.iloc[:,i]
         ind_cos2.name, ind_ctr.name = "cos2", "ctr"
         ind_infos = concat((ind_infos,ind_coord,ind_ctr,ind_cos2),axis=1)
-    ind_infos = ind_infos.iloc[:nb_element,:].round(decimals=digits)
+    ind_infos = ind_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(ind_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
@@ -285,12 +283,12 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(f"\nSupplementary individuals (the {nb_element} first)\n")
         else:
             print("\nSupplementary individuals\n")
-        ind_sup_infos = ind_sup.dist
+        ind_sup_infos = ind_sup.dist2
         for i in range(ncp):
             ind_sup_coord, ind_sup_cos2= ind_sup.coord.iloc[:,i], ind_sup.cos2.iloc[:,i]
             ind_sup_cos2.name = "cos2"
             ind_sup_infos = concat((ind_sup_infos,ind_sup_coord,ind_sup_cos2),axis=1)
-        ind_sup_infos = ind_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        ind_sup_infos = ind_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(ind_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
@@ -309,14 +307,14 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
         var_coord, var_cos2, var_ctr = var.coord.iloc[:,i], var.cos2.iloc[:,i], var.contrib.iloc[:,i]
         var_cos2.name, var_ctr.name = "cos2", "ctr"
         var_infos = concat((var_infos,var_coord,var_ctr,var_cos2),axis=1)
-    var_infos = var_infos.iloc[:nb_element,:].round(decimals=digits)
+    var_infos = var_infos.head(nb_element).round(decimals=digits)
     if to_markdown:
         print(var_infos.to_markdown(tablefmt=tablefmt,**kwargs))
     else:
         print(var_infos)
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #add supplementary continuous variables informations
+    #add supplementary quantitativve variables informations
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if hasattr(self,"quanti_sup_"):
         quanti_sup = self.quanti_sup_
@@ -329,7 +327,7 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             quanti_sup_coord, quanti_sup_cos2 = quanti_sup.coord.iloc[:,i], quanti_sup.cos2.iloc[:,i]
             quanti_sup_cos2.name = "cos2"
             quanti_sup_infos =concat((quanti_sup_infos,quanti_sup_coord,quanti_sup_cos2),axis=1)
-        quanti_sup_infos = quanti_sup_infos.iloc[:nb_element,:].round(decimals=digits)
+        quanti_sup_infos = quanti_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(quanti_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
@@ -344,12 +342,12 @@ def summaryPCA(self,digits=3,nb_element=10,ncp=3,to_markdown=False,tablefmt = "p
             print(f"\nSupplementary categories (the {nb_element} first)\n")
         else:
             print("\nSupplementary categories\n")
-        quali_sup_infos = quali_sup.dist
+        quali_sup_infos = quali_sup.dist2
         for i in range(ncp):
             quali_sup_coord, quali_sup_cos2, quali_sup_vtest = quali_sup.coord.iloc[:,i], quali_sup.cos2.iloc[:,i], quali_sup.vtest.iloc[:,i]
             quali_sup_cos2.name, quali_sup_vtest.name = "cos2", "vtest"
             quali_sup_infos = concat((quali_sup_infos,quali_sup_coord,quali_sup_cos2,quali_sup_vtest),axis=1)
-        quali_sup_infos = quali_sup_infos.round(decimals=digits)
+        quali_sup_infos = quali_sup_infos.head(nb_element).round(decimals=digits)
         if to_markdown:
             print(quali_sup_infos.to_markdown(tablefmt=tablefmt,**kwargs))
         else:
