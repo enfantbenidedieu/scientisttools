@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from numpy import sqrt, ones, nan, inf
 from scipy.stats import chi2_contingency
-from pandas import DataFrame, Series, CategoricalDtype
+from pandas import DataFrame, Series, CategoricalDtype, concat
 from collections import OrderedDict, namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -11,9 +11,12 @@ from ..functions.gfa import gFA
 from ..functions.gsvd import gSVD
 from ..functions.preprocessing import preprocessing
 from ..functions.get_sup_label import get_sup_label
-from ..functions.statistics import wmean, wstd, func_groupby
+from ..functions.model_matrix import model_matrix
+from ..functions.wlsreg import wlsreg
+from ..functions.statistics import wmean, wstd, wcorr, func_groupby
 from ..functions.func_predict import func_predict
 from ..functions.func_eta2 import func_eta2
+from ..functions.utils import check_is_bool, check_is_dataframe
 from ..others._splitmix import splitmix
 from ..others._disjunctive import disjunctive
 
@@ -22,18 +25,7 @@ class CA(BaseEstimator,TransformerMixin):
     Correspondence Analysis (CA)
     
     Performs Correspondence Analysis (CA) and its derivatives with supplementary points (rows and/or columns), supplementary variables (continuous and/or categorical).
-    :class:`scientisttools.CA` performns:
-
-        1. Simple Correspondence Analysis (CA)
-        2. Detrended Correspondence Analysis (DCA) 
-        3. Non-symmetric Correspondence Analysis (nsCA) 
-        4. Between-class Correspondence Analysis (bcCA)
-        5. Between-class Detrended Correspondence Analysis (bcDCA)
-        6. Between-class non-symmetric Correspondence Analysis (bcnsCA)
-        7. Within-class Correspondence Analysis (wcCA)
-        8. Within-class Detrended Correspondence Analysis (wcDCA)
-        9. Within-class non-symmetric Correspondence Analysis (wcnsCA)
-
+    
     Parameters
     ----------
     symmetric: bool, default = True
@@ -41,6 +33,12 @@ class CA(BaseEstimator,TransformerMixin):
     
     ref : int, str, default = None
         The indexe or name of the reference distribution. Only for Detrended Correspondence Analysis (DCA).
+    
+    iv : int, list, tuple or range, default = None
+        The indexes or names of the instrumental (explanatory) variables (continuous and/or categorical).
+
+    ortho : bool, default = False
+        If ``True``, then the correspondence analysis with orthogonal instrumental variables (CAoiv) is performed.
 
     group : int, str
         The indexe or name of the categorical variable which allows for between-class or within-class analysis.
@@ -61,7 +59,7 @@ class CA(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary columns points.
 
     sup_var : int, str, list, tuple or range, default = None 
-        The indexes or names of the supplementary variables (quantitative and/or qualitative).
+        The indexes or names of the supplementary variables (continuous and/or categorical).
 
     tol : float, default = 1e-7
         A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
@@ -69,20 +67,22 @@ class CA(BaseEstimator,TransformerMixin):
     Returns
     -------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters with the following attributes:
 
         Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
             Input data.
         X : DataFrame of shape (n_rows, n_columns)
             Active data.
-        Z : DataFrame of shape (n_rows, n_columns) 
+        Zcod : DataFrame of shape (n_rows, n_columns) 
             Standardized data.
-        bary : None or DataFrameof shape (n_groups, n_columns)
+        Z : DataFrame of shape (n_rows, n_columns) 
+            Standardized data (CA) or fitted values (CAiv) or residuals values (CAoiv).
+        bary : None or DataFrame of shape (n_groups, n_columns)
             Barycenter of rows points.
         tab : DataFrame of shape (n_rows, n_columns) or (n_groups, n_columns)
             Data used for GSVD.
         total : int
-            The sum of elements in ``X``.
+            The sum of all elements in ``X`` or the sum of all elements in reference distribution.
         row_s : Series of shape (n_rows,)
             The rows sums.
         col_s : Series of shape (n_columns,)
@@ -95,8 +95,8 @@ class CA(BaseEstimator,TransformerMixin):
             The rows weights.
         col_w : Series of shape (n_columns,)
             The columns weights.
-        ncp : int
-            The number of components kepted.
+        iv : None, list
+            The names of the instrumental variables.
         group : None, list
             The name of the group variables used for between/within - class analysis.
         ref : None, list
@@ -106,7 +106,23 @@ class CA(BaseEstimator,TransformerMixin):
         col_sup : None, list
             The names of the supplementary columns.
         sup_var : None, list
-            The names of the supplementary variables (quantitative and/or qualitative)
+            The names of the supplementary variables (continuous and/or categorical)
+        t : Series of shape (n_rows,)
+            The reference distribution.
+        z : DataFrame of shape (n_rows, n_iv)
+            Instrumental variables.
+        zcod : DataFrame of shape (n_rows, n_zcod)
+            Recoded instrumental variables.
+        zs : DataFrame of shape (n_rows, n_zcod)
+            Standardized recoded instrumental variables.
+        z_center : Series of shape (n_zcod,)
+            The weighted average of recoded instrumental variables.
+        z_scale : Series of shape (n_zcod,)
+            The weighted standard deviation of recoded instrumental variables.
+        model : OrderedDict
+            The separate weighted least square regression between standardized data and standardized recoded instrumental variables.
+        y : Series of shape (n_rows,)
+            The group distribution.
     
     col_ : col
         An object containing all the results for the active columns with the following attributes:
@@ -147,6 +163,14 @@ class CA(BaseEstimator,TransformerMixin):
         infos : DataFrame of shape (n_groups, 4), optional
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) for the groups.
 
+    iv_ : iv, optional
+        An object containing all the results for the instrumental variables with the following attributes:
+
+        coord : DataFrame of shape (n_zcod, ncp)
+            The coordinates of the instrumental variables.
+        cos2 : DataFrame of shape (n_zcod, ncp)
+            The squared cosinus of the instrumental variables.
+
     levels_sup_ : levels_sup
         An object containing all the results for the supplementary levels with the following attributes:
 
@@ -160,20 +184,20 @@ class CA(BaseEstimator,TransformerMixin):
             The squared distance to origin for supplementary levels.
 
     quali_var_sup_ : quali_var_sup
-        An object containing all the results for the supplementary qualitative variables with the following attributes:
+        An object containing all the results for the supplementary categorical variables with the following attributes:
 
         coord : DataFrame of shape (n_quali_var_sup, ncp)
             The coordinates for supplementary levels, which is the squared correlation ratio
 
     quanti_var_sup_ : quanti_var_sup
-        An object containing all the results for the supplementary quantitative variables with the following attributes:
+        An object containing all the results for the supplementary continuous variables with the following attributes:
 
-        coord : DataFrame of shape (n_quanti_sup, n_columns)
-            The coordinates for the supplementary quantitative variables.
-        cos2 : DataFrame of shape (n_quanti_sup, n_columns)
-            The squared cosinus for the supplementary quantitative variables.
+        coord : DataFrame of shape (n_quanti_var_sup, ncp)
+            The coordinates for the supplementary continuous variables.
+        cos2 : DataFrame of shape (n_quanti_var_sup, ncp)
+            The squared cosinus for the supplementary continuous variables.
         dist2 : Series of shape (n_quanti_var_sup,)
-            The squared distance to origin for supplementary quantitative variables.
+            The squared distance to origin for supplementary continuous variables.
 
     ratio_ : float, optional
         The inertia (between-class/within-class) percentage.
@@ -207,24 +231,24 @@ class CA(BaseEstimator,TransformerMixin):
         
         vs : 1d numpy array of shape (maxcp,)
             The singular values.
-        U : 2d numpy array of shape (n_rows, ncp) or (n_groups, ncp)
+        U : 2d numpy array of shape (n_rows, maxcp) or (n_groups, maxcp)
             The left singular vectors.
-        V : 2d numpy array of shape (n_columns, ncp)
+        V : 2d numpy array of shape (n_columns, maxcp)
             The right singular vectors.
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
 
     References
     ----------
     [1] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
     
-    [2] Husson, F., Le, S. and Pages, J. (2009). Analyse de donnees avec R, Presses Universitaires de Rennes.
+    [2] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle, Dunod, Paris 4ed.
 
-    [3] Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    [3] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
 
-    [4] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle, Dunod, Paris 4ed.
-
-    [5] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
-
-    [5] Rakotomalala R. (2020), `Pratique des méthodes factorielles avec Python <https://hal.science/hal-04868625v1>`_, Université Lumière Lyon 2, Version 1.0
+    [4] Rakotomalala R. (2020), `Pratique des méthodes factorielles avec Python <https://hal.science/hal-04868625v1>`_, Université Lumière Lyon 2, Version 1.0
 
     See also
     --------
@@ -237,38 +261,48 @@ class CA(BaseEstimator,TransformerMixin):
 
     Examples
     --------
-    >>> from scientisttools.datasets import housetasks, children, ichtyo, cultural
+    >>> from scientisttools.datasets import housetasks, children, ichtyo, dune, cultural
     >>> from scientisttools import CA
-    >>> #with supplementary rows, supplementary columns and supplementary qualitative variables
+    >>> #with supplementary rows, supplementary columns and supplementary categorical variables
     >>> clf = CA(row_sup=range(14,18),col_sup=(5,6,7),sup_var=8)
     >>> clf.fit(children)
     CA(col_sup=(5,6,7),row_sup=range(14,18),sup_var=8)
-    >>> #with supplementary rows, supplementary variables (quantitative and qualitative)
+    >>> #with supplementary rows, supplementary variables (continuous and categorical)
     >>> clf = CA(row_sup=range(14,18),sup_var=range(5,9))
     >>> clf.fit(children)
     CA(row_sup=range(14,18),sup_var=range(5,9))
-    >>> #detrended correspondence analysys
+    >>> #detrended correspondence analysis (DCA)
     >>> clf = CA(ref=9,sup_var=10)
     >>> clf.fit(ichtyo)
     CA(ref=9,sup_var=10)
-    >>> Non-symmetric correspondence analysis (nsCA)
+    >>> #non-symmetric correspondence analysis (nsCA)
     >>> clf = CA(symmetric=False)
     >>> clf.fit(housetasks)
     CA(symmetric=False)
+    >>> #correspondence analysis with instrumental variables (CAiv)
+    >>> clf = CA(iv=range(5))
+    >>> clf.fit(dune)
+    CA(iv=range(5))
+    >>> #correspondence analysis with orthogonal instrumental variables (CAoiv)
+    >>> clf = CA(iv=range(5),ortho=True)
+    >>> clf.fit(dune)
+    CA(iv=range(5),ortho=True)
     >>> #between-class correspondence analysis (bcCA)
     >>> clf = CA(group=0,row_sup=range(20,26),col_sup=range(9,12),sup_var=range(12,18))
     >>> clf.fit(cultural)
     CA(col_sup=range(9,12),group=0,row_sup=range(20,26),sup_var=range(12,18))
-    >>> #within-class correspondence analysis
+    >>> #within-class correspondence analysis (wcCA)
     >>> clf = CA(group=0,option="within",row_sup=range(20,26),col_sup=range(9,12),sup_var=range(12,18))
     >>> clf.fit(cultural)
     CA(col_sup=range(9,12),group=0,option="within",row_sup=range(20,26),sup_var=range(12,18))
     """
     def __init__(
-            self, symmetric=True, ref=None, group=None, option="between", ncp=5, row_sup=None, col_sup=None, sup_var=None, tol = 1e-7
+            self, symmetric=True, ref=None, iv=None, ortho=False, group=None, option="between", ncp=5, row_sup=None, col_sup=None, sup_var=None, tol = 1e-7
     ):
         self.symmetric = symmetric
         self.ref = ref
+        self.iv = iv
+        self.ortho = ortho
         self.group = group
         self.option = option
         self.ncp = ncp
@@ -296,6 +330,23 @@ class CA(BaseEstimator,TransformerMixin):
             Returns the instance itself.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if symmetric is a boolean
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_bool(self.symmetric)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #reference validation
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.ref is not None and not isinstance(self.ref,(int,str)):
+            raise TypeError("'ref' must be either an objet of type int or str")
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if ortho is a boolean
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.iv is not None: 
+            check_is_bool(self.ortho)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #group validation
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group is not None and not isinstance(self.group,(int,str)):
@@ -304,21 +355,19 @@ class CA(BaseEstimator,TransformerMixin):
             raise ValueError("'option' should be one of 'between', 'within'")
             
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #reference validation
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.ref is not None and not isinstance(self.ref,(int,str)):
-            raise TypeError("'ref' must be either an objet of type int or str")
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #preprocessing
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         X = preprocessing(X=X)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #get labels
+        #get the instrumental variables labels, the group labels, and the reference labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_label, ref_label = get_sup_label(X=X, indexes=self.group, axis=1), get_sup_label(X=X, indexes=self.ref, axis=1)
-        row_sup_label, col_sup_label, sup_var_label = get_sup_label(X=X, indexes=self.row_sup, axis=0), get_sup_label(X=X, indexes=self.col_sup, axis=1), get_sup_label(X=X, indexes=self.sup_var, axis=1)
+        iv_label, group_label, ref_label = get_sup_label(X=X,indexes=self.iv,axis=1), get_sup_label(X=X,indexes=self.group,axis=1), get_sup_label(X=X,indexes=self.ref,axis=1)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #get supplementary elements labels
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        row_sup_label, col_sup_label, sup_var_label = get_sup_label(X=X,indexes=self.row_sup,axis=0), get_sup_label(X=X,indexes=self.col_sup,axis=1), get_sup_label(X=X,indexes=self.sup_var,axis=1)
         
         #make a copy of the original data
         Xtot = X.copy()
@@ -341,14 +390,23 @@ class CA(BaseEstimator,TransformerMixin):
         #drop supplementary rows
         if self.row_sup is not None: 
             X_row_sup, X = X.loc[row_sup_label,:], X.drop(index=row_sup_label)
+            if self.ref is not None:
+                t_row_sup, X_row_sup = X_row_sup[ref_label[0]], X_row_sup.drop(columns=ref_label)
+            if self.iv is not None:
+                z_row_sup, X_row_sup = X_row_sup.loc[:,iv_label], X_row_sup.drop(columns=iv_label)
             if self.group is not None:
                 y_row_sup, X_row_sup = X_row_sup[group_label[0]], X_row_sup.drop(columns=group_label)
-            if self.ref is not None:
-                X_row_sup = X_row_sup.drop(columns=ref_label)
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # drop others elements
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop instrumental variables
+        if self.iv is not None:
+            z, X = X.loc[:,iv_label], X.drop(columns=iv_label)
 
         #extract reference distribution
         if self.ref is not None:
-            z, X = X[ref_label[0]],  X.drop(columns=ref_label)
+            t, X = X[ref_label[0]],  X.drop(columns=ref_label)
 
         #extract group disribution
         if self.group is not None:
@@ -375,7 +433,7 @@ class CA(BaseEstimator,TransformerMixin):
         if self.ref is None: 
             row_s, total = X.sum(axis=1), int(X.sum(axis=0).sum())
         else: 
-            row_s, total = z.copy(), int(z.sum())
+            row_s, total = t.copy(), int(t.sum())
         row_s.name, col_s.name = "ni.", "n.j"
         if total == 0: 
             raise ValueError("all frequencies are zero")
@@ -386,13 +444,31 @@ class CA(BaseEstimator,TransformerMixin):
 
         #set columns weights and standardization
         if self.symmetric:
-            col_w, Z = col_m.copy(), ((X.T/ row_s).T/col_m) - 1
+            col_w, Zcod = col_m.copy(), ((X.T/row_s).T/col_m) - 1
         else:
-            col_w, Z = Series(ones(n_cols)/n_cols,index=X.columns), (X.apply(lambda x : x/sum(x) if sum(x)!=0 else col_m,axis=1) - col_m)* n_cols
+            col_w, Zcod = Series(ones(n_cols)/n_cols,index=X.columns), (X.apply(lambda x : x/sum(x) if sum(x)!=0 else col_m,axis=1) - col_m) * n_cols
         
         #fill NA, +/-inf if 1e-15
-        Z = Z.replace([nan,inf,-inf], 1e-15)  
+        Zcod = Zcod.replace([nan,inf,-inf], 1e-15)  
 
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #correspondance analysis with (orthogonal) instrumental variables (CAiv/CAoiv)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        Z = Zcod.copy()
+        if self.iv is not None:
+            #recode categorical variable into disjunctive and drop first
+            zcod = model_matrix(X=z)
+            z_center, z_scale = wmean(X=zcod,w=row_m), wstd(X=zcod,w=row_m)
+            #standardization
+            zs = (zcod - z_center)/z_scale
+            #separate weighted least squared model
+            model = wlsreg(X=zs,Y=Zcod,w=row_m)
+            #residuals (CAoiv) or fitted values (CAiv)
+            if self.ortho:
+                Z = concat((model[k].resid.to_frame(k) for k in Zcod.columns),axis=1)
+            else:
+                Z = concat((model[k].fittedvalues.to_frame(k) for k in Zcod.columns),axis=1)
+   
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #class analysis (None/between/within)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -417,8 +493,17 @@ class CA(BaseEstimator,TransformerMixin):
         self.svd_, self.eig_, self.col_, ncp = fit_.svd, fit_.eig, namedtuple("col",fit_.col.keys())(*fit_.col.values()), fit_.ncp
 
         #store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Z=Z,bary=bary,tab=tab,total=total,row_s=row_s,col_s=col_s,row_m=row_m,col_m=col_m,row_w=row_w,col_w=col_w,ncp=ncp,
-                            group=group_label,ref=ref_label,row_sup=row_sup_label,col_sup=col_sup_label,sup_var=sup_var_label)
+        call_ = OrderedDict(Xtot=Xtot,X=X,Zcod=Zcod,Z=Z,bary=bary,tab=tab,total=total,row_s=row_s,col_s=col_s,row_m=row_m,col_m=col_m,row_w=row_w,col_w=col_w,ncp=ncp,
+                            iv=iv_label,group=group_label,ref=ref_label,row_sup=row_sup_label,col_sup=col_sup_label,sup_var=sup_var_label)
+        #add reference distribution
+        if self.ref is not None:
+            call_ = {**call_, **OrderedDict(t=t)}
+        #add instrumental variables informations
+        if self.iv is not None:
+            call_ = {**call_, **OrderedDict(z=z,zcod=zcod,zs=zs,z_center=z_center,z_scale=z_scale,model=model)}
+        #add group distribution
+        if self.group is not None:
+            call_ = {**call_, **OrderedDict(y=y)}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -437,27 +522,71 @@ class CA(BaseEstimator,TransformerMixin):
         self.row_ = namedtuple("row",row_.keys())(*row_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #statistics for instrumental variables
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.iv is not None and self.ortho is False:
+            nzcod = self.call_.zcod.shape[1]
+            #coordinates for the instrumental variables
+            iv_coord = wcorr(X=concat((self.call_.zcod,self.row_.coord),axis=1),w=row_m).iloc[:nzcod,nzcod:]
+            #convert to ordered dictionary
+            iv_ = OrderedDict(coord=iv_coord,cos2=iv_coord**2)
+            #convert to namedtuple
+            self.iv_ = namedtuple("iv",iv_.keys())(*iv_.values())
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for supplementary rows
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.row_sup is not None:
             #standardization
             if self.symmetric:
+                #margins for supplementary rows
+                if self.ref is None:
+                    row_sup_m = X_row_sup.sum(axis=1)/self.call_.total
+                else:
+                    row_sup_m = t_row_sup/self.call_.total
                 #frequencies of supplementary rows
                 P_row_sup = X_row_sup/total
-                #margins for supplementary rows
-                row_sup_m = P_row_sup.sum(axis=1)
                 #standardization: z_ij = (f_ij/(f_i.*f_.j)) - 1
-                Z_row_sup = ((P_row_sup.T / row_sup_m).T/col_m) - 1
+                Zcod_row_sup = ((P_row_sup.T / row_sup_m).T/col_m) - 1
             else: 
-                Z_row_sup = (X_row_sup.apply(lambda x : x/sum(x) if sum(x)!=0 else col_m,axis=1) - col_m) * n_cols
+                Zcod_row_sup = (X_row_sup.apply(lambda x : x/sum(x) if sum(x)!=0 else col_m,axis=1) - col_m) * n_cols
 
+            #correspondence analysis with (orthogonal) instrumental variables
+            Z_row_sup = Zcod_row_sup.copy()
+            if self.iv is not None:
+                #split z_row_sup
+                split_z_row_sup = splitmix(z_row_sup)
+                #extract elements
+                z_row_sup_quanti_var, z_row_sup_quali_var, nz_row_sup_quanti_var, nz_row_sup_quali_var = split_z_row_sup.quanti, split_z_row_sup.quali, split_z_row_sup.k1, split_z_row_sup.k2
+                #initialization
+                zcod_row_sup = DataFrame(index=row_sup_label,columns=self.call_.zcod.columns).astype(float)
+                #check if numerics variables
+                if nz_row_sup_quanti_var > 0:
+                    #replace with numerics columns
+                    zcod_row_sup.loc[:,z_row_sup_quanti_var.columns] = z_row_sup_quanti_var
+                #check if categorical variables      
+                if nz_row_sup_quali_var > 0:
+                    #active categorics
+                    categorics = [x for x in self.call_.zcod.columns if x not in self.call_.z.columns]
+                    #replace with dummies
+                    zcod_row_sup.loc[:,categorics] = disjunctive(X=z_row_sup_quali_var,cols=categorics,prefix=True,sep="")
+                #standardization: z_ik = (x_ik - m_k)/s_k
+                zs_row_sup = (zcod_row_sup - self.call_.z_center)/self.call_.z_scale
+                #insert constant to features
+                zs_row_sup.insert(0,"const",1)
+                #predicted values for CAiv
+                Z_row_sup = concat((model[k].predict(zs_row_sup).to_frame(k) for k in Zcod_row_sup.columns),axis=1)
+                #residuals for CAoiv
+                if self.ortho: 
+                    Z_row_sup = Zcod_row_sup - Z_row_sup.values
+                
             #within class analysis - suppress within effect
             if self.group is not None and self.option == "within":
                 Z_row_sup = Z_row_sup - bary.loc[y_row_sup.values,:].values
 
             #fill NA, +/-inf if 1e-15
             Z_row_sup = Z_row_sup.replace([nan,inf,-inf], 1e-15)  
-            
+
             #statistics for supplementary rows
             row_sup_ = func_predict(X=Z_row_sup,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0)
             #convert to namedtuple
@@ -474,10 +603,21 @@ class CA(BaseEstimator,TransformerMixin):
             #standardization
             if self.symmetric: 
                 # z_ij = (f_ij/(f_i.*f_.j)) - 1
-                Z_col_sup = ((P_col_sup.T/row_m).T/col_sup_m) - 1
+                Zcod_col_sup = ((P_col_sup.T/row_m).T/col_sup_m) - 1
             else: 
-                Z_col_sup = (X_col_sup.apply(lambda x : x/sum(x) if sum(x)!=0 else col_sup_m, axis=1) - col_sup_m) * len(col_sup_label)
+                Zcod_col_sup = (X_col_sup.apply(lambda x : x/sum(x) if sum(x)!=0 else col_sup_m, axis=1) - col_sup_m) * len(col_sup_label)
 
+            #correspondence analysis with instrumental variables
+            Z_col_sup = Zcod_col_sup.copy()
+            if self.iv is not None:
+                #separate weighted least squared model
+                model_col_sup = wlsreg(X=self.call_.zs,Y=Z_col_sup,w=row_m)
+                #residuals (CAoiv) or fitted variables (CAiv)
+                if self.ortho:
+                    Z_col_sup = concat((model_col_sup[k].resid.to_frame(k) for k in Zcod_col_sup.columns),axis=1) 
+                else:
+                    Z_col_sup = concat((model_col_sup[k].fittedvalues.to_frame(k) for k in Zcod_col_sup.columns),axis=1)
+            
             #between/within-class effect
             if self.group is not None:
                 bary_col_sup = func_groupby(X=Z_col_sup,by=y,func="mean",w=row_m).loc[uq_classe,:]
@@ -496,32 +636,46 @@ class CA(BaseEstimator,TransformerMixin):
             split_X_sup_var = splitmix(X=X_sup_var)
             X_quanti_var_sup, X_quali_var_sup, n_quanti_var_sup, n_quali_var_sup = split_X_sup_var.quanti, split_X_sup_var.quali, split_X_sup_var.k1, split_X_sup_var.k2
 
-            #statistics for supplementary quantitative variables
+            #statistics for supplementary continuous variables
             if n_quanti_var_sup > 0:
                 #standardization: z_ik =  (x_ik - m_k)/s_k
-                Z_quanti_var_sup = (X_quanti_var_sup - wmean(X=X_quanti_var_sup,w=row_m))/wstd(X=X_quanti_var_sup,w=row_m)
+                Zcod_quanti_var_sup = (X_quanti_var_sup - wmean(X=X_quanti_var_sup,w=row_m))/wstd(X=X_quanti_var_sup,w=row_m)
+
+                #correspondence analysis with (orthogonal) instrumental variables
+                Z_quanti_var_sup = Zcod_quanti_var_sup.copy()
+                if self.iv is not None:
+                    #separate weighted least squared model
+                    model_quanti_var_sup = wlsreg(X=self.call_.zs,Y=Zcod_quanti_var_sup,w=row_m)
+                    #residuals (CAoiv) or fitted variables (CAiv)
+                    if self.ortho:
+                        Z_quanti_var_sup = concat((model_quanti_var_sup[k].resid.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1)
+                    else:
+                        Z_quanti_var_sup = concat((model_quanti_var_sup[k].fittedvalues.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1)
 
                 #within class analysis - suppress within effect
                 if self.group is not None:
                     bary_quanti_var_sup = func_groupby(X=Z_quanti_var_sup,by=y,func="mean",w=row_m).loc[uq_classe,:]
                     Z_quanti_var_sup = bary_quanti_var_sup if self.option == "between" else Z_quanti_var_sup - bary_quanti_var_sup.loc[y.values,:].values
 
-                #statistics for supplementary quantitative variables
+                #statistics for supplementary continuous variables
                 quanti_var_sup_ = func_predict(X=Z_quanti_var_sup,Y=fit_.svd.U[:,:ncp],w=row_w,axis=1)
                 #convert to namedtuple
                 self.quanti_var_sup_ = namedtuple("quanti_var_sup",quanti_var_sup_.keys())(*quanti_var_sup_.values())
 
-            #statistics for supplementary qualitative variables/levels
+            #statistics for supplementary categorical variables/levels
             if n_quali_var_sup > 0:
                 #conditional sum accross levels
                 X_levels_sup = func_groupby(X=X,by=X_quali_var_sup,func="sum")
 
                 #standardization
                 if self.symmetric:
+                    #margins for supplementary levels
+                    if self.ref is not None:
+                        levels_sup_m = func_groupby(X=t,by=X_quali_var_sup,func="sum")[ref_label[0]]/self.call_.total
+                    else:
+                        levels_sup_m = X_levels_sup.sum(axis=1)/self.call_.total
                     #frequencies of supplementary levels
                     P_levels_sup = X_levels_sup/total
-                    #margins for supplementary levels
-                    levels_sup_m = P_levels_sup.sum(axis=1)
                     #standardization: z_ij = (f_ij/(f_i.*f_.j)) - 1
                     Z_levels_sup = ((P_levels_sup.T / levels_sup_m).T/col_m) - 1
                 else: 
@@ -536,7 +690,7 @@ class CA(BaseEstimator,TransformerMixin):
                 #convert to namedtuple
                 self.levels_sup_ = namedtuple("levels_sup",levels_sup_.keys())(*levels_sup_.values())
 
-                #coordinates for the supplementary qualitative variables - Eta-squared
+                #coordinates for the supplementary categorical variables - Eta-squared
                 quali_var_sup_coord = func_eta2(X=self.row_.coord,by=X_quali_var_sup,w=row_m,excl=None)
                 #convert to ordered dictionary
                 quali_var_sup_ = OrderedDict(coord=quali_var_sup_coord)
@@ -551,7 +705,7 @@ class CA(BaseEstimator,TransformerMixin):
 
         Parameters
         ----------
-        `X`: DataFrame of shape (n_rows, n_columns)
+        X : DataFrame of shape (n_rows, n_columns)
             Training data, where ``n_rows`` in the number of rows and ``n_columns`` is the number of columns.
             ``X`` is a contingency table containing absolute frequencies.
 
@@ -560,12 +714,106 @@ class CA(BaseEstimator,TransformerMixin):
         
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, n_components)
-            Transformed values.
+        X_new : DataFrame of shape (n_rows, ncp)
+            Transformed values, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
         """
         self.fit(X)
         return self.row_.coord
     
+    def transform(self,X):
+        """
+        Apply dimensionality reduction to ``X``.
+
+        ``X`` is projected on the first principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+
+        Returns
+        -------
+        X_new : DataFrame of shape (n_rows, ncp)
+            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        """
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if the estimator is fitted by verifying the presence of fitted attributes
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_fitted(self)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X is an object of class pd.DataFrame
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_dataframe(X)
+        X.index.name = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #get elements
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.ref is not None:
+            if self.call_.ref[0] in X.columns:
+                t, X = X[self.call_.ref[0]], X.drop(columns=self.call_.ref)
+            else:
+                raise ValueError("X must contain reference distribution.")
+        if self.group is not None:
+            y, X = X[self.call_.group[0]], X.drop(columns=self.call_.group)
+        if self.iv is not None:
+            z, X = X.loc[:,self.call_.iv], X.drop(columns=self.call_.iv)
+
+        #standardization
+        if self.symmetric:
+            #margins for new rows
+            if self.ref is None:
+                row_m = X.sum(axis=1)/self.call_.total
+            else:
+                row_m = t/self.call_.total
+            #frequencies of new rows
+            P = X/self.call_.total
+            #standardization: z_ij = (n_ij/(n_i.*f_.j)) - 1
+            Zcod = ((P.T / row_m).T/self.call_.col_m) - 1
+        else: 
+            Zcod = (X.apply(lambda x : x/sum(x) if sum(x)!=0 else self.call_.col_m,axis=1) - self.call_.col_m) * X.shape[1]
+
+        #correspondence analysis with (orthogonal) instrumental variables
+        Z = Zcod.copy()
+        if self.iv is not None:
+            #split z
+            split_z = splitmix(z)
+            #extract elements
+            z_quanti_var, z_quali_var, nz_quanti_var, nz_quali_var = split_z.quanti, split_z.quali, split_z.k1, split_z.k2
+            #initialization
+            zcod = DataFrame(index=X.index,columns=self.call_.zcod.columns).astype(float)
+            #check if numerics variables
+            if nz_quanti_var > 0:
+                #replace with numerics columns
+                zcod.loc[:,z_quanti_var.columns] = z_quanti_var
+            #check if categorical variables      
+            if nz_quali_var > 0:
+                #active categorics
+                categorics = [x for x in self.call_.zcod.columns if x not in self.call_.z.columns]
+                #replace with dummies
+                zcod.loc[:,categorics] = disjunctive(X=z_quali_var,cols=categorics,prefix=True,sep="")
+            #standardization: z_ik = (x_ik - m_k)/s_k
+            zs = (zcod - self.call_.z_center)/self.call_.z_scale
+            #insert constant to features
+            zs.insert(0,"const",1)
+            #fitted values for CAiv
+            Z = concat((self.call_.model[k].predict(zs).to_frame(k) for k in Zcod.columns),axis=1)
+            #residuals for CAoiv
+            if self.ortho: 
+                Z = Zcod - Z.values
+        
+        #within class analysis - suppress within effect
+        if self.group is not None and self.option == "within":
+            Z = Z - self.call_.bary.loc[y.values,:].values
+
+        #fill NA, +/-inf if 1e-15
+        Z = Z.replace([nan,inf,-inf], 1e-15) 
+        #coordinates for the new nrows
+        coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.svd_.ncp])
+        coord.columns = self.eig_.index[:self.svd_.ncp]
+        return coord
+            
 def statsCA(
         obj
 ):
