@@ -1,0 +1,4 @@
+"stay.at.home"	"part-time.work"	"full-time.work"	"housewives.cut.from.world.totally.agree"	"housewives.cut.from.world.quite.agree"	"housewives.cut.from.world.quite.disagree"	"housewives.cut.from.world.totally.disagree"
+"both.man.and.woman.work"	13	142	106	107	75	40	39
+"man.morks.more"	30	408	117	192	175	100	88
+"only.man.works"	241	573	94	140	215	254	299

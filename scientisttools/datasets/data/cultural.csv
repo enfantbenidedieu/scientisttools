@@ -1,0 +1,27 @@
+Occupation,Social Class,Theatre,Cinema,Museums,Concerts,Reading,Streaming,Sports,Video Games,Temp Exhibitions,Cultural Podcasts,Festivals,Income,Age,Years Education,Area,Dominant Gender,Dominant Education
+Farmers,Working,15,40,10,20,35,25,60,20,12,10,18,22000,48,11,Rural,M,Low
+Craftsmen,Middle,20,55,15,30,45,40,70,35,18,20,25,28000,45,12,Mixed,M,Medium
+Shopkeepers,Middle,18,60,20,35,50,50,65,40,22,25,30,30000,43,13,Urban,M,Medium
+Business Owners,Upper,40,70,50,45,80,60,55,25,45,35,50,55000,50,16,Urban,M,High
+Senior Executives,Upper,70,85,90,75,120,80,60,30,80,60,75,65000,47,18,Urban,M,High
+Intermediate Professions,Middle,45,75,55,60,85,90,70,45,50,55,60,38000,42,15,Mixed,F,Medium
+Administrative Employees,Middle,35,65,40,45,75,85,65,50,40,50,45,32000,44,14,Urban,F,Medium
+Sales Employees,Working,25,70,30,40,60,95,80,65,28,45,35,26000,39,12,Urban,F,Medium
+Skilled Workers,Working,15,55,20,30,45,80,95,70,20,35,30,24000,41,11,Mixed,M,Low
+Unskilled Workers,Working,10,50,15,25,35,75,100,85,15,30,20,21000,40,10,Rural,M,Low
+Students,Student,30,90,35,70,65,120,85,110,45,70,80,15000,22,14,Urban,F,Ongoing
+Retired Executives,Upper,60,70,85,55,110,50,40,10,75,40,60,42000,68,17,Urban,M,High
+Retired Employees,Middle,35,60,50,35,80,45,45,15,48,30,35,28000,70,13,Mixed,F,Medium
+Unemployed Graduates,Upper,25,65,35,40,55,90,70,60,35,55,45,20000,35,16,Urban,F,High
+Unemployed Non-Graduates,Working,15,55,20,25,40,85,75,75,20,40,30,18000,36,11,Urban,M,Low
+Self-Employed,Middle,30,70,45,50,75,65,60,35,42,45,50,35000,44,14,Mixed,M,Medium
+Public Sector A,Upper,55,80,75,65,100,70,60,25,70,55,65,50000,46,17,Urban,F,High
+Public Sector B,Middle,40,75,55,55,85,80,70,40,52,50,55,36000,43,15,Mixed,F,Medium
+Public Sector C,Working,25,65,35,40,65,85,75,55,30,45,40,27000,42,13,Urban,F,Medium
+Liberal Professions,Upper,65,85,95,70,115,75,50,20,85,65,70,70000,49,19,Urban,F,High
+Military,Working,20,60,25,30,50,70,90,40,30,35,45,30000,38,13,Mixed,M,Medium
+Clergy,Upper,50,30,70,20,120,20,30,5,80,25,40,35000,60,18,Urban,M,High
+Homemakers,Working,20,55,30,25,65,75,50,40,35,40,30,23000,45,12,Mixed,F,Medium
+Micro-Entrepreneurs,Middle,35,70,40,55,70,85,65,50,45,50,55,33000,37,14,Urban,M,Medium
+Apprentices,Student,10,75,15,35,40,110,95,100,20,60,75,14000,20,12,Urban,M,Ongoing
+Artists,Upper,90,65,100,85,95,60,45,20,110,55,95,40000,41,17,Urban,F,High

@@ -4,6 +4,7 @@ from pandas import Series, CategoricalDtype, concat
 from itertools import chain, repeat
 from collections import OrderedDict, namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 #intern functions
 from ._pca import PCA
@@ -16,6 +17,7 @@ from ..functions.concat_empty import concat_empty
 from ..functions.statistics import wmean, wstd, func_groupby
 from ..functions.func_eta2 import func_eta2
 from ..functions.func_predict import func_predict
+from ..functions.utils import check_is_dataframe
 from ..others._splitmix import splitmix
 from ..others._disjunctive import disjunctive
 
@@ -31,18 +33,6 @@ class PCAmix(BaseEstimator,TransformerMixin):
         if all variables are qualitative, then standard MCA is performed. When all the variables are qualitative, the factor coordinates of the individuals are equal to the factor scores
         of standard MCA times squares root of :math:`J` (the number of qualitatives variables) and the eigenvalues are then equal to the usual eigenvalues of MCA times :math:`J`.
         When all the variables are quantitative, PCAmix gives exactly the same results as normed PCA.
-
-    :class::`scientisttools.PCAmix` performns:
-
-        1. Normed Principal Component Analysis (PCA)
-        2. Standard Multiple Correspondence Analysis (MCA)
-        3. Principal Component Analysis of Mixed Data (PCAmix)
-        4. Between-class Normed Principal Component Analysis (bcPCA)
-        5. Between-class Standard Multiple Correspondence Analysis (bcMCA)
-        6. Between-class Principal Component Analysis of Mixed Data (bcPCAmix)
-        7. Within-class Normed Principal Component Analysis (wcPCA)
-        8. Within-class Standard Multiple Correspondence Analysis (wcMCA)
-        9. Within-class Principal Component Analysis of Mixed Data (wcPCAmix)
 
     Parameters
     ----------
@@ -600,3 +590,58 @@ class PCAmix(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.ind_.coord
+    
+    def transform(self,X):
+        """
+        Apply dimensionality reduction to ``X``.
+
+        ``X`` is projected on the first principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+
+        Returns
+        -------
+        X_new : DataFrame of shape (n_rows, ncp)
+            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        """
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if the estimator is fitted by verifying the presence of fitted attributes
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_fitted(self)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X is an object of class pd.DataFrame
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_dataframe(X)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set index name as None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        X.index.name = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #get elements
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.group is not None:
+            y, X = X[self.call_.group[0]], X.drop(columns=self.call_.group)
+        if self.iv is not None:
+            z, X = X.loc[:,self.call_.iv], X.drop(columns=self.call_.iv)
+        if self.partial is not None:
+            t, X = X.loc[:,self.call_.partial], X.drop(columns=self.call_.partial)
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X contains original columns
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not set(self.call_.X.columns).issubset(X.columns): 
+            raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
+        X = X[self.call_.X.columns]
+        
