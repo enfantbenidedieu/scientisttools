@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pandas import DataFrame, Series, concat
-from numpy import array, ndarray, ones, diag,linalg, fill_diagonal, insert, diff, nan, cumsum, c_, sqrt
+from numpy import array, ndarray, ones, diag,linalg, insert, diff, nan, cumsum, c_, sqrt
 from collections import namedtuple, OrderedDict
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -57,7 +57,7 @@ class FA(BaseEstimator,TransformerMixin):
     Returns
     -------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters with the following attributes:
 
         Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
             Input data.
@@ -149,14 +149,6 @@ class FA(BaseEstimator,TransformerMixin):
     [4] Marley W. Watkins (2018), Exploratory Factor Analysis : A guide to best practice, Journal of Black Psychology, Vol. 44(3) 219-246
 
     [5] Rakotomalala R. (2020), Pratique des méthodes factorielles avec Python, Université Lumière Lyon 2, Version 1.0
-
-    [6] wikipedia, https://en.wikipedia.org/wiki/Exploratory_factor_analysis
-
-    [7] datalab, https://datatab.fr/tutorial/exploratory-factor-analysis
-
-    [8] https://jmeunierp8.github.io/ManuelJamovi/s15.html
-
-    [9] https://stats.oarc.ucla.edu/sas/output/factor-analysis/
 
     See also
     --------

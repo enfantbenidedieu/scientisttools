@@ -172,7 +172,7 @@ class FArot(BaseEstimator,TransformerMixin):
         self.max_iter = max_iter
         self.tol = tol
     
-    def fit(self,obj):
+    def fit(self,obj,y=None):
         """
         Fit the model to ``obj``
 
@@ -180,6 +180,9 @@ class FArot(BaseEstimator,TransformerMixin):
         ----------
         obj : class
             An object of class :class:`~scientisttools.FA`.
+
+        y : None
+            y is ignored.
 
         Returns
         -------
@@ -313,7 +316,7 @@ class FArot(BaseEstimator,TransformerMixin):
         
         return self
 
-    def fit_transform(self,obj):
+    def fit_transform(self,obj,y=None):
         """
         Fit the model with ``obj`` and apply the dimensionality reduction
 
@@ -321,6 +324,9 @@ class FArot(BaseEstimator,TransformerMixin):
         ----------
         obj : class
             An object of class :class:`~scientisttools.FA`.
+
+        y : None
+            y is ignored.
             
         Returns
         -------
