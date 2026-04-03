@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from numpy import ndarray, array, zeros, ones, sqrt, linalg, log, flip,cumsum,mean, fill_diagonal, nan, cov
+from numpy import ndarray, array,ones, sqrt, linalg, log, cumsum,mean, nan
 from pandas import DataFrame, Series, concat, CategoricalDtype
-from pandas.api.types import is_numeric_dtype
 from scipy.stats import chi2
 from collections import namedtuple,OrderedDict
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -12,10 +11,10 @@ from ..functions.gfa import gFA
 from ..functions.gsvd import gSVD
 from ..functions.preprocessing import preprocessing
 from ..functions.get_sup_label import get_sup_label
-from ..functions.concat_empty import concat_empty
+from ..functions.model_matrix import model_matrix
 from ..functions.wlsreg import wlsreg
-from ..functions.statistics import wmean, wstd, wcov, func_groupby
-from ..functions.utils import check_is_bool
+from ..functions.statistics import wmean, wstd, wcorr, func_groupby
+from ..functions.utils import check_is_bool, check_is_dataframe
 from ..functions.func_eta2 import func_eta2
 from ..functions.func_predict import func_predict
 from ..functions.cov2corr import cov2corr
@@ -29,14 +28,6 @@ class PCA(BaseEstimator,TransformerMixin):
 
     Performs Principal Component Analysis (PCA) and its derivatives with supplementary individuals, supplementary variables (continuous and/or categorical). 
     Missing values on continuous variables are replaced by the column mean. Missing values on categorical variables are replaced by the most frequent categories in columns.
-    :class:`scientisttools.PCA` performns:
-
-        1. Principal Component Analysis (PCA)
-        2. Principal Component Analysis with partial correlation matrix (PCApartial)
-        3. Principal Component Analysis with instrumental variables (PCAiv)
-        4. Principal Component Analysis with orthogonal instrumental variables (PCAoiv)
-        5. Between-class Principal Component Analysis (bcPCA)
-        6. Within-class Principal Component Analysis (wcPCA)
     
     Parameters
     ----------
@@ -44,13 +35,22 @@ class PCA(BaseEstimator,TransformerMixin):
         If ``True``, then the data are scaled to unit variance.
 
     iv : int, list, tuple or range, default = None
-        The indexes or names of the instrumental (explanatory) variables (quantitative and/or qualitative).
+        The indexes or names of the instrumental (explanatory) variables (continuous and/or categorical).
 
     ortho : bool, default = False
-        If ``True``, then the principal analysis with orthogonal instrumental variables (PCAoiv) is performed.
+        If ``True``, then the principal component analysis with orthogonal instrumental variables (PCAoiv) is performed.
 
-    partiel : int, str, list, tuple or range, default = None
-        The indexes or the names of the partial variables (quantitative and/or qualitative).
+    partial : int, str, list, tuple or range, default = None
+        The indexes or the names of the partial variables (continuous and/or categorical).
+
+    group : int, str
+        The indexe or name of the categorical variable which allows for between-class or within-class analysis.
+
+    option : str, default = "between"
+        Which class analysis should be performns.
+
+        - 'between' for between-class analysis.
+        - 'within' for within-class analysis.
 
     ncp : int, default = 5
         The number of dimensions kept in the results.
@@ -65,7 +65,7 @@ class PCA(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary individuals.
 
     sup_var : int, str, list, tuple or range, default = None 
-        The indexes or names of the supplementary variables (quantitative and/or qualitative).
+        The indexes or names of the supplementary variables (continuous and/or categorical).
     
     tol : float, default = 1e-7
         A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
@@ -73,7 +73,7 @@ class PCA(BaseEstimator,TransformerMixin):
     Returns
     -------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters with the following attributes:
 
         Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
             Input data.
@@ -94,10 +94,7 @@ class PCA(BaseEstimator,TransformerMixin):
         center : Series of shape (n_columns,)
             The variables weighted average.
         scale : Series of shape (n_columns,)
-            The variables standard deviation:
-
-            - If `scale_unit = True`, then standard deviation are computed using variables weighted standard deviation
-            - If `scale_unit = False`, then standard deviation are a vector of ones with length number of variables.
+            The variables standard deviation.
         ind_w : Series of shape (n_rows,) 
             The individuals weights.
         row_w : Series of shape (n_rows,) or (n_groups,)
@@ -108,26 +105,38 @@ class PCA(BaseEstimator,TransformerMixin):
             The columns weights.
         ncp : int
             The number of components kepted.
-        features : None, list
-            The names of the explanatory variables (instrumental variables) or partial variables.
+        iv : None, list
+            The names of the instrumental variables.
+        partial : None, list
+            The names of the partial variables.
         group : None, list
             The name of the group variables used for between/within - class analysis.
         ind_sup : None, list
             The names of the supplementary individuals.
         sup_var : None, list
             The names of the supplementary variables (continuous and/or categorical).
-        zcod : DataFrame of shape (n_rows, n_features), optional
-            The standardized features data.
-        z_center : Series of shape (n_feature_quanti_var,), optional
-            The weighted average of features variables.
-        z_scale : Series of shape (n_feature_quanti_var,), optional
-            The weighted standard deviation of features variables
+        z : DataFrame of shape (n_rows, n_iv), optional
+            Instrumental variables.
+        zcod : DataFrame of shape (n_rows, n_zcod), optional
+            Recoded instrumental variables.
+        zs : DataFrame of shape (n_rows, n_zcod), optional
+            Standardized recoded instrumental variables.
+        z_center : Series of shape (n_zcod,), optional
+            The weighted average of recoded instrumental variables.
+        z_scale : Series of shape (n_zcod,), optional
+            The weighted standard deviation of recoded instrumental variables.
+        model : OrderedDict, optional
+            The separate weighted least square regression between standardized data and standardized recoded instrumental variables.
+        z : DataFrame of shape (n_rows, n_partial), optional
+            Partial variables.
+        y : Series of shape (n_rows,), optional
+            The group distribution.
 
     eig_ : DataFrame of shape (maxcp, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     ind_ : ind
-        An object containing all the results for the active individuals, with the following attributes:
+        An object containing all the results for the active individuals with the following attributes:
 
         coord : DataFrame of shape (n_rows,ncp)
             The coordinates of the individuals.
@@ -139,7 +148,7 @@ class PCA(BaseEstimator,TransformerMixin):
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals.
 
     ind_sup_ : ind_sup, optional
-        An object containing all the results for the supplementary individuals, with the following attributes:
+        An object containing all the results for the supplementary individuals with the following attributes:
 
         coord : DataFrame of shape (n_rows_plus, ncp)
             The coordinates of the supplementary individuals.
@@ -148,8 +157,16 @@ class PCA(BaseEstimator,TransformerMixin):
         dist2 : Series of shape (n_rows_plus,)
             The squared distance to origin of the supplementary individuals.
 
+    iv_ : iv, optional
+        An object containing all the results for the instrumental variables with the following attributes:
+
+        coord : DataFrame of shape (n_zcod, ncp)
+            The coordinates of the instrumental variables.
+        cos2 : DataFrame of shape (n_zcod, ncp)
+            The squared cosinus of the instrumental variables.
+
     levels_sup_ : levels_sup, optional
-        An object containing all the results for the supplementary levels, with the following attributes:
+        An object containing all the results for the supplementary levels with the following attributes:
 
         coord : DataFrame of shape (n_levels, ncp)
             The coordinates of the supplementary levels.
@@ -161,13 +178,13 @@ class PCA(BaseEstimator,TransformerMixin):
             The value-test (which is a criterion with a Normal distribution) of the supplementary levels.
         
     quali_var_sup_ : quali_var_sup, optional
-        An object containing all the results for the supplementary qualitative variables, with the following attributes:
+        An object containing all the results for the supplementary categorical variables, with the following attributes:
 
         coord : DataFrame of shape (n_levels, ncp)
-            The coordinates of the supplementary qualitative variables. The squared correlation ratio of the supplementary qualitative variables, which is the square correlation coefficient between a qualitative variable and a dimension
+            The coordinates of the supplementary categorical variables. The squared correlation ratio of the supplementary categorical variables, which is the square correlation coefficient between a categorical variable and a dimension
 
     quanti_var_ : quanti_var
-        An object containing all the results for the active variables, with the following attributes:
+        An object containing all the results for the active variables with the following attributes:
 
         coord : DataFrame of shape (n_columns, ncp)
             The coordinates of the variables.
@@ -179,17 +196,17 @@ class PCA(BaseEstimator,TransformerMixin):
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the variables.
 
     quanti_var_sup_ : quanti_var_sup, optional
-        An object containing all the results for the supplementary quantitative variables, with the following attributes:
+        An object containing all the results for the supplementary continuous variables, with the following attributes:
         
         coord : DataFrame of shape (n_quanti_var_sup, ncp)
-            The coordinates of the supplementary quantitative variables.
+            The coordinates of the supplementary continuous variables.
         cos2 : DataFrame of shape (n_quanti_var_sup, ncp)
-            The squared cosinus of the supplementary quantitative variables.
+            The squared cosinus of the supplementary continuous variables.
         dist2 : Series of shape (n_quanti_var_sup,)
-            The squared distance to origin of the supplementary quantitative variables.
+            The squared distance to origin of the supplementary continuous variables.
 
     svd_ : svd
-        An object containing all the results for the generalized singular value decomposition (GSVD), with the following attributes:
+        An object containing all the results for the generalized singular value decomposition (GSVD) with the following attributes:
         
         vs : 1d numpy array of shape (maxcp,)
             The singular values.
@@ -197,26 +214,22 @@ class PCA(BaseEstimator,TransformerMixin):
             The left singular vectors.
         V : 2d numpy array of shape (n_columns, maxcp)
             The right singular vectors.
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
 
     References
     ----------
-    [1] Bry X. (1996), Analyses factorielles multiple, Economica
+    [1] Escofier B., Pagès J. (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
 
-    [2] Bry X. (1999), Analyses factorielles simples, Economica
+    [2] Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
 
-    [3] Escofier B., Pagès J. (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    [3] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
 
-    [4] Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
+    [4] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
 
-    [5] Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
-
-    [6] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
-
-    [6] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
-
-    [7] Rakotomalala, R. (2020). Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2. Version 1.0
-
-    [8] Tenenhaus, M. (2006). Statistique : Méthodes pour décrire, expliquer et prévoir. Dunod.
+    [5] Rakotomalala, Ricco (2020), `Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2 <https://hal.science/hal-04868625v1>_`, Version 1.0
     
     See also
     --------
@@ -274,21 +287,10 @@ class PCA(BaseEstimator,TransformerMixin):
         check_is_bool(self.scale_unit)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if partial and iv are both not None
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if all(x is not None for x in (self.partial,self.iv)): 
-            raise ValueError("At least one should be None between 'iv' and 'partial'.")
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if ortho is a boolean
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.iv is not None: 
             check_is_bool(self.ortho)
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set scale_unit
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        self.scale_unit = True if self.partial is not None else False if self.iv is not None else self.scale_unit
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #group validation
@@ -304,14 +306,14 @@ class PCA(BaseEstimator,TransformerMixin):
         X = preprocessing(X=X)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #get the features labels
+        #get instrumental variables labels, partial variables labels and grouping variable label
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        features_label = get_sup_label(X=X,indexes=self.partial,axis=1) if self.partial is not None else get_sup_label(X=X, indexes=self.iv, axis=1) if self.iv is not None else None
+        iv_label, partial_label, group_label = get_sup_label(X=X,indexes=self.iv, axis=1) , get_sup_label(X=X,indexes=self.partial,axis=1), get_sup_label(X=X,indexes=self.group,axis=1)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #get labels
+        #get supplementary elements labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_label, ind_sup_label, sup_var_label = get_sup_label(X=X, indexes=self.group, axis=1), get_sup_label(X=X,indexes=self.ind_sup,axis=0), get_sup_label(X=X,indexes=self.sup_var,axis=1)
+        ind_sup_label, sup_var_label = get_sup_label(X=X,indexes=self.ind_sup,axis=0), get_sup_label(X=X,indexes=self.sup_var,axis=1)
 
         #make a copy of the original data
         Xtot = X.copy()
@@ -330,12 +332,18 @@ class PCA(BaseEstimator,TransformerMixin):
             X_ind_sup, X = X.loc[ind_sup_label,:], X.drop(index=ind_sup_label)
             if self.group is not None:
                 y_ind_sup, X_ind_sup = X_ind_sup[group_label[0]], X_ind_sup.drop(columns=group_label)
-            if (self.iv is not None) or (self.partial is not None):
-                z_ind_sup, X_ind_sup = X_ind_sup.loc[:,features_label], X_ind_sup.drop(columns=features_label)
+            if self.iv is not None:
+                z_ind_sup, X_ind_sup = X_ind_sup.loc[:,iv_label], X_ind_sup.drop(columns=iv_label)
+            if self.partial is not None:
+                t_ind_sup, X_ind_sup = X_ind_sup.loc[:,partial_label], X_ind_sup.drop(columns=partial_label)
 
-        #drop features (partial or instrumental) variables
-        if (self.iv is not None) or (self.partial is not None):
-            z, X = X.loc[:,features_label], X.drop(columns=features_label)
+        #drop instrumental variables
+        if self.iv is not None:
+            z, X = X.loc[:,iv_label], X.drop(columns=iv_label)
+        
+        #drop partiel variables
+        if self.partial is not None:
+            t, X = X.loc[:,partial_label], X.drop(columns=partial_label)
         
         #extract group disribution
         if self.group is not None:
@@ -378,49 +386,41 @@ class PCA(BaseEstimator,TransformerMixin):
         x_center, x_scale = wmean(X=X,w=ind_w), wstd(X=X,w=ind_w)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #get data
+        #principal components analysis with partial variables (PCApartial)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        Xcod, col_w = X.copy(), var_w.copy()
-        if any(x is not None for x in (self.partial,self.iv)):
-            #set target
-            x = (X - x_center)/x_scale if self.iv is not None else X.copy()
-
-            #split z (features)
-            split_z = splitmix(z)
-            z_quanti_var, z_quali_var, nz_quanti_var, nz_quali_var = split_z.quanti, split_z.quali, split_z.k1, split_z.k2
-        
-            zcod = None
-            #add qualitative features
-            if nz_quali_var > 0: 
-                zcod = concat_empty(zcod,z_quali_var,axis=1)
-            #add quantitative features
-            if nz_quanti_var > 0:
-                if self.partial is not None: 
-                    zcod = concat_empty(zcod,z_quanti_var,axis=1)
-                else:
-                    z_center, z_scale = wmean(X=z_quanti_var,w=ind_w), wstd(X=z_quanti_var,w=ind_w)
-                    zcod = concat_empty(zcod, (z_quanti_var - z_center)/z_scale,axis=1)
-            #reorder columns 
-            zcod = zcod[z.columns]
-    
+        Xcod = X.copy()
+        if self.partial is not None:
+            #recode categorical variable into disjunctive and drop first
+            tcod = model_matrix(X=t)
             #separate weighted least squared model
-            self.separate_analyses_ = wlsreg(X=zcod,Y=x,w=ind_w)
-
-            #set variables
-            if (self.partial is not None) or (self.iv is not None and self.ortho): 
-                Xcod = concat((self.separate_analyses_[k].resid.to_frame(k) for k in x.columns),axis=1)
-            if self.iv is not None and not self.ortho: 
-                Xcod = concat((self.separate_analyses_[k].fittedvalues.to_frame(k) for k in x.columns),axis=1)
-            #set columns weight
-            col_w = Series(ones(Xcod.shape[1]),index=Xcod.columns,name="weight")
-
+            model1 = wlsreg(X=tcod,Y=X,w=ind_w)
+            #residuals of models
+            Xcod = concat((model1[k].resid.to_frame(k) for k in X.columns),axis=1)
+    
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #standardization: z_ik = (x_ik - m_k)/s_k
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #compute weighted average and weighted standard deviation
         center, scale = wmean(X=Xcod,w=ind_w), wstd(X=Xcod,w=ind_w) if self.scale_unit else Series(ones(n_cols),index=Xcod.columns,name="scale")
         #standardization: z_ik = (x_ik - m_k)/s_k
-        Z = (Xcod - center)/scale
+        Zcod = (Xcod - center)/scale
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #principal components analysis with (orthogonal) instrumental variables
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        Z, col_w = Zcod.copy(), var_w.copy()
+        if self.iv is not None:
+            #recode categorical variable into disjunctive and drop first
+            zcod = model_matrix(X=z)
+            #standardized instrumental variables
+            z_center, z_scale = wmean(X=zcod,w=ind_w), wstd(X=zcod,w=ind_w)
+            zs = (zcod - z_center)/z_scale
+            #separate weighted least squared model
+            model2 = wlsreg(X=zs,Y=Zcod,w=ind_w)
+            #residuals or fitted variables
+            Z = concat((model2[k].resid.to_frame(k) for k in Zcod.columns),axis=1) if self.ortho else concat((model2[k].fittedvalues.to_frame(k) for k in Zcod.columns),axis=1)
+            #set columns weights
+            col_w = Series(ones(Zcod.shape[1]),index=Zcod.columns,name="weight")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #class analysis (None/between/within)
@@ -445,14 +445,15 @@ class PCA(BaseEstimator,TransformerMixin):
         self.svd_, self.eig_, ncp, self.quanti_var_ = fit_.svd, fit_.eig, fit_.ncp, namedtuple("quanti_var",fit_.col.keys())(*fit_.col.values())
 
         #convert to ordered dictionary - call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Xcod=Xcod,Z=Z,bary=bary,tab=tab,x_center=x_center,x_scale=x_scale,center=center,scale=scale,ind_w=ind_w,row_w=row_w,var_w=var_w,col_w=col_w,ncp=ncp,
-                            features=features_label,group=group_label,ind_sup=ind_sup_label,sup_var=sup_var_label)
-        #add features
-        if any(x is not None for x in (self.iv, self.partial)):
-            call_["zcod"] = zcod
-        #add weighted average and standard deviation for instrumental variables
-        if (self.iv is not None) and any(is_numeric_dtype(z[x]) for x in z.columns): 
-            call_ = {**call_, **OrderedDict(z_center=z_center,z_scale=z_scale)}
+        call_ = OrderedDict(Xtot=Xtot,X=X,Xcod=Xcod,Zcod=Zcod,Z=Z,bary=bary,tab=tab,x_center=x_center,x_scale=x_scale,center=center,scale=scale,ind_w=ind_w,row_w=row_w,var_w=var_w,col_w=col_w,ncp=ncp,
+                            iv=iv_label,partial=partial_label,group=group_label,ind_sup=ind_sup_label,sup_var=sup_var_label)
+        #add elements
+        if self.partial is not None:
+            call_ = {**call_, **OrderedDict(t=t,tcod=tcod,model1=model1)}
+        if self.iv is not None:
+            call_ = {**call_, **OrderedDict(z=z,zcod=zcod,zs=zs,z_center=z_center,z_scale=z_scale,model2=model2)}
+        if self.group is not None:
+            call_ = {**call_, **OrderedDict(y=y)}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -471,42 +472,90 @@ class PCA(BaseEstimator,TransformerMixin):
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #statistics for partial variables
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.partial is not None:
+            ntod = self.call_.tcod.shape[1]
+            #coordinates for the partial variables
+            partial_coord = wcorr(X=concat((self.call_.tcod,self.ind_.coord),axis=1),w=ind_w).iloc[:ntod,ntod:]
+            #convert to ordered dictionary
+            partial_ = OrderedDict(coord=partial_coord,cos2=partial_coord**2)
+            #convert to namedtuple
+            self.partial_ = namedtuple("partial",partial_.keys())(*partial_.values())
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #statistics for instrumental variables
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.iv is not None and self.ortho is False:
+            nzcod = self.call_.zcod.shape[1]
+            #coordinates for the instrumental variables
+            iv_coord = wcorr(X=concat((self.call_.zcod,self.ind_.coord),axis=1),w=ind_w).iloc[:nzcod,nzcod:]
+            #convert to ordered dictionary
+            iv_ = OrderedDict(coord=iv_coord,cos2=iv_coord**2)
+            #convert to namedtuple
+            self.iv_ = namedtuple("iv",iv_.keys())(*iv_.values())
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for supplementary individuals
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
             #set Xcod for supplementary individuals
+            #principal component analysis with partial variables
             Xcod_ind_sup = X_ind_sup.copy()
-            if any(x is not None for x in (self.iv,self.partial)): 
-                #set x for supplementary individuals
-                x_ind_sup = (X_ind_sup - x_center)/x_scale if self.iv is not None else X_ind_sup.copy()
+            if self.partial is not None:
+                #split t_ind_sup
+                split_t_ind_sup = splitmix(t_ind_sup)
+                #extract elements
+                t_ind_sup_quanti_var, t_ind_sup_quali_var, nt_ind_sup_quanti_var, nt_ind_sup_quali_var = split_t_ind_sup.quanti, split_t_ind_sup.quali, split_t_ind_sup.k1, split_t_ind_sup.k2
+                #initialization
+                tcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.tcod.columns).astype(float)
+                #check if numerics variables
+                if nt_ind_sup_quanti_var > 0:
+                    #replace with numerics columns
+                    tcod_ind_sup.loc[:,t_ind_sup_quanti_var.columns] = t_ind_sup_quanti_var
+                #check if categorical variables      
+                if nt_ind_sup_quali_var > 0:
+                    #active categorics
+                    categorics = [x for x in self.call_.tcod.columns if x not in self.call_.t.columns]
+                    #replace with dummies
+                    tcod_ind_sup.loc[:,categorics] = disjunctive(X=t_ind_sup_quali_var,cols=categorics,prefix=True,sep="")
+                #insert constant to features
+                tcod_ind_sup.insert(0,"const",1)
+                #residuals
+                Xcod_ind_sup = concat(((X_ind_sup[k] - self.call_.model1[k].predict(tcod_ind_sup)).to_frame(k) for k in X_ind_sup.columns),axis=1)
+                
+            #standardization: z_ik = (x_ik - m_k)/s_k
+            Zcod_ind_sup = (Xcod_ind_sup - self.call_.center)/self.call_.scale
 
+            #principal component analysis with instrumental variables
+            Z_ind_sup = Zcod_ind_sup.copy()
+            if self.iv is not None:
                 #split z_ind_sup
                 split_z_ind_sup = splitmix(z_ind_sup)
                 #extract elements
                 z_ind_sup_quanti_var, z_ind_sup_quali_var, nz_ind_sup_quanti_var, nz_ind_sup_quali_var = split_z_ind_sup.quanti, split_z_ind_sup.quali, split_z_ind_sup.k1, split_z_ind_sup.k2
-            
-                zcod_ind_sup = None
-                #Add qualitative variables
-                if nz_ind_sup_quali_var > 0: 
-                    if nz_ind_sup_quali_var != nz_quali_var: 
-                        raise ValueError("Not convenient qualitative variable")
-                    zcod_ind_sup = concat_empty(zcod_ind_sup,z_ind_sup_quali_var,axis=1)
-                #add quantitative variables
+                #initialization
+                zcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.zcod.columns).astype(float)
+                #check if numerics variables
                 if nz_ind_sup_quanti_var > 0:
-                    if  nz_ind_sup_quanti_var != nz_quanti_var: 
-                        raise ValueError("Not convenient quantitative variable")
-                    zcod_ind_sup = concat_empty(zcod_ind_sup,z_ind_sup_quanti_var,axis=1) if self.partial is not None else concat_empty(zcod_ind_sup,z_ind_sup_quanti_var.sub(z_center,axis=1).div(z_scale,axis=1),axis=1)
-                
-                #reorder columns
-                zcod_ind_sup = zcod_ind_sup[z_ind_sup.columns]
-                #predicted values
-                Xcod_ind_sup = concat((self.separate_analyses_[k].predict(zcod_ind_sup).to_frame(k) for k in x_ind_sup.columns),axis=1)
-                #residuals for PCApartial or PCAoiv
-                if (self.partial is not None) or (self.iv is not None and self.ortho): 
-                    Xcod_ind_sup = x_ind_sup.sub(Xcod_ind_sup.values)
+                    #replace with numerics columns
+                    zcod_ind_sup.loc[:,z_ind_sup_quanti_var.columns] = z_ind_sup_quanti_var
+                #check if categorical variables      
+                if nz_ind_sup_quali_var > 0:
+                    #active categorics
+                    categorics = [x for x in self.call_.zcod.columns if x not in self.call_.z.columns]
+                    #replace with dummies
+                    zcod_ind_sup.loc[:,categorics] = disjunctive(X=z_ind_sup_quali_var,cols=categorics,prefix=True,sep="")
+                #standardization: z_ik = (x_ik - m_k)/s_k
+                zs_ind_sup = (zcod_ind_sup - self.call_.z_center)/self.call_.z_scale
+                #insert constant to features
+                zs_ind_sup.insert(0,"const",1)
 
-            #standardization: z_ik = (x_ik - m_k)/s_k
-            Z_ind_sup = (Xcod_ind_sup - center)/scale
+                #predicted values
+                Z_ind_sup = concat((self.call_.model2[k].predict(zs_ind_sup).to_frame(k) for k in Zcod_ind_sup.columns),axis=1)
+                #residuals for orthogonal instrumental variables
+                if self.ortho: 
+                    Z_ind_sup = Zcod_ind_sup - Z_ind_sup.values
 
             #within class analysis - suppress within effect
             if self.group is not None and self.option == "within":
@@ -518,43 +567,48 @@ class PCA(BaseEstimator,TransformerMixin):
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for supplementary variables (quantitative and/or qualitative)
+        #statistics for supplementary variables (continuous and/or categorical)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.sup_var is not None:
             #split X_sup_var
             split_X_sup_var = splitmix(X=X_sup_var)
             X_quanti_var_sup, X_quali_var_sup, n_quanti_var_sup, n_quali_var_sup = split_X_sup_var.quanti, split_X_sup_var.quali, split_X_sup_var.k1, split_X_sup_var.k2
             
-            #statistics for supplementary quantitative variables
+            #statistics for supplementary continuous variables
             if n_quanti_var_sup > 0:
                 #set Xcod_quanti_var_sup
                 Xcod_quanti_var_sup = X_quanti_var_sup.copy()
-                if any(x is not None for x in (self.iv,self.partial)):
-                    x_quanti_var_sup = (X_quanti_var_sup - wmean(X=X_quanti_var_sup,w=ind_w))/wstd(X=X_quanti_var_sup,w=ind_w) if self.iv is not None else X_quanti_var_sup.copy()
-                    #update dictionary
-                    self.separate_analyses_ = {**self.separate_analyses_, **wlsreg(X=zcod,Y=x_quanti_var_sup,w=ind_w)}
-                    #set variables
-                    if (self.partial is not None) or (self.iv is not None and self.ortho): 
-                        Xcod_quanti_var_sup = concat((self.separate_analyses_[k].resid.to_frame(k) for k in x_quanti_var_sup.columns),axis=1)
-                    if self.iv is not None and not self.ortho: 
-                        Xcod_quanti_var_sup = concat((self.separate_analyses_[k].fittedvalues.to_frame(k) for k in x_quanti_var_sup.columns),axis=1)
+                #principal component analysis with partial variables
+                if self.partial is not None:
+                    #separate weighted least squared model
+                    model1_sup = wlsreg(X=self.call_.tcod,Y=X_quanti_var_sup,w=ind_w)
+                    #residuals of models
+                    Xcod_quanti_var_sup = concat((model1_sup[k].resid.to_frame(k) for k in X_quanti_var_sup.columns),axis=1)
 
-                #compute weighted average for supplementary quantitative variables
+                #compute weighted average for supplementary continuous variables
                 center_sup, scale_sup = wmean(X=Xcod_quanti_var_sup,w=ind_w), wstd(X=Xcod_quanti_var_sup,w=ind_w) if self.scale_unit else ones(n_quanti_var_sup)
                 #standardization: z_ik = (x_ik - m_k)/s_k
-                Z_quanti_var_sup = (Xcod_quanti_var_sup - center_sup)/scale_sup
+                Zcod_quanti_var_sup = (Xcod_quanti_var_sup - center_sup)/scale_sup
 
+                #principal component analysis with instrumental variables
+                Z_quanti_var_sup = Zcod_quanti_var_sup.copy()
+                if self.iv is not None:
+                    #separate weighted least squared model
+                    model2_sup = wlsreg(X=self.call_.zs,Y=Zcod_quanti_var_sup,w=ind_w)
+                    #residuals or fitted variables
+                    Z_quanti_var_sup = concat((model2_sup[k].resid.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1) if self.ortho else concat((model2_sup[k].fittedvalues.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1)
+                    
                 #within class analysis - suppress within effect
                 if self.group is not None:
                     bary_quanti_var_sup = func_groupby(X=Z_quanti_var_sup,by=y,func="mean",w=ind_w).loc[uq_classe,:]
                     Z_quanti_var_sup = bary_quanti_var_sup if self.option == "between" else Z_quanti_var_sup - bary_quanti_var_sup.loc[y.values,:].values
 
-                #statistics for supplementary quantitative variables
+                #statistics for supplementary continuous variables
                 quanti_var_sup_ = func_predict(X=Z_quanti_var_sup,Y=fit_.svd.U[:,:ncp],w=row_w,axis=1)
                 #convert to namedtuple
                 self.quanti_var_sup_ = namedtuple("quanti_var_sup",quanti_var_sup_.keys())(*quanti_var_sup_.values())
 
-            #statistics for supplementary qualitative variables/levels
+            #statistics for supplementary categorical variables/levels
             if n_quali_var_sup > 0:
                 #conditional mean - Barycenter of original data
                 X_levels_sup = func_groupby(X=Xcod,by=X_quali_var_sup,w=ind_w,func="mean")
@@ -569,7 +623,7 @@ class PCA(BaseEstimator,TransformerMixin):
                 #convert to namedtuple
                 self.levels_sup_ = namedtuple("levels_sup",levels_sup_.keys())(*levels_sup_.values())
 
-                #coordinates for the supplementary qualitative variables - Eta-squared
+                #coordinates for the supplementary categorical variables - Eta-squared
                 quali_var_sup_coord = func_eta2(X=self.ind_.coord,by=X_quali_var_sup,w=ind_w,excl=None)
                 #convert to ordered dictionary
                 quali_var_sup_ = OrderedDict(coord=quali_var_sup_coord)
@@ -598,6 +652,131 @@ class PCA(BaseEstimator,TransformerMixin):
         self.fit(X)
         return self.ind_.coord
     
+    def transform(self,X):
+        """
+        Apply dimensionality reduction to ``X``.
+
+        ``X`` is projected on the first principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+
+        Returns
+        -------
+        X_new : DataFrame of shape (n_rows, ncp)
+            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        """
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if the estimator is fitted by verifying the presence of fitted attributes
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_fitted(self)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X is an object of class pd.DataFrame
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_dataframe(X)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set index name as None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        X.index.name = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #get elements
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.group is not None:
+            y, X = X[self.call_.group[0]], X.drop(columns=self.call_.group)
+        if self.iv is not None:
+            z, X = X.loc[:,self.call_.iv], X.drop(columns=self.call_.iv)
+        if self.partial is not None:
+            t, X = X.loc[:,self.call_.partial], X.drop(columns=self.call_.partial)
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X contains original columns
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not set(self.call_.X.columns).issubset(X.columns): 
+            raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
+        X = X[self.call_.X.columns]
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # principal component analysis with partial correlation matrix (PCApartial)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        Xcod = X.copy()
+        if self.partial is not None:
+            #split t
+            split_t = splitmix(t)
+            #extract elements
+            t_quanti_var, t_quali_var, nt_quanti_var, nt_quali_var = split_t.quanti, split_t.quali, split_t.k1, split_t.k2
+            #initialization
+            tcod = DataFrame(index=X.index,columns=self.call_.tcod.columns).astype(float)
+            #check if numerics variables
+            if nt_quanti_var > 0:
+                #replace with numerics columns
+                tcod.loc[:,t_quanti_var.columns] = t_quanti_var
+            #check if categorical variables      
+            if nt_quali_var > 0:
+                #active categorics
+                categorics = [x for x in self.call_.tcod.columns if x not in self.call_.t.columns]
+                #replace with dummies
+                tcod.loc[:,categorics] = disjunctive(X=t_quali_var,cols=categorics,prefix=True,sep="")
+            #insert constant to features
+            tcod.insert(0,"const",1)
+            #residuals
+            Xcod = concat(((X[k] - self.call_.model1[k].predict(tcod)).to_frame(k) for k in X.columns),axis=1)
+            
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #standardization: z_ik = (x_ik - m_k)/s_k
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        Zcod = (Xcod - self.call_.center)/self.call_.scale
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #principal component analysis with instrumental variables (PCAiv/PCAoiv)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        Z = Zcod.copy()
+        if self.iv is not None:
+            #split z
+            split_z = splitmix(z)
+            #extract elements
+            z_quanti_var, z_quali_var, nz_quanti_var, nz_quali_var = split_z.quanti, split_z.quali, split_z.k1, split_z.k2
+            #initialization
+            zcod = DataFrame(index=X.index,columns=self.call_.zcod.columns).astype(float)
+            #check if numerics variables
+            if nz_quanti_var > 0:
+                #replace with numerics columns
+                zcod.loc[:,z_quanti_var.columns] = z_quanti_var
+            #check if categorical variables      
+            if nz_quali_var > 0:
+                #active categorics
+                categorics = [x for x in self.call_.zcod.columns if x not in self.call_.z.columns]
+                #replace with dummies
+                zcod.loc[:,categorics] = disjunctive(X=z_quali_var,cols=categorics,prefix=True,sep="")
+            #standardization: z_ik = (x_ik - m_k)/s_k
+            zs = (zcod - self.call_.z_center)/self.call_.z_scale
+            #insert constant to features
+            zs.insert(0,"const",1)
+
+            #predicted values
+            Z = concat((self.call_.model2[k].predict(zs).to_frame(k) for k in Zcod.columns),axis=1)
+            #residuals for orthogonal instrumental variables
+            if self.ortho: 
+                Z = Zcod - Z.values
+
+        #within class analysis - suppress within effect
+        if self.group is not None and self.option == "within":
+            Z = Z - self.call_.bary.loc[y.values,:].values
+        #coordinates for the new nrows
+        coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.svd_.ncp])
+        coord.columns = self.eig_.index[:self.svd_.ncp]
+        return coord
+
 def statsPCA(
         obj
 ):
@@ -660,12 +839,12 @@ def statsPCA(
     #correlation matrix
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #covariance/correlation of Z and reconst
-    M = wcov(obj.call_.Z,w=obj.call_.row_w,ddof=0)
+    M = wcorr(obj.call_.Z,w=obj.call_.row_w,ddof=0)
     #inverse of M
     try: 
         inv_M = DataFrame(linalg.inv(M),index=colnames,columns=colnames)
     except linalg.LinAlgError: 
-        inv_M = DataFrame(linalg.pinv(M),index=colnames,columns=colnames)
+        inv_M = DataFrame(linalg.pinv(M,hermitian=True),index=colnames,columns=colnames)
     #weighted partial correlation matrix and reconst covariance/correlation
     partial_M, reconst_M = -1*cov2corr(inv_M), (obj.quanti_var_.coord.T * obj.call_.col_w).T.dot(obj.quanti_var_.coord.T)
     for c in partial_M.columns:
