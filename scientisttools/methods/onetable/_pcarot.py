@@ -156,7 +156,7 @@ class PCArot(TransformerMixin,BaseEstimator):
         self.max_iter = max_iter
         self.tol = tol
 
-    def fit(self,obj):
+    def fit(self,obj,y=None):
         """
         Fit the model to ``obj``
 
@@ -164,6 +164,9 @@ class PCArot(TransformerMixin,BaseEstimator):
         ----------
         obj : class 
             An object of class :class:`~scientisttools.PCA`.
+
+        y : None
+            y is ignored.
 
         Returns
         -------
@@ -282,7 +285,7 @@ class PCArot(TransformerMixin,BaseEstimator):
 
         return self
     
-    def fit_transform(self,obj):
+    def fit_transform(self,obj,y=None):
         """
         Fit the model with ``obj`` and apply the dimensionality reduction
 
@@ -290,6 +293,9 @@ class PCArot(TransformerMixin,BaseEstimator):
         ----------
         obj : class
             An object of class :class:`~scientisttools.PCA`.
+
+        y : None
+            y is ignored.
             
         Returns
         -------
