@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from numpy import array,ndarray,sqrt,ones
-from pandas import Series, CategoricalDtype, concat
+from pandas import DataFrame, Series, CategoricalDtype, concat
 from itertools import chain, repeat
 from collections import OrderedDict, namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -14,10 +14,12 @@ from ..functions.gsvd import gSVD
 from ..functions.preprocessing import preprocessing
 from ..functions.get_sup_label import get_sup_label
 from ..functions.concat_empty import concat_empty
-from ..functions.statistics import wmean, wstd, func_groupby
+from ..functions.statistics import wmean, wstd, wcorr, func_groupby
 from ..functions.func_eta2 import func_eta2
 from ..functions.func_predict import func_predict
-from ..functions.utils import check_is_dataframe
+from ..functions.utils import check_is_dataframe, check_is_bool
+from ..functions.model_matrix import model_matrix
+from ..functions.wlsreg import wlsreg
 from ..others._splitmix import splitmix
 from ..others._disjunctive import disjunctive
 
@@ -36,6 +38,12 @@ class PCAmix(BaseEstimator,TransformerMixin):
 
     Parameters
     ----------
+    iv : int, list, tuple or range, default = None
+        The indexes or names of the instrumental (explanatory) variables (continuous and/or categorical).
+
+    ortho : bool, default = False
+        If ``True``, then the principal component analysis of mixed data with orthogonal instrumental variables (PCAmixoiv) is performed.
+
     group : int, str
         The indexe or name of the categorical variable which allows for between-class or within-class analysis.
 
@@ -71,8 +79,10 @@ class PCAmix(BaseEstimator,TransformerMixin):
             Active data.
         dummies : DataFrame of shape (n_rows, n_levels)
             Disjunctive table.
-        Z : DataFrame of shape (n_rows, columns)
-            Standardized data
+        Zcod : DataFrame of shape (n_rows, n_columns) 
+            Standardized data.
+        Z : DataFrame of shape (n_rows, n_columns) 
+            Standardized data (PCAmix) or fitted values (PCAmixiv) or residuals values (PCAmixoiv).
         bary : None or DataFrameof shape (n_groups, n_columns)
             Barycenter of rows points.
         tab : DataFrame of shape (n_rows, n_columns) or (n_groups, n_columns)
@@ -101,6 +111,20 @@ class PCAmix(BaseEstimator,TransformerMixin):
             The names of the supplementary individuals.
         sup_var : None, list
             The names of the supplementary variables (continuous and/or categorical)
+        z : DataFrame of shape (n_rows, n_iv)
+            Instrumental variables.
+        zcod : DataFrame of shape (n_rows, n_zcod)
+            Recoded instrumental variables.
+        zs : DataFrame of shape (n_rows, n_zcod)
+            Standardized recoded instrumental variables.
+        z_center : Series of shape (n_zcod,)
+            The weighted average of recoded instrumental variables.
+        z_scale : Series of shape (n_zcod,)
+            The weighted standard deviation of recoded instrumental variables.
+        model : OrderedDict
+            The separate weighted least square regression between standardized data and standardized recoded instrumental variables.
+        y : Series of shape (n_rows,)
+            The group distribution.
         
     eig_ : DataFrame of shape (maxcp, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
@@ -134,7 +158,7 @@ class PCAmix(BaseEstimator,TransformerMixin):
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals.
 
     ind_sup_ : ind_sup
-        An object containing all the results for the supplementary individuals, with the following attributes:
+        An object containing all the results for the supplementary individuals with the following attributes:
 
         coord : DataFrame of shape (n_rows_plus, ncp)
             The coordinates of the supplementary individuals.
@@ -143,8 +167,17 @@ class PCAmix(BaseEstimator,TransformerMixin):
         dist2 : Series of shape (n_rows_plus,)
             The squared distance to origin of the supplementary individuals.
 
+    iv_ : iv, optional
+        An object containing all the results for the instrumental variables with the following attributes:
+
+        coord : DataFrame of shape (n_zcod, ncp)
+            The coordinates of the instrumental variables.
+        cos2 : DataFrame of shape (n_zcod, ncp)
+            The squared cosinus of the instrumental variables.
+
+
     levels_ : levels
-        An object containing all the results for the active levels, with the following attributes:
+        An object containing all the results for the active levels with the following attributes:
         
         coord : DataFrame of shape (n_levels, ncp)
             The coordinates of the levels.
@@ -217,6 +250,10 @@ class PCAmix(BaseEstimator,TransformerMixin):
             The left singular vectors.
         V : 2d numpy array of shape (n_quanti_var + n_levels, ncp)
             The right singular vectors.
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
 
     var_ : var
         An object containing all the results for the active variables (quantitative and qualitative), with the following attributes:
@@ -257,19 +294,24 @@ class PCAmix(BaseEstimator,TransformerMixin):
     --------
     >>> from scientisttools.datasets import autos2005, decathlon, canines
     >>> from scientisttools import PCAmix
-    >>> #PCA with PCAMIX function
-    >>> res_pca = PCAMIX(ind_sup=(41,42,43,44,45),var_sup=(10,11,12))
-    >>> res_pca.fit(decathlon)
-    >>> #MCA with PCAMIX function
-    >>> res_mca = PCAMIX(ind_sup=(27,28,29,30,31,32),var_sup=(6,7))
-    >>> res_mca.fit(canines)
-    >>> #Mixed Data with PCAMIX function
-    >>> res_mix = PCAMIX(ind_sup=(38,39,40,41,42,43,44),var_sup=(12,13,14,15))
-    >>> res_mix.fit(autos2005)
+    >>> #PCA with PCAmix function
+    >>> clf = PCAmix(ind_sup=range(41,46),var_sup=(10,11,12))
+    >>> clf.fit(decathlon.data)
+    PCAmix(ind_sup=range(41,46),var_sup=(10,11,12))
+    >>> #MCA with PCAmix function
+    >>> clf = PCAmix(ind_sup=range(27,33),var_sup=(6,7))
+    >>> clf.fit(canines.data)
+    PCAmix(ind_sup=range(27,33),var_sup=(6,7))
+    >>> #Mixed Data with PCAmix function
+    >>> clf = PCAmix(ind_sup=range(38,45),var_sup=range(12,16))
+    >>> clf.fit(autos2005.data)
+    PCAmix(ind_sup=range(38,45),var_sup=range(12,16))
     """
     def __init__(
-            self, group=None, option="between", ncp=5, row_w=None, col_w=None, ind_sup=None, sup_var=None
+            self, iv=None, ortho=False, group=None, option="between", ncp=5, row_w=None, col_w=None, ind_sup=None, sup_var=None
     ):
+        self.iv = iv
+        self.ortho = ortho
         self.group = group
         self.option = option
         self.ncp = ncp
@@ -296,6 +338,12 @@ class PCAmix(BaseEstimator,TransformerMixin):
             Returns the instance itself
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if ortho is a boolean
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.iv is not None: 
+            check_is_bool(self.ortho)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #group validation
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group is not None and not isinstance(self.group,(int,str)):
@@ -309,9 +357,14 @@ class PCAmix(BaseEstimator,TransformerMixin):
         X = preprocessing(X=X)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #get labels
+        #get the instrumental variables labels and group labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_label, ind_sup_label, sup_var_label = get_sup_label(X=X, indexes=self.group, axis=1), get_sup_label(X=X, indexes=self.ind_sup, axis=0), get_sup_label(X=X, indexes=self.sup_var, axis=1)
+        iv_label, group_label = get_sup_label(X=X, indexes=self.iv, axis=1), get_sup_label(X=X, indexes=self.group, axis=1)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #get supplementary elements labels
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ind_sup_label, sup_var_label =  get_sup_label(X=X, indexes=self.ind_sup, axis=0), get_sup_label(X=X, indexes=self.sup_var, axis=1)
 
         #make a copy of the original data
         Xtot = X.copy()
@@ -323,13 +376,23 @@ class PCAmix(BaseEstimator,TransformerMixin):
         if self.sup_var is not None:
             X_sup_var, X = X.loc[:,sup_var_label], X.drop(columns=sup_var_label)
             #drop supplementary individuals
-            if self.ind_sup is not None: X_sup_var = X_sup_var.drop(index=ind_sup_label)
+            if self.ind_sup is not None: 
+                X_sup_var = X_sup_var.drop(index=ind_sup_label)
         
         #drop supplementary individuals
         if self.ind_sup is not None: 
             X_ind_sup, X = X.loc[ind_sup_label,:], X.drop(index=ind_sup_label)
+            if self.iv is not None:
+                z_ind_sup, X_ind_sup = X_ind_sup.loc[:,iv_label], X_ind_sup.drop(columns=iv_label)
             if self.group is not None:
                 y_ind_sup, X_ind_sup = X_ind_sup[group_label[0]], X_ind_sup.drop(columns=group_label)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # drop others elements
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop instrumental variables
+        if self.iv is not None:
+            z, X = X.loc[:,iv_label], X.drop(columns=iv_label)
 
         #extract group disribution
         if self.group is not None:
@@ -405,7 +468,25 @@ class PCAmix(BaseEstimator,TransformerMixin):
             Xcod, col_w, center, scale  = concat_empty(Xcod,dummies,axis=1), concat_empty(col_w,levels_w,axis=0), concat_empty(center,center2,axis=0), concat_empty(scale,scale2,axis=0)
 
         #standardization: z_ik = (x_ik - m_k)/s_k
-        Z = (Xcod - center)/scale
+        Zcod = (Xcod - center)/scale
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #principal component analysis of mixed data with (orthogonal) instrumental variables (PCAmixiv/PCAmixoiv)
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        Z = Zcod.copy()
+        if self.iv is not None:
+            #recode categorical variable into disjunctive and drop first
+            zcod = model_matrix(X=z)
+            z_center, z_scale = wmean(X=zcod,w=ind_w), wstd(X=zcod,w=ind_w)
+            #standardization
+            zs = (zcod - z_center)/z_scale
+            #separate weighted least squared model
+            model = wlsreg(X=zs,Y=Zcod,w=ind_w)
+            #fitted values (MCAiv) or residuals values (MCAoiv)
+            if self.ortho:
+                Z = concat((model[k].resid.to_frame(k)  for k in Zcod.columns),axis=1)
+            else: 
+                Z = concat((model[k].fittedvalues.to_frame(k) for k in Zcod.columns),axis=1)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #class analysis (None/between/within)
@@ -434,7 +515,13 @@ class PCAmix(BaseEstimator,TransformerMixin):
 
         #Store call informations
         call_ = OrderedDict(Xtot=Xtot,X=X,dummies=dummies,Z=Z,tab=tab,bary=bary,k1=n_quanti,k2=n_quali,ind_w=ind_w,row_w=row_w,var_w=var_w,col_w=col_w,center=center,scale=scale,ncp=ncp,
-                            group=group_label,ind_sup=ind_sup_label,sup_var=sup_var_label)
+                            iv=iv_label,group=group_label,ind_sup=ind_sup_label,sup_var=sup_var_label)
+        #add instrumental variables informations
+        if self.iv is not None:
+            call_ = {**call_, **OrderedDict(z=z,zcod=zcod,zs=zs,z_center=z_center,z_scale=z_scale,model=model)}
+        #add group distribution
+        if self.group is not None:
+            call_ = {**call_, **OrderedDict(y=y)}
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -489,6 +576,18 @@ class PCAmix(BaseEstimator,TransformerMixin):
                               cos2=concat_empty(quanti_var_["cos2"]**2,((quali_var_coord**2).T/(nb_moda-1)).T,axis=0))
             #convert to namedtuple
             self.var_ = namedtuple("var",var_.keys())(*var_.values())
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #statistics for instrumental variables
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.iv is not None and self.ortho is False:
+            nzcod = self.call_.zcod.shape[1]
+            #coordinates for the instrumental variables
+            iv_coord = wcorr(X=concat((self.call_.zcod,self.ind_.coord),axis=1),w=ind_w).iloc[:nzcod,nzcod:]
+            #convert to ordered dictionary
+            iv_ = OrderedDict(coord=iv_coord,cos2=iv_coord**2)
+            #convert to namedtuple
+            self.iv_ = namedtuple("iv",iv_.keys())(*iv_.values())
     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for supplementary individuals
@@ -505,7 +604,37 @@ class PCAmix(BaseEstimator,TransformerMixin):
             if n_quali > 0: 
                 Xcod_ind_sup = concat_empty(Xcod_ind_sup,disjunctive(X_ind_sup_quali,cols=dummies.columns),axis=1)
             #standardization: z_ik = (x_ik - m_k)/s_k
-            Z_ind_sup = (Xcod_ind_sup - center)/scale
+            Zcod_ind_sup = (Xcod_ind_sup - center)/scale
+
+            #principal component analysis with instrumental variables
+            Z_ind_sup = Zcod_ind_sup.copy()
+            if self.iv is not None:
+                #split z_ind_sup
+                split_z_ind_sup = splitmix(z_ind_sup)
+                #extract elements
+                z_ind_sup_quanti_var, z_ind_sup_quali_var, nz_ind_sup_quanti_var, nz_ind_sup_quali_var = split_z_ind_sup.quanti, split_z_ind_sup.quali, split_z_ind_sup.k1, split_z_ind_sup.k2
+                #initialization
+                zcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.zcod.columns).astype(float)
+                #check if numerics variables
+                if nz_ind_sup_quanti_var > 0:
+                    #replace with numerics columns
+                    zcod_ind_sup.loc[:,z_ind_sup_quanti_var.columns] = z_ind_sup_quanti_var
+                #check if categorical variables      
+                if nz_ind_sup_quali_var > 0:
+                    #active categorics
+                    categorics = [x for x in self.call_.zcod.columns if x not in self.call_.z.columns]
+                    #replace with dummies
+                    zcod_ind_sup.loc[:,categorics] = disjunctive(X=z_ind_sup_quali_var,cols=categorics,prefix=True,sep="")
+                #standardization: z_ik = (x_ik - m_k)/s_k
+                zs_ind_sup = (zcod_ind_sup - self.call_.z_center)/self.call_.z_scale
+                #insert constant to features
+                zs_ind_sup.insert(0,"const",1)
+
+                #predicted values
+                Z_ind_sup = concat((self.call_.model[k].predict(zs_ind_sup).to_frame(k) for k in Zcod_ind_sup.columns),axis=1)
+                #residuals for orthogonal instrumental variables
+                if self.ortho: 
+                    Z_ind_sup = Zcod_ind_sup - Z_ind_sup.values
 
             #within class analysis - suppress within effect
             if self.group is not None and self.option == "within":
@@ -527,7 +656,18 @@ class PCAmix(BaseEstimator,TransformerMixin):
             #statistics for supplementary quantitative variables
             if n_quanti_var_sup > 0:
                 #standardization: z_ik = (x_ik - m_k)/s_k
-                Z_quanti_var_sup = (X_quanti_var_sup - wmean(X=X_quanti_var_sup,w=ind_w))/wstd(X=X_quanti_var_sup,w=ind_w)
+                Zcod_quanti_var_sup = (X_quanti_var_sup - wmean(X=X_quanti_var_sup,w=ind_w))/wstd(X=X_quanti_var_sup,w=ind_w)
+
+                #principal component analysis of mixed data with (orthogonal) instrumental variables (PCAmixiv/CAoiv)
+                Z_quanti_var_sup = Zcod_quanti_var_sup.copy()
+                if self.iv:
+                    #separate weighted least squared regression
+                    model_quanti_var_sup = wlsreg(X=self.call_.zs,Y=Zcod_quanti_var_sup,w=ind_w)
+                    #residuals (PCAmixoiv) or fitted values (PCAmixiv)
+                    if self.ortho:
+                        Z_quanti_var_sup = concat((model_quanti_var_sup[k].resid.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1)
+                    else:
+                        Z_quanti_var_sup = concat((model_quanti_var_sup[k].fittedvalues.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1)
 
                 #within class analysis - suppress within effect
                 if self.group is not None:
@@ -546,7 +686,18 @@ class PCAmix(BaseEstimator,TransformerMixin):
                 #proportion of supplementary levels
                 p_k_sup = (dummies_sup.T * ind_w).sum(axis=1)
                 #standardization: z_ik = y_ik - p_k
-                Z_levels_sup = dummies_sup - p_k_sup
+                Zcod_levels_sup = dummies_sup - p_k_sup
+
+                #principal component analysis of mixed data with (orthogonal) instrumental variables (PCAmixiv/PCAmixoiv)
+                Z_levels_sup = Zcod_levels_sup.copy()
+                if self.iv:
+                    #separate weighted least squared regression
+                    model_levels_sup = wlsreg(X=self.call_.zs,Y=Zcod_levels_sup,w=ind_w)
+                    #residuals (PCAmixoiv) or fitted values (PCAmixiv)
+                    if self.ortho:
+                        Z_levels_sup = concat((model_levels_sup[k].resid.to_frame(k) for k in Zcod_levels_sup.columns),axis=1)
+                    else: 
+                        Z_levels_sup = concat((model_levels_sup[k].fittedvalues.to_frame(k) for k in Zcod_levels_sup.columns),axis=1)
 
                 #within class analysis - suppress within effect
                 if self.group is not None:
@@ -635,8 +786,6 @@ class PCAmix(BaseEstimator,TransformerMixin):
             y, X = X[self.call_.group[0]], X.drop(columns=self.call_.group)
         if self.iv is not None:
             z, X = X.loc[:,self.call_.iv], X.drop(columns=self.call_.iv)
-        if self.partial is not None:
-            t, X = X.loc[:,self.call_.partial], X.drop(columns=self.call_.partial)
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if X contains original columns
@@ -644,4 +793,54 @@ class PCAmix(BaseEstimator,TransformerMixin):
         if not set(self.call_.X.columns).issubset(X.columns): 
             raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
         X = X[self.call_.X.columns]
-        
+
+        #split data
+        split_X = splitmix(X)
+        X_quanti, X_quali, = split_X.quanti, split_X.quali
+
+        #initialize the data
+        Xcod = None
+        if self.call_.k1 > 0: 
+            Xcod = concat_empty(Xcod,X_quanti,axis=1)
+        if self.call_.k2 > 0: 
+            Xcod = concat_empty(Xcod,disjunctive(X_quali,cols=self.call_.dummies.columns),axis=1)
+        #standardization: z_ik = (x_ik - m_k)/s_k
+        Zcod = (Xcod - self.call_.center)/self.call_.scale
+
+        #principal component analysis of mixed data with (orthogonal) instrumental variables
+        Z = Zcod.copy()
+        if self.iv is not None:
+            #split z
+            split_z = splitmix(z)
+            #extract elements
+            z_quanti_var, z_quali_var, nz_quanti_var, nz_quali_var = split_z.quanti, split_z.quali, split_z.k1, split_z.k2
+            #initialization
+            zcod = DataFrame(index=X.index,columns=self.call_.zcod.columns).astype(float)
+            #check if numerics variables
+            if nz_quanti_var > 0:
+                #replace with numerics columns
+                zcod.loc[:,z_quanti_var.columns] = z_quanti_var
+            #check if categorical variables      
+            if nz_quali_var > 0:
+                #active categorics
+                categorics = [x for x in self.call_.zcod.columns if x not in self.call_.z.columns]
+                #replace with dummies
+                zcod.loc[:,categorics] = disjunctive(X=z_quali_var,cols=categorics,prefix=True,sep="")
+            #standardization: z_ik = (x_ik - m_k)/s_k
+            zs = (zcod - self.call_.z_center)/self.call_.z_scale
+            #insert constant to features
+            zs.insert(0,"const",1)
+
+            #predicted values
+            Z = concat((self.call_.model[k].predict(zs).to_frame(k) for k in Zcod.columns),axis=1)
+            #residuals for orthogonal instrumental variables
+            if self.ortho: 
+                Z = Zcod - Z.values
+
+        #within class analysis - suppress within effect
+        if self.group is not None and self.option == "within":
+            Z = Z - self.call_.bary.loc[y.values,:].values
+        #coordinates for the new nrows
+        coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.svd_.ncp])
+        coord.columns = self.eig_.index[:self.svd_.ncp]
+        return coord
