@@ -760,6 +760,13 @@ class CA(BaseEstimator,TransformerMixin):
         if self.iv is not None:
             z, X = X.loc[:,self.call_.iv], X.drop(columns=self.call_.iv)
 
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X contains original columns
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not set(self.call_.X.columns).issubset(X.columns): 
+            raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
+        X = X[self.call_.X.columns]
+
         #standardization
         if self.symmetric:
             #margins for new rows

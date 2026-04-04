@@ -5,9 +5,11 @@ from collections import OrderedDict, namedtuple
 from scipy.spatial.distance import pdist,squareform
 from sklearn.utils import check_symmetric
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 #intern functions
 from ..functions.get_sup_label import get_sup_label
+from ..functions.utils import check_is_dataframe
 
 class PCoA(BaseEstimator,TransformerMixin):
     """
@@ -235,8 +237,10 @@ class PCoA(BaseEstimator,TransformerMixin):
         else:
             ncp = min(self.ncp,rank)
 
+        #convert to Ordered dictionary
+        evd_ = OrderedDict(V=eigvects,d=eigvals,rank=rank,ncp=ncp)
         #convert to namedtuple
-        self.evd_ = namedtuple("evdResult",["V","d"])(eigvects,eigvals)
+        self.evd_ = namedtuple("evdResult",evd_.keys())(*evd_.values())
 
         #proportion and difference
         eigdiff, eigprop = insert(-diff(eigvals),len(eigvals)-1,nan), 100*eigvals/Itot
@@ -308,4 +312,60 @@ class PCoA(BaseEstimator,TransformerMixin):
             Transformed values.
         """
         self.fit(X)
-        return self.ind_.coord    
+        return self.ind_.coord
+    
+    def transform(self,X):
+        """
+        Apply dimensionality reduction to ``X``.
+
+        ``X`` is projected on the first principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+
+        Returns
+        -------
+        X_new : DataFrame of shape (n_rows, ncp)
+            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        """
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if the estimator is fitted by verifying the presence of fitted attributes
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_fitted(self)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X is an object of class pd.DataFrame
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_dataframe(X)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set index name as None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        X.index.name = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X contains original columns
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not set(self.call_.X.columns).issubset(X.columns): 
+            raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
+        X = X[self.call_.X.columns]
+
+        dist = X
+        if self.metric != "precomputed":
+            n_rows = X.shape[0]
+            dist = DataFrame(squareform(pdist(concat((X,self.call_.X),axis=0),metric=self.metric,**(self.metric_params if self.metric_params is not None else {})))[:n_rows,n_rows:],
+                             index=X.index,columns=self.call_.X.index)
+        #double centering
+        D = dist**2
+        d1 = D.sum(axis=1)
+        S = (-0.5*(((D.T - d1).T - self.call_.d2) + self.call_.d3))
+        #coordinates for the new rows
+        return DataFrame(S.values.dot(self.evd_.V[:,:self.evd_.ncp]/sqrt(self.evd_.d[:self.evd_.ncp])),index=X.index,columns=self.eig_.index[:self.evd_.ncp])

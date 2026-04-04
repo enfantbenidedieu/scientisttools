@@ -4,6 +4,7 @@ from pandas import Series, CategoricalDtype, concat
 from itertools import chain, repeat
 from collections import OrderedDict, namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 #intern functions
 from ._pca import PCA
@@ -16,6 +17,7 @@ from ..functions.concat_empty import concat_empty
 from ..functions.statistics import wmean, wstd, func_groupby
 from ..functions.func_eta2 import func_eta2
 from ..functions.func_predict import func_predict
+from ..functions.utils import check_is_dataframe
 from ..others._splitmix import splitmix
 from ..others._disjunctive import disjunctive
 
@@ -27,22 +29,10 @@ class FAMD(BaseEstimator,TransformerMixin):
     Missing values on continuous variables are replaced by the column mean. Missing values on categorical variables are replaced by the most frequent categories in columns.
     
     .. note:: 
-        Its includes standard Principal Component Analysis (PCA) and Multiple Correspondence Analysis (MCA) as special cases. If all variables are quantitative, standard PCA is performed.
-        If all variables are qualitative, then standard MCA is performed. When all the variable are categorical, the factor coordinates of the individuals are equal to the factor scores
+        Its includes standard Principal Component Analysis (PCA) and Multiple Correspondence Analysis (MCA) as special cases. If all variables are continuous, standard PCA is performed.
+        If all variables are categorical, then standard MCA is performed. When all the variable are categorical, the factor coordinates of the individuals are equal to the factor scores
         of standard MCA times squares root of :math::`J` (the number of categorical variables) and the eigenvalues are then equal to the usual eigenvalues of MCA times :math::`J`.
-        When all the variables are quantitative, FAMD gives exactly the same results as normed PCA.
-
-    :class::`scientisttools.FAMD` performns:
-
-        1. Normed Principal Component Analysis (PCA)
-        2. Standard Multiple Correspondence Analysis (MCA)
-        3. Factor Analysis of Mixed Data (FAMD)
-        4. Between-class Normed Principal Component Analysis (bcPCA)
-        5. Between-class Standard Multiple Correspondence Analysis (bcMCA)
-        6. Between-class Factor Analysis of Mixed Data (bcFAMD)
-        7. Within-class Normed Principal Component Analysis (wcPCA)
-        8. Within-class Standard Multiple Correspondence Analysis (wcMCA)
-        9. Within-class Factor Analysis of Mixed Data (wcFAMD)
+        When all the variables are continuous, FAMD gives exactly the same results as normed PCA.
 
     Parameters
     ----------
@@ -76,7 +66,7 @@ class FAMD(BaseEstimator,TransformerMixin):
     Returns
     -------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters with the following attributes:
 
         Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
             Input data.
@@ -103,9 +93,9 @@ class FAMD(BaseEstimator,TransformerMixin):
         row_w : Series of shape (n_rows,) or (n_groups,)
             The rows weights.
         var_w : Series of shape (n_quali_var,)
-            The categorical variables weights.
+            The weight of the categorical variables.
         col_w : Series of shape (n_columns,)
-            The categories weights.
+            The weights of the columns.
         center : Series of shape (n_columns,)
             The columns average.
         scale : Series of shape (n_columns,)
@@ -139,7 +129,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) for the groups.
 
     ind_ : ind
-        An object containing all the results for the active individuals, with the following attributes:
+        An object containing all the results for the active individuals with the following attributes:
 
         coord : DataFrame of shape (n_rows, ncp)
             The coordinates of the individuals.
@@ -153,7 +143,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals.
 
     ind_sup_ : ind_sup
-        An object containing all the results for the supplementary individuals, with the following attributes:
+        An object containing all the results for the supplementary individuals with the following attributes:
 
         coord : DataFrame of shape (n_rows_plus, ncp)
             The coordinates of the supplementary individuals.
@@ -163,7 +153,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             The squared distance to origin of the supplementary individuals.
 
     levels_ : levels
-        An object containing all the results for the active levels, with the following attributes:
+        An object containing all the results for the active levels with the following attributes:
         
         coord : DataFrame of shape (n_levels, ncp)
             The coordinates of the levels.
@@ -177,7 +167,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             The value-test of the levels.
 
     levels_sup_ : levels_sup_
-        An object containing all the results for the supplementary levels, with the following attributes:
+        An object containing all the results for the supplementary levels with the following attributes:
         
         coord : DataFrame of shape (n_levels_sup, ncp)
             The coordinates of the supplementary levels.
@@ -189,21 +179,21 @@ class FAMD(BaseEstimator,TransformerMixin):
             The value-test of the supplementary levels.
 
     quali_var_ : quali_var
-        An object containing all the results for the active qualitative variables, with the following attributes:
+        An object containing all the results for the active categorical variables, with the following attributes:
 
         coord : DataFrame of shape (n_quali_var, ncp)
-            The coordinates of the qualitative variables, which is eta2, the square correlation coefficient between a qualitative variable and a dimension.
+            The coordinates of the categorical variables, which is eta2, the square correlation coefficient between a categorical variable and a dimension.
         contrib : DataFrame of shape (n_quali_var, ncp)
-            The contributions of the qualitative variables.
+            The contributions of the categorical variables.
 
     quali_var_sup_ : quali_var_sup 
-        An object containing all the results for the supplementary qualitative variables, with the following attributes:
+        An object containing all the results for the supplementary categorical variables, with the following attributes:
 
         coord : DataFrame of shape (n_quali_var_sup, ncp)
-            The coordinates of the supplementary qualitative variables. The squared correlation ratio of the supplementary qualitative variables, which is the square correlation coefficient between a qualitative variable and a dimension
+            The coordinates of the supplementary categorical variables. The squared correlation ratio of the supplementary categorical variables, which is the square correlation coefficient between a categorical variable and a dimension
 
     quanti_var_ : quanti_var
-        An object containing all the results for the active quantitative variables, with the following attributes:
+        An object containing all the results for the active continuous variables, with the following attributes:
 
         coord : DataFrame of shape (n_quanti_var, ncp)
             The coordinates of the variables.
@@ -215,14 +205,14 @@ class FAMD(BaseEstimator,TransformerMixin):
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the variables.
 
     quanti_var_sup_ : quanti_var_sup
-        An object containing all the results for the supplementary quantitative variables, with the following attributes:
+        An object containing all the results for the supplementary continuous variables, with the following attributes:
         
         coord : DataFrame of shape (n_quanti_var_sup, ncp)
-            The coordinates of the supplementary quantitative variables.
+            The coordinates of the supplementary continuous variables.
         cos2 : DataFrame of shape (n_quanti_var_sup, ncp)
-            The squared cosinus of the supplementary quantitative variables.
+            The squared cosinus of the supplementary continuous variables.
         dist2 : Series of shape (n_quanti_var_sup,)
-            The squared distance to origin of the supplementary quantitative variables.
+            The squared distance to origin of the supplementary continuous variables.
     
     ratio_ : float, optional
         The inertia (between-class/within-class) percentage.
@@ -232,13 +222,17 @@ class FAMD(BaseEstimator,TransformerMixin):
         
         vs : 1d numpy array of shape (maxcp,)
             The singular values.
-        U : 2d numpy array of shape (n_rows, ncp) or (n_groups, ncp)
+        U : 2d numpy array of shape (n_rows, ncp) or (n_groups, maxcp)
             The left singular vectors.
-        V : 2d numpy array of shape (n_quanti_var + n_levels, ncp)
+        V : 2d numpy array of shape (n_quanti_var + n_levels, maxcp)
             The right singular vectors.
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
 
     var_ : var
-        An object containing all the results for the active variables (quantitative and qualitative), with the following attributes:
+        An object containing all the results for the active variables (continuous and categorical), with the following attributes:
 
         coord : DataFrame of shape (n_columns, ncp)
             The coordinates of the variables.
@@ -251,11 +245,11 @@ class FAMD(BaseEstimator,TransformerMixin):
     ----------
     [1] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
 
-    [2] Pagès J. (2004). <Analyse factorielle de donnees mixtes https://www.numdam.org/article/RSA_2004__52_4_93_0.pdf>_. Revue Statistique Appliquee. LII (4). pp. 93-111.
+    [2] Pagès J. (2004). `Analyse factorielle de donnees mixtes <https://www.numdam.org/article/RSA_2004__52_4_93_0.pdf>`_. Revue Statistique Appliquee. LII (4). pp. 93-111.
 
     [3] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. edp sciences
 
-    [4] Rakotomalala, Ricco (2020), <Pratique des méthodes factorielles avec Python https://hal.science/hal-04868625v1>_. Université Lumière Lyon 2, Version 1.0
+    [4] Rakotomalala, Ricco (2020), `Pratique des méthodes factorielles avec Python <https://hal.science/hal-04868625v1>`_. Université Lumière Lyon 2, Version 1.0
 
     See Also
     --------
@@ -334,9 +328,14 @@ class FAMD(BaseEstimator,TransformerMixin):
         X = preprocessing(X=X)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #get labels
+        #get the group labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_label, ind_sup_label, sup_var_label = get_sup_label(X=X, indexes=self.group, axis=1), get_sup_label(X=X, indexes=self.ind_sup, axis=0), get_sup_label(X=X, indexes=self.sup_var, axis=1)
+        group_label = get_sup_label(X=X,indexes=self.group,axis=1)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #get supplementary labels
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ind_sup_label, sup_var_label = get_sup_label(X=X, indexes=self.ind_sup, axis=0), get_sup_label(X=X, indexes=self.sup_var, axis=1)
 
         #make a copy of the original data
         Xtot = X.copy()
@@ -416,12 +415,14 @@ class FAMD(BaseEstimator,TransformerMixin):
         if n_quali > 0:
             #disjunctive table
             dummies = disjunctive(X=X_quali)
-            #set number of categorics by qualitative variable
+            #proportion of the levels
+            p_k = (dummies.T * ind_w).sum(axis=1)
+            #set number of categorics by categorical variable
             nb_moda = array([X_quali[j].nunique() for j in X_quali.columns])
             #set levels weights
-            levels_w = Series(array(list(chain(*[repeat(i,k) for i, k in zip(var_w[X_quali.columns],nb_moda)]))),index=dummies.columns,name="weight")
+            levels_w = Series(list(chain(*[repeat(i,k) for i, k in zip(var_w[X_quali.columns],nb_moda)])),index=dummies.columns,name="weight")
             #concatenate
-            Xcod, col_w, scale = concat_empty(Xcod,dummies,axis=1), concat_empty(col_w,levels_w,axis=0), concat_empty(scale,Series(sqrt(dummies.mul(ind_w,axis=0).sum(axis=0)),index=dummies.columns,name="scale"),axis=0)
+            Xcod, col_w, scale = concat_empty(Xcod,dummies,axis=1), concat_empty(col_w,levels_w,axis=0), concat_empty(scale,Series(sqrt(p_k),index=dummies.columns,name="scale"),axis=0)
         
         #weighted average
         center = wmean(X=Xcod,w=ind_w)
@@ -434,9 +435,8 @@ class FAMD(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #class analysis (None/between/within)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.group is None:
-            tab, row_w, bary = Z.copy(), ind_w.copy(), None
-        else:
+        tab, row_w, bary = Z.copy(), ind_w.copy(), None
+        if self.group is not None:
             bary = func_groupby(X=Z,by=y,func="mean",w=ind_w).loc[uq_classe,:]
             if self.option == "between":
                 tab, row_w = bary.copy(), Series([ind_w.loc[y[y==k].index].sum() for k in uq_classe],index=uq_classe,name="weight")
@@ -470,7 +470,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             self.ratio_, self.ind_, self.group_ = sum(self.eig_.iloc[:,0])/sum(res_.vs**2), namedtuple("ind",ind_.keys())(*ind_.values()), namedtuple("group",group_.keys())(*group_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for active quantitative variables
+        #statistics for active continuous variables
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if n_quanti > 0:
             #convert to dictionary
@@ -479,7 +479,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for active levels - active qualitative variables
+        #statistics for active levels - active categorical variables
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if n_quali > 0:
             #proportion for the leves
@@ -495,9 +495,9 @@ class FAMD(BaseEstimator,TransformerMixin):
             #convert to namedtuple
             self.levels_ = namedtuple("levels",levels_.keys())(*levels_.values())
 
-            #coordinates for the qualitative variables  - Eta-squared
+            #coordinates for the categorical variables  - Eta-squared
             quali_var_coord = func_eta2(X=self.ind_.coord,by=X_quali,w=ind_w,excl=None)
-            #contributions of qualitative variables
+            #contributions of categorical variables
             quali_var_ctr =  concat((self.levels_.contrib.loc[self.levels_.contrib.index.isin(list(X_quali[j].unique())),:].sum(axis=0).to_frame(j) for j in X_quali.columns),axis=1).T
             #convert to ordered dictionary
             quali_var_ = OrderedDict(coord=quali_var_coord,contrib=quali_var_ctr)
@@ -545,14 +545,14 @@ class FAMD(BaseEstimator,TransformerMixin):
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
         #----------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for supplementary variables (quantitative and/or qualitative)
+        #statistics for supplementary variables (continuous and/or categorical)
         #----------------------------------------------------------------------------------------------------------------------------------------
         if self.sup_var is not None:
             #split X_sup_var
             split_X_sup_var = splitmix(X_sup_var)
             X_quanti_var_sup, X_quali_var_sup, n_quanti_var_sup, n_quali_var_sup = split_X_sup_var.quanti, split_X_sup_var.quali, split_X_sup_var.k1, split_X_sup_var.k2
 
-            #statistics for supplementary quantitative variables
+            #statistics for supplementary continuous variables
             if n_quanti_var_sup > 0:
                 #standardization: z_ik = (x_ik - m_k)/s_k
                 Z_quanti_var_sup = (X_quanti_var_sup - wmean(X=X_quanti_var_sup,w=ind_w))/wstd(X=X_quanti_var_sup,w=ind_w)
@@ -562,12 +562,12 @@ class FAMD(BaseEstimator,TransformerMixin):
                     bary_quanti_var_sup = func_groupby(X=Z_quanti_var_sup,by=y,func="mean",w=ind_w).loc[uq_classe,:]
                     Z_quanti_var_sup = bary_quanti_var_sup if self.option == "between" else Z_quanti_var_sup - bary_quanti_var_sup.loc[y.values,:].values
 
-                #statistics for supplementary quantitative variables
+                #statistics for supplementary continuous variables
                 quanti_var_sup_ = func_predict(X=Z_quanti_var_sup,Y=fit_.svd.U[:,:ncp],w=row_w,axis=1)
                 #convert to namedtuple
                 self.quanti_var_sup_ = namedtuple("quanti_var_sup",quanti_var_sup_.keys())(*quanti_var_sup_.values())
 
-            #statistics for supplementary qualitative variables/levels
+            #statistics for supplementary categorical variables/levels
             if n_quali_var_sup > 0:
                 #standardization: z_gk = (x_gk - m_k)
                 Z_levels_sup = func_groupby(X=Zcod,by=X_quali_var_sup,w=ind_w,func="mean").sub(z_center,axis=1)
@@ -580,7 +580,7 @@ class FAMD(BaseEstimator,TransformerMixin):
                 #convert to namedtuple
                 self.levels_sup_ = namedtuple("levels_sup",levels_sup_.keys())(*levels_sup_.values())
 
-                #cordinates for the supplementary qualitative variables - Eta-squared
+                #cordinates for the supplementary categorical variables - Eta-squared
                 quali_var_sup_coord = func_eta2(X=self.ind_.coord,by=X_quali_var_sup,w=ind_w,excl=None)
                 #convert to ordered dictionary
                 quali_var_sup_ = OrderedDict(coord=quali_var_sup_coord)
@@ -608,3 +608,78 @@ class FAMD(BaseEstimator,TransformerMixin):
         """
         self.fit(X)
         return self.ind_.coord
+    
+    def transform(self,X):
+        """
+        Apply dimensionality reduction to ``X``.
+
+        ``X`` is projected on the first principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+
+        Returns
+        -------
+        X_new : DataFrame of shape (n_rows, ncp)
+            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        """
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if the estimator is fitted by verifying the presence of fitted attributes
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_fitted(self)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X is an object of class pd.DataFrame
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_dataframe(X)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set index name as None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        X.index.name = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #get elements
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if self.group is not None:
+            y, X = X[self.call_.group[0]], X.drop(columns=self.call_.group)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X contains original columns
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not set(self.call_.X.columns).issubset(X.columns): 
+            raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
+        X = X[self.call_.X.columns]
+
+        #split data
+        split_X = splitmix(X)
+        #extract elements
+        X_quanti, X_quali, n_quanti, n_quali = split_X.quanti, split_X.quali, split_X.k1, split_X.k2
+
+        #initialize the data
+        Xcod = None
+        if n_quanti > 0:
+            #concatenate
+            Xcod = concat_empty(Xcod,X_quanti,axis=1)
+        if n_quali > 0:
+            #concatenate
+            Xcod = concat_empty(Xcod,disjunctive(X_quali,cols=self.call_.dummies.columns),axis=1)
+
+        #standardization: z_ik = (x_ik - m_k)/s_k) - m_zk
+        Z = ((Xcod - self.call_.center)/self.call_.scale) - self.call_.z_center
+
+        #within class analysis - suppress within effect
+        if self.group is not None and self.option == "within":
+            Z = Z - self.call_.bary.loc[y.values,:].values
+        #coordinates for the new nrows
+        coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.svd_.ncp])
+        coord.columns = self.eig_.index[:self.svd_.ncp]
+        return coord

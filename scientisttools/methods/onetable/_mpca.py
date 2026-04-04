@@ -795,6 +795,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not set(self.call_.X.columns).issubset(X.columns): 
             raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
+        X = X[self.call_.X.columns]
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # Data preparation
