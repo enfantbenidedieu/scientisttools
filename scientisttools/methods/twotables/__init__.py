@@ -6,11 +6,13 @@ from ._cancorr import CANCORR
 from ._cca import CCA
 from ._coia import COIA
 from ._pcaiv import PCAiv
+from ._procrustes import Procrustes
 
 __all__ = [
     "BWCA",
     "CANCORR",
     "CCA",
     "COIA",
-    "PCAiv"
+    "PCAiv",
+    "Procrustes"
 ]
