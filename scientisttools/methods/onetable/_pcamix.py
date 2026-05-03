@@ -514,7 +514,7 @@ class PCAmix(BaseEstimator,TransformerMixin):
         fit_.col["coord"] = (fit_.col["coord"].T * col_w).T
 
         #Store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,dummies=dummies,Z=Z,tab=tab,bary=bary,k1=n_quanti,k2=n_quali,ind_w=ind_w,row_w=row_w,var_w=var_w,col_w=col_w,center=center,scale=scale,ncp=ncp,
+        call_ = OrderedDict(Xtot=Xtot,X=X,dummies=dummies,Zcod=Zcod,Z=Z,tab=tab,bary=bary,k1=n_quanti,k2=n_quali,ind_w=ind_w,row_w=row_w,var_w=var_w,col_w=col_w,center=center,scale=scale,ncp=ncp,
                             iv=iv_label,group=group_label,ind_sup=ind_sup_label,sup_var=sup_var_label)
         #add instrumental variables informations
         if self.iv is not None:
