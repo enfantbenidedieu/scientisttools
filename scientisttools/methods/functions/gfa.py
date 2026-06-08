@@ -1,121 +1,140 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, c_, insert, diff, nan, cumsum, diag
+from numpy import ones, c_, insert, diff, nan, cumsum
 from pandas import DataFrame, Series
 from collections import namedtuple, OrderedDict
-from typing import NamedTuple
 
 #intern functions
-from .gsvd import gsvd
+from .gsvd import gSVD
 
-def gfa(X:DataFrame,row_weights:Series|None,col_weights:Series|None,max_components:int,n_components:int) -> NamedTuple:
+def gFA(
+        X,ncp=5,row_w=None,col_w=None, tol = 1e-7
+):
     """
-    Generalized Factor Analysis (GFA)
-    ---------------------------------
+    General 
 
-    Description
-    -----------
-    performs generalized factor analysis of a rectangular matrix with weights for rows and columns
-
-    Usage
-    -----
-    ```
-    >>> gfa(X,row_weights,col_weights,max_components,n_components)
-    ```
+    Performs general factor analysis analysis of a rectangular matrix with weights for rows and columns.
 
     Parameters
     ----------
-    `X`: a pandas DataFrame, of shape (n_rows, n_columns)
+    X : DataFrame of shape (n_rows, n_columns)
+        Input data.
 
-    `row_weights`: None or a pandas Series with the weights of each row (None by default and the weights are uniform)
+    ncp : int, default = 5
+        The number of dimensions kept in the results.
 
-    `col_weights`: None or a pandas Series with the weights of each colum (None by default and the weights are uniform)
+    row_w : 1d array-like of shape (n_rows,)
+        The rows weights.
 
-    `max_components`: an integer indicating the maximum number of dimensions
+    col_w : 1d array-like of shape (n_columns,)
+        The columns weights.
 
-    `n_components`: an integer indicating indicating the number of dimensions kept in the results
+    tol : float, default = 1e-7
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
 
     Returns
     -------
-    a namedtuple of namedtuple/pandas DataFrame, including:
+    result : gFAResult
+        An object with the following attributes:
 
-    `svd`: a namedtuple of numpy array containing all the results for the generalized singular value decomposition (GSVD), including:
-        * `vs`: 1D numpy array containing the singular values,
-        * `U`: 2D numpy array whose columns contain the left singular vectors,
-        * `V`: 2D numpy array whose columns contain the right singular vectors.
+        ncp : int
+            The number of dimensions kepted.
 
-    `eig`: a pandas DataFrame containing all the eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance
+        svd : svd
+            An object containing all the results for the generalized singular value decomposition (GSVD) with the following attributes:
+            
+            vs : 1d numpy array of shape (mcp,)
+                The singular values.
+            U : 2d numpy array of shape (n_columns, n_components)
+                The left singular vectors.
+            V : 2d numpy array of shape (n_rows, n_components)
+                The right singular vectors.
+        
+        eig : DataFrame of shape (max_components, 4)
+            The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
-    `row`: a namedtuple of pandas DataFrames containing all the results for the rows, including:
-        * `coord`: coordinates of the rows,
-        * `cos2`: squared cosinus of the rows,
-        * `contrib`: relative contributions of the rows,
-        * `infos`: additionals informations (weight, margin, squared distance to origin, inertia and percentage of inertia) of the rows.
-    
-    `col`: a namedtuple of pandas DataFrames containing all the results for the columns, including:
-        * `coord`: coordinates of the columns,
-        * `cos2`: squared cosinus of the columns,
-        * `contrib`: relative contributions of the columns,
-        * `infos`: additionals informations (margin, squared distance to origin, inertia and percentage of inertia) of the columns.
+        row : dict
+            An object with the following keys:
 
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+            coord : DataFrame of shape (n_rows, n_components) 
+                The coordinates for the rows,
+            cos2 : DataFrame of shape (n_rows, n_components)
+                The squared cosinus for the rows,
+            contrib : DataFrame of shape (n_rows, n_components)
+                The relative contributions for the rows,
+            infos : DataFrame of shape (n_rows, 4)
+                Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) for the rows.
+
+        col : dict
+            An object with the following keys:
+
+            coord : DataFrame of shape (n_columns, n_components)
+                The coordinates for the columns.
+            cos2 : DataFrame of shape (n_columns, n_components)
+                The squared cosinus for the columns.
+            contrib : DataFrame of shape (n_columns, n_components)
+                The relative contributions for the columns.
+            infos : DataFrame of shape (n_columns, 4)
+                Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) for the columns.
 
     References
     ----------
-    * Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    [1] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
     
-    * Husson, F., Le, S. and Pages, J. (2009). Analyse de donnees avec R, Presses Universitaires de Rennes.
+    [2] Husson, F., Le, S. and Pages, J. (2009). Analyse de donnees avec R, Presses Universitaires de Rennes.
 
-    * Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    [3] Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
 
-    * Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
+    [4] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
 
-    * Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
+    [5] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
 
-    * Rakotomalala R. (2020), Pratique des méthodes factorielles avec Python, Université Lumière Lyon 2, Version 1.0
+    [6] Rakotomalala R. (2020), `Pratique des méthodes factorielles avec Python <https://hal.science/hal-04868625v1>`_, Université Lumière Lyon 2, Version 1.0
     """
-    #shape of dataframe
+    #set number of rows and columns
     n_rows, n_cols = X.shape
-
+    
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #set rows and columns weights
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #set rows weights
-    if row_weights is None:
-        row_weights = Series(ones(n_rows)/n_rows,index=X.index,name="Weight")
-
+    if row_w is None: 
+        row_w = Series(ones(n_rows)/n_rows,index=X.index,name="Weight")
     #set columns weights
-    if col_weights is None:
-        col_weights = Series(ones(n_cols),index=X.columns,name="Weight")
+    if col_w is None: 
+        col_w = Series(ones(n_cols),index=X.columns,name="Weight")
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #generalized singular values decomposition (GSVD)
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    svd = gsvd(X=X,row_weights=row_weights,col_weights=col_weights,n_components=n_components)
+    svd = gSVD(X=X,ncp=ncp,row_w=row_w,col_w=col_w,tol=tol)
+    #reset number of components
+    ncp = svd.ncp
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #eigen values informations
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    eigen_values = svd.vs[:max_components]**2
-    difference, proportion = insert(-diff(eigen_values),len(eigen_values)-1,nan), 100*eigen_values/sum(eigen_values)
+    eigvals = svd.vs**2
+    difference, proportion = insert(-diff(eigvals),len(eigvals)-1,nan), 100*eigvals/sum(eigvals)
     #convert to DataFrame
-    eig = DataFrame(c_[eigen_values,difference,proportion,cumsum(proportion)],columns=["Eigenvalue","Difference","Proportion","Cumulative"],index = ["Dim."+str(x+1) for x in range(max_components)])
+    eig = DataFrame(c_[eigvals,difference,proportion,cumsum(proportion)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],index = [f"Dim{x+1}" for x in range(len(eigvals))])
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #rows informations: weights, squared distance to origin, inertia, percentage of inertia, coordinates, contributions and squared cosinus
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #dist2 of the rows
-    row_sqdisto = X.pow(2).mul(col_weights,axis=1).sum(axis=1)
+    row_sqdisto = ((X**2)*col_w).sum(axis=1)
     #inertia of the rows
-    row_inertia = row_sqdisto*row_weights
+    row_inertia = row_sqdisto*row_w
     #percentage of inertia of the rows
     row_inertia_pct = 100*row_inertia/sum(row_inertia)
     #convert to DataFrame
-    row_infos = DataFrame(c_[row_weights,row_sqdisto,row_inertia,row_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","% Inertia"],index=X.index)
+    row_infos = DataFrame(c_[row_w,row_sqdisto,row_inertia,row_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","Inertia (%)"],index=X.index)
     #coordinates of the rows
-    row_coord = DataFrame(svd.U.dot(diag(svd.vs[:n_components])),index=X.index,columns=["Dim."+str(x+1) for x in range(n_components)])
+    row_coord = DataFrame(svd.U[:,:ncp]*svd.vs[:ncp],index=X.index,columns=eig.index[:ncp])
     #contributions of the rows
-    row_ctr = row_coord.pow(2).mul(100).mul(row_weights,axis=0).div(eigen_values[:n_components],axis=1)
+    row_ctr = 100*((row_coord**2).T * row_w).T/eigvals[:ncp]
     #cos2 of the rows
-    row_sqcos = row_coord.pow(2).div(row_sqdisto,axis=0)
+    row_sqcos = ((row_coord**2).T/row_sqdisto).T
     #convert to ordered dictionary
     row = OrderedDict(coord=row_coord,cos2=row_sqcos,contrib=row_ctr,infos=row_infos)
     
@@ -123,21 +142,21 @@ def gfa(X:DataFrame,row_weights:Series|None,col_weights:Series|None,max_componen
     #columns informations : weights, squared distance to origin, inertia, percentage of inertia, coordinates, contributions and squared cosinus
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #dist2 of the columns
-    col_sqdisto = X.pow(2).mul(row_weights,axis=0).sum(axis=0)
+    col_sqdisto = ((X**2).T*row_w).sum(axis=1)
     #inertia of the columns
-    col_inertia = col_sqdisto*col_weights
+    col_inertia = col_sqdisto*col_w
     #percentage of inertia of the columns
     col_inertia_pct = 100*col_inertia/sum(col_inertia)
     #convert to DataFrame
-    col_infos = DataFrame(c_[col_weights,col_sqdisto,col_inertia,col_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","% Inertia"],index=X.columns)
+    col_infos = DataFrame(c_[col_w,col_sqdisto,col_inertia,col_inertia_pct],columns=["Weight","Sq. Dist.","Inertia","Inertia (%)"],index=X.columns)
     #coordinates of the columns
-    col_coord = DataFrame(svd.V.dot(diag(svd.vs[:n_components])),index=X.columns,columns=["Dim."+str(x+1) for x in range(n_components)])
+    col_coord = DataFrame(svd.V[:,:ncp]*svd.vs[:ncp],index=X.columns,columns=eig.index[:ncp])
     #contributions of the columns
-    col_ctr = col_coord.pow(2).mul(100).mul(col_weights,axis=0).div(eigen_values[:n_components],axis=1)
+    col_ctr = 100*((col_coord**2).T* col_w).T/eigvals[:ncp]
     #cos2 of the columns
-    col_sqcos = col_coord.pow(2).div(col_sqdisto,axis=0)
+    col_sqcos = ((col_coord**2).T/col_sqdisto).T
     #convert to ordered dictionary
     col = OrderedDict(coord=col_coord,cos2=col_sqcos,contrib=col_ctr,infos=col_infos)
 
     #convert to namedtuple
-    return namedtuple("gfaResult",["svd","eig","row","col"])(svd,eig,row,col)
+    return namedtuple("gFAResult",["ncp","svd","eig","row","col"])(ncp,svd,eig,row,col)

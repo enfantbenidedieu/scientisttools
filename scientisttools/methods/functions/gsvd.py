@@ -1,108 +1,105 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, array,apply_along_axis,sqrt,linalg,sign
-from pandas import DataFrame
+from numpy import ones, array,apply_along_axis,sqrt,linalg,sign, nan_to_num, diag, set_printoptions, errstate
 from collections import namedtuple
-from typing import NamedTuple
+set_printoptions(suppress=True)
+errstate(invalid='ignore', divide='ignore')
 
-def gsvd(X:DataFrame,row_weights=None,col_weights=None,n_components=None|int) -> NamedTuple:
+def gSVD(
+        X, ncp=5, row_w=None, col_w=None, tol = 1e-7
+):
     """
     Generalized Singular Value Decomposition (GSVD) of a Matrix
-    -----------------------------------------------------------
 
-    Description
-    -----------
     Compute the generalized singular value decomposition (gsvd) of a rectangular matrix with weights for rows and columns
 
     Parameters
     ----------
-    `X`: pandas DataFrame of float, shape (n_rows, n_columns)
+    X : DataFrame of shape (n_rows, n_columns)
+        Input data.
 
-    `row_weights`: a pandas Series or a 1D array with the weights of each row (None by default and the weights are uniform)
+    ncp : int, default = 5
+        The number of dimensions kept in the results.
 
-    `col_weights`: a pandas Series or a 1D array with the weights of each colum (None by default and the weights are uniform)
+    row_w : 1d array-like of shape (n_rows,), default = None
+        The rows weights.
 
-    `n_components`: an integer indicating the number of dimensions kept in the results
+    col_w : 1d array-like of shape (n_columns,), default = None
+        The columns weights.
 
-    Return
-    ------
-    a namedtuple of numpy array containing:
-    
-    `vs`: a vector containing the singular values of 'X'
+    tol : float, default = 1e-7
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
 
-    `U`: a matrix whose columns contain the left singular vectors of 'X'
-
-    `V`: a matrix whose columns contain the right singular vectors of 'X'.
-    
-    See also
-    --------
-    See also https://numpy.org/doc/stable/reference/generated/numpy.linalg.svd.html or https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.svd.html
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    Returns
+    -------
+    result : gSVDResult
+        An object containing all the results for the generalized singular value decomposition (GSVD) with the following attributes:
+            
+        vs : 1d numpy array of shape (maxcp,)
+            The singular values.
+        U : 2d numpy array of shape (n_columns, maxcp)
+            The left singular vectors.
+        V : 2d numpy array of shape (n_rows, maxcp)
+            The right singular vectors.
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
     """
-    #set dimensions
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #set number of rows and columns weights
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #set number of rows and columns
     n_rows, n_cols = X.shape
 
-    # Set row weights
-    if row_weights is None:
-        row_weights = ones(n_rows)/n_rows
-    else:
-        row_weights = array([x/sum(row_weights) for x in row_weights])
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #set rows and columsn weights
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #set row weights
+    if row_w is None: 
+        row_w = ones(n_rows)
     
-    # Set columns weights
-    if col_weights is None:
-        col_weights = ones(n_cols)
+    #set columns weights
+    if col_w is None: 
+        col_w = ones(n_cols)
     
-    # Set number of components
-    if n_components is None:
-        n_components = min(n_rows-1, n_cols)
-    else:
-        n_components = min(n_components, n_rows-1, n_cols)
+    #multiply X with square root of rows and columns weights
+    X = (X.T * sqrt(row_w)).T * sqrt(col_w)
 
-    row_weights, col_weights = row_weights.astype(float), col_weights.astype(float)
-    
-    X = apply_along_axis(func1d=lambda x : x*sqrt(row_weights),axis=0,arr=X*sqrt(col_weights))
-
-    if X.shape[1] < X.shape[0]:
-        #svd on X
+    if n_cols < n_rows:
         svd = linalg.svd(X,full_matrices=False)
         U, V = svd[0], svd[2].T
     else:
-        #svd on X transpose
         svd = linalg.svd(X.T,full_matrices=False)
         U, V = svd[2].T, svd[0]
 
-    if n_components > 1:
-        #find sign
-        mult = sign(V.sum(axis=0))
-        #replace signe 0 by 1
-        mult = array(list(map(lambda x: 1 if x == 0 else x, mult)))
-        #update U and V
-        U, V = apply_along_axis(func1d=lambda x : x*mult,axis=1,arr=U), apply_along_axis(func1d=lambda x : x*mult,axis=1,arr=V)
+    #set maximum number of components
+    rank = sum(((svd[1]/svd[1][0])**2)>tol)
+    
+    #set number of components
+    if ncp is None: 
+        ncp = rank
+    elif ncp < 1: 
+        raise ValueError("'ncp' must be strictly positive")
+    else: 
+        ncp = int(min(ncp,rank))
 
+    if ncp > 1:
+        mult = array([1 if x == 0 else x for x in sign(V.sum(axis=0))])
+        U, V = U*mult, V*mult
+
+    #extract singular values decomposition
+    vs = svd[1][:rank]
     #recalibrate U and V using row weight and col weight
-    U, V = apply_along_axis(func1d=lambda x : x/sqrt(row_weights),axis=0,arr=U), apply_along_axis(func1d=lambda x : x/sqrt(col_weights),axis=0,arr=V)
-
-    #set number of columns using n_components
-    U, V = U[:,:n_components], V[:,:n_components]
-
-    #set delta length
-    vs = svd[1][:min(n_rows - 1, n_cols)]
-
-    #check if condition is satisfied
-    vs_filter = list(map(lambda x : True if x < 1e-15 else False, vs[:n_components]))
-
-    #select index which respect the criteria
-    num, vs_num = [idx for idx, i in enumerate(vs[:n_components]) if vs_filter[idx] == True], [i for idx, i in enumerate(vs[:n_components]) if vs_filter[idx] == True]
-
-    #######
-    if len(num) == 1:
-        U[:,num] = U[:,num].reshape(-1,1)*array(vs_num)
-        V[:,num] = V[:,num].reshape(-1,1)*array(vs_num)
-    elif len(num)>1:
-        U[:,num] = apply_along_axis(func1d=lambda x : x*vs_num,axis=1,arr=U[:,num])
-        V[:,num] = apply_along_axis(func1d=lambda x : x*vs_num,axis=1,arr=V[:,num])
+    U, V = U.T.dot(diag(1/sqrt(row_w))).T, V.T.dot(diag(1/sqrt(col_w))).T
+    #replace NAN, inf with 1e-15
+    U, V = nan_to_num(U,nan=1e-15,posinf=1e-15,neginf=-1e-15), nan_to_num(V,nan=1e-15,posinf=1e-15,neginf=-1e-15)
+    #select index and values which satisfied the condition
+    num, vs_num = [i for i, v in enumerate(vs) if v < 1e-15], [v for i,v in enumerate(vs) if v < 1e-15]
+    
+    if len(num) == 1: 
+        U[:,num], V[:,num] = U[:,num].reshape(-1,1)*array(vs_num), V[:,num].reshape(-1,1)*array(vs_num)
+    elif len(num) > 1: 
+        U[:,num], V[:,num] = apply_along_axis(func1d=lambda x : x*vs_num,axis=1,arr=U[:,num]), apply_along_axis(func1d=lambda x : x*vs_num,axis=1,arr=V[:,num])
 
     #convert to namedtuple
-    return namedtuple("gsvdResult",["vs","U","V"])(vs,U,V)
+    return namedtuple("gSVDResult",["vs","U","V","rank","ncp"])(vs,U,V,rank,ncp)

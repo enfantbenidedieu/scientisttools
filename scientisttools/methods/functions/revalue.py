@@ -1,54 +1,65 @@
 # -*- coding: utf-8 -*-
-from pandas import Series, DataFrame, Categorical
+from pandas import CategoricalDtype, DataFrame, Series
 
-def revalue(X):
+def revalue(
+        X,
+) -> DataFrame:
     """
-    Revalue Categoricals Variables
-    ------------------------------
+    Revalue Categorical Variables
 
-    Description
-    -----------
-    Check if two categoricals variables have same levels and replace with new values
-
-    Usage
-    -----
-    ```python
-    >>> revalue(X)
-    ```
+    Check if two categoricals variables have same categories and replace with new values.
 
     Parameters
     ----------
-    `X`: a pandas DataFrame of shape (n_samples, n_columns) or a pandas Series of shape (n_samples,)
+    X : DataFrame of shape (n_samples, n_columns) or Series of shape (n_samples,)
         X contains categoricals variables.
 
-    Return(s)
-    ---------
-    `Y`: a pandas DataFrame of shape (n_samples, n_columns)
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    Returns
+    -------
+    Y : DataFrame of shape (n_samples, n_columns)
+        Revaluated data
     """
-    if isinstance(X,Series): #convert to DataFrame if X is a pandas Series
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #convert pd.Series to pd.DataFrame
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    if isinstance(X,Series):
         X = X.to_frame()
+
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #check if X is an object of class pd.DataFrame
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. X must be an object of class pd.DataFrame")
+
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #check if all columns are categorics
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    if not all(X[k].dtype in ("object","category") for k in X.columns):
+        raise TypeError("All columns in X must be categorics.")
     
-    if not isinstance(X,DataFrame): #check if X is an instance of pd.DataFrame class
-        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    #find columns with at least one element in common
+    def find_intersection(X):
+        i, res = 0, {}
+        for k in range(X.shape[1]-1):
+            for l in range(k+1,X.shape[1]):
+                intersect = list(set(X.iloc[:,k].dropna().unique()) & set(X.iloc[:,l].dropna().unique()))
+                if len(intersect) > 0:
+                    res[i] = intersect
+                    i +=1
+        return res
 
     #check if shape greater than 1:
-    Y = X.copy()
-    if Y.shape[1]>1:
-        for i in range(X.shape[1]-1):
-            for j in range(i+1,X.shape[1]):
-                if (X.iloc[:,i].dtype in ["object","category"]) and (X.iloc[:,j].dtype in ["object","category"]):
-                    intersect = list(set(X.iloc[:,i].dropna().unique().tolist()) & set(X.iloc[:,j].dropna().unique().tolist()))
-                    if len(intersect)>=1:
-                        valuei = {x : X.columns.tolist()[i]+"_"+str(x) for x in X.iloc[:,i].dropna().unique().tolist()}
-                        valuej = {x : X.columns.tolist()[j]+"_"+str(x) for x in X.iloc[:,j].dropna().unique().tolist()}
-                        Y.iloc[:,i], Y.iloc[:,j] = X.iloc[:,i].map(valuei), X.iloc[:,j].map(valuej)
-
+    if X.shape[1]>1:
+        all_levels = find_intersection(X)
+        while len(all_levels) != 0:
+            y = X.isin(all_levels[0]).any()
+            cols = list(y[y==True].index)
+            if len(cols) > 1:
+                for j in cols:
+                    X[j] = X[j].map({x : "{}_{}".format(j,x) for x in list(X[j].dropna().unique())})
+            all_levels = find_intersection(X)
+          
     #convert to categorical
-    for q in Y.columns:
-        if Y[q].dtype in ["object","category"]:
-            Y[q] = Categorical(Y[q],categories=sorted(Y[q].dropna().unique().tolist()),ordered=True)
-    return Y
+    for q in X.columns:
+        X[q] = X[q].astype(CategoricalDtype(categories=sorted(list(X[q].dropna().unique())),ordered=True))
+    return X

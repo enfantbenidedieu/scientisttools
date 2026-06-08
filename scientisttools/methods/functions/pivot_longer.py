@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from pandas import DataFrame
 
-def pivot_longer(X,level=- 1, dropna=True):
+def pivot_longer(X,level=- 1,dropna=True,value_to="value"):
     """
     Stack the prescribed level(s) from columns to index
     --------------------------------------------------
@@ -31,4 +31,4 @@ def pivot_longer(X,level=- 1, dropna=True):
                 "pd.DataFrame. For more information see: "
                 "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
     
-    return X.stack(level=level, dropna=dropna).rename_axis(('Var1', 'Var2')).reset_index(name='value')
+    return X.stack(level=level, dropna=dropna).rename_axis(('Var1', 'Var2')).reset_index(name=value_to)
