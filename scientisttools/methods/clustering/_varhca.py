@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from numpy import sqrt, c_,array
+from numpy import sqrt, c_
 from pandas import Series, concat, DataFrame
 from collections import namedtuple, OrderedDict
 from scipy.cluster.hierarchy import linkage, cut_tree
