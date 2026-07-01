@@ -1,29 +1,27 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, c_,array
-from pandas import DataFrame, Series, concat
-from scipy.cluster.hierarchy import linkage, cut_tree
-from scipy.spatial.distance import pdist, squareform
+from numpy import c_, average, array, ndarray
+from pandas import DataFrame, concat, Series
 from collections import OrderedDict, namedtuple
+from scipy.spatial.distance import pdist, squareform
+from scipy.cluster.hierarchy import linkage, cut_tree
 from sklearn.cluster import KMeans
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
-#interns functions
-from ..functions.statistics import func_groupby
-from ..others._auto_cut_tree import auto_cut_tree
-from ..others._catdes import catdes
+# intern function
 from ..functions.utils import check_is_dataframe
 
-class HCPC(BaseEstimator,TransformerMixin):
+class CatVARHCPC(BaseEstimator,TransformerMixin):
     """
-    Hierarchical Clustering on Principal Components (HCPC)
+    Categorical Variables Hierachical Clustering on Principal Components (CatVARHCPC)
     
-    Performs an agglomerative hierarchical clustering on results from a factor analysis. Results include paragons, description of the clusters.
+    Performs agglomerative hierarchical clustering on categorical variables using principal components.
 
     Parameters
     ----------
-    ncl : int.  
-        If a (positive) integer, the tree is cut with nb.cluters clusters. if None, the tree is automatically cut.
+    ncl : int.  default = 3
+        If a (positive) integer, the tree is cut with nb_cluters clusters. 
+        if None, the tree is automatically cut.
 
     consol : bool, default = False
         If True, a k-means consolidation is performed after agglomerative hierarchical clustering.
@@ -34,183 +32,151 @@ class HCPC(BaseEstimator,TransformerMixin):
     random_state : int, RandomState instance or None, default=0
         Determines random number generation for centroid initialization. Use
         an int to make the randomness deterministic.
-    
-    mincl : int. 
-        The least possible number of clusters suggested.
 
-    maxcl : int. 
-        The higher possible number of clusters suggested; by default the minimum between 10 and the number of individuals divided by 2.
+    method : {"average","complete","single","ward"}, default = "ward"
+        The linkage algorithm to use.
 
     metric : str, default = "euclidean"
         The metric used to built the tree. It must be one of the options allowed by `scipy.spatial.distance.pdist` for its metric parameter, or a metric listed in :func:`sklearn.metrics.pairwise.distance_metrics`.
 
-    method : str, default = "ward"
-        the method used to built the tree. 
-
-    proba : float, default = 0.05
-        The probability used to select axes and variables.
-
-    n_paragons : int. 
-        The number of edited paragons.
-
-    order : bool, default = True
-        If True, clusters are ordered following their center coordinate on the first axis.
-
     **kwargs : key words parameters
         Additionals parameters for sklearn.cluster.KMeans.
-
+    
     Returns
     -------
-    axes_ : desc_axes
-        An object containing the description of the clusters by the principal components.
-        See catdes.
-
     call_ : call
         An object containing the summary called parameters with the following attributes:
 
         obj : class
-            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
+            An object of class :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
 
-        Xtot : DataFrame of shape (n_samples, n_columns)
-            Input data.
+        X : DataFrame of shape (n_samples, n_components)
+            Coordinates of levels.
 
-        X : DataFrame of shape (n_samples, n_columns)
-            Input data without supplementary individuals
-
-        data_clust : DataFrame of shape (n_samples, ncp + 1)
-            The original data with a supplementary column called cluster containing the partition.
+        w : Series of shap e(n_samples,)
+            The weights for each observation.
 
         ncl : int
             The number of clusters.
 
-        proba : float
-            The probability used to select axes and variables.
-
         tree : tree
             The results for the hierarchical tree.
 
-        km : class, optional
-            The results of k-means.
+        km : class
+            The fitted K-Means object.
+
+        data_clust : DataFrame of shape (n_samples, n_components + 1) 
+            Coordinates of levels with cluster column.
 
     cluster_ : cluster
         An object containing the results of the clusters, with the following attributes:
 
         coord : DataFrame of shape (n_clusters, n_components)
-            The coordinates of the clusters (cluster centers).
-
-    ind_ : dind
-        An object containing the description of the clusters by the individuals, with the following attributes:
+            The coordinates of the clusters (also been cluster centers).
+    
+    levels_ : levels
+        An object containing the description of the clusters by the levels.
 
         cluster : Series of shape (n_samples,)
-            The labels of individuals.
+            The labels of each data point.
         dist : DataFrame of shape (n_samples, n_clusters)
-            The distance of individuals to the cluster centers.
+            The distance of each data points to the cluster centers.
         member : DataFrame of shape (n_samples, 3)
-            Cluster's members of individuals (distance to own cluster, distance to next closest, ratio (own/next)).
+            Cluster's members of each data point (distance to own cluster, distance to next closest, ratio (own/next)).
 
-    ind_sup_ : ind_sup
-        An object containing the description of the clusters by the supplementary individuals, with the following attributes:
+    levels_sup_ : levels_sup, optional
+        An object containing the description of the clusters by the supplementary levels.
 
         cluster : Series of shape (n_samples_sup,)
-            The labels of supplementary individuals.
+            The labels of each supplementary data point.
         dist : DataFrame of shape (n_samples_sup, n_clusters)
-            The distance of supplementary individuals to the cluster centers.
+            The distance of each supplementary data points to the cluster centers.
         member : DataFrame of shape (n_samples_sup, 3)
-            Cluster's members of supplementary individuals (distance to own cluster, distance to next closest, ratio).
+            Cluster's members of each data point (distance to own cluster, distance to next closest, ratio).
 
-    var_ : var
-        An object containing the description of the clusters by the original data. See :class:`~scientisttools.catdes`
-    
     References
     ----------
-    [1] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod.
+    [1] R. Rakotomalala, « Classification de variables », Tutoriels Tanagra pour le Data Mining.
 
     [2] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
 
     Examples
     --------
-    >>> from scientisttools.datasets import usarrests, tea
-    >>> from scientistools import PCA, MCA, HCPC
-    >>> # HCPC after PCA
-    >>> clf = PCA(ncp=3)
-    >>> clf.fit(usarrests)
-    >>> clf2 = HCPC(ncl=4)
-    >>> clf2.fit(clf)
-    >>> # HCPC after MCA
-    >>> clf = MCA(ncp=20,sup_var=range(18,36))
-    >>> clf.fit(tea)
-    >>> clf2 = HCPC(ncl=3)
+    >>> from scientisttools.datasets import loisirs
+    >>> from scientistools import PCA, CatVARHCPC
+    >>> # MCA
+    >>> clf = MCA(ncp=2)
+    >>> clf.fit(loisirs)
+    >>> # Hierarchical Clustering on Variables after MCA
+    >>> clf2 = CatVARHCPC(ncl=3)
     >>> clf2.fit(clf)
     """
     def __init__(
-            self, ncl=3, consol=True, max_iter=300, random_state=0, mincl=3, maxcl=None, metric="euclidean", method="ward", proba=0.05, order=True, **kwargs
+            self, ncl=3, consol=True, max_iter=300, random_state=0, method = "ward", metric = "euclidean", **kwargs
     ):
         self.ncl = ncl
         self.consol = consol
         self.max_iter = max_iter
         self.random_state = random_state
-        self.mincl = mincl
-        self.maxcl = maxcl
-        self.metric = metric
         self.method = method
-        self.proba = proba
-        self.order = order
+        self.metric = metric
         self.kwargs = kwargs
-
-    def fit(self,obj,y=None):
+        
+    def fit(self,obj,y=None,sample_weight=None):
         """
         Compute agglomerative clustering with ``obj``
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
+            An object of class :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
 
         y : Ignored
             Not used, present here for API consistency by convention.
+
+        sample_weight : 1d array-like of shape (n_samples,), default = None
+            An optional sample weights. The weights for each observation.
         
         Returns
         -------
         self : object
-            Returns the instance itself
+            Fitted estimator.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if obj is an object class PCA, MCA, FAMD, PCAmix, MCA, MFA
+        #check if linkage method is valid
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if not (obj.__class__.__name__ in ("PCA","MCA","FAMD","PCAmix","MPCA","MFA")):
-            raise TypeError("'obj' must be an objet of class PCA, MCA, FAMD, PCAMIX, MPCA, MFA")
-        
-        # set number of individuals
-        n_rows = obj.ind_.coord.shape[0]
+        if not (self.method in ("average","complete","single","ward")):
+            raise ValueError("'method' should be one of 'average', 'complete', 'single', 'ward'")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set max cluster
+        #check if obj is an object of class MCA, FAMD, PCAmix, MPCA, MFA
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.maxcl is None:
-            maxcl = min(10,round(n_rows/2))
-        else:
-            maxcl = min(self.maxcl,n_rows-1)
+        if not (obj.__class__.__name__ in ("MCA","FAMD","PCAmix","MPCA","MFA")):
+            raise TypeError("'obj' must be an objet of class MCA, FAMD, PCAmix, MPCA, MFA")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set proba
+        #hierarchical clustering
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.proba is None:
-            proba = 0.05
-        elif not isinstance(self.proba,float):
-            raise TypeError(f"{type(self.proba)} is not supported")
-        elif self.proba < 0 or self.proba > 1:
-            raise ValueError(f"the 'proba' value {self.proba} is not within the required range of 0 and 1.")
-        else:
-            proba = self.proba
+        # extract principal components
+        X = obj.levels_.coord
+        # copy of principal components
+        D = X.copy()
 
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #agglomerative clustering
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # coordinates for individuals
-        D = obj.ind_.coord
+        # number of levels
+        n_levels = X.shape[0]
+        # weighted of levels extract from factor analysis
+        if sample_weight is None: 
+            w = obj.call_.col_w.loc[X.index]
+        elif not isinstance(sample_weight,(list,tuple,ndarray,Series)): 
+            raise TypeError("'sample_weight' must be a 1d array-like of sample weights.")
+        elif len(sample_weight) != n_levels: 
+            raise ValueError(f"'sample_weight' must be a 1d array-like of shape ({n_levels},).")
+        else:
+            w = Series(array(sample_weight),index=X.index,name="weight")
+        
         # linkage matrix
         Z = linkage(D,method=self.method,metric=self.metric)
-        #height
+        # height
         height = (DataFrame(c_[list(range(1,Z.shape[0]+1)),Z[:,2][::-1]],columns=["cluster","height"]).
                   assign(
                       diff_1 = lambda x : -1*x["height"].diff(1),
@@ -218,130 +184,105 @@ class HCPC(BaseEstimator,TransformerMixin):
                   ))
         height["cluster"] = height["cluster"].astype(int)
 
-        #convert to ordered dictionary
+        # convert to ordered dictionary
         tree_ = OrderedDict(D=D,Z=Z,height=height,merge=Z[:,:2],size=Z[:,3])
-        #convert to namedtuple
+        # convert to namedtuple
         tree = namedtuple("tree",tree_.keys())(*tree_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set number of clusters
+        # set numbers of clusters
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ncl is None:
-            t = auto_cut_tree(
-                obj = obj,
-                mincl = self.mincl,
-                maxcl = maxcl,
-                method = self.method,
-                metric = self.metric,
-                order = self.order,
-                w = ones(n_rows)
-            )
-            ncl = t.ncl
+            nclust = height[height["diff_2"]==height["diff_2"].max()]["cluster"].values[0]
+        elif self.ncl < 0:
+            raise TypeError("'ncl' should be a positive integer.")
         elif not isinstance(self.ncl,int):
-            raise TypeError("'ncl' must be an integer")
-        elif self.ncl > maxcl:
-            raise ValueError(f"ncl must be less than or equal to {maxcl}")
+            raise TypeError("'ncl' should be an integer")
         else:
             ncl = self.ncl
-
-        # assign cluster to each individual
-        cluster = Series((cut_tree(Z,n_clusters=ncl)+1).reshape(-1,), index = D.index, name = "cluster", dtype="category")
-        # coordinates for the clusters - cluster centers
-        cluster_coord = func_groupby(X=D,by=cluster,func="mean",w=obj.call_.row_w)
+            
+        # assign cluster
+        cluster = Series((cut_tree(Z,n_clusters=ncl)+1).reshape(-1, ), index = D.index, name = "cluster", dtype="category")
+        # unique cluster
+        uq_cluster = sorted(list(cluster.unique()))
+        # coordinates of the clusters - cluster centers
+        cluster_coord = DataFrame(index=uq_cluster,columns=X.columns).astype(float)
+        for i in uq_cluster:
+            ix = list(cluster[cluster==i].index)
+            cluster_coord.loc[i,:] = average(a=X.loc[ix,:],axis=0,weights=w.loc[ix])
         cluster_coord.index = cluster_coord.index.astype("category")
-
-        # original data (continuous and/or categorical) without supplementary individuals
-        X = obj.call_.Xtot
-        #drop the supplementary individuals
-        if hasattr(obj,"ind_sup_"):
-            X = X.drop(index=obj.call_.ind_sup)
-
-        #call informations
-        call_ = OrderedDict(obj=obj,X=D,ncl=ncl,proba=proba,tree=tree)
+        
+        # convert to ordered dictionary
+        call_ = OrderedDict(obj=obj,X=X,w=w,ncl=ncl,tree=tree)
 
         # consolidation
         if self.consol:
             # K-means clustering
-            km = KMeans(n_clusters=ncl,init=cluster_coord,max_iter=self.max_iter,random_state=self.random_state,**self.kwargs).fit(X=D,sample_weight=obj.call_.row_w)
+            km = KMeans(n_clusters=ncl,init=cluster_coord,max_iter=self.max_iter,random_state=self.random_state,**self.kwargs).fit(X=X,sample_weight=w)
             # assign cluster
-            cluster = Series(array(km.labels_)+1, index = D.index, name = "cluster",dtype="category")
+            cluster = Series(array(km.labels_)+1, index = D.index, name = "cluster", dtype="category")
             # coordinates of the clusters - cluster centers
             cluster_coord = DataFrame(km.cluster_centers_,index=list(range(1,ncl+1)),columns=km.feature_names_in_)
             cluster_coord.index = cluster_coord.index.astype("category")
             # add to dictionary
             call_["km"] = km
-        # add 
-        call_["data_clust"] = concat((D,cluster),axis=1)
-        
+    
+        # concatenate principal components with cluster
+        call_["data_clust"] = concat((X,cluster),axis=1)
         # convert to namedtuple
-        self.call_ = namedtuple("call",call_.keys())(*call_.values()) 
-        
+        self.call_ = namedtuple("call",call_.keys())(*call_.values())
+
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # statistics for clusters : coordinates, square distance to origin and square cosinus
+        #statistics for clusters
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #convert to ordered dictionary
         cluster_ = OrderedDict(coord=cluster_coord)
         #convert to namedtuple
         self.cluster_ = namedtuple("cluster",cluster_.keys())(*cluster_.values())
-        
+
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # statistics for individuals
+        # statistics for levels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # unique cluster
         uq_cluster = sorted(list(cluster.unique()))
-        # distance for individuals to the cluster centers
-        dist_cluster_center = DataFrame(squareform(pdist(concat((D,cluster_coord),axis=0),metric=self.metric))[:n_rows,n_rows:],index=D.index,columns=uq_cluster)
-        # cluster's members : distance own cluster, distance next closest, ratio (own/next)
+        # distance for levels to the cluster centers
+        dist_cluster_center = DataFrame(squareform(pdist(concat((X,cluster_coord),axis=0),metric=self.metric))[:n_levels,n_levels:],index=D.index,columns=uq_cluster)
+        # cluster's members : distance own cluster, distance nex closest, ratio (own/next)
         cluster_member = DataFrame(index=D.index,columns=["Own Cluster","Next Closest"]).astype(float)
         cluster_member["Own Cluster"] = dist_cluster_center.min(axis=1)
         cluster_member["Next Closest"] = dist_cluster_center.apply(lambda x: x.nsmallest(2).iloc[-1], axis=1)
         cluster_member["Ratio (Own/Next)"] = cluster_member["Own Cluster"]/cluster_member["Next Closest"]
-        #convert to ordered dictionary
-        ind_ = OrderedDict(cluster=cluster,dist=dist_cluster_center,member=cluster_member)
-        #convert to namedtuple
-        self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
-        
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # statistics for principals components
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #axis description
-        axes_ = catdes(X=concat((cluster,D),axis=1),num_var="cluster",w=obj.call_.row_w,proba=proba)._asdict()
-        #convert to namedtuple
-        self.axes_ = namedtuple("axes",axes_.keys())(*axes_.values())
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for variables
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # statistics for variables
-        var_ = catdes(X=concat((cluster,X),axis=1),num_var="cluster",w=obj.call_.row_w,proba=proba)._asdict()
+        # convert to ordered dictionary
+        levels_ = OrderedDict(cluster=cluster,dist=dist_cluster_center,member=cluster_member)
         # convert to namedtuple
-        self.var_ = namedtuple("var",var_.keys())(*var_.values())
+        self.levels_ = namedtuple("levels",levels_.keys())(*levels_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # statistics for supplementary individuals
+        # statistics for supplementary levels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if hasattr(obj,"ind_sup_"):
-            #coordinates for the supplementary individuals
-            D_sup = obj.ind_sup_.coord
-            n_rows_sup = D_sup.shape[0]
-            # distance for supplementary individuals to cluster centers
-            dist_sup_cluster_center = DataFrame(squareform(pdist(concat((D_sup,cluster_coord),axis=0),metric=self.metric))[:n_rows_sup,n_rows_sup:],index=D_sup.index,columns=uq_cluster)
-            # assign cluster to supplementary individuals
-            ind_sup_cluster = dist_sup_cluster_center.idxmin(axis=1).astype("category")
-            ind_sup_cluster.name = "cluster"
+        if hasattr(obj,"levels_sup_"):
+            # coordinates for supplementary levels
+            X_sup = obj.levels_sup_.coord
+            # number of supplementary levels
+            n_levels_sup = X_sup.shape[0]
+            # distance for supplementary levels to the cluster centers
+            dist_sup_cluster_center = DataFrame(squareform(pdist(concat((X_sup,cluster_coord),axis=0),metric=self.metric))[:n_levels_sup,n_levels_sup:],index=X_sup.index,columns=uq_cluster)
+            # assign cluster to supplementary levels
+            levels_sup_cluster = dist_sup_cluster_center.idxmin(axis=1).astype("category")
+            levels_sup_cluster.name = "cluster"
             # cluster's members : distance own cluster, distance next closest, ratio (own/next)
-            cluster_member_sup = DataFrame(index=D_sup.index,columns=["Own Cluster","Next Closest"]).astype(float)
+            cluster_member_sup = DataFrame(index=X_sup.index,columns=["Own Cluster","Next Closest"]).astype(float)
             cluster_member_sup["Own Cluster"] = dist_sup_cluster_center.min(axis=1)
             cluster_member_sup["Next Closest"] = dist_sup_cluster_center.apply(lambda x: x.nsmallest(2).iloc[-1], axis=1)
             cluster_member_sup["Ratio (Own/Next)"] = cluster_member_sup["Own Cluster"]/cluster_member_sup["Next Closest"]
             #convert to ordered dictionary
-            ind_sup_ = OrderedDict(cluster=ind_sup_cluster,dist=dist_sup_cluster_center,member=cluster_member_sup)
+            levels_sup_ = OrderedDict(cluster=levels_sup_cluster,dist=dist_sup_cluster_center,member=cluster_member_sup)
             #convert to namedtuple
-            self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
+            self.levels_sup_ = namedtuple("levels_sup",levels_sup_.keys())(*levels_sup_.values())
 
         return self
     
-    def fit_predict(self,obj,y=None):
+    def fit_predict(self,obj,y=None,sample_weight=None):
         """
         Compute cluster centers and predict cluster index for each sample.
 
@@ -350,40 +291,46 @@ class HCPC(BaseEstimator,TransformerMixin):
         Parameters
         ----------
         obj : class
-            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
+            An object of class :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
 
         y : Ignored
             Not used, present here for API consistency by convention.
+        
+        sample_weight : 1d array-like of shape (n_samples,), default = None
+            An optional sample weights. The weights for each observation.
 
         Returns
         -------
         labels : Series of shape (n_samples,)
             Index of the cluster each sample belongs to.
         """
-        self.fit(obj)
-        return self.ind_.cluster
+        self.fit(obj=obj,sample_weight=sample_weight)
+        return self.levels_.cluster
     
-    def fit_transform(self,obj,y=None):
+    def fit_transform(self,obj,y=None,sample_weight=None):
         """
-        Compute agglomerative clustering with ``obj`` and transform X to cluster-distance space.
+        Compute agglomerative hierarchical clustering with ``obj`` and transform X to cluster-distance space.
 
         Equivalent to fit(obj).transform(X), but more efficiently implemented.
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
+            An object of class :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
         
         y : Ignored
             Not used, present here for API consistency by convention.
+
+        sample_weight : 1d array-like of shape (n_samples,), default = None
+            An optional sample weights. The weights for each observation.
         
         Returns
         -------
         X_new : DataFrame of shape (n_samples, n_clusters)
             X transformed in the new space.
         """
-        self.fit(obj)
-        return self.ind_.dist
+        self.fit(obj=obj,sample_weight=sample_weight)
+        return self.levels_.dist
     
     def predict(self,X):
         """
@@ -401,7 +348,7 @@ class HCPC(BaseEstimator,TransformerMixin):
         """
         # distance for new data points to cluster centers
         dist = self.transform(X)
-        # assign cluster to new individuals
+        # assign cluster to new data points
         cluster = dist.idxmin(axis=1).astype("category")
         cluster.name = "cluster"
         return cluster
@@ -448,8 +395,8 @@ class HCPC(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if X.shape[1] != self.call_.X.shape[1]:
             raise ValueError("Inconvenient column length")
-        
-        # number of new individuals
+
+        # number of new data points
         n_rows = X.shape[0]
         # distance for new data points to cluster centers
         dist = DataFrame(squareform(pdist(concat((X,self.cluster_.coord),axis=0),metric=self.metric))[:n_rows,n_rows:],index=X.index,columns=self.cluster_.coord.index)
