@@ -60,7 +60,7 @@ def fviz_cluster(obj,
     Parameters
     ----------
     obj : class
-        an object of class :class:`~scientisttools.CatVARHCPC`, :class:`~scientisttools.CatVARKMeansPC`, :class:`~scientisttools.HCPC`, :class:`~scientisttools.KMeansPC`, :class:`~scientisttools.VARHCPC`, :class:`~scientisttools.VARKMeansPC`.
+        An object of class :class:`~scientisttools.CatVARHCPC`, :class:`~scientisttools.CatVARKMeansPC`, :class:`~scientisttools.HCPC`, :class:`~scientisttools.KMeansPC`, :class:`~scientisttools.VARHCPC`, :class:`~scientisttools.VARKMeansPC`.
 
     axis : list, tuple, default = (0,1)
         The dimensions to be plotted.
