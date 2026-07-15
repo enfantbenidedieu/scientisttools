@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from numpy import arange
 from pandas import Series, DataFrame, Categorical
 from scipy.cluster.hierarchy import dendrogram, cut_tree, fcluster
 from mizani.palettes import brewer_pal
@@ -30,16 +29,16 @@ def fviz_dend2(Z,
                criterion = "distance",
                labels = None,
                color_labels_by_cluster = False,
-               add_rect = False,
-               rect_border = "gray",
+               rect = False,
+               col_border = "gray",
                rect_type = "dashed",
                rect_size = 1,
                rect_fill = False,
                rect_alpha = 0.1,
                lower_rect = 0.5,
                upper_rect = 0.9,
-               palette = "Set2",
-               text_size = 11,
+               palette = "Dark2",
+               text_size = 8,
                line_size = 1,
                family = "sans-serif",
                horiz = False,
@@ -47,7 +46,8 @@ def fviz_dend2(Z,
                y_label = None,
                title = None,
                subtitle = None,
-               ggtheme = theme_minimal()):
+               pntheme = theme_minimal(),
+               **kwargs):
     """
     Visualization of Dendrogram
 
@@ -70,10 +70,10 @@ def fviz_dend2(Z,
     color_labels_by_cluster : bool, default = False
         if True, then labels are colored by cluster.
 
-    add_rect : boo, default = False
+    rect : boo, default = False
         If True, then add a rectangle around groups.
 
-    rect_border : str, default = "gray"
+    col_border : str, default = "gray"
         Border color for rectangles.
 
     rect_type : str, default = "dashed"
@@ -94,10 +94,10 @@ def fviz_dend2(Z,
     upper_rect : float, default = 0.9
         A value of how high should the higher part of the rectange around clusters. Ignored when rect = False.
 
-    palette : str, list, tuple, default = "Set2"
+    palette : str, list, tuple, default = "Dark2"
         If string, the color palette to be used for coloring or filling by groups. If list or tuple, the colors for labels.
 
-    text_size : int, dafeult = 11
+    text_size : int, dafeult = 8
         The size for labels.
 
     line_size : int, default = 1
@@ -119,15 +119,17 @@ def fviz_dend2(Z,
         The title of the graph you draw. If None, then a title is chosen.
 
     subtitle : str, default = None
-        The subtitle of the graph you draw. If None, then a title is chosen.
+        The subtitle of the graph you draw.
 
-    ggtheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes : theme_gray(), theme_bw(), theme_classic(), theme_void(),...
+    pntheme : function, default = theme_minimal() 
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+    
+    **kwargs : Any
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
 
     Returns
     -------
-    p : ggplot
-        a plotnine
+    A plotnine object.
 
     See also
     --------
@@ -144,8 +146,9 @@ def fviz_dend2(Z,
 
     Reference
     ---------
-    https://anyplot.ai/dendrogram-basic/python/pygal
-    https://anyplot.ai/dendrogram-basic
+    [1] `pygal <https://anyplot.ai/dendrogram-basic/python/pygal>`.
+    
+    [2] `dendrogram basic <https://anyplot.ai/dendrogram-basic>`.
 
     Examples
     --------
@@ -165,7 +168,7 @@ def fviz_dend2(Z,
     n = Z.shape[0] + 1 
     # labels
     if labels is None:
-        labels = [f"row{x+1}" for x in range(n)]
+        labels = [f"{x+1}" for x in range(n)]
     # dendrogram
     d = dendrogram(Z,labels=labels,no_plot=True)
 
@@ -318,40 +321,71 @@ def fviz_dend2(Z,
     if horiz is False:
         # add segments
         if color_segments_by_cluster:
-            p = p + geom_segment(aes(x="x", xend="xend", y="y", yend="yend", color="cluster"), data=segments_df, size=line_size)
-        else:
-            p = p + geom_segment(aes(x="x", xend="xend", y="y", yend="yend"), data=segments_df, color="black",size=line_size)
-
-        # add labels
-        if color_labels_by_cluster and ncl > 1:
-            p = ( 
-                p 
-                + geom_text(mapping=aes(x="x", y="y", label="label", color="cluster"),data=label_df,angle=90,
-                            ha="center",va="top",size=text_size,nudge_y=0,show_legend=False)
+            p = (
+                p + 
+                geom_segment(
+                    data = segments_df, 
+                    mapping = aes(x="x", xend="xend", y="y", yend="yend", color="cluster"),
+                    size = line_size
+                )
             )
         else:
             p = (
                 p 
-                + geom_text(mapping=aes(x="x", y="y", label="label"),data=label_df,angle=90,
-                            ha="center",va="top",size=text_size,nudge_y=0,show_legend=False)
+                + geom_segment(
+                    data = segments_df,
+                    mapping = aes(x="x", xend="xend", y="y", yend="yend"), 
+                    color = "black",
+                    size = line_size
+                )
             )
+
+        # add labels
+        # show texts
+        mapping_aes = dict(x="x",y="y",label="label")
+        if color_labels_by_cluster and ncl > 1:
+            mapping_aes["color"] = "cluster"
+        # set texts arguments
+        text_args = dict(
+            data = label_df,
+            mapping = aes(**mapping_aes),
+            angle = 90,
+            ha = "center",
+            va = "top",
+            size = text_size,
+            nudge_y = 0,
+            show_legend = False
+        )
+        p = p + geom_text(**text_args)
 
         # color and remove 
         if (color_segments_by_cluster or color_labels_by_cluster) and ncl > 1:
-            if add_rect:
+            if rect:
                 if rect_fill:
                     p = (
                         p 
-                        + geom_rect(mapping=aes(xmin="xmin",xmax="xmax",ymin="ymin",ymax="ymax",fill="cluster"),data=rects_df, alpha = rect_alpha)
+                        + geom_rect(
+                            data = rects_df,
+                            mapping = aes(xmin="xmin",xmax="xmax",ymin="ymin",ymax="ymax",fill="cluster"),
+                            alpha = rect_alpha
+                        )
                         + scale_fill_manual(values=colors_mapping) 
                         + guides(fill=False)
                     )
                 else:
                     p = (
                         p 
-                        + geom_rect(mapping=aes(xmin="xmin",xmax="xmax",ymin="ymin",ymax="ymax"),data=rects_df, alpha = rect_alpha,
-                                    color = rect_border, fill = "white",linetype = rect_type,size = rect_size)
+                        + geom_rect(
+                            data = rects_df,
+                            mapping = aes(xmin="xmin",xmax="xmax",ymin="ymin",ymax="ymax"), 
+                            alpha = rect_alpha,
+                            color = col_border, 
+                            fill = "white",
+                            linetype = rect_type,
+                            size = rect_size
+                        )
                     )
+                
             # set color manual and remove legend
             p = (
                 p 
@@ -362,7 +396,7 @@ def fviz_dend2(Z,
         p = (
             p 
             + scale_x_continuous(breaks=[], expand=(0.04, 0))
-            + scale_y_continuous(breaks=list(arange(0, y_max+1, 2)), expand=(0.10, 0))
+            + scale_y_continuous(labels=lambda breaks: [str(x) if x >= 0 else "" for x in breaks])
             + coord_cartesian(xlim=(x_min - x_pad, x_max + x_pad), ylim=(y_min, y_max))
         )
 
@@ -380,9 +414,9 @@ def fviz_dend2(Z,
         # add theme
         p = (
             p 
-            + ggtheme
+            + pntheme
             + theme(
-                text = element_text(size=text_size, family=family),
+                text = element_text(family=family),
                 axis_title_x = element_blank(),
                 axis_text_x = element_blank(),
                 axis_ticks_major_x = element_blank(),
@@ -391,45 +425,76 @@ def fviz_dend2(Z,
                 panel_grid_major_x = element_blank(),
                 panel_grid_minor_x = element_blank(),
                 panel_grid_minor_y = element_blank(),
-                panel_grid_major_y = element_line(alpha=0.2, size=0.5, color="#CCCCCC")
+                panel_grid_major_y = element_line(alpha=0.2, size=0.5, color="#CCCCCC"),
+                **kwargs
             )
         )
     else:
         # add segments
         if color_segments_by_cluster:
-            p = p + geom_segment(aes(y="x", yend="xend", x="y", xend="yend", color="cluster"), data=segments_df, size=line_size)
-        else:
-            p = p + geom_segment(aes(y="x", yend="xend", x="y", xend="yend"), data=segments_df, color="black",size=line_size)
-
-        # add labels
-        if color_labels_by_cluster and ncl > 1:
-            p = ( 
+            p = (
                 p 
-                + geom_text(mapping=aes(y="x", x="y", label="label", color="cluster"),data=label_df,angle=0,
-                            ha="right",va="center",size=text_size,show_legend=False)
+                + geom_segment(
+                    data = segments_df, 
+                    mapping = aes(y="x", yend="xend", x="y", xend="yend", color="cluster"), 
+                    size = line_size
+                )
             )
         else:
             p = (
                 p 
-                + geom_text(mapping=aes(y="x", x="y", label="label"),data=label_df,angle=0,
-                            ha="right",va="center",size=text_size,show_legend=False)
+                + geom_segment(
+                    data = segments_df,
+                    mapping = aes(y="x", yend="xend", x="y", xend="yend"),
+                    color = "black",
+                    size = line_size
+                )
             )
+
+        # add labels
+        # show texts
+        mapping_aes = dict(y="x",x="y",label="label")
+        if color_labels_by_cluster and ncl > 1:
+            mapping_aes["color"] = "cluster"
+        # set texts arguments
+        text_args = dict(
+            data = label_df,
+            mapping = aes(**mapping_aes),
+            angle = 0,
+            ha = "right",
+            va = "center",
+            size = text_size,
+            nudge_y = 0,
+            show_legend = False
+        )
+        p = p + geom_text(**text_args)
 
         # color and remove 
         if color_segments_by_cluster or color_labels_by_cluster:
-            if add_rect:
+            if rect:
                 if rect_fill:
                     p = (
                         p 
-                        + geom_rect(mapping=aes(ymin="xmin",ymax="xmax",xmin="ymin",xmax="ymax",fill="cluster"),data=rects_df, alpha = rect_alpha)
+                        + geom_rect(
+                            data = rects_df, 
+                            mapping = aes(ymin="xmin",ymax="xmax",xmin="ymin",xmax="ymax",fill="cluster"),
+                            alpha = rect_alpha
+                        )
                         + scale_fill_manual(values=colors_mapping) 
                         + guides(fill=False)
                     )
                 else:
                     p = (
                         p 
-                        + geom_rect(mapping=aes(ymin="xmin",ymax="xmax",xmin="ymin",xmax="ymax"),data=rects_df, alpha = rect_alpha,
-                                    color = rect_border, fill = "white",linetype = rect_type,size = rect_size)
+                        + geom_rect(
+                            data = rects_df, 
+                            mapping = aes(ymin="xmin",ymax="xmax",xmin="ymin",xmax="ymax"),
+                            alpha = rect_alpha, 
+                            color = col_border, 
+                            fill = "white",
+                            linetype = rect_type,
+                            size = rect_size
+                        )
                     )
             # set color manual and remove legend
             p = (
@@ -441,7 +506,7 @@ def fviz_dend2(Z,
         p = (
             p 
             + scale_y_continuous(breaks=[], expand=(0.04, 0))
-            + scale_x_continuous(breaks=list(arange(0, y_max+1, 2)), expand=(0.10, 0))
+            + scale_x_continuous(labels=lambda breaks: [str(x) if x >= 0 else "" for x in breaks])
             + coord_cartesian(ylim=(x_min - x_pad, x_max + x_pad), xlim=(y_min, y_max))
         )
 
@@ -459,9 +524,9 @@ def fviz_dend2(Z,
         # add theme
         p = (
             p 
-            + ggtheme
+            + pntheme
             + theme(
-                text = element_text(size=text_size, family=family),
+                text = element_text(family=family),
                 axis_title_y = element_blank(),
                 axis_text_y = element_blank(),
                 axis_ticks_major_x = element_blank(),
@@ -470,7 +535,8 @@ def fviz_dend2(Z,
                 panel_grid_major_x = element_blank(),
                 panel_grid_minor_x = element_blank(),
                 panel_grid_minor_y = element_blank(),
-                panel_grid_major_y = element_line(alpha=0.2, size=0.5, color="#CCCCCC")
+                panel_grid_major_y = element_line(alpha=0.2, size=0.5, color="#CCCCCC"),
+                **kwargs
             )
         )
     return p
