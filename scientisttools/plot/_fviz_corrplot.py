@@ -17,6 +17,7 @@ def fviz_corrplot(X,
                   x_label = None,
                   y_label = None,
                   title = None,
+                  subtitle = None,
                   col_outline = "gray",
                   gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                   legend_title = "Corr",
@@ -24,7 +25,7 @@ def fviz_corrplot(X,
                   pntheme = theme_minimal(),
                   **kwargs):
     """
-    A Visualization of a correlation matrix
+    Visualization of a correlation matrix
 
     A graphical display of a correlation matrix.
     
@@ -41,6 +42,9 @@ def fviz_corrplot(X,
 
     title : str, default = None
         The title of the graph you draw. If None, then a title is chosen.
+
+    subtitle : str, default = None
+        The subtitle of the graph you draw.
 
     col_outline : str, default = "gray"
         The point outline color.
@@ -127,7 +131,10 @@ def fviz_corrplot(X,
     # set title
     if title is None:
         title = "Correlation"
-    p = p + labs(title=title,x=x_label,y=y_label)
+    # set subtitle
+    if subtitle is None:
+        subtitle = ""
+    p = p + labs(x=x_label,y=y_label,title=title,subtitle=subtitle)
 
     # add plotnine theme
     p = p + pntheme

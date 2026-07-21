@@ -16,10 +16,12 @@ def fviz_corcircle(obj,
                    repel = False,
                    col_var = "black",
                    segment_args = dict(size=0.5,alpha=1),
+                   point_args = dict(size=1.5),
                    text_args = dict(size=8),
                    quanti_sup = True,
                    col_quanti_sup = "blue",
                    segment_args_quanti_sup = dict(linetype="dashed",size=0.5,alpha=1),
+                   point_args_quanti_sup = dict(size=1.5),
                    text_args_quanti_sup = dict(size=8),
                    scale = 1,
                    circle = True,
@@ -30,8 +32,6 @@ def fviz_corcircle(obj,
                    y_label = None,
                    title = None,
                    subtitle = None,
-                   hline = True,
-                   vline = True,
                    pntheme = theme_minimal(),
                    **kwargs):
     """
@@ -61,10 +61,13 @@ def fviz_corcircle(obj,
         Color for variables segments and/or texts.
 
     segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+
+    point_args : dict, default = dict(size = 1.5)
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
 
     text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
 
     quanti_sup : bool, default = True
         If True, then show supplementary continuous variables segments and/or texts.
@@ -73,13 +76,22 @@ def fviz_corcircle(obj,
         Color for supplementary continuous variables segments and/or texts.
 
     segment_args_quanti_sup : dict, default = dict(linetype="dashed",size=0.5,alpha=1)
-        A dictionary containing parameters for supplementary continuous variables segments except color.
+        A dictionary containing parameters (except color) for supplementary continuous variables segments.
+
+    point_args_quanti_sup : dict, default = dict(size = 1.5)
+        A dictionary containing parameters (except color) for supplementary continuous variables points.
 
     text_args_quanti_sup : dict, default = dict(size = 8)
-        A dictionary containing parameters for supplementary continuous variables texts.
+        A dictionary containing parameters (except color) for supplementary continuous variables texts.
 
     scale : int, default = 1
         The scale of factor coordinates.
+
+    circle : bool, default = True
+        If True, draw a circle.
+
+    col_circle : str, default = "gray"
+        Color for the circle.
 
     x_lim : list, tuple, default = (-1.1,1.1)
         The range of the plotted x values.
@@ -98,13 +110,7 @@ def fviz_corcircle(obj,
 
     subtitle : str, default = None
         The subtitle of the graph you draw.
-
-    hline : bool, default = True
-        If True, then add a horizontal line.
-
-    vline : bool, default = True
-        If True, then add a vertical line.
-
+    
     pntheme : function, default = theme_minimal() 
         Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
 
@@ -160,6 +166,7 @@ def fviz_corcircle(obj,
         repel = repel,
         color = col_var,
         segment_args = segment_args,
+        point_args = point_args,
         text_args = text_args
     )
 
@@ -169,15 +176,15 @@ def fviz_corcircle(obj,
     if (quanti_sup and 
         (obj.__class__.__name__ in ("PCA","FA","FAMD","PCAmix","MPCA","MFA","DMFA")) and 
         hasattr(obj,"quanti_var_sup_")):
-        quanti_var_sup_coord = obj.quanti_var_sup_.coord
         p = add_arrow(
             p = p,
-            data = quanti_var_sup_coord.mul(scale),
+            data = obj.quanti_var_sup_.coord.mul(scale),
             axis = axis,
             geom = geom,
             repel = repel,
             color = col_quanti_sup,
             segment_args = segment_args_quanti_sup,
+            point_args = point_args_quanti_sup,
             text_args = text_args_quanti_sup
         )
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -205,8 +212,6 @@ def fviz_corcircle(obj,
         y_label = y_label,
         title = title,
         subtitle = subtitle,
-        hline = hline,
-        vline = vline,
         pntheme = pntheme,
         **kwargs
     )

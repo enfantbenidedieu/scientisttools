@@ -10,21 +10,26 @@ from plotnine import (
     theme_minimal, 
     scale_y_continuous,
     labs,
-    ylim
+    ylim,
+    theme
 )
 
 def fviz_screeplot(obj,
                    choice = "proportion",
                    geom = ("bar","line"),
-                   bar_args = dict(color="steelblue",fill = "steelblue",width=None),
-                   line_args = dict(color="black",linetype="solid"),
+                   col_bar = "steelblue",
+                   bar_args = dict(fill="steelblue",width=None),
+                   col_line = "black",
+                   line_args = dict(),
                    show_labels = False,
                    ncp = 10,
                    y_lim = None,
                    x_label = None,
                    y_label = None,
                    title = None,
-                   pntheme = theme_minimal()):
+                   subtitle = None,
+                   pntheme = theme_minimal(),
+                   **kwargs):
     """
     Visualize the eigenvalues/variances of dimensions
     
@@ -45,11 +50,17 @@ def fviz_screeplot(obj,
         * "line" to show only line.
         * ("bar", "line") to use both types.
 
-    bar_args : dict, default = dict(color="steelblue",fill = "steelblue",width=None)
-        A dictionary containing others keyword arguments for barplot (see https://plotnine.org/reference/geom_bar.html).
+    col_bar : str, default = "steelblue"
+        Outline color for the bar plot.
 
-    line_args : dict, default = dict(color="black",linetype="solid")
-        A dictionary containing others keyword arguments for line plot (see https://plotnine.org/reference/geom_line.html).
+    bar_args : dict, default = dict(fill="steelblue",width=None)
+        A dictionary containing parameters (except color) for bar plot (see `plotnine.geom_bar <https://plotnine.org/reference/geom_bar.html>`).
+
+    col_line, str, default = "black"
+        Color for the line plot.
+
+    line_args : dict, default = dict()
+        A dictionary containing parameters (except color) for line plot (see `plotnine.geom_line <https://plotnine.org/reference/geom_line.html>`).
 
     show_labels : bool, default = False
         If True, labels are added at the top of bars or points showing the information retained by each dimension.
@@ -69,13 +80,26 @@ def fviz_screeplot(obj,
     title : str, default = None
         The title of the graph you draw. If None, then a title is chosen.
     
+    subtitle : str, default = None
+        The subtitle of the graph you draw.
+    
     pntheme : function, default = theme_minimal() 
         Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+
+    **kwargs : Any
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
     
     Returns
     -------
     A plotnine object.
 
+    See also
+    --------
+    :class:`~scientisttools.get_eig`
+        Extract the eigenvalues/variances of the principal dimensions
+    :class:`~scientisttools.get_eigenvalue`
+        An alias of :class:`~scientisttools.get_eig`
+    
     Examples
     --------
     >>> from scientisttools.datasets import decathlon
@@ -122,20 +146,20 @@ def fviz_screeplot(obj,
     df_eig = DataFrame({"dim" : Categorical(range(1,len(eig)+1)),"eig" : eig.values})
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #
+    # scree plot
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # initialization
     p = ggplot(df_eig,aes(x = "dim",y="eig",group = 1))
 
     # show barplot
     if "bar" in geom :
-        p = p +  geom_bar(stat="identity",**bar_args)
+        p = p +  geom_bar(stat="identity",color=col_bar,**bar_args)
     # show line
     if "line" in geom :
         p = (
             p 
-            + geom_line(**line_args) 
-            + geom_point(shape="o",color=line_args["color"])
+            + geom_line(color=col_line,**line_args) 
+            + geom_point(color=col_line)
         )
     
     # show labels
@@ -146,20 +170,30 @@ def fviz_screeplot(obj,
     if choice in ("proportion","cumulative"):
         p = p + scale_y_continuous(labels=lambda l: ["%d%%" % (v * 100) for v in l])
 
-    # set title
-    if title is None:
-        title = "Scree plot"
     # set x_label
     if x_label is None:
         x_label = "Dimensions"
     # set y_label
     if y_label is None:
         y_label = "% of explained variances"
-    p = p + labs(title = title, x = x_label, y = y_label)
+    # set title
+    if title is None:
+        title = "Scree plot"
+    # set subtitle
+    if subtitle is None:
+        subtitle = ""
+    p = p + labs(x=x_label, y=y_label, title=title, subtitle=subtitle)
     # set y_lim
     if y_lim is not None:
         p = p + ylim(y_lim)
-    return p + pntheme
+
+    # add theme
+    p = p + pntheme
+
+    # theme customization
+    if kwargs is not None:
+        p = p + theme(**kwargs)
+    return p
 
 def fviz_eig(obj,**kwargs):
     """

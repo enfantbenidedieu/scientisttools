@@ -7,7 +7,7 @@ from plotnine import (
     geom_abline,
     geom_point,
     geom_segment,
-    geom_smooth,
+    geom_polygon,
     geom_text,
     ggplot,
     guides,
@@ -26,6 +26,7 @@ from ._fviz import (
     overlap_coord,
     set_axis
 )
+from ..methods.others import ellipse, convexhull
 
 def fviz_cancorr_ind(obj,
                      element = "X",
@@ -42,14 +43,13 @@ def fviz_cancorr_ind(obj,
                      y_label = None,
                      title = None,
                      subtitle = None,
-                     hline = True,
-                     vline = True,
                      pntheme = theme_minimal(),
                      **kwargs):
     """
     Visualize Canonical Correlation Analysis - Graph of individuals
 
-    Performs Canonical Correlation Analysis (CANCORR) to highlight correlations between two dataframes. 
+    Canonical correlation analysis (:class:`~scientisttools.CANCORR) seeks a linear combination of one set of variables and a linear combination of a second set of variables such that the correlation is maximized. 
+    It is similar to regression, which seeks a linear combination of a set of variables that maximizes the correlation with a single (response) variable.
     :class:`~scientisttools.fviz_cancorr_ind` provides plotnine-based elegant visualization of :class:`~scientisttools.CANCORR` outputs for individuals.
 
     Parameters
@@ -60,9 +60,9 @@ def fviz_cancorr_ind(obj,
     element : str, default = "X"
         The element to be used for points. Allowed values are :
 
-        * 'X' for first group.
-        * 'Y' for second group.
-        * 'XY' for both groups.
+        * "X" for first group.
+        * "Y" for second group.
+        * "XY" for both groups.
 
     axis : list, default = [0,1]
         The dimensions to be plotted.
@@ -106,12 +106,6 @@ def fviz_cancorr_ind(obj,
 
     subtitle : str, default = None
         The subtitle of the graph you draw.
-
-    hline : bool, default = True
-        If True, then add a horizontal line.
-
-    vline : bool, default = True
-        If True, then add a vertical line.
 
     pntheme : function, default = theme_minimal() 
         Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
@@ -163,8 +157,8 @@ def fviz_cancorr_ind(obj,
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # set text arguments
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    if repel and "text" in geom:
-        text_args["adjust_text"] = dict(arrowprops=dict(arrowstyle='-',lw=1.0))
+    if repel and ("text" in geom):
+        text_args["adjust_text"] = dict(arrowprops=dict(lw=1.0))
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # data preparation
@@ -179,7 +173,7 @@ def fviz_cancorr_ind(obj,
         for i, k in enumerate(obj.call_.name_group):
             data = obj.ind_[i].copy()
             data.columns = [f"Can{x+1}" for x in range(data.shape[1])]
-            data.insert(0,"habillage",k)
+            data.loc[:,"habillage"] = k
             data = data.reset_index().rename(columns={"index" : "rownames"})
             coord = concat((coord,data),axis=0,ignore_index=True)
         coord["habillage"] = coord["habillage"].astype("category")
@@ -245,8 +239,6 @@ def fviz_cancorr_ind(obj,
         y_label = y_label,
         title = title,
         subtitle = subtitle,
-        hline = hline,
-        vline = vline,
         pntheme = pntheme,
         **kwargs
     )
@@ -268,14 +260,13 @@ def fviz_cancorr_var(obj,
                      y_label = None,
                      title = None,
                      subtitle = None,
-                     hline = True,
-                     vline = True,
                      pntheme = theme_minimal(),
                      **kwargs):
     """
     Visualize Canonical Correlation Analysis - Graph of variables
     
-    Performs Canonical Correlation Analysis (CANCORR) to highlight correlations between two dataframes. 
+    Canonical correlation analysis (:class:`~scientisttools.CANCORR) seeks a linear combination of one set of variables and a linear combination of a second set of variables such that the correlation is maximized. 
+    It is similar to regression, which seeks a linear combination of a set of variables that maximizes the correlation with a single (response) variable.
     :class:`~scientisttools.fviz_cancorr_var` provides plotnine-based elegant visualization of :class:`~scientisttools.CANCORR` outputs for variables.
 
     Parameters
@@ -286,8 +277,8 @@ def fviz_cancorr_var(obj,
     element : str, default = "X"
         The element to be used for points. Allowed values are :
 
-        * 'X' for first group.
-        * 'Y' for second group.
+        * "X" for first group.
+        * "Y" for second group.
 
     axis : list, default = [0,1]
         The dimensions to be plotted.
@@ -331,12 +322,6 @@ def fviz_cancorr_var(obj,
 
     subtitle : str, default = None
         The subtitle of the graph you draw.
-
-    hline : bool, default = True
-        If True, then add a horizontal line.
-
-    vline : bool, default = True
-        If True, then add a vertical line.
 
     pntheme : function, default = theme_minimal() 
         Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
@@ -393,7 +378,8 @@ def fviz_cancorr_var(obj,
     # set columns
     xcoord.columns, ycoord.columns = [f"Dim{x+1}" for x in range(xcoord.shape[1])], [f"Dim{x+1}" for x in range(ycoord.shape[1])]
     # add 
-    xcoord.insert(0,"habillage",obj.call_.name_group[0]), ycoord.insert(0,"habillage",obj.call_.name_group[1])
+    xcoord.loc[:,"habillage"] = obj.call_.name_group[0]
+    ycoord.loc[:,"habillage"] = obj.call_.name_group[1]
     # concatenate
     coord = concat((xcoord,ycoord),axis=0,ignore_index=False).reset_index().rename(columns={"index" : "rownames"})
 
@@ -430,7 +416,7 @@ def fviz_cancorr_var(obj,
             p 
             + geom_segment(
                 mapping = aes(x=0,y=0,xend=f"Dim{axis[0]+1}",yend=f"Dim{axis[1]+1}",color="habillage"),
-                arrow = arrow(angle=30,length=0.2/2.54,type="open"),
+                arrow = arrow(angle=30,length=0.2/2.54),
                 **segment_args
             ) 
         )
@@ -479,8 +465,6 @@ def fviz_cancorr_var(obj,
         y_label = y_label,
         title = title,
         subtitle = subtitle,
-        hline = hline,
-        vline = vline,
         pntheme = pntheme,
         **kwargs
     )
@@ -499,21 +483,24 @@ def fviz_cancorr_scatter(obj,
                          abline = True,
                          col_abline = "red",
                          abline_args = dict(linetype="dashed",size=1.5),
-                         ellipse = True,
+                         add_ellipses = True,
+                         ellipse_type = "confidence",
                          col_ellipse = "blue",
-                         ellipse_args = dict(type="t",level=0.95,alpha=0.1),
+                         level = 0.95,
                          x_lim = None,
                          y_lim = None,
                          x_label = None,
                          y_label = None,
                          title = None,
                          subtitle = None,
-                         hline = True,
-                         vline = True,
-                         pntheme=theme_minimal(),
+                         pntheme = theme_minimal(),
                          **kwargs):
     """
     Visualize Canonical Correlation Analysis - Scatter plot
+
+    Canonical correlation analysis (:class:`~scientisttools.CANCORR) seeks a linear combination of one set of variables and a linear combination of a second set of variables such that the correlation is maximized. 
+    It is similar to regression, which seeks a linear combination of a set of variables that maximizes the correlation with a single (response) variable.
+    :class:`~scientisttools.fviz_cancorr_scatter` provides plotnine-based elegant visualization of :class:`~scientisttools.CANCORR` outputs to help visualize X, Y data in canonical space.
 
     Parameters
     ----------
@@ -533,7 +520,7 @@ def fviz_cancorr_scatter(obj,
     repel : bool, default = False
         Whether to avoid overplotting text labels or not.
 
-    color : str, default = "black"
+    col_ind : str, default = "black"
         Color for individuals.
 
     point_args : dict, default = dict(size = 1.5)
@@ -547,7 +534,7 @@ def fviz_cancorr_scatter(obj,
 
     col_smooth : str, default = "green"
         The color for loess smoothed curve.
-
+ 
     smooth_args : dict, default = dict(method="loess",se=False)
         A dictionary containing parameters (except color) for smoothed curve (see `plotnine.stat_smooth <https://plotnine.org/reference/stat_smooth.html>`).
 
@@ -560,14 +547,23 @@ def fviz_cancorr_scatter(obj,
     abline_args : dict, default = dict(linetype="dashed",size=1.5)
         A dictionary containing parameters (except color) for linear regression (see `plotnine.geom_abline <https://plotnine.org/reference/geom_abline.html>`).
 
-    ellipse : bool, default = True
-        If True, draw a data ellipse for the canonical scores.
+    add_ellipses : bool, default = False
+        If True, draws ellipses around the canonical scores.
+
+    ellipse_type : str, default = "confidence"
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+
+        * "convex": plot convex hull of a set of points as :class:`~scientisttools.convexhull`.
+        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.ellipse`.
+        * "t": assumes a multivariate t-distribution.
+        * "norm": assumes a multivariate normal distribution.
+        * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
 
     col_ellipse : str, default = "blue"
         Color for ellipse.
 
-    ellipse_args : dict, default = dict(type="t",level=0.95,alpha=0.1)
-        A dictionary containing parameters (except color) for ellipse (see `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`).
+    level : float, default = 0.95
+        The size of the concentration ellipse in normal probability.
 
     x_lim : list, tuple, default = None
         The range of the plotted x values.
@@ -586,12 +582,6 @@ def fviz_cancorr_scatter(obj,
 
     subtitle : str, default = None
         The subtitle of the graph you draw.
-
-    hline : bool, default = True
-        If True, then add a horizontal line.
-
-    vline : bool, default = True
-        If True, then add a vertical line.
 
     pntheme : function, default = theme_minimal() 
         Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
@@ -668,16 +658,37 @@ def fviz_cancorr_scatter(obj,
     if smooth:
         p = p + stat_smooth(color=col_smooth,**smooth_args)
     # show ellipse circle
-    if ellipse:
-        p = (
-            p 
-            + stat_ellipse(
-                geom  = "polygon",
-                color = col_ellipse,
-                fill = col_ellipse,
-                **ellipse_args
+    if add_ellipses:
+        if ellipse_type in ("confidence","convex"):
+            if ellipse_type == "confidence":
+                data = ellipse(X=scores,level=level)
+            else:
+                data = convexhull(X=scores)
+
+            # add to plot
+            p = (
+                p 
+                + geom_polygon(
+                    data = data,
+                    mapping = aes(
+                        x = "X",
+                        y = "X",
+                    ), 
+                    color = col_ellipse,
+                    fill = col_ellipse,
+                    inherit_aes = False
+                )
             )
-        )
+        else:
+            p = (
+                p 
+                + stat_ellipse(
+                    geom  = "polygon",
+                    type = ellipse_type,
+                    color = col_ellipse,
+                    fill = col_ellipse
+                )
+            )
     
     # set x label
     if x_label is None:
@@ -705,8 +716,6 @@ def fviz_cancorr_scatter(obj,
         y_label = y_label,
         title = title,
         subtitle = subtitle,
-        hline = hline,
-        vline = vline,
         pntheme = pntheme,
         **kwargs
     )

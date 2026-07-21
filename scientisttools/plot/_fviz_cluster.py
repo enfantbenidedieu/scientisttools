@@ -27,8 +27,7 @@ from ._fviz import (
     overlap_coord, 
     set_axis
 )
-from ..methods.others._confidence_ellipse import confidence_ellipse
-from ..methods.others._convex_ellipse import convex_ellipse
+from ..methods.others  import data_ellipse
 
 def fviz_cluster(obj,
                  axis = [0,1],
@@ -42,13 +41,13 @@ def fviz_cluster(obj,
                  center_arrow_size = 1,
                  legend_title = None,
                  palette = "Dark2",
-                 ellipse = False,
+                 add_ellipses = False,
                  ellipse_type = "confidence",
                  level = 0.95,
                  alpha = 0.2,
                  add_sup = True,
                  color_sup = "black",
-                 point_args_sup = dict(shape=">",size=1.5),
+                 point_args_sup = dict(size=1.5),
                  segment_args_sup = dict(linetype="dashed",size=0.5),
                  text_args_sup = dict(size=8),
                  circle = True,
@@ -59,8 +58,6 @@ def fviz_cluster(obj,
                  y_label = None,
                  title = None,
                  subtitle = None,
-                 hline = True,
-                 vline = True,
                  pntheme = theme_minimal(),
                  **kwargs):
     """
@@ -110,14 +107,14 @@ def fviz_cluster(obj,
     palette : str, list, tuple, default = "Dark2"
         If string, the color palette to be used for coloring or filling by groups. If list or tuple, the colors for labels.
 
-    ellipse : bool, default = False
+    add_ellipses : bool, default = False
         If True, draws ellipses around the points.
 
     ellipse_type : str, default = "confidence"
         String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
-        * "convex": plot convex hull of a set of points as :class:`~scientisttools.convex_ellipse`.
-        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.confidence_ellipse`.
+        * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
+        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
         * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
@@ -166,12 +163,6 @@ def fviz_cluster(obj,
 
     subtitle : str, default = None
         The subtitle of the graph you draw.
-
-    hline : bool, default = True
-        A boolean to either add or not a horizontal line.
-
-    vline : bool, default = True
-        A boolean to either add or not a vertical line.
 
     pntheme : function, default = theme_minimal() 
         Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
@@ -262,7 +253,7 @@ def fviz_cluster(obj,
             p = (p + 
                  geom_segment(
                      mapping= aes(x=0,y=0,xend=f"Dim{axis[0]+1}",yend=f"Dim{axis[1]+1}"), 
-                     arrow = arrow(angle=30,length=0.2/2.54,type="open"),
+                     arrow = arrow(angle=30,length=0.2/2.54),
                      **segment_args
                  ) + guides(color=guide_legend(title=legend_title)))
         # show texts
@@ -306,16 +297,16 @@ def fviz_cluster(obj,
             p = p + geom_text(mapping=aes(color=legend_title),**text_args)
         
         # show ellipse
-        if ellipse:
+        if add_ellipses:
             if ellipse_type in ("confidence","convex"):
                 # data preparation
                 data = coord.loc[:,[f"Dim{axis[0]+1}",f"Dim{axis[1]+1}",legend_title]]
-                # confidence ellipse
-                if ellipse_type == "confidence":
-                    df_ells = confidence_ellipse(X=data,axis=axis,level=level)
-                # convex ellipse
-                else:
-                    df_ells = convex_ellipse(X=data,axis=axis)
+                df_ells = data_ellipse(
+                    X = data,
+                    ellipse_type = ellipse_type,
+                    axis = axis,
+                    level = level
+                )
                 # add to plot
                 p = (
                     p 
@@ -397,7 +388,7 @@ def fviz_cluster(obj,
     p = p + scale_color_manual(values=colors_mapping)
     
     # set fill manual
-    if ellipse and (obj.__class__.__name__ not in ("VARHCPC","VARKMeansPC")):
+    if add_ellipses and (obj.__class__.__name__ not in ("VARHCPC","VARKMeansPC")):
         p = p + scale_fill_manual(values=colors_mapping)
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -420,8 +411,6 @@ def fviz_cluster(obj,
         y_label = y_label,
         title = title,
         subtitle = subtitle,
-        hline = hline,
-        vline = vline,
         pntheme = pntheme,
         **kwargs
     )

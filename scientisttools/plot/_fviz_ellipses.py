@@ -16,7 +16,7 @@ from plotnine import (
 )
 
 # interns functions
-from ..methods.others import confidence_ellipse, convex_ellipse
+from ..methods.others import data_ellipse
 from ..methods.functions.get_sup_label import get_sup_label
 from ._fviz import (
     check_is_valid_axis,
@@ -32,7 +32,7 @@ def fviz_ellipses(obj,
                   text_args = dict(size=8),
                   habillage = None,
                   palette = "Dark2",
-                  ellipse = False, 
+                  add_ellipses = False, 
                   ellipse_type = "confidence",
                   level = 0.95,
                   alpha = 0.1,
@@ -42,8 +42,6 @@ def fviz_ellipses(obj,
                   y_label = None,
                   title = None,
                   subtitle = None,
-                  hline = True,
-                  vline = True,
                   pntheme = theme_bw(),
                   **kwargs):
     """
@@ -64,14 +62,14 @@ def fviz_ellipses(obj,
         * "text" to show only labels.
         * ("point","text") to show both points and labels.
 
-    repel : bool, default = True
-        Whether to avoid overplotting text labels or not.
+    repel : bool, default = False
+        Whether to avoid overplotting individuals text labels or not.
 
     point_args : dict, default = dict(size = 1.5)
-        A dictionary containing keywords arguments for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
 
     text_args : dict, default = dict(size = 8)
-        A dictionary containing keywords arguments for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
 
     habillage : list, tuple, default = None 
         The indexes or names of the categorical variables.
@@ -79,14 +77,14 @@ def fviz_ellipses(obj,
     palette : str, list, tuple, default = "Dark2"
         If string, the color palette to be used for coloring or filling by groups. If list or tuple, the colors for labels.
 
-    ellipse : bool, default = False
+    add_ellipses : bool, default = False
         If True, draws ellipses around the points.
 
     ellipse_type : str, default = "confidence"
         String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
-        * "convex": plot convex hull of a set of points as :class:`~scientisttools.convex_ellipse`.
-        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.confidence_ellipse`.
+        * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
+        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
         * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
@@ -112,12 +110,6 @@ def fviz_ellipses(obj,
     title : str, default = None 
         The title of the graph you draw. If None, then a title is chosen.
 
-    hline : bool, default = True
-        If True, draw a horizontal line (``yintercept=0``).
-
-    vline : bool, default = True
-        If True, draw a vertical line (``xintercept=0``).
-
     pntheme : function, default = theme_bw() 
         Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
 
@@ -134,7 +126,7 @@ def fviz_ellipses(obj,
     >>> from scientisttools import FAMD, fviz_ellipses
     >>> clf = FAMD()
     >>> clf.fit(wine.data)
-    >>> p = fviz_ellipses(clf,habillage=("Label", "Soil"),ellipse=True)
+    >>> p = fviz_ellipses(clf,habillage=("Label", "Soil"),add_ellipses=True)
     >>> print(p.show())
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -184,11 +176,8 @@ def fviz_ellipses(obj,
     for k in labels:
         df = coord.loc[:,[f"Dim{axis[0]+1}",f"Dim{axis[1]+1}",k]]
         # element for ellipse (convex or confidence)
-        if ellipse and ellipse_type in ("confidence","convex"):
-            if ellipse_type == "confidence":
-                df_ell = confidence_ellipse(X=df,axis=axis,level=level)
-            else:
-                df_ell = convex_ellipse(X=df,axis=axis)
+        if add_ellipses and ellipse_type in ("confidence","convex"):
+            df_ell = data_ellipse(X=df,ellipse_type=ellipse_type,axis=axis,level=level)
             df_ell["Variable"] = k
             df_ell = df_ell.rename(columns={k : "habillage"})
             df_ells = concat((df_ells,df_ell),axis=0,ignore_index=True)
@@ -217,7 +206,7 @@ def fviz_ellipses(obj,
     # set text arguments
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if repel and ("text" in geom):
-        text_args["adjust_text"] = dict(arrowprops=dict(arrowstyle='-',lw=1.0))
+        text_args["adjust_text"] = dict(arrowprops=dict(lw=1.0))
 
     # initialization
     p = ggplot(
@@ -291,8 +280,6 @@ def fviz_ellipses(obj,
         y_label = y_label,
         title = title,
         subtitle = subtitle,
-        hline = hline,
-        vline = vline,
         pntheme = pntheme,
         **kwargs
     )
