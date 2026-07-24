@@ -21,7 +21,6 @@ class GPA(BaseEstimator,TransformerMixin):
     ):
         self.group = group
         self.group_type = group_type
-        self.name_group = name_group
         self.tol = tol
         self.max_iter = max_iter
 

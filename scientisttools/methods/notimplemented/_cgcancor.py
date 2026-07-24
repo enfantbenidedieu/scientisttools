@@ -6,7 +6,6 @@ from collections import OrderedDict, namedtuple
 from functools import reduce
 from sklearn.base import BaseEstimator, TransformerMixin
 
-#intern functions
 from ..functions.preprocessing import preprocessing
 from ..functions.get_sup_label import get_sup_label
 from ..functions.statistics import wmean, wstd, wcorr, func_groupby
