@@ -3,8 +3,7 @@ from numpy import array, ones, c_, number, cov, sqrt
 from pandas import Series, DataFrame, concat, get_dummies
 from scipy.stats import t
 from statsmodels.api import WLS
-from collections import namedtuple, OrderedDict
-from typing import NamedTuple
+from collections import namedtuple
 
 def condes(X, 
            num_var, 
@@ -119,9 +118,9 @@ def condes(X,
         raise ValueError(f"the 'proba' value {proba} is not within the required range of 0 and 1.")
     
     # call informations
-    call_ = OrderedDict(X=X,num_var=num_label,w=w,proba=proba)
+    call_ = {"X": X, "num_var": num_label, "w": w, "proba": proba}
     #convert to namedtuple
-    res_ = OrderedDict(call=namedtuple("call",call_.keys())(*call_.values()))
+    res_ = {"call": namedtuple("call",call_.keys())(*call_.values())}
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # split x into continuous and categorical variables

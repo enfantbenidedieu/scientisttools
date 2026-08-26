@@ -4,9 +4,9 @@ from pandas import DataFrame
 from collections import namedtuple
 
 def varimax(loadings,
-            normalize=True,
-            max_iter=1000,
-            tol=1e-5):
+            normalize = True,
+            max_iter = 1000,
+            tol = 1e-5):
     """
     Varimax rotation
     
@@ -18,7 +18,7 @@ def varimax(loadings,
         The loading table.
 
     normalize : bool, default = True 
-        Should Kaiser normalization be performed? If so the rows of loadings are re-scaled to unit length before rotation, and scaled back afterwards.
+        Should Kaiser normalization be performed. If so the rows of loadings are re-scaled to unit length before rotation, and scaled back afterwards.
 
     max_iter : int, optional, defauult = 1000.
         The maximum number of iterations. Used for 'varimax' and 'oblique' rotations.
@@ -40,6 +40,15 @@ def varimax(loadings,
     References
     ----------
     [1] Kaiser HF (1958). `The Varimax Criterion for Analytic Rotation in Factor Analysis. <https://www.cambridge.org/core/journals/psychometrika/article/abs/varimax-criterion-for-analytic-rotation-in-factor-analysis/88F99AA31F472BF854B01B6B92F4212B>`_ Psychometrika, 23(3), 187-200.
+    
+    Examples
+    --------
+    >>> from scientisttools.datasets import decathlon
+    >>> from scientisttools import PCA, varimax
+    >>> clf = PCA(ncp=5)
+    >>> clf.fit(decathlon.actif)
+    PCA()
+    >>> rloadings = varimax(clf.quanti_var_.coord)
     """
     #make a copy of loadings
     X = loadings.copy()

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from numpy import ndarray, array, where, ones, nan,inf
 from pandas import DataFrame, Series, concat
-from itertools import chain, repeat
-from collections import OrderedDict
+from itertools import chain
 
 #interns methods
 from ..onetable._pca import PCA
@@ -61,7 +60,8 @@ def coeffCOI(X,
         The "junk" categories. It can be a list or a tuple of the names of the categories or a list or a tuple of the indexes in the active disjunctive table.
 
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
 
     Returns
     -------
@@ -107,9 +107,9 @@ def coeffCOI(X,
     #check if type_group in not None
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if type_group is None:
-        raise ValueError("'type_group' must be assigned")
+        raise ValueError("type_group must be assigned")
     elif not isinstance(type_group, (list,tuple,ndarray,Series)): 
-        raise ValueError("'type' must be a 1d array-like with the type of variables in each group")
+        raise ValueError("type_group must be a 1d array-like with the type of variables in each group")
     else:
         type_group = [str(x) for x in type_group]
 
@@ -128,7 +128,7 @@ def coeffCOI(X,
     if name_group is None:
         name_group = [f"Gr{x+1}" for x in range(len(group))]
     elif not isinstance(name_group,(list,tuple,ndarray,Series)):
-        raise TypeError("'name_group' must be a 1d array-like with name of group")
+        raise TypeError("name_group must be a 1d array-like with name of group")
     else:
         name_group = [x for x in name_group]
 
@@ -136,14 +136,14 @@ def coeffCOI(X,
     #check if option is valid
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if not (option in ("lambda1","inertia","uniform")):
-        raise ValueError("'option' must be one of 'lambda1', 'inertia', 'uniform'")
+        raise ValueError("option must be one of 'lambda1', 'inertia', 'uniform'")
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #assigned group name to label
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    group_dict, k = OrderedDict(), 0
+    group_dict, k = {}, 0
     for i, g in zip(range(len(group)),name_group):
-        group_dict[g] = list(X.columns[k:(k+group[i])])
+        group_dict[g] = X.columns[k:(k+group[i])]
         k += group[i]
 
     #number of rows/columns
@@ -156,9 +156,9 @@ def coeffCOI(X,
     if row_w is None:
         ind_w = Series(ones(n_rows)/n_rows,index=X.index,name="weight")
     elif not isinstance(row_w,(list,tuple,ndarray,Series)):
-        raise TypeError("'row_w' must be a 1d array-like of individuals weights.")
+        raise TypeError("row_w must be a 1d array-like of individuals weights.")
     elif len(row_w) != n_rows:
-        raise ValueError(f"'row_w' must be a 1d array-like of shape ({n_rows},).")
+        raise ValueError(f"row_w must be a 1d array-like of shape ({n_rows},).")
     else:
         ind_w = Series(array(row_w)/sum(row_w),index=X.index,name="weight")
 
@@ -166,9 +166,9 @@ def coeffCOI(X,
     if col_w is None:
         var_w = Series(ones(n_cols),index=X.columns,name="weight")
     elif not isinstance(col_w,(list,tuple,ndarray,Series)):
-        raise TypeError("'col_w' must be a 1d array-like of variables weights.")
+        raise TypeError("col_w must be a 1d array-like of variables weights.")
     elif len(col_w) != n_cols:
-        raise ValueError(f"'col_w' must be a 1d array-like of shape ({n_cols},).")
+        raise ValueError(f"col_w must be a 1d array-like of shape ({n_cols},).")
     else:
         var_w = Series(array(col_w),index=X.columns,name="weight")
 
@@ -180,14 +180,14 @@ def coeffCOI(X,
         name_group_freq = [g for i, g in enumerate(name_group) if i in num_group_freq]
         
         if len(name_group_freq) > 0:
-            group_freq_dict = OrderedDict({k : group_dict[k] for k in name_group_freq})
+            group_freq_dict = {k : group_dict[k] for k in name_group_freq}
             freq_cols = list(chain.from_iterable(group_freq_dict.values()))
             #select frequencies data
             N = X.loc[:,freq_cols]
             #sum of all elements 
             total = N.sum(axis=0).sum()
             #proportional table
-            P = N.div(total)
+            P = N/total
             #set global row margin and columns margin
             row_m, col_m = P.sum(axis=1), P.sum(axis=0)
             #construction of recoded table
@@ -197,7 +197,7 @@ def coeffCOI(X,
                 #normalize such as sum equal to 1
                 row_w_g = row_m_g/sum(row_m_g)
                 #recoded columns and fill NA, +/-inf if 1e-15
-                Xcod[cols] = P[cols].div(col_m[cols],axis=1).sub(row_w_g,axis=0).div(row_m,axis=0).replace([nan,inf,-inf], 1e-15)
+                Xcod[cols] = (((P[cols]/col_m[cols]).T - row_w_g)/row_m).T.replace([nan,inf,-inf], 1e-15)
             #update weights for rows and columns
             ind_w, var_w[freq_cols] = row_m, col_m
 
@@ -208,7 +208,7 @@ def coeffCOI(X,
     #separate general factor analysis
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #separate general factor analysis model for active group
-    model = OrderedDict()
+    model = {}
     for g, cols in group_dict.items():
         if type_group[name_group.index(g)] in ("c","f","s"):
             scale_unit = False if type_group[name_group.index(g)] in ("c","f") else True
@@ -225,14 +225,11 @@ def coeffCOI(X,
     #standardized data
     Zcod = concat((model[g].call_.Z for g in list(group_dict.keys())),axis=1)
     #active columns dictionary
-    columns_dict = {g : list(model[g].call_.Z.columns) for g in list(group_dict.keys())}
+    columns_dict = {g : model[g].call_.Z.columns for g in list(group_dict.keys())}
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #set columns weights for multiple factor analysis
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #columns weights in each groups 
-    mcol_w = concat((model[g].call_.col_w for g in list(group_dict.keys())),axis=0)
-
     #set groups weights
     if option == "lambda1":
         alpha = Series([1/model[g].eig_.iloc[0,0] for g in list(model.keys())],index=list(model.keys()))
@@ -240,9 +237,8 @@ def coeffCOI(X,
         alpha = Series([1/sum(model[g].eig_.iloc[:,0]) for g in list(model.keys())],index=list(model.keys()))
     else:
         alpha = Series(ones(len(list(model.keys()))),index=list(model.keys()))
-    
     #set columns weights for multiple factor analysis
-    col_w = Series(array([x*y for x,y in zip(mcol_w,array(list(chain(*[repeat(i,k) for i, k in zip(alpha[list(group_dict.keys())],nb_cols)]))))]),index=Zcod.columns,name="weight")
+    col_w = concat((model[g].call_.col_w*alpha[g] for g in list(group_dict.keys())),axis=0)
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #non-normed principal component analysis
@@ -253,7 +249,7 @@ def coeffCOI(X,
     Z = Zcod - z_center
 
     #coinertia coefficients
-    coinertia = DataFrame(index=name_group,columns=name_group).astype(float)
+    coinertia = DataFrame(index=name_group,columns=name_group).astype("float")
     for g1, cols1 in columns_dict.items():
         for g2, cols2 in columns_dict.items():
             coinertia.loc[g1,g2] = func_coinertia(X=Z[cols1],Y=Z[cols2],xcol_w=col_w[cols1],ycol_w=col_w[cols2],row_w=row_w)

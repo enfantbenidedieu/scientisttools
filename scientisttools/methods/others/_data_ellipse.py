@@ -16,7 +16,7 @@ def data_ellipse(X,
 
     Parameters
     ----------
-    X : DataFrame of shape (n_samples, n_components + 1)
+    X : DataFrame of shape (n_samples, ncp + 1)
         Input data containing containing the coordinates of the individuals for which the ellipses are constructed. 
         This data can contain more than 2 variables; the variables taken into account are chosen after. 
         The last column must be a categorical variable which allows to associate one row to an ellipse.  

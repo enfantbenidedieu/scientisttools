@@ -3,7 +3,7 @@ from numpy import number, array, ones, zeros, nan,sqrt
 from pandas import concat, Series, DataFrame, CategoricalDtype, get_dummies, crosstab
 from scipy.stats import chi2_contingency, norm, hypergeom
 from statsmodels.api import WLS
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from typing import NamedTuple
 
 #interns fn
@@ -12,7 +12,7 @@ from ..functions.statistics import wmean, wstd, func_groupby
 
 def catdes(X, 
            num_var, 
-           w=None,
+           w = None,
            proba=0.05) -> NamedTuple:
     """
     Categories description
@@ -105,7 +105,7 @@ def catdes(X,
     # split X into x and y
     y, x = X[num_label], X.drop(columns=[num_label])
     # unique element in y
-    uq_classe = sorted(list(y.unique()))
+    uq_classe = sorted(y.unique())
     # convert y to categorical data type
     y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
 
@@ -126,10 +126,10 @@ def catdes(X,
         raise ValueError(f"the 'proba' value {proba} is not within the required range of 0 and 1.")
     
     # call informations
-    call_ = OrderedDict(X=X,num_var=num_label,w=w,proba=proba)
+    call_ = {"X": X, "num_var": num_label, "w": w, "proba": proba}
     #convert to namedtuple
-    res_ = OrderedDict(call=namedtuple("call",call_.keys())(*call_.values()))
-    
+    res_ = {"call": namedtuple("call", call_.keys())(*call_.values())}
+
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #split x into continuous and categorical variables
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -169,8 +169,8 @@ def catdes(X,
         vtest_prob = vtest.apply(lambda x : 2*norm(0,1).sf(abs(x)),axis=0)
         
         # rearrange
-        quanti = OrderedDict()
-        for k  in list(p_k.index):
+        quanti = {}
+        for k  in p_k.index:
             df = concat((vtest.loc[k,:],y_center.loc[k,:],center,y_scale.loc[k,:],scale,vtest_prob.loc[k,:]),axis=1)
             df.columns = ["vtest","Mean in category","Overall mean","sd in category","Overall sd","pvalue"]
             df = df[df["pvalue"]<proba]
@@ -193,7 +193,7 @@ def catdes(X,
             tab.index = [f"{q}={x}" for x in tab.index]
             # chi2 test
             chi = chi2_contingency(tab,correction=False)
-            row_chi2 = DataFrame(OrderedDict(pvalue=chi.pvalue,dof=chi.dof),index=[q])
+            row_chi2 = DataFrame({"pvalue": chi.pvalue, "dof": chi.dof}, index=[q])
             chi2_test = concat_empty(chi2_test,row_chi2,axis=0)
 
             # value-test (vtest) and associated probability
@@ -226,7 +226,7 @@ def catdes(X,
         #listing mode/class - class/Mod
         mod_class = 100*func_groupby(X=dummies,by=y,func="mean",w=w).T
         class_mod = (100*func_groupby(X=dummies,by=y,func="sum")/n_s).T
-        category = OrderedDict()
+        category = {}
         for i in uq_classe:
             df = concat((class_mod.loc[:,i],mod_class.loc[:,i],p_s.mul(100),vtest_prob.loc[:,i],vtest.loc[:,i]),axis=1)
             df.columns = ["Class/Mod","Mod/Class","Global","pvalue","vtest"]
