@@ -14,7 +14,7 @@ from ..functions.cov2corr import cov2corr
 from ..functions.utils import check_is_bool, is_all_numeric_dtype, is_all_object_or_category_dtype
 from ..others._disjunctive import disjunctive
 from ..others._splitmix import splitmix
-from ..others._splitgroup import splitgroup, RVstats
+from ..others._spca import splitgroup, RVstats
 
 class cGCANCOR(BaseEstimator,TransformerMixin):
     """
