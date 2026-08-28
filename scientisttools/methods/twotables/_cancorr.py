@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from numpy import ndarray, ones, array,insert,diff,nan,sum,c_,cumsum
 from pandas import Series, DataFrame, concat
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 
 #interns functions
@@ -22,7 +22,7 @@ class CANCORR(BaseEstimator,TransformerMixin):
     Parameters
     ----------
     scale_unit : bool, default = True
-        If ``True``, then the data are scaled to unit variance.
+        If True, then the data are scaled to unit variance.
 
     ncp : int, default = 5
         The number of dimensions kept in the results.
@@ -31,10 +31,10 @@ class CANCORR(BaseEstimator,TransformerMixin):
         The number of variables in each group.
 
     name_group : list, tuple, default = None
-        The name of the groups. If ``None``, the group are named X and Y.
+        The name of the groups. If None, the group are named X and Y.
 
     prefix_group : list, tuple, default = None
-        The prefix of the groups. If ``None``, the group are prefixed Xcan, Ycan.
+        The prefix of the groups. If None, the group are prefixed Xcan, Ycan.
 
     row_w : 1d array-like of shape (n_rows,), default = None
         An optional rows weights. The weights are given only for the active rows.
@@ -45,9 +45,9 @@ class CANCORR(BaseEstimator,TransformerMixin):
         An object with the following attributes
 
         X : DataFrame of shape (n_xcolumns, ncp)
-            Raw canonical coefficients for ``X``.
+            Raw canonical coefficients for X.
         Y : DataFrame of shape (n_ycolumns, ncp)
-            Raw canonical coefficients for ``Y``.
+            Raw canonical coefficients for Y.
         
     cancorr_ : DataFrame of shape (ncp, 2)
         Canonical correlation.
@@ -66,9 +66,9 @@ class CANCORR(BaseEstimator,TransformerMixin):
         row_w : Series of shape (n_rows,)
             Rows weights.
         center : Series of shape (n_columns,)
-            The weighted average of ``X``.
+            The weighted average of X.
         scale : Series of shape (n_columns,)
-            The weighted standard deviation of ``X``.
+            The weighted standard deviation of X.
         ncp : int
             The number of components kepted.
         group : list
@@ -82,37 +82,37 @@ class CANCORR(BaseEstimator,TransformerMixin):
         An object with the following attributes:
 
         xcorr : DataFrame of shape (n_xcolumns, n_ycolumns)
-            Correlation coefficients among ``X``.
+            Correlation coefficients among X.
         ycorr :DataFrame of shape (n_ycolumns, n_ycolumns)
-            Coerrelation coefficients among ``Y``.
+            Coerrelation coefficients among Y.
         xycorr : DataFrame of shape (n_xcolumns, n_ycolumns)
-            Correlation coefficients between ``X`` and ``Y``.
+            Correlation coefficients between X and Y.
 
     cov_ : cov
         An object with the following attributes:
 
         xcov : DataFrame of shape (n_xcolumns, n_ycolumns)
-            Covariance among ``X``.
+            Covariance among X.
         ycov :DataFrame of shape (n_ycolumns, n_ycolumns)
-            Covariance among ``Y``.
+            Covariance among Y.
         xycov : DataFrame of shape (n_xcolumns, n_ycolumns)
-            Covariance between ``X`` and ``Y``.
+            Covariance between X and Y.
 
     ind_ : ind
         An object containing the results for the individuals with the following attributes:
 
         X : DataFrame of shape (n_rows, ncp)
-            Individuals scores for ``X``.
+            Individuals scores for X.
         Y : DataFrame of shape (n_rows, ncp)
-            Individuals scores for ``Y``.
+            Individuals scores for Y.
 
-    ind_ : ind
+    ind_sup_ : ind_sup, optional
         An object containing the resuts for the supplementary individuals with the following attributes:
 
         X : DataFrame of shape (n_rows_sup, ncp)
-            Supplementary individuals scores for ``X``.
+            Supplementary individuals scores for X.
         Y : DataFrame of shape (n_rows_sup, ncp)
-            Supplementary individuals scores for ``Y``.
+            Supplementary individuals scores for Y.
 
     manova_ : manova
         An object with the following attributes:
@@ -156,27 +156,27 @@ class CANCORR(BaseEstimator,TransformerMixin):
             An object with the following attributes
 
             xscores : DataFrame of shape (n_xcolumns, ncp)
-                Correlation between ``X`` and ``X`` scores. 
+                Correlation between X and X scores. 
             yscores : DataFrame of shape (n_xcolumns, ncp)
-                Correlation between ``X`` and ``Y`` scores. 
+                Correlation between X and Y scores. 
 
         Y : Y
             An object with the following attributes
 
             xscores : DataFrame of shape (n_ycolumns, ncp)
-                Correlation between ``Y`` and ``X`` scores. 
+                Correlation between Y and X scores. 
             yscores : DataFrame of shape (n_ycolumns, ncp)
-                Correlation between ``Y`` and ``Y`` scores. 
+                Correlation between Y and Y scores. 
 
     sscp_ : sscp
         An object with the following attributes:
 
         xsscp : DataFrame of shape (n_xcolumns, n_xcolumns)
-            Sum of squared cross product among ``X``.
+            Sum of squared cross product among X.
         ysscp : DataFrame of shape (n_ycolumns, n_ycolumns)
-            Sum of squared cross product among ``Y``.
+            Sum of squared cross product among Y.
         xysscp : DataFrame of shape (n_xcolumns, n_ycolumns)
-            Sum of squared cross product between ``X`` and ``Y``.
+            Sum of squared cross product between X and Y.
 
     References
     ----------
@@ -189,17 +189,30 @@ class CANCORR(BaseEstimator,TransformerMixin):
     [4] Mardia, K. V., Kent, J. T. and Bibby, J. M. (1979). Multivariate Analysis. London: Academic Press.
 
     [5] Seber, G. A. F. (1984). Multivariate Observations. New York: Wiley. Page 506f.
+    
+    See Also
+    --------
+    save : Print results for general factor analysis model in an Excel sheet
+    sprintf : Print the analysis results
+    summary : Printing summaries of general factor analysis model
 
     Examples
     --------
     >>> from scientisttools.datasets import fitnessclub
-    >>> from scientisttools import CANCOR
-    >>> clf = CANCOR(scale_unit=False,ncp=3,group=(3,3),name_group=("Physiological","Exercises"))
+    >>> from scientisttools import CANCORR
+    >>> clf = CANCORR(scale_unit=False,ncp=3,group=(3,3),name_group=("Physiological","Exercises"))
     >>> clf.fit(fitnessclub)
-    CANCOR(group=(3,3),name_group=("Physiological","Exercises"),ncp=3,scale_unit=False)
+    CANCORR(group=(3,3),name_group=("Physiological","Exercises"),ncp=3,scale_unit=False)
     """
     def __init__(
-            self, scale_unit=False, ncp=None, group=None, name_group=None, prefix_group=None, row_w=None, ind_sup = None
+            self, 
+            scale_unit = False, 
+            ncp = None, 
+            group = None, 
+            name_group = None, 
+            prefix_group = None, 
+            row_w = None, 
+            ind_sup = None
     ):
         self.scale_unit = scale_unit
         self.ncp = ncp
@@ -210,16 +223,16 @@ class CANCORR(BaseEstimator,TransformerMixin):
         self.ind_sup = ind_sup
 
     def fit(self,X,y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns),
-            Training data, where ``n_rows`` in the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns),
+            Training data, where ``n_samples`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
@@ -249,11 +262,11 @@ class CANCORR(BaseEstimator,TransformerMixin):
         if self.name_group is None: 
             name_group = ["X","Y"]
         elif not isinstance(self.name_group,(list,tuple,ndarray,Series)): 
-            raise TypeError("'name_group' must be a 1d array-like with the name of the groups")
+            raise TypeError("name_group must be a 1d array-like with the name of the groups")
         elif len(self.name_group) != 2: 
-            raise ValueError("'name_group' must be a 1d array-like of shape (2,).")
+            raise ValueError("name_group must be a 1d array-like of shape (2,).")
         else: 
-            name_group = [str(x) for x in self.name_group]
+            name_group = [f"{x}" for x in self.name_group]
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #assigned group prefix
@@ -261,11 +274,11 @@ class CANCORR(BaseEstimator,TransformerMixin):
         if self.prefix_group is None: 
             prefix_group = ["Xcan","Ycan"]
         elif not isinstance(self.prefix_group,(list,tuple,ndarray,Series)): 
-            raise TypeError("'prefix_group' must be a 1d array-like with prefix of group")
+            raise TypeError("prefix_group must be a 1d array-like with prefix of group")
         elif len(self.prefix_group) != 2: 
-            raise ValueError("'prefix_group' must be a 1d array-like of shape (2,).")
+            raise ValueError("prefix_group must be a 1d array-like of shape (2,).")
         else: 
-            prefix_group = [str(x) for x in self.prefix_group]
+            prefix_group = [f"{x}" for x in self.prefix_group]
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #preprocessing
@@ -308,37 +321,41 @@ class CANCORR(BaseEstimator,TransformerMixin):
         if self.row_w is None: 
             row_w = Series(ones(n_rows)/n_rows,index=X.index,name="weight")
         elif not isinstance(self.row_w,(list,tuple,ndarray,Series)): 
-            raise TypeError("'row_w' must be a 1d array-like with the individuals weights.")
+            raise TypeError("row_w must be a 1d array-like with the individuals weights.")
         elif len(self.row_w) != n_rows: 
-            raise ValueError(f"'row_w' must be a 1d array-like of shape ({n_rows},).")
+            raise ValueError(f"row_w must be a 1d array-like of shape ({n_rows},).")
         else: 
             row_w = Series(array(self.row_w)/sum(self.row_w),index=X.index,name="weight")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #standardization
+        # standardization
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #weighted average of X
-        center, scale = wmean(X=X,w=row_w), wstd(X=X,w=row_w) if self.scale_unit else Series(ones(X.shape[1]),index=X.columns,name="scale")
-        #standardization: z_ik = (x_ik - m_k)/s_k
+        # weighted average of X
+        center = wmean(X=X,w=row_w)
+        # weighted standard deviation of X
+        if self.scale_unit:
+            scale = wstd(X=X,w=row_w) 
+        else:
+            scale = Series(ones(X.shape[1]),index=X.columns,name="scale")
+        # standardization: z_ik = (x_ik - m_k)/s_k
         Z = (X - center)/scale
             
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set number of components
+        # set number of components
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #maximum number of components
-        maxncp = min(group)
-        #set number of componenets
+        # maximum number of components
+        rank = min(group)
+        # set number of componenets
         if self.ncp is None: 
-            ncp = maxncp
-        elif not isinstance(self.ncp, int): 
-            raise TypeError("'ncp' must be an integer")
+            ncp = rank
         elif self.ncp < 1: 
-            raise TypeError("'ncp' must be a positive integer")
+            raise TypeError("ncp must be strictly positive.")
         else:
-            ncp = int(min(self.ncp, maxncp))
+            ncp = int(min(self.ncp, rank))
 
         #set call_ informations
-        call_ = OrderedDict(Xtot=Xtot,X=X1,Y=X2,Z=Z,row_w=row_w,center=center,scale=scale,ncp=ncp,group=group,name_group=name_group,prefix_group=prefix_group,ind_sup=ind_sup_label)
+        call_  = {"Xtot":Xtot,"X":X1,"Y":X2,"Z":Z,"row_w":row_w,"center":center,"scale":scale,"ncp":ncp,"group":group,
+                  "name_group":name_group,"prefix_group":prefix_group,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -350,93 +367,114 @@ class CANCORR(BaseEstimator,TransformerMixin):
         #unbiaised covariance matrices
         xcov, ycov, xycov = wcov(X1,w=row_w,ddof=1), wcov(X2,w=row_w,ddof=1), wcov(X,w=row_w,ddof=1).iloc[:n_xcols,n_xcols:]
         #convert to namedtuple
-        cov_ = OrderedDict(xcov=xcov,ycov=ycov,xycov=xycov,xcovb=xcovb,ycovb=ycovb,xycovb=xycovb)
+        cov_ = {"xcov":xcov,"ycov":ycov,"xycov":xycov,"xcovb":xcovb,"ycovb":ycovb,"xycovb":xycovb}
         #convert to namedtuple
         self.cov_ = namedtuple("cov",cov_.keys())(*cov_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #sum of squared cross producs
+        # sum of squared cross producs
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #unbiaised covariance matrices
+        # unbiaised covariance matrices
         xsscp, ysscp, xysscp = xcovb * n_rows, ycovb * n_rows, xycovb * n_rows
-        #convert to namedtuple
-        sscp_ = OrderedDict(xsscp=xsscp,ysscp=ysscp,xysscp=xysscp)
-        #convert to namedtuple
+        # convert to namedtuple
+        sscp_ = {"xsscp":xsscp,"ysscp":ysscp,"xysscp":xysscp}
+        # convert to namedtuple
         self.sscp_ = namedtuple("sscp",sscp_.keys())(*sscp_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #pearson correlation matrix
+        # pearson correlation matrix
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #pearson correlation of X, Y and XY
+        # pearson correlation of X, Y and XY
         xcorr, ycorr, xycorr = wcorr(X1,w=row_w), wcorr(X2,w=row_w), wcorr(X,w=row_w).iloc[:n_xcols,n_xcols:]
-        #convert to ordered dictionary
-        corr_ = OrderedDict(xcorr=xcorr,ycorr=ycorr,xycorr=xycorr)
-        #add to model attributes
+        # convert to ordered dictionary
+        corr_ = {"xcorr":xcorr,"ycorr":ycorr,"xycorr":xycorr}
+        # add to model attributes
         self.corr_ = namedtuple("corr",corr_.keys())(*corr_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #generalized singular value decomposition
+        # generalized singular value decomposition
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         gensvd_ = gensvd(xycorr,xcorr,ycorr,nu=n_xcols,nv=n_ycols) if self.scale_unit else gensvd(xycov,xcov,ycov,nu=n_xcols,nv=n_ycols)
         #canonical correlation
-        rho = gensvd_.cor[:maxncp]
-        #raw canonical coefficients
-        xcancoef = DataFrame(gensvd_.xcoef[:,:ncp],index=X1.columns,columns=[f"{prefix_group[0]}{x+1}" for x in range(ncp)])
-        ycancoef = DataFrame(gensvd_.ycoef[:,:ncp],index=X2.columns,columns=[f"{prefix_group[1]}{x+1}" for x in range(ncp)])
-        #add to model attributes
-        self.cancoef_ = namedtuple("cancoef",name_group)(xcancoef,ycancoef)
-
+        rho = gensvd_.cor[:rank]
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #eigen values informations
+        # eigen values informations
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #eigenvalue informations
+        # eigenvalue informations
         eigvals = array([x/(1-x) for x in rho**2])
         eigdiff, eigprop = insert(-diff(eigvals),len(eigvals)-1,nan), 100*eigvals/sum(eigvals)
-        #convert to DataFrame
-        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],index=[f"Can{x+1}" for x in range(len(eigvals))])
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #canonical correlations and multivariate statistics 
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #canonical correlation
+        # convert to DataFrame
+        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],
+                                index=[f"Can{x+1}" for x in range(len(eigvals))])
+        
+        # canonical correlation
         self.cancorr_ = DataFrame(c_[rho,rho**2],columns=["Canonical Correlation","Squared Canonical Correlation"],index=self.eig_.index)
-
-        #multivariate statistics and F approximations
-        wilks, pillai  = lrtest(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols), pillai_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
-        hotelling, roy = hotelling_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols), roy_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
-        #convert to ordered dictionary
-        manova_ = OrderedDict(wilks=wilks,pillai=pillai,hotelling=hotelling,roy=roy)
-        #add to model attributes
-        self.manova_ = namedtuple("manova",manova_.keys())(*manova_.values())
-
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for individuals - canonical scores 
+        # raw canonical coefficients
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #scores for the individuals in X and Y
-        xscores, yscores = Z.iloc[:,:n_xcols].dot(xcancoef), Z.iloc[:,n_xcols:].dot(ycancoef)
-        #add to model attributes
-        self.ind_ = namedtuple("ind",name_group)(xscores,yscores)
-
+        # raw canonical coefficients
+        xcancoef = DataFrame(gensvd_.xcoef[:,:ncp],index=X1.columns,columns=[f"{prefix_group[0]}{x+1}" for x in range(ncp)])
+        ycancoef = DataFrame(gensvd_.ycoef[:,:ncp],index=X2.columns,columns=[f"{prefix_group[1]}{x+1}" for x in range(ncp)])
+        # add to model attributes
+        self.cancoef_ = namedtuple("cancoef",name_group)(xcancoef,ycancoef)
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for variables
+        # statistics for individuals - canonical scores 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #compute correlation
-        corr_X_xscores, corr_X_yscores = wcorr(concat((X1,xscores),axis=1), w=row_w).iloc[:n_xcols,n_xcols:], wcorr(concat((X1,yscores),axis=1), w=row_w).iloc[:n_xcols,n_xcols:]
-        corr_Y_xscores, corr_Y_yscores = wcorr(concat((X2,xscores),axis=1), w=row_w).iloc[:n_ycols,n_ycols:], wcorr(concat((X2,yscores),axis=1), w=row_w).iloc[:n_ycols,n_ycols:]
-        #convert to namedtupkle
-        X_scores, Y_scores = namedtuple(name_group[0],["xscores","yscores"])(corr_X_xscores,corr_X_yscores), namedtuple(name_group[1],["xscores","yscores"])(corr_Y_xscores,corr_Y_yscores)
-        #convert to namedtuple
+        # scores for the individuals in X and Y
+        ind_xscores = Z.iloc[:,:n_xcols].dot(xcancoef)
+        ind_yscores = Z.iloc[:,n_xcols:].dot(ycancoef)
+        # set index
+        ind_xscores.index = [f"{x}.{name_group[0]}" for x in ind_xscores.index]
+        ind_yscores.index = [f"{x}.{name_group[1]}" for x in ind_yscores.index]
+        # concatenate
+        ind_scores = concat((ind_xscores,ind_yscores),axis=0)
+        # convert to dictionary
+        ind_ = {"scores":ind_scores}
+        # add to model attributes
+        self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # statistics for variables
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # compute correlation
+        corr_X_xscores = wcorr(concat((X1,ind_xscores),axis=1), w=row_w).iloc[:n_xcols,n_xcols:]
+        corr_X_yscores = wcorr(concat((X1,ind_yscores),axis=1), w=row_w).iloc[:n_xcols,n_xcols:]
+        corr_Y_xscores = wcorr(concat((X2,ind_xscores),axis=1), w=row_w).iloc[:n_ycols,n_ycols:]
+        corr_Y_yscores  = wcorr(concat((X2,ind_yscores),axis=1), w=row_w).iloc[:n_ycols,n_ycols:]
+        # set index
+        
+        # convert to namedtuple
+        X_scores = namedtuple(name_group[0],["xscores","yscores"])(corr_X_xscores,corr_X_yscores)
+        Y_scores = namedtuple(name_group[1],["xscores","yscores"])(corr_Y_xscores,corr_Y_yscores)
+        # add to model attribute
         self.quanti_var_ = namedtuple("quanti_var",name_group)(X_scores,Y_scores)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for supplementary individuals
+        #multivariate statistics 
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #multivariate statistics and F approximations
+        wilks = lrtest(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
+        pillai  = pillai_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
+        hotelling = hotelling_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
+        roy =  roy_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
+        #convert to ordered dictionary
+        manova_ = {"wilks":wilks,"pillai":pillai,"hotelling":hotelling,"roy":roy}
+        #add to model attributes
+        self.manova_ = namedtuple("manova",manova_.keys())(*manova_.values())
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # statistics for supplementary individuals
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup:
-            #standardization
+            # standardization : z_ik = (x_ik - m_k)/s_k
             Z_ind_sup = (X_ind_sup - center)/scale
-            #scores in X and Y
-            xscores_sup, yscores_sup = Z_ind_sup.iloc[:,:n_xcols].dot(xcancoef), Z_ind_sup.iloc[:,n_xcols:].dot(ycancoef)
-            #add to model attributes
-            self.ind_sup_ = namedtuple("ind",name_group)(xscores_sup,yscores_sup)
+            # scores for supplementary individuals in X and Y
+            ind_sup_xscores = Z_ind_sup.iloc[:,:n_xcols].dot(xcancoef)
+            ind_sup_yscores = Z_ind_sup.iloc[:,n_xcols:].dot(ycancoef)
+            # add to model attributes
+            self.ind_sup_ = namedtuple("ind",name_group)(ind_sup_xscores,ind_sup_yscores)
 
         return self

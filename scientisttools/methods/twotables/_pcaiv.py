@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pandas import concat, Series
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -23,13 +23,13 @@ class PCAiv(BaseEstimator,TransformerMixin):
         The number of dimensions kept in the results.
 
     ortho : bool, default = False
-        If ``True``, then the principal component analysis with orthogonal instrumental variables (PCAoiv) is performed.
+        If True, then the principal component analysis with orthogonal instrumental variables (PCAoiv) is performed.
 
     Returns
     -------
     call_ : call
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     col_ : col
@@ -67,11 +67,13 @@ class PCAiv(BaseEstimator,TransformerMixin):
     svd_ : svd
         An object containing all the results for the generalized singular value decomposition (GSVD) with the following attributes:
         
-        vs : 1d numpy array of shape (maxcp,)
+        vs : 1d numpy array of shape (rank,)
             The singular values.
-        U : 2d numpy array of shape (n_rows, ncp)
+        d : 1d numpy array of shape (rank,)
+            The eigen values.
+        U : 2d numpy array of shape (n_rows, rank)
             The left singular vectors.
-        V : 2d numpy array of shape (n_columns, ncp)
+        V : 2d numpy array of shape (n_columns, rank)
             The right singular vectors.
         rank : int
             The maximum number of components.
@@ -94,15 +96,12 @@ class PCAiv(BaseEstimator,TransformerMixin):
 
     [7] Ter Braak, C. J. F. (1987) The analysis of vegetation-environment relationships by canonical correspondence analysis. Vegetatio, 69, 69-77.
 
-    See also
+    See Also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
-
+    save : Print results for general factor analysis model in an Excel sheet
+    sprintf : Print the analysis results
+    summary : Printing summaries of general factor analysis model
+    
     Examples
     --------
     >>> from scientisttools.datasets import wine, poison, rpjdl
@@ -117,21 +116,23 @@ class PCAiv(BaseEstimator,TransformerMixin):
     >>> clf1.fit(rpjdl.iloc[:,:51])
     """
     def __init__(
-         self, ncp=5, ortho=False   
+         self, 
+         ncp=5, 
+         ortho=False   
     ):
         self.ncp = ncp
         self.ortho = ortho
 
     def fit(self,obj,y):
-        """
-        Fit the model to ``obj``
+        """Fit the model to obj
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`scientisttools.CA`, :class:`scientisttools.FAMD`, :class:`scientisttools.MCA`, :class:`scientisttools.MPCA`, :class:`scientisttools.PCA`, :class:`scientisttools.PCAmix`, :class:`scientisttools.MFA`.
+            An object of class :class:`~scientisttools.CA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.MCA`, :class:`~scientisttools.MPCA`, 
+            :class:`~scientisttools.PCA`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MFA`.
 
-        y : Series of shape (n_rows,) of DataFrame of shape (n_rows, n_ycolumns)
+        y : Series of shape (n_rows,) or DataFrame of shape (n_rows, n_iv)
             Instrumental variables.
         
         Returns
@@ -168,13 +169,14 @@ class PCAiv(BaseEstimator,TransformerMixin):
             Z = obj.call_.Z
         else:
             Z = obj.call_.Zcod
-        #recode categorical variable into disjunctive and drop first
+        # recode categorical variable into disjunctive and drop first
         ycod = model_matrix(X=y)
         center, scale = wmean(X=ycod,w=obj.call_.row_w), wstd(X=ycod,w=obj.call_.row_w)
-        #standardization
+        # standardization
         ys = (ycod - center)/scale
-        #separate weighted least squared model
-        model = wlsreg(X=ys,Y=Z,w=obj.call_.row_w)
+        # separate weighted least squared model
+        #model = wlsreg(X=ys,Y=Z,w=obj.call_.row_w)
+        model = wlsreg(X=ycod,Y=Z,w=obj.call_.row_w)
         #set variables
         if self.ortho:
             Z = concat((model[k].resid.to_frame(k)  for k in Z.columns),axis=1)
@@ -188,14 +190,17 @@ class PCAiv(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         fit_ = gFA(X=tab,ncp=self.ncp,row_w=obj.call_.row_w,col_w=obj.call_.col_w)
         #extract elements
-        self.svd_, self.eig_, ncp = fit_.svd, fit_.eig, fit_.ncp
+        self.svd_, self.eig_ = fit_.svd, fit_.eig
+        # reset number of components
+        ncp = self.svd_.ncp
 
         #coordinates for the columns (G = MVD)
         if obj.__class__.__name__ == "PCAmix":
             fit_.col["coord"] = (fit_.col["coord"].T * obj.call_.col_w).T
         
         #call informations
-        call_ = OrderedDict(X=Z,y=y,ycod=ycod,ys=ys,center=center,scale=scale,Z=Z,tab=tab,row_w=obj.call_.row_w,col_w=obj.call_.col_w,ncp=ncp,model=model)
+        call_ = {"X": Z, "y": y, "ycod": ycod, "ys": ys, "center": center, "scale": scale, "Z": Z, "tab": tab, 
+                 "row_w": obj.call_.row_w, "col_w": obj.call_.col_w, "ncp": ncp, "model": model}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -213,7 +218,7 @@ class PCAiv(BaseEstimator,TransformerMixin):
             #coordinates for the instrumental variables
             iv_coord = wcorr(X=concat((ycod,self.row_.coord),axis=1),w=obj.call_.row_w).iloc[:nycod,nycod:]
             #convert to ordered dictionary
-            iv_ = OrderedDict(coord=iv_coord,cos2=iv_coord**2)
+            iv_ = {"coord": iv_coord, "cos2": iv_coord**2}
             #convert to namedtuple
             self.iv_ = namedtuple("iv",iv_.keys())(*iv_.values())
         
@@ -221,14 +226,15 @@ class PCAiv(BaseEstimator,TransformerMixin):
     
     def fit_transform(self,obj,y):
         """
-        Fit the model with ``obj`` and apply the dimensionality reduction on ``obj``
+        Fit the model with obj and apply the dimensionality reduction on obj
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`scientisttools.CA`, :class:`scientisttools.FAMD`, :class:`scientisttools.MCA`, :class:`scientisttools.MPCA`, :class:`scientisttools.PCA`, :class:`scientisttools.PCAmix`, :class:`scientisttools.MFA`.
+            An object of class :class:`scientisttools.CA`, :class:`scientisttools.FAMD`, :class:`scientisttools.MCA`, :class:`scientisttools.MPCA`, 
+            :class:`scientisttools.PCA`, :class:`scientisttools.PCAmix`, :class:`scientisttools.MFA`.
 
-        y : Series of shape (n_rows,) of DataFrame of shape (n_rows, n_ycolumns)
+        y : Series of shape (n_rows,) or DataFrame of shape (n_rows, n_iv)
             Instrumental variables.
         
         Returns

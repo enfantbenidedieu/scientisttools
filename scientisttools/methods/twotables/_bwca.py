@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pandas import CategoricalDtype, Series
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -23,10 +23,10 @@ class BWCA(BaseEstimator,TransformerMixin):
         The number of dimensions kept in the results.
     
     option : str, default = "between"
-        Which class analysis should be performns.
+        Which class analysis should be performns. Possible values are:
 
-        - 'between' for between-class analysis.
-        - 'within' for within-class analysis.
+        * "between" for between-class analysis.
+        * "within" for within-class analysis.
         
     Returns
     -------
@@ -62,7 +62,7 @@ class BWCA(BaseEstimator,TransformerMixin):
         infos : DataFrame of shape (n_columns, 4)
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the columns.
     
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     group_ : group
@@ -99,11 +99,13 @@ class BWCA(BaseEstimator,TransformerMixin):
     svd_ : svd
         An object containing all the results for the generalized singular value decomposition (GSVD), with the following attributes:
         
-        vs : 1d numpy array of shape (maxcp,)
+        vs : 1d numpy array of shape (rank,)
             The singular values.
-        U : 2d numpy array of shape (n_groups, ncp) or (n_rows, ncp)
+        d : 1d numpy array of shape (rank,)
+            The eigen values (= squared of singular values).
+        U : 2d numpy array of shape (n_groups, rank) or (n_rows, rank)
             The left singular vectors.
-        V : 2d numpy array of shape (n_columns, ncp)
+        V : 2d numpy array of shape (n_columns, rank)
             The right singular vectors.
         rank : int
             The maximum number of components.
@@ -118,14 +120,11 @@ class BWCA(BaseEstimator,TransformerMixin):
 
     [3] Lebart L., Morineau A. et Warwick K., 1984, Multivariate Descriptive Statistical Analysis, John Wiley and sons, New-York.
 
-    See also
+    See Also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet
+    sprintf : Print the analysis results
+    summary : Printing summaries of general factor analysis model
 
     Example
     -------
@@ -141,19 +140,21 @@ class BWCA(BaseEstimator,TransformerMixin):
     >>> save(clf)
     """
     def __init__(
-            self, ncp = 5, option = "between"
+            self, 
+            ncp = 5, 
+            option = "between"
     ):
         self.ncp = ncp
         self.option = option
 
     def fit(self,obj,y):
-        """
-        Fit the model to ``obj``
+        """Fit the model to obj
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`scientisttools.CA`, :class:`scientisttools.FAMD`, :class:`scientisttools.MCA`, :class:`scientisttools.MPCA`, :class:`scientisttools.PCA`, :class:`scientisttools.PCAmix`, :class:`scientisttools.MFA`.
+            An object of class :class:`~scientisttools.CA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.MCA`, :class:`~scientisttools.MPCA`, 
+            :class:`~scientisttools.PCA`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MFA`.
 
         y : Series of shape (n_rows,)
             Classes values.
@@ -164,85 +165,97 @@ class BWCA(BaseEstimator,TransformerMixin):
             Returns the instance itself.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if the estimator is fitted by verifying the presence of fitted attributes
+        # check if the estimator is fitted by verifying the presence of fitted attributes
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         check_is_fitted(obj)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if obj is object of class CA, FAMD, MCA, MPCA, PCA, PCAmix, MFA
+        # check if obj is object of class CA, FAMD, MCA, MPCA, PCA, PCAmix, MFA
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not (obj.__class__.__name__ in ("CA","FAMD","MCA","MPCA","PCA","PCAmix","MFA")):
-            raise TypeError("'obj' must be an object of class CA, FAMD, MCA, MPCA, PCA, PCAmix, MFA")
+            raise TypeError("obj must be an object of class CA, FAMD, MCA, MPCA, PCA, PCAmix, MFA")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if y is an object of class d.Series
+        # check if y is an object of class d.Series
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         check_is_series(y)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if option
+        # check if option
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not self.option in ("between","within"):
-            raise ValueError("'option' should be one of 'between', 'within'")
+            raise ValueError("option should be one of 'between', 'within'")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set classes
+        # set classes
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #unique element in y
-        uq_classe = sorted(list(y.unique()))
-        #convert y to categorical data type
+        # unique element in y
+        uq_classe = sorted(y.unique())
+        # convert y to categorical data type
         y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set rows and columns weights
+        # set rows and columns weights
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        X, w, col_w = obj.call_.Z, obj.call_.ind_w if obj.__class__.__name__ != "CA" else obj.call_.row_m, obj.call_.col_w
-        row_w, bary = w.copy(), func_groupby(X=X,by=y,func="mean",w=w).loc[uq_classe,:]
-        if self.option == "between":
-            tab, row_w = bary.copy(), Series([w.loc[y[y==k].index].sum() for k in uq_classe],index=uq_classe,name="weight")
+        X, col_w = obj.call_.Z,  obj.call_.col_w
+        if obj.__class__.__name__ != "CA":
+            w = obj.call_.ind_w
         else:
-            tab = X - bary.loc[y.values,:].values
+            w = obj.call_.row_m
+        row_w, bary = w.copy(), func_groupby(X=X,by=y,func="mean",w=w).loc[uq_classe,:]
+        # between-class analysis
+        if self.option == "between":
+            tab = bary.copy()
+            row_w = Series([w.loc[y[y==k].index].sum() for k in uq_classe],index=uq_classe,name="weight")
+        # within-class analysis
+        else:
+            tab = X - bary.loc[y.to_numpy(),:].to_numpy()
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #fit generalized factor analysis
+        # fit generalized factor analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         fit_ = gFA(X=tab,ncp=self.ncp,row_w=row_w,col_w=col_w)
-        #extract elements
-        self.svd_, self.eig_, ncp = fit_.svd, fit_.eig, fit_.ncp
+        # extract elements
+        self.svd_, self.eig_= fit_.svd, fit_.eig
+        # update ncp
+        ncp = self.svd_.ncp
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #ratio - percentage of between-class/within-class inertia
+        # ratio - percentage of between-class/within-class inertia
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         res_ = gSVD(X=X,ncp=self.ncp,row_w=w,col_w=col_w)
-        self.ratio_ = sum(fit_.eig.iloc[:,0])/sum(res_.vs**2)
+        self.ratio_ = sum(fit_.eig.iloc[:,0])/sum(res_.d)
 
         #coordinates for the columns (G = MVD)
         if obj.__class__.__name__ == "PCAmix":
             fit_.col["coord"] = (fit_.col["coord"].T * col_w).T
         
-        #call informations
-        call_ = OrderedDict(X=X,y=y,tab=tab,bary=bary,w=w,row_w=row_w,col_w=col_w,ncp=ncp)
-        #convert to namedtuple
+        # call informations - convert to dictionary
+        call_ = {"X":X,"y":y,"tab":tab,"bary":bary,"w":w,"row_w":row_w,"col_w":col_w,"ncp":ncp}
+        # convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for rows and groups
+        # statistics for rows and groups
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        row_, group_ = func_predict(X=X,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0) if self.option == "between" else fit_.row, func_predict(X=bary,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0) if self.option == "within" else fit_.row
+        row_ = func_predict(X=X,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0) if self.option == "between" else fit_.row
+        group_ = func_predict(X=bary,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0) if self.option == "within" else fit_.row
 
-        #convert to namedtuple
-        self.group_, self.col_, self.row_ = namedtuple("group",group_.keys())(*group_.values()), namedtuple("col",fit_.col.keys())(*fit_.col.values()), namedtuple("row",row_.keys())(*row_.values())
+        # convert to namedtuple
+        self.group_ = namedtuple("group",group_.keys())(*group_.values())
+        self.col_ = namedtuple("col",fit_.col.keys())(*fit_.col.values())
+        self.row_ = namedtuple("row",row_.keys())(*row_.values())
 
         return self
     
     def fit_transform(self,obj,y):
-        """
-        Fit the model with ``obj`` and apply the dimensionality reduction on ``obj``
+        """Fit the model with obj and apply the dimensionality reduction on obj
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`scientisttools.CA`, :class:`scientisttools.FAMD`, :class:`scientisttools.MCA`, :class:`scientisttools.MPCA`, :class:`scientisttools.PCA`, :class:`scientisttools.PCAmix`, :class:`scientisttools.MFA`.
+            An object of class :class:`~scientisttools.CA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.MCA`, :class:`~scientisttools.MPCA`, 
+            :class:`~scientisttools.PCA`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MFA`.
 
         y : Series of shape (n_rows,)
             Classes values.

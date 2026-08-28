@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from numpy import ones,sqrt,outer,corrcoef
 from scipy import linalg
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from pandas import DataFrame, Series
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -19,7 +19,10 @@ class CCA(BaseEstimator,TransformerMixin):
     Canonical Correspondence Analysis (CCA)
 
     Performs canonical (also known as constrained) correspondence analysis (CCA).
-    Canonical (or constrained) correspondence analysis is a multivariate ordination technique. It appeared in community ecology [1] and relates community composition to the variation in the environment (or in other factors). It works from data on abundances or counts of samples and constraints variables, and outputs ordination axes that maximize sample separation among species.
+    Canonical (or constrained) correspondence analysis is a multivariate ordination technique. It appeared in community ecology [1] 
+    and relates community composition to the variation in the environment (or in other factors). 
+    It works from data on abundances or counts of samples and constraints variables, 
+    and outputs ordination axes that maximize sample separation among species.
 
     Parameters
     ----------
@@ -27,10 +30,12 @@ class CCA(BaseEstimator,TransformerMixin):
         The number of dimensions kept in the results.
 
     scaling : int, default = 1
-        Scaling type 1 maintains :math:`\chi^{2}` distances between rows. Scaling type 2 preserves :math:`\chi^{2}` distances between columns. For a more detailed explanation of the interpretation, see [1] 
+        Scaling type 1 maintains :math:`\chi^{2}` distances between rows. Scaling type 2 preserves :math:`\chi^{2}` distances between columns. 
+        For a more detailed explanation of the interpretation, see [1] 
         
     env : int, str, list, tuple or range, default = None 
-        The indexes or names of the environmental variables (continuous and/or categorical). Categorical variables are recoded into dummy variables without first category.
+        The indexes or names of the environmental variables (continuous and/or categorical). 
+        Categorical variables are recoded into dummy variables without first category.
 
     row_sup : int, str, list, tuple or range, default = None
         The indexes or names of the supplementary rows points.
@@ -132,6 +137,12 @@ class CCA(BaseEstimator,TransformerMixin):
     [2] Cajo J.F. Braak and Piet F.M. Verdonschot, Canonical correspondence analysis and related multivariate methods in aquatic ecology, Aquatic Sciences 57.3 (1995), pp. 255-289.
 
     [3] Legendre P. and Legendre L. 1998. Numerical Ecology. Elsevier, Amsterdam.
+    
+    See Also
+    --------
+    save : Print results for general factor analysis model in an Excel sheet
+    sprintf : Print the analysis results
+    summary : Printing summaries of general factor analysis model
 
     Examples
     --------
@@ -142,7 +153,12 @@ class CCA(BaseEstimator,TransformerMixin):
     CCA(env=range(5),ncp=2,scaling=1)
     """
     def __init__(
-            self, ncp=5, scaling=1, env=None, row_sup=None, tol = 1e-7
+            self, 
+            ncp = 5, 
+            scaling = 1, 
+            env = None, 
+            row_sup = None, 
+            tol = 1e-7
     ):
         self.ncp = ncp
         self.scaling = scaling
@@ -151,16 +167,16 @@ class CCA(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns),
-            Training data, where ``n_rows`` in the number of rows and ``n_columns`` is the number of columns.
+            Training data, where ``n_rows`` in the number of rows 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
@@ -170,7 +186,7 @@ class CCA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # check if scaling value is correct
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if not self.scaling in (1,2):
+        if not (self.scaling in (1,2)):
             raise ValueError("'scaling' must be 1 or 2.")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -212,7 +228,7 @@ class CCA(BaseEstimator,TransformerMixin):
         #species abundance
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #total 
-        total = int(X.sum(axis=0).sum())
+        total = X.sum(axis=0).sum()
         #relative frequence distribution
         P = X/total
         #set rows and columns margins
@@ -243,7 +259,7 @@ class CCA(BaseEstimator,TransformerMixin):
         #canonical regression
         beta, _, _, _ = linalg.lstsq(X_w, Z1)
         #fitted values and residuals
-        Y_hat, Y_res = X_w.dot(beta), Z1 - X_w.dot(beta).values
+        Y_hat, Y_res = X_w.dot(beta), Z1 - X_w.dot(beta).to_numpy()
         Y_hat.columns = Z1.columns
         #coefficients of weighted multiple regression
         self.coef_ = DataFrame(beta,index=X_w.columns,columns=Z1.columns)
@@ -254,10 +270,11 @@ class CCA(BaseEstimator,TransformerMixin):
         svd_hat = gSVD(X=Y_hat,ncp=self.ncp,row_w=ones(n_rows),col_w=ones(n_cols),tol=self.tol)
         U_hat = Z1.dot(svd_hat.V[:,:svd_hat.ncp])/svd_hat.vs[:svd_hat.ncp]
         #eigenvalues
-        eigvals_hat = Series(svd_hat.vs**2,index=[f"Dim{x+1}" for x in range(svd_hat.rank)],name="Eigenvalue")
+        eigvals_hat = Series(svd_hat.d,index=[f"Dim{x+1}" for x in range(svd_hat.rank)],name="Eigenvalue")
 
         #store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Y=Y,Ycod=Ycod,Z1=Z1,Z2=Z2,total=total,row_m=row_m,col_m=col_m,row_w=row_w,col_w=col_w,ncp=svd_hat.ncp,env=env_label,row_sup=row_sup_label)
+        call_ = {"Xtot": Xtot, "X": X, "Y": Y, "Ycod": Ycod, "Z1": Z1, "Z2": Z2, "total": total, "row_m": row_m, "col_m": col_m, 
+                 "row_w": row_w, "col_w": col_w, "ncp": svd_hat.ncp, "env": env_label, "row_sup": row_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -267,7 +284,7 @@ class CCA(BaseEstimator,TransformerMixin):
         svd_res = gSVD(X=Y_res,ncp=self.ncp,row_w=ones(n_rows),col_w=ones(n_cols),tol=self.tol)
         U_hat_res = Y_res.dot(svd_res.V[:,:svd_res.ncp])/svd_res.vs[:svd_res.ncp]
         #igenvalues
-        eigvals_res = Series(svd_res.vs**2,index=[f"Dim{x+1}" for x in range(svd_res.rank)],name="Eigenvalue")
+        eigvals_res = Series(svd_res.d,index=[f"Dim{x+1}" for x in range(svd_res.rank)],name="Eigenvalue")
             
         #convert to namedtuple
         self.eig_, self.svd_ = namedtuple("eig",["CCA","CA"])(eigvals_hat,eigvals_res), namedtuple("svd",["CCA","CA"])(svd_hat,svd_res)
@@ -276,14 +293,14 @@ class CCA(BaseEstimator,TransformerMixin):
         #statistics for columns
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #columns estimations and residuals
-        col_coord_hat = DataFrame((svd_hat.V[:,:svd_hat.ncp].T/sqrt(col_m.values)).T,index=X.columns,columns=self.eig_.CCA.index[:svd_hat.ncp])
-        col_coord_res = DataFrame((svd_res.V[:,:svd_res.ncp].T/sqrt(col_m.values)).T,index=X.columns,columns=self.eig_.CA.index[:svd_res.ncp])
+        col_coord_hat = DataFrame((svd_hat.V[:,:svd_hat.ncp].T/sqrt(col_m.to_numpy())).T,index=X.columns,columns=self.eig_.CCA.index[:svd_hat.ncp])
+        col_coord_res = DataFrame((svd_res.V[:,:svd_res.ncp].T/sqrt(col_m.to_numpy())).T,index=X.columns,columns=self.eig_.CA.index[:svd_res.ncp])
         if self.scaling == 2:
             col_coord_hat, col_coord_res = col_coord_hat * svd_hat.vs[:svd_hat.ncp], col_coord_res * svd_res.vs[:svd_res.ncp]
         #convert to namedtuple
         col_coord = namedtuple("coord",["CCA","CA"])(col_coord_hat,col_coord_res)
         #convert to ordered dictionary
-        col_ = OrderedDict(coord=col_coord)
+        col_ = {"coord": col_coord}
         #convert to namedtuple
         self.col_ = namedtuple("col",col_.keys())(*col_.values())
         
@@ -291,14 +308,14 @@ class CCA(BaseEstimator,TransformerMixin):
         #statistics for rows
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #rows estimation scores
-        row_coord_hat, row_coord_res = (U_hat.T/sqrt(row_m.values)).T, (U_hat_res.T/sqrt(row_m.values)).T
+        row_coord_hat, row_coord_res = (U_hat.T/sqrt(row_m.to_numpy())).T, (U_hat_res.T/sqrt(row_m.to_numpy())).T
         if self.scaling == 1:
             row_coord_hat, row_coord_res = row_coord_hat * svd_hat.vs[:svd_hat.ncp], row_coord_res * svd_res.vs[:svd_res.ncp]
         row_coord_hat.columns, row_coord_res.columns = self.eig_.CCA.index[:svd_hat.ncp], self.eig_.CA.index[:svd_res.ncp]
         #convert to namedtuple
         row_coord = namedtuple("coord",["CCA","CA"])(row_coord_hat,row_coord_res)
         #convert to ordered dictionary
-        row_ = OrderedDict(coord = row_coord)
+        row_ = {"coord": row_coord}
         #convert to namedtuple
         self.row_ = namedtuple("row",row_.keys())(*row_.values())
 
@@ -307,7 +324,7 @@ class CCA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         quanti_var_coord = DataFrame(corrcoef(x=X_w,y=svd_hat.U[:,:svd_hat.ncp],rowvar=False)[:X_w.shape[1],X_w.shape[1]:],index= X_w.columns,columns=self.eig_.CCA.index[:self.svd_.CCA.ncp])
         #convert to ordered dictionary
-        quanti_var_ = OrderedDict(coord = quanti_var_coord)
+        quanti_var_ = {"coord": quanti_var_coord}
         #convert to namedtuple
         self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
         
@@ -331,7 +348,7 @@ class CCA(BaseEstimator,TransformerMixin):
             #extract elements
             Y_row_sup_quanti, Y_row_sup_quali, n_quanti, n_quali = split_Y_row_sup.quanti, split_Y_row_sup.quali, split_Y_row_sup.k1, split_Y_row_sup.k2
 
-            Ycod_row_sup = DataFrame(index=row_sup_label,columns=Ycod.columns).astype(float)
+            Ycod_row_sup = DataFrame(index=row_sup_label,columns=Ycod.columns).astype("float")
             #check if numerics variables
             if n_quanti > 0:
                 #replace with numerics columns
@@ -350,18 +367,20 @@ class CCA(BaseEstimator,TransformerMixin):
 
             #supplementary rows
             U_hat_row_sup = Z1_row_sup.dot(self.svd_.CCA.V[:,:self.svd_.CCA.ncp])/self.svd_.CCA.vs[:self.svd_.CCA.ncp]
-            U_hat_res_row_sup = (Z1_row_sup - X_w_row_sup.dot(self.coef_).values).dot(self.svd_.CA.V[:,:self.svd_.CA.ncp])/self.svd_.CA.vs[:self.svd_.CA.ncp]
+            U_hat_res_row_sup = (Z1_row_sup - X_w_row_sup.dot(self.coef_).to_numpy()).dot(self.svd_.CA.V[:,:self.svd_.CA.ncp])/self.svd_.CA.vs[:self.svd_.CA.ncp]
 
             #supplementary rows estimation scores
-            row_sup_coord_hat, row_sup_coord_res = (U_hat_row_sup.T/sqrt(row_sup_m.values)).T, (U_hat_res_row_sup.T/sqrt(row_sup_m.values)).T
+            row_sup_coord_hat = (U_hat_row_sup.T/sqrt(row_sup_m.to_numpy())).T
+            row_sup_coord_res = (U_hat_res_row_sup.T/sqrt(row_sup_m.to_numpy())).T
             if self.scaling == 1:
-                row_sup_coord_hat, row_sup_coord_res = row_sup_coord_hat * self.svd_.CCA.vs[:self.svd_.CCA.ncp], row_sup_coord_res * self.svd_.CA.vs[:self.svd_.CA.ncp]
+                row_sup_coord_hat = row_sup_coord_hat * self.svd_.CCA.vs[:self.svd_.CCA.ncp]
+                row_sup_coord_res = row_sup_coord_res * self.svd_.CA.vs[:self.svd_.CA.ncp]
             row_sup_coord_hat.columns, row_sup_coord_res.columns = self.eig_.CCA.index[:svd_hat.ncp], self.eig_.CA.index[:svd_res.ncp]
 
             #convert to namedtuple
             row_sup_coord = namedtuple("coord",["CCA","CA"])(row_sup_coord_hat,row_sup_coord_res)
             #convert to ordered dictionary
-            row_sup_ = OrderedDict(coord = row_sup_coord)
+            row_sup_ = {"coord": row_sup_coord}
             #convert to namedtuple
             self.row_sup_ = namedtuple("row_sup",row_sup_.keys())(*row_sup_.values())
 
