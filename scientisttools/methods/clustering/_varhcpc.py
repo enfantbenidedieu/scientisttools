@@ -3,13 +3,10 @@ from numpy import c_, average, array, ndarray
 from pandas import DataFrame, concat, Series
 from scipy.cluster.hierarchy import linkage, cut_tree
 from scipy.spatial.distance import pdist, squareform
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from sklearn.cluster import KMeans
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
-
-# interns functions
-from ..functions.utils import check_is_dataframe
 
 class VARHCPC(BaseEstimator,TransformerMixin):
     """
@@ -20,9 +17,57 @@ class VARHCPC(BaseEstimator,TransformerMixin):
     Parameters
     -----------
     ncl : int.  default = 3
-        If a (positive) integer, the tree is cut with nb_cluters clusters. 
-        if None, the tree is automatically cut.
+        If a (positive) integer, the tree is cut with nb_cluters clusters. If None, the tree is automatically cut.
 
+    method : {"average","complete","single","ward"}, default = "ward"
+        The linkage algorithm to use. The following are methods for calculating the distance between the
+        newly formed cluster :math:`u` and each :math:`v`.
+
+        * method = "single" assigns
+
+        .. math::
+            d(u,v) = \\min(dist(u[i],v[j]))
+
+        for all points :math:`i` in cluster :math:`u` and
+        :math:`j` in cluster :math:`v`. This is also known as the
+        Nearest Point Algorithm.
+        
+        * method = "complete" assigns
+
+        .. math::
+            d(u, v) = \\max(dist(u[i],v[j]))
+
+        for all points :math:`i` in cluster u and :math:`j` in
+        cluster :math:`v`. This is also known by the Farthest Point
+        Algorithm or Voor Hees Algorithm.
+        
+        * method = "average" assigns
+
+        .. math::
+            d(u,v) = \\sum_{ij} \\frac{d(u[i], v[j])}{(|u|*|v|)}
+
+        for all points :math:`i` and :math:`j` where :math:`|u|`
+        and :math:`|v|` are the cardinalities of clusters :math:`u`
+        and :math:`v`, respectively. This is also called the UPGMA
+        algorithm.
+        
+        * method = "ward" uses the Ward variance minimization algorithm.
+        The new entry :math:`d(u,v)` is computed as follows,
+
+        .. math::
+
+            d(u,v) = \\sqrt{\\frac{|v|+|s|}{T}d(v,s)^2 + \\frac{|v|+|t|}{T}d(v,t)^2 - \\frac{|v|}{T}d(s,t)^2}
+
+        where :math:`u` is the newly joined cluster consisting of
+        clusters :math:`s` and :math:`t`, :math:`v` is an unused
+        cluster in the forest, :math:`T=|v|+|s|+|t|`, and
+        :math:`|*|` is the cardinality of its argument. This is also
+        known as the incremental algorithm.
+        
+    metric : str, default = "euclidean"
+        The metric used to built the tree. It must be one of the options allowed by :func:`scipy.spatial.distance.pdist` for 
+        its metric parameter, or a metric listed in :func:`sklearn.metrics.pairwise.distance_metrics`.
+        
     consol : bool, default = False
         If True, a k-means consolidation is performed after agglomerative hierarchical clustering.
 
@@ -33,25 +78,20 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         Determines random number generation for centroid initialization. Use
         an int to make the randomness deterministic.
 
-    metric : str, default = "euclidean"
-        The metric used to built the tree. It must be one of the options allowed by `scipy.spatial.distance.pdist` for its metric parameter, or a metric listed in :func:`sklearn.metrics.pairwise.distance_metrics`.
-
-    method : str, default = "ward"
-        the method used to built the tree. 
-
     **kwargs : key words parameters
-        Additionals parameters for sklearn.cluster.KMeans.
+        Additionals parameters for :func:`sklearn.cluster.KMeans`.
 
-    Returns
-    -------
+    Attributes
+    ----------
     call_ : call
         An object containing the summary called parameters with the following attributes:
 
         obj : class
-            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
+            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, 
+            :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
 
-        X : DataFrame of shape (n_samples, n_components)
-            Coordinates of continuous variables, where ``n_columns`` is the number of continuous variables and ``n_components`` is the number of components.
+        X : DataFrame of shape (n_samples, ncp)
+            Coordinates of continuous variables.
 
         ncl : int
             The number of clusters.
@@ -61,11 +101,14 @@ class VARHCPC(BaseEstimator,TransformerMixin):
 
         km : class, optional
             The results of k-means.
+            
+        data_clust : DataFrame of shape (n_samples, ncp +1) 
+            Coordinates of continuous variables with cluster column.
 
     cluster_ : cluster
         An object containing the results of the clusters, with the following attributes:
 
-        coord : DataFrame of shape (n_clusters, ncp)
+        coord : DataFrame of shape (ncl, ncp)
             The coordinates of the clusters - cluster centers
     
     quanti_var_ : quanti_var
@@ -73,7 +116,7 @@ class VARHCPC(BaseEstimator,TransformerMixin):
 
         cluster : Series of shape (n_samples,)
             The labels of variables.
-        dist : DataFrame of shape (n_samples, n_clusters)
+        dist : DataFrame of shape (n_samples, ncl)
             The distance of variables to the cluster centers.
         member : DataFrame of shape (n_samples, 3)
             Cluster's members of variables (distance to own cluster, distance to next closest, ratio (own/next)).
@@ -83,7 +126,7 @@ class VARHCPC(BaseEstimator,TransformerMixin):
 
         cluster : Series of shape (n_samples_sup,)
             The labels of supplementary variables.
-        dist : DataFrame of shape (n_samples_sup, n_clusters)
+        dist : DataFrame of shape (n_samples_sup, nccl)
             The distance of supplementary variables to the cluster centers.
         member : DataFrame of shape (n_samples_sup, 3)
             Cluster's members of supplementary variables (distance to own cluster, distance to next closest, ratio (own/next)).
@@ -92,8 +135,12 @@ class VARHCPC(BaseEstimator,TransformerMixin):
     ----------
     [1] R. Rakotomalala, « Classification de variables », Tutoriels Tanagra pour le Data Mining.
 
-    [2] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
+    [2] Lebart L., Piron M., & Morineau A. (2006). `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_. Dunod. Paris 4ed.
 
+    See Also
+    --------
+    VARKMeansPC : Variables K-Means Clustering on Principal Components
+    
     Examples
     --------
     >>> from scientisttools.datasets import decathlon
@@ -101,28 +148,37 @@ class VARHCPC(BaseEstimator,TransformerMixin):
     >>> # HCPC after PCA
     >>> clf = PCA(ncp=5,ind_sup=range(41,46),sup_var=(10,11,12))
     >>> clf.fit(decathlon.data)
-    >>> clf2 = VARHCPC(n_clusters=3)
+    PCA(ncp=5,ind_sup=range(41,46),sup_var=(10,11,12))
+    >>> clf2 = VARHCPC(ncl=3)
     >>> clf2.fit(clf)
+    VARHCPC(ncl=3)
     """
     def __init__(
-            self, ncl=3, consol=True, max_iter=300, random_state=0, metric = "euclidean", method = "ward", **kwargs
+            self, 
+            ncl = 3, 
+            method = "ward", 
+            metric = "euclidean", 
+            consol = True, 
+            max_iter = 300, 
+            random_state = 0, 
+            **kwargs
     ):
         self.ncl = ncl
+        self.method = method
+        self.metric = metric
         self.consol = consol
         self.max_iter = max_iter
         self.random_state = random_state
-        self.metric = metric
-        self.method = method
         self.kwargs = kwargs
         
     def fit(self,obj,y=None,sample_weight=None):
-        """
-        Compute agglomerative hierarchical clustering with ``obj``
+        """Compute agglomerative hierarchical clustering with obj
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
+            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, 
+            :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
 
         y : Ignored
             Not used, present here for API consistency by convention.
@@ -175,10 +231,10 @@ class VARHCPC(BaseEstimator,TransformerMixin):
                       diff_1 = lambda x : -1*x["height"].diff(1),
                       diff_2 = lambda x : x["diff_1"].diff(-1)
                   ))
-        height["cluster"] = height["cluster"].astype(int)
+        height["cluster"] = height["cluster"].astype("int")
 
         #convert to ordered dictionary
-        tree_ = OrderedDict(D=D,Z=Z,height=height,merge=Z[:,:2],size=Z[:,3])
+        tree_ = {"D":D,"Z":Z,"height":height,"merge":Z[:,:2],"size":Z[:,3]}
         #convert to namedtuple
         tree = namedtuple("tree",tree_.keys())(*tree_.values())
 
@@ -188,24 +244,24 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         if self.ncl is None:
             ncl = height[height["diff_2"]==height["diff_2"].max()]["cluster"].values[0]
         elif self.ncl < 0:
-            raise TypeError("'ncl' should be a positive integer.")
+            raise TypeError("ncl should be a positive integer.")
         elif not isinstance(self.ncl,int):
-            raise TypeError("'ncl' should be an integer")
+            raise TypeError("ncl should be an integer")
         else:
             ncl = self.ncl
         
         # assign cluster
         cluster = Series((cut_tree(Z,n_clusters=ncl)+1).reshape(-1, ), index = D.index,name = "cluster",dtype="category")
         # unique cluster
-        uq_cluster = sorted(list(cluster.unique()))
+        uq_cluster = sorted(cluster.unique())
         # coordinates of the clusters - cluster centers
-        cluster_coord = DataFrame(index=uq_cluster,columns=X.columns).astype(float)
+        cluster_coord = DataFrame(index=uq_cluster,columns=X.columns).astype("float")
         for i in uq_cluster:
-            ix = list(cluster[cluster==i].index)
+            ix = cluster[cluster==i].index
             cluster_coord.loc[i,:] = average(a=X.loc[ix,:],axis=0,weights=w.loc[ix])
 
         # convert to ordered dictionary
-        call_ = OrderedDict(obj=obj,X=X,w=w,ncl=ncl,tree=tree)
+        call_ = {"obj":obj,"X":X,"w":w,"ncl":ncl,"tree":tree}
 
         # consolidation
         if self.consol:
@@ -227,7 +283,7 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         #statistics for clusters
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #convert to ordered dictionary
-        cluster_ = OrderedDict(coord=cluster_coord)
+        cluster_ = {"coord":cluster_coord}
         #convert to namedtuple
         self.cluster_ = namedtuple("cluster",cluster_.keys())(*cluster_.values())
 
@@ -237,12 +293,12 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         # distance of continuous to cluster centers
         dist_cluster_center = DataFrame(squareform(pdist(concat((X,cluster_coord),axis=0),metric=self.metric))[:n_cols,n_cols:],index=D.index,columns=uq_cluster)
         # cluster's members : distance own cluster, distance nex closest, ratio (own/next)
-        cluster_member = DataFrame(index=D.index,columns=["Own Cluster","Next Closest"]).astype(float)
+        cluster_member = DataFrame(index=D.index,columns=["Own Cluster","Next Closest"]).astype("float")
         cluster_member["Own Cluster"] = dist_cluster_center.min(axis=1)
         cluster_member["Next Closest"] = dist_cluster_center.apply(lambda x: x.nsmallest(2).iloc[-1], axis=1)
         cluster_member["Ratio (Own/Next)"] = cluster_member["Own Cluster"]/cluster_member["Next Closest"]
         # convert to ordered dictionary
-        quanti_var_ = OrderedDict(cluster=cluster,dist=dist_cluster_center,member=cluster_member)
+        quanti_var_ = {"cluster":cluster,"dist":dist_cluster_center,"member":cluster_member}
         # convert to namedtuple
         self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
 
@@ -260,27 +316,27 @@ class VARHCPC(BaseEstimator,TransformerMixin):
             quanti_var_sup_cluster = dist_sup_cluster_center.idxmin(axis=1).astype("category")
             quanti_var_sup_cluster.name = "cluster"
             # cluster's members : distance own cluster, distance nex closest, ratio (own/next)
-            cluster_member_sup = DataFrame(index=X_sup.index,columns=["Own Cluster","Next Closest"]).astype(float)
+            cluster_member_sup = DataFrame(index=X_sup.index,columns=["Own Cluster","Next Closest"]).astype("float")
             cluster_member_sup["Own Cluster"] = dist_sup_cluster_center.min(axis=1)
             cluster_member_sup["Next Closest"] = dist_sup_cluster_center.apply(lambda x: x.nsmallest(2).iloc[-1], axis=1)
             cluster_member_sup["Ratio (Own/Next)"] = cluster_member_sup["Own Cluster"]/cluster_member_sup["Next Closest"]
             #convert to ordered dictionary
-            quanti_var_sup_ = OrderedDict(cluster=quanti_var_sup_cluster,dist=dist_sup_cluster_center,member=cluster_member_sup)
+            quanti_var_sup_ = {"cluster":quanti_var_sup_cluster,"dist":dist_sup_cluster_center,"member":cluster_member_sup}
             #convert to namedtuple
             self.quanti_var_sup_ = namedtuple("quanti_var_sup",quanti_var_sup_.keys())(*quanti_var_sup_.values())
 
         return self
     
     def fit_predict(self,obj,y=None,sample_weight=None):
-        """
-        Compute cluster centers and predict cluster index for each sample.
+        """Compute cluster centers and predict cluster index for each sample.
 
         Convenience method; equivalent to calling fit(obj) followed by predict(X).
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
+            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, 
+            :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
 
         y : Ignored
             Not used, present here for API consistency by convention.
@@ -297,13 +353,13 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         return self.quanti_var_.cluster
     
     def fit_transform(self,obj,y=None,sample_weight=None):
-        """
-        Fit the model with ``obj`` and apply the hierarchical clustering on ``obj``
+        """Fit the model with obj and apply the hierarchical clustering on obj
 
         Parameters
         ----------
         obj : class
-            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
+            An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, 
+            :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`.
         
         y : Ignored
             Not used, present here for API consistency by convention.
@@ -313,20 +369,20 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         
         Returns
         -------
-        X_new : DataFrame of shape (n_columns, n_clusters)
+        X_new : DataFrame of shape (n_columns, ncl)
             X transformed in the new space.
         """
         self.fit(obj=obj,sample_weight=sample_weight)
         return self.quanti_var_.dist
     
     def predict(self,X):
-        """
-        Predict the closest cluster each sample in X belongs to.
+        """Predict the closest cluster each sample in X belongs to.
 
         Parameters
         ----------
-        X : DataFrame of shape (n_columns, n_components)
-            New data to predict, where ``n_columns`` is the number of columns and ``n_components`` is the number of components.
+        X : DataFrame of shape (n_columns, ncp)
+            New data to predict, where ``n_columns`` is the number of columns 
+            and ``ncp`` is the number of components.
 
         Returns
         -------
@@ -341,19 +397,19 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         return cluster
     
     def transform(self,X):
-        """
-        Transform X to a cluster-distance space.
+        """Transform X to a cluster-distance space.
 
         In the new space, each dimension is the distance to the cluster centers.
         
         Parameters
         ----------
-        X : DataFrame of shape (n_columns, n_components)
-            New data to transform, where ``n_columns`` is the number of columns and ``n_components`` is the number of components.
+        X : DataFrame of shape (n_columns, ncp)
+            New data to transform, where ``n_columns`` is the number of columns 
+            and ``ncp`` is the number of components.
 
         Returns
         -------
-        X_new : DataFrame of shape (n_columns, n_clusters)
+        X_new : DataFrame of shape (n_columns, ncl)
             X transformed in the new space.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -364,7 +420,9 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if X is an object of class pd.DataFrame
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        check_is_dataframe(X)
+        if not isinstance(X,DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame.",
+                            "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set index name as None
