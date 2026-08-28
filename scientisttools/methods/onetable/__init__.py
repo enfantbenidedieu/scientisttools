@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from ._ca import CA, statsCA
-from ._fa import FA, statsFA
+from ._ca import CA
+from ._fa import FA
 from ._famd import FAMD
 from ._farot import FArot
-from ._mca import MCA, statsMCA
+from ._mca import MCA
 from ._mpca import MPCA
-from ._pca import PCA, statsPCA
+from ._pca import PCA
 from ._pcamix import PCAmix
-from ._pcarot import PCArot, statsPCArot
+from ._pcarot import PCArot
 from ._pcoa import PCoA 
 
 __all__ = [
-    "CA", "statsCA",
-    "FA", "statsFA",
+    "CA",
+    "FA",
     "FAMD",
     "FArot",
-    "MCA", "statsMCA",
+    "MCA",
     "MPCA",
-    "PCA", "statsPCA",
+    "PCA",
     "PCAmix",
-    "PCArot", "statsPCArot",
+    "PCArot",
     "PCoA"
 ]

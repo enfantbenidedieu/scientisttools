@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from numpy import array,ndarray,sqrt,linalg,ones,diag
+from numpy import array,repeat,ndarray,sqrt,linalg,ones,diag
 from pandas import concat, Series, CategoricalDtype, DataFrame
-from itertools import chain, repeat
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -36,17 +35,17 @@ class MPCA(BaseEstimator,TransformerMixin):
         The indexes or names of the instrumental (explanatory) variables (continuous and/or categorical).
 
     ortho : bool, default = False
-        If ``True``, then the mixed principal component analysis with orthogonal instrumental variables (MPCAoiv) is performed, else 
+        If True, then the mixed principal component analysis with orthogonal instrumental variables (MPCAoiv) is performed, else 
         mixed principal component analysis with instrumental variables (MPCAiv).
 
-    group : int, str
+    group : int, str, default = None
         The indexe or name of the categorical variable which allows for between-class or within-class analysis.
 
     option : str, default = "between"
         Which class analysis should be performns.
 
-        - 'between' for between-class analysis.
-        - 'within' for within-class analysis.
+        * 'between' for between-class analysis.
+        * 'within' for within-class analysis.
 
     ncp : int, default = 5
         The number of dimensions kept in the results.
@@ -62,9 +61,13 @@ class MPCA(BaseEstimator,TransformerMixin):
 
     sup_var : int, str, list, tuple or range, default = None 
         The indexes or names of the supplementary variables (continuous and/or categorical).
+        
+    tol : float, default = 1e-7
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
     
-    Returns
-    -------
+    Attributes
+    ----------
     call_ : call
         An object containing the summary called parameters with the following attributes:
 
@@ -129,7 +132,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         y : Series of shape (n_rows,), optional
             The group distribution.
     
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     group_ : group, optional
@@ -244,11 +247,11 @@ class MPCA(BaseEstimator,TransformerMixin):
     svd_ : svd
         An object containing all the results for the generalized singular value decomposition (GSVD), with the following attributes:
         
-        vs : 1d numpy array of shape (maxcp,)
+        vs : 1d numpy array of shape (rank,)
             The singular values.
-        U : 2d numpy array of shape (n_rows, maxcp) or (n_groups, maxcp)
+        U : 2d numpy array of shape (n_rows, rank) or (n_groups, rank)
             The left singular vectors.
-        V : 2d numpy array of shape (n_quanti_var + n_levels, maxcp)
+        V : 2d numpy array of shape (n_quanti_var + n_levels, rank)
             The right singular vectors.
         rank : int
             The maximum number of components.
@@ -279,12 +282,9 @@ class MPCA(BaseEstimator,TransformerMixin):
 
     See Also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet
+    sprintf : Print the analysis results
+    summary : Printing summaries of general factor analysis model
 
     Examples
     --------
@@ -304,7 +304,17 @@ class MPCA(BaseEstimator,TransformerMixin):
     MPCA(group=20,ind_sup=range(200,300),option='within',sup_var=range(21,tea.shape[1]))
     """
     def __init__(
-            self, iv=None, ortho=False, group=None, option="between", ncp=5, row_w=None, col_w=None, ind_sup=None, sup_var=None
+            self, 
+            iv = None, 
+            ortho = False, 
+            group = None, 
+            option = "between", 
+            ncp = 5, 
+            row_w = None, 
+            col_w = None, 
+            ind_sup = None, 
+            sup_var = None,
+            tol = 1e-7
     ):
         self.iv = iv
         self.ortho = ortho
@@ -315,18 +325,19 @@ class MPCA(BaseEstimator,TransformerMixin):
         self.col_w = col_w
         self.ind_sup = ind_sup
         self.sup_var = sup_var
+        self.tol = tol
 
     def fit(self,X, y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` in the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_rows`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -390,7 +401,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         if self.group is not None:
             y, X = X[group_label[0]], X.drop(columns=group_label)
             #unique element in y
-            uq_classe = sorted(list(y.unique()))
+            uq_classe = sorted(y.unique())
             #convert y to categorical data type
             y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
 
@@ -403,7 +414,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         X_quanti, X_quali, n_rows, n_quanti, n_quali = split_X.quanti, split_X.quali, split_X.n, split_X.k1, split_X.k2
 
         #check if mixed data
-        if any(x == 0 for x in (n_quanti, n_quali)): 
+        if n_quanti == 0 or n_quali == 0: 
             raise TypeError("MPCA require both continuous and categorical variables.")
         n_cols = n_quanti + n_quali
 
@@ -433,9 +444,9 @@ class MPCA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate analyses
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        xmodel = PCA(scale_unit=True,ncp=self.ncp,row_w=ind_w,col_w=var_w[X_quanti.columns],sup_var=list(X_quali.columns)).fit(X)
-        ymodel = MCA(ncp=self.ncp,row_w=ind_w,col_w=var_w[X_quali.columns],sup_var=list(X_quanti.columns)).fit(X)
-        self.separate_analyses_ = OrderedDict({"PCA" : xmodel, "MCA" : ymodel})
+        xmodel = PCA(scale_unit=True,ncp=self.ncp,row_w=ind_w,col_w=var_w[X_quanti.columns],sup_var=list(X_quali.columns),tol=self.tol).fit(X)
+        ymodel = MCA(ncp=self.ncp,row_w=ind_w,col_w=var_w[X_quali.columns],sup_var=list(X_quanti.columns),tol=self.tol).fit(X)
+        self.separate_analyses_ = {"PCA" : xmodel, "MCA" : ymodel}
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #center numerics variables
@@ -459,12 +470,13 @@ class MPCA(BaseEstimator,TransformerMixin):
         #duplicate according to number of levels
         nb_moda = Series([X_quali[j].nunique() for j in X_quali.columns],index=X_quali.columns)
         #levels weights
-        levels_w = Series(list(chain(*[repeat(i,k) for i, k in zip(var_w.loc[X_quali.columns],nb_moda)])),index=dummies.columns,name="weight")
+        levels_w = Series(repeat(var_w.loc[X_quali.columns],nb_moda),index=dummies.columns,name="weight")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #concatenate
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        Xcod, Xc, center, col_w = concat((X_quanti,dummies),axis=1), concat((X1c,X2c),axis=1), concat((center1,center2),axis=0), concat((var_w.loc[X_quanti.columns],levels_w),axis=0)
+        Xcod, Xc = concat((X_quanti,dummies),axis=1), concat((X1c,X2c),axis=1)
+        center, col_w  = concat((center1,center2),axis=0), concat((var_w.loc[X_quanti.columns],levels_w),axis=0)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #standardization according to normed PCA
@@ -504,24 +516,28 @@ class MPCA(BaseEstimator,TransformerMixin):
             if self.option == "between":
                 tab, row_w = bary.copy(), Series([ind_w.loc[y[y==k].index].sum() for k in uq_classe],index=uq_classe,name="weight")
             else:
-                tab, row_w = Z - bary.loc[y.values,:].values, ind_w.copy()
+                tab, row_w = Z - bary.loc[y.to_numpy(),:].to_numpy(), ind_w.copy()
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #fit generalized factor analysis model and extract all elements
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        fit_ = gFA(X=tab,ncp=self.ncp,row_w=row_w,col_w=col_w)
+        fit_ = gFA(X=tab,ncp=self.ncp,row_w=row_w,col_w=col_w,tol=self.tol)
         #extract elements
-        self.svd_, self.eig_, ncp, self.quanti_var_ = fit_.svd, fit_.eig, fit_.ncp, namedtuple("quanti_var",fit_.col.keys())(*fit_.col.values())
+        self.svd_, self.eig_, self.quanti_var_ = fit_.svd, fit_.eig, namedtuple("quanti_var",fit_.col.keys())(*fit_.col.values())
+        # reste number of components
+        ncp = self.svd_.ncp
 
         #store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,dummies=dummies,Xcod=Xcod,Xc=Xc,Zcod=Zcod,Z=Z,bary=bary,tab=tab,center=center,xc_center=xc_center,xc_scale=xc_scale,k1=n_quanti,k2=n_quali,ind_w=ind_w,row_w=row_w,var_w=var_w,
-                            levels_w=levels_w,col_w=col_w,ncp=ncp,iv=iv_label,group=group_label,ind_sup=ind_sup_label,sup_var=sup_var_label)
+        call_ = {"Xtot": Xtot, "X": X, "dummies": dummies, "Xcod": Xcod, "Xc": Xc, "Zcod": Zcod, "Z": Z, "bary": bary, "tab": tab, 
+                 "center": center, "xc_center": xc_center, "xc_scale": xc_scale, "k1": n_quanti, "k2": n_quali, 
+                 "ind_w": ind_w, "row_w": row_w, "var_w": var_w, "levels_w": levels_w, "col_w": col_w, "ncp": ncp, 
+                 "iv": iv_label, "group": group_label, "ind_sup": ind_sup_label, "sup_var": sup_var_label}
         #add features
         if self.iv is not None:
-            call_ = {**call_, **OrderedDict(z=z,zcod=zcod,zs=zs,z_center=z_center,z_scale=z_scale,model=model)}
+            call_ = {**call_, **{"z": z, "zcod": zcod, "zs": zs, "z_center": z_center, "z_scale": z_scale, "model": model}}
         #add group distribution
         if self.group is not None:
-            call_ = {**call_, **OrderedDict(y=y)}
+            call_ = {**call_, **{"y": y}}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -531,12 +547,12 @@ class MPCA(BaseEstimator,TransformerMixin):
         ind_ = fit_.row 
         if self.group is not None:
             #ratio - percentage of between-class/within-class inertia
-            res_ = gSVD(X=Z,ncp=self.ncp,row_w=ind_w,col_w=col_w)
+            res_ = gSVD(X=Z,ncp=self.ncp,row_w=ind_w,col_w=col_w,tol=self.tol)
             if self.option == "between":
                 group_, ind_ = fit_.row, func_predict(X=Z,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0)
             else:
                 group_ = func_predict(X=bary,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0)
-            self.ratio_, self.group_ = sum(self.eig_.iloc[:,0])/sum(res_.vs**2), namedtuple("group",group_.keys())(*group_.values())
+            self.ratio_, self.group_ = sum(self.eig_.iloc[:,0])/sum(res_.d), namedtuple("group",group_.keys())(*group_.values())
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -551,7 +567,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         #vtest for the levels
         levels_vtest = (levels_coord.T * sqrt((n_rows-1)/((1/p_k) - 1))).T/fit_.svd.vs[:ncp]
         #convert to ordered dictionary
-        levels_ = OrderedDict(coord=levels_coord, contrib=levels_ctr, vtest=levels_vtest)
+        levels_ = {"coord": levels_coord, "contrib": levels_ctr, "vtest": levels_vtest}
         #convert to namedtuple
         self.levels_ = namedtuple("levels",levels_.keys())(*levels_.values())
 
@@ -563,7 +579,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         #contrib of the qualitative variables
         quali_var_ctr = concat((levels_ctr.loc[levels_ctr.index.isin(list(X_quali[j].unique())),:].sum(axis=0).to_frame(j) for j in X_quali.columns),axis=1).T
         #convert to dictionary
-        quali_var_ = OrderedDict(coord=quali_var_coord,contrib=quali_var_ctr)
+        quali_var_ = {"coord": quali_var_coord, "contrib": quali_var_ctr}
         #convert to namedtuple
         self.quali_var_ = namedtuple("quali_var",quali_var_.keys())(*quali_var_.values())
 
@@ -571,7 +587,8 @@ class MPCA(BaseEstimator,TransformerMixin):
         #statistics for variables
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #convert to ordered dictionary
-        var_= OrderedDict(coord=concat((fit_.col["cos2"].loc[X_quanti.columns,:],quali_var_coord),axis=0),contrib=concat((fit_.col["contrib"].loc[X_quanti.columns,:],quali_var_ctr),axis=0))
+        var_= {"coord": concat((fit_.col["cos2"].loc[X_quanti.columns,:],quali_var_coord),axis=0), 
+               "contrib": concat((fit_.col["contrib"].loc[X_quanti.columns,:],quali_var_ctr),axis=0)}
         #convert to namedtuple
         self.var_ = namedtuple("var",var_.keys())(*var_.values())
 
@@ -583,7 +600,7 @@ class MPCA(BaseEstimator,TransformerMixin):
             #coordinates for the instrumental variables
             iv_coord = wcorr(X=concat((self.call_.zcod,self.ind_.coord),axis=1),w=ind_w).iloc[:nzcod,nzcod:]
             #convert to ordered dictionary
-            iv_ = OrderedDict(coord=iv_coord,cos2=iv_coord**2)
+            iv_ = {"coord": iv_coord, "cos2": iv_coord**2}
             #convert to namedtuple
             self.iv_ = namedtuple("iv",iv_.keys())(*iv_.values())
 
@@ -610,7 +627,7 @@ class MPCA(BaseEstimator,TransformerMixin):
                 #extract elements
                 z_ind_sup_quanti_var, z_ind_sup_quali_var, nz_ind_sup_quanti_var, nz_ind_sup_quali_var = split_z_ind_sup.quanti, split_z_ind_sup.quali, split_z_ind_sup.k1, split_z_ind_sup.k2
                 #initialization
-                zcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.zcod.columns).astype(float)
+                zcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.zcod.columns).astype("float")
                 #check if numerics variables
                 if nz_ind_sup_quanti_var > 0:
                     #replace with numerics columns
@@ -630,11 +647,11 @@ class MPCA(BaseEstimator,TransformerMixin):
                 Z_ind_sup = concat((self.call_.model[k].predict(zs_ind_sup).to_frame(k) for k in Zcod_ind_sup.columns),axis=1)
                 #residuals (MPCAoiv)
                 if self.ortho:
-                    Z_ind_sup = Zcod_ind_sup - Z_ind_sup.values
+                    Z_ind_sup = Zcod_ind_sup - Z_ind_sup.to_numpy()
 
             #within class analysis - suppress within effect
             if self.group is not None and self.option == "within":
-                Z_ind_sup = Z_ind_sup - bary.loc[y_ind_sup.values,:].values
+                Z_ind_sup = Z_ind_sup - bary.loc[y_ind_sup.to_numpy(),:].to_numpy()
 
             #statistics for supplementary individuals
             ind_sup_ = func_predict(X=Z_ind_sup,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0)
@@ -669,7 +686,7 @@ class MPCA(BaseEstimator,TransformerMixin):
                 #within class analysis - suppress within effect
                 if self.group is not None:
                     bary_quanti_var_sup = func_groupby(X=Z_quanti_var_sup,by=y,func="mean",w=ind_w).loc[uq_classe,:]
-                    Z_quanti_var_sup = bary_quanti_var_sup if self.option == "between" else Z_quanti_var_sup - bary_quanti_var_sup.loc[y.values,:].values
+                    Z_quanti_var_sup = bary_quanti_var_sup if self.option == "between" else Z_quanti_var_sup - bary_quanti_var_sup.loc[y.to_numpy(),:].to_numpy()
 
                 #statistics for supplementary continuous variables
                 quanti_var_sup_ = func_predict(X=Z_quanti_var_sup,Y=fit_.svd.U[:,:ncp],w=row_w,axis=1)
@@ -703,7 +720,7 @@ class MPCA(BaseEstimator,TransformerMixin):
                 #within class analysis - suppress within effect
                 if self.group is not None:
                     bary_levels_sup = func_groupby(X=Z_levels_sup,by=y,func="mean",w=ind_w).loc[uq_classe,:]
-                    Z_levels_sup = bary_levels_sup if self.option == "between" else Z_levels_sup - bary_levels_sup.loc[y.values,:].values
+                    Z_levels_sup = bary_levels_sup if self.option == "between" else Z_levels_sup - bary_levels_sup.loc[y.to_numpy(),:].to_numpy()
 
                 #statistics for supplementary quantitative variables
                 levels_sup_ = func_predict(X=Z_levels_sup,Y=fit_.svd.U[:,:ncp],w=row_w,axis=1)
@@ -719,23 +736,23 @@ class MPCA(BaseEstimator,TransformerMixin):
                 #coordinates for the supplementary qualitative variables - Eta-squared
                 quali_var_sup_coord = func_eta2(X=self.ind_.coord,by=X_quali_var_sup,w=ind_w,excl=None)
                 #convert to ordered dictionary
-                quali_var_sup_ = OrderedDict(coord=quali_var_sup_coord)
+                quali_var_sup_ = {"coord": quali_var_sup_coord}
                 #convert to namedtuple
                 self.quali_var_sup_ = namedtuple("quali_var_sup",quali_var_sup_.keys())(*quali_var_sup_.values())
 
         return self
     
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+            Training data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
@@ -746,20 +763,21 @@ class MPCA(BaseEstimator,TransformerMixin):
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to ``X``.
+        """Apply dimensionality reduction to X.
 
-        ``X`` is projected on the first principal components previously extracted from a training set.
+        X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
-            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+            New data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
         X_new : DataFrame of shape (n_rows, ncp)
-            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+            Projection of X in the first principal components, where ``n_rows`` is the number of rows 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes
@@ -821,7 +839,7 @@ class MPCA(BaseEstimator,TransformerMixin):
             #extract elements
             z_quanti_var, z_quali_var, nz_quanti_var, nz_quali_var = split_z.quanti, split_z.quali, split_z.k1, split_z.k2
             #initialization
-            zcod = DataFrame(index=X.index,columns=self.call_.zcod.columns).astype(float)
+            zcod = DataFrame(index=X.index,columns=self.call_.zcod.columns).astype("float")
             #check if numerics variables
             if nz_quanti_var > 0:
                 #replace with numerics columns
@@ -841,12 +859,12 @@ class MPCA(BaseEstimator,TransformerMixin):
             Z = concat((self.call_.model[k].predict(zs).to_frame(k) for k in Zcod.columns),axis=1)
             #residuals values (MPCAoiv)
             if self.ortho:
-                Z = Zcod - Z.values
+                Z = Zcod - Z.to_numpy()
 
         #within class analysis - suppress within effect
         if self.group is not None and self.option == "within":
-            Z = Z - self.call_.bary.loc[y.values,:].values
+            Z = Z - self.call_.bary.loc[y.to_numpy(),:].to_numpy()
         #coordinates for the new nrows
-        coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.svd_.ncp])
-        coord.columns = self.eig_.index[:self.svd_.ncp]
+        coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.call_.ncp])
+        coord.columns = self.eig_.index[:self.call_.ncp]
         return coord

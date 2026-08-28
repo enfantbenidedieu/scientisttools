@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from numpy import ones, array,ndarray, linalg, real, c_, insert, cumsum,diff,nan,sqrt, trace
 from pandas import DataFrame, Series,concat
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from scipy.spatial.distance import pdist,squareform
 from sklearn.utils import check_symmetric
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -9,7 +9,6 @@ from sklearn.utils.validation import check_is_fitted
 
 #intern functions
 from ..functions.get_sup_label import get_sup_label
-from ..functions.utils import check_is_dataframe
 
 class PCoA(BaseEstimator,TransformerMixin):
     """
@@ -22,7 +21,7 @@ class PCoA(BaseEstimator,TransformerMixin):
     ncp : int, default = 2
         Number of embedding dimensions.
 
-    metric :  str or callablse, default = 'euclidean'
+    metric :  str or callable, default = 'euclidean'
         Metric to use for dissimilarity computation. Default is "euclidean".
 
         If metric is a string, it must be one of the options allowed by
@@ -47,10 +46,11 @@ class PCoA(BaseEstimator,TransformerMixin):
         An optional individuals weights. The weights are given only for the active individuals.
 
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
 
-    Returns
-    -------
+    Attributes
+    ----------
     call_ : call
         An object containing the summary called parameters, with the following attributes:
 
@@ -77,17 +77,20 @@ class PCoA(BaseEstimator,TransformerMixin):
         ind_sup : None, list
             The names of the supplementary individuals.
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     evd_ : evdResult
         An object containing all the eigen values decomposition, with the following attributes:
 
-        V : 2D array-like of shape (n_samples, maxcp)
-            Eigen vectors.
-
-        d : 1D array-like of shape (maxcp,)
-            Eigen values.
+        V : 2D array-like of shape (n_samples, rank)
+            The eigen vectors.
+        d : 1D array-like of shape (rank,)
+            The eigen values.
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
 
     ind_ : ind
         An object containing all the results for the individuals, with the following attributes:
@@ -104,29 +107,47 @@ class PCoA(BaseEstimator,TransformerMixin):
     ind_sup_ : ind_sup, optional
         An object containing all the results for the supplementary individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_rows_plus, ncp)
+        coord : DataFrame of shape (n_samples_plus, ncp)
             The coordinates of the supplementary individuals.
-        cos2 : DataFrame of shape (n_samples, ncp)
+        cos2 : DataFrame of shape (n_samples_plus, ncp)
             The square cosinus of the supplementary individuals.
-        dist2 : Series of shape (n_samples,)
+        dist2 : Series of shape (n_samples_plus,)
             The square euclidean distance of the supplementary individuals.
 
     References
     ----------
-    [1] Borg, I.; Groenen P (1997), Modern Multidimensional Scaling - Theory and Applications, Springer Series in Statistics.
+    [1] Borg, I.; Groenen P. Modern Multidimensional Scaling - Theory and Applications. Springer Series in Statistics. 2005.
 
-    [2] Rakotomalala, R. (2020). Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2. Version 1.
+    [2] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python, `hal-04868625v1 <https://hal.science/hal-04868625v1>`_. 2020.
+
+    Notes
+    -----
+    Principal Coordinates Analysis (from :class:`~scientisttools.PCoA`), also known as classical multidimensional scaling (MDS), is a method used to explore and visualize similarities or dissimilarities among a set of objects or samples. 
+    Unlike its counterpart, Principal Component Analysis (from :class:`~scientisttools.PCA`), which operates on Euclidean distances between data points, PCoA deals with pairwise distances or dissimilarities, 
+    making it suitable for non-Euclidean spaces.
+    
+    See also
+    --------
+    save : Print results for general factor analysis model in an Excel sheet
+    sprintf : Print the analysis results
+    summary : Printing summaries of general factor analysis model
     
     Examples
     --------
     >>> from scientisttools.datasets import autosmds
     >>> from scientisttools import PCoA
     >>> clf = PCoA(ncp=2,ind_sup=(12,13,14))
-    >>> clf.fit(autosmds)
+    >>> clf.fit(autosmds) 
     PCoA(ind_sup=(12,13,14),ncp=2)
     """
     def __init__(
-            self, ncp=2, metric="euclidean", metric_params=None, row_w=None, ind_sup = None, tol = 1e-7
+            self, 
+            ncp = 2, 
+            metric = "euclidean", 
+            metric_params = None, 
+            row_w = None, 
+            ind_sup = None, 
+            tol = 1e-7
     ):
         self.ncp = ncp
         self.metric = metric
@@ -136,16 +157,16 @@ class PCoA(BaseEstimator,TransformerMixin):
         self.tol = tol
     
     def fit(self,X,y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` in the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -156,7 +177,8 @@ class PCoA(BaseEstimator,TransformerMixin):
         #check if X is an object of class pd.DataFrame
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not isinstance(X,DataFrame):
-            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                            "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #Drop level if ndim greater than 1 and reset columns name
@@ -191,9 +213,9 @@ class PCoA(BaseEstimator,TransformerMixin):
         if self.row_w is None:
             row_w = Series(ones(n_rows)/n_rows,index=X.index,name="weight")
         elif not isinstance(self.row_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'row_w' must be a 1d array-like of individuals weights.")
+            raise TypeError("row_w must be a 1d array-like of individuals weights.")
         elif len(self.row_w) != n_rows:
-            raise ValueError(f"'row_w' must be a 1d array-like of shape ({n_rows},).")
+            raise ValueError(f"row_w must be a 1d array-like of shape ({n_rows},).")
         else:
             row_w = Series(array(self.row_w)/sum(self.row_w),index=X.index,name="weight")
 
@@ -233,22 +255,25 @@ class PCoA(BaseEstimator,TransformerMixin):
         if self.ncp is None:
             ncp = rank
         elif self.ncp < 1:
-            raise TypeError("ncp must be positive")
+            raise TypeError("ncp must be strictly positive")
         else:
             ncp = min(self.ncp,rank)
 
         #convert to Ordered dictionary
-        evd_ = OrderedDict(V=eigvects,d=eigvals,rank=rank,ncp=ncp)
+        evd_ = {"V": eigvects, "d": eigvals, "rank": rank, "ncp": ncp}
         #convert to namedtuple
         self.evd_ = namedtuple("evdResult",evd_.keys())(*evd_.values())
 
         #proportion and difference
-        eigdiff, eigprop = insert(-diff(eigvals),len(eigvals)-1,nan), 100*eigvals/Itot
+        eigdiff, eigprop = insert(-diff(eigvals),rank-1,nan), 100*eigvals/Itot
         #convert to DataFrame
-        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],index = ["Dim"+str(x+1) for x in range(len(eigvals))])
+        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],
+                              columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],
+                              index = [f"Dim{x+1}" for x in range(rank)])
 
         #convert to ordered dictionary
-        call_ = OrderedDict(Xtot=Xtot,X=X,dist=dist,D=D,S=S,d1=d1,d2=d2,d3=d3,row_w=row_w,ncp=ncp,ind_sup=ind_sup_label)
+        call_ = {"Xtot": Xtot, "X": X, "dist": dist, "D": D, "S": S, "d1": d1, "d2": d2, "d3": d3, 
+                 "row_w": row_w, "ncp": ncp, "ind_sup": ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
         
@@ -256,7 +281,7 @@ class PCoA(BaseEstimator,TransformerMixin):
         #statistics for individuals: coordinates, contributions,  square euclidean distance and square cosinus
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #coordinates for the individuals
-        coord = DataFrame(eigvects[:,:ncp]*sqrt(eigvals[:ncp]),index=X.index,columns=["Dim"+str(x+1) for x in range(ncp)])
+        coord = DataFrame(eigvects[:,:ncp]*sqrt(eigvals[:ncp]),index=X.index,columns=[f"Dim{x+1}" for x in range(ncp)])
         #contributions for the individuals
         ctr = (coord**2)/eigvals[:ncp]
         #square euclidean distance
@@ -264,7 +289,7 @@ class PCoA(BaseEstimator,TransformerMixin):
         #cos2 for the individuals
         sqcos = ((coord**2).T/sqdist).T
         #convert to ordered dictionary
-        ind_ = OrderedDict(coord=coord,contrib=ctr,cos2=sqcos,dist2=sqdist)
+        ind_ = {"coord": coord, "contrib": ctr, "cos2": sqcos, "dist2": sqdist}
         #convert to namedtuple
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
@@ -275,36 +300,37 @@ class PCoA(BaseEstimator,TransformerMixin):
             dist_sup = X_ind_sup
             if self.metric != "precomputed":
                 n_rows_sup = len(ind_sup_label)
-                dist_sup = DataFrame(squareform(pdist(concat((X_ind_sup,self.call_.X),axis=0),metric=self.metric,**(self.metric_params if self.metric_params is not None else {})))[:n_rows_sup,n_rows_sup:],
+                dist_sup = DataFrame(squareform(pdist(concat((X_ind_sup,self.call_.X),axis=0),metric=self.metric,
+                                                      **(self.metric_params if self.metric_params is not None else {})))[:n_rows_sup,n_rows_sup:],
                                     index=ind_sup_label,columns=self.call_.X.index)
             #double centering
             D_sup = dist_sup**2
             d1_sup = D_sup.sum(axis=1)
             S_sup = (-0.5*(((D_sup.T - d1_sup).T - d2) + d3))
             #coordinates for the supplementary individuals
-            ind_sup_coord = DataFrame(S_sup.values.dot(eigvects[:,:ncp]/sqrt(eigvals[:ncp])),index=ind_sup_label,columns=self.eig_.index[:ncp])
+            ind_sup_coord = DataFrame(S_sup.to_numpy().dot(eigvects[:,:ncp]/sqrt(eigvals[:ncp])),index=ind_sup_label,columns=self.eig_.index[:ncp])
             #squared euclidean distance of the supplementary individuals
-            ind_sup_sqdist = Series(((S_sup.values.dot(eigvects/sqrt(eigvals)))**2).sum(axis=1),index=ind_sup_label,name="Sq. Dist.")
+            ind_sup_sqdist = Series(((S_sup.to_numpy().dot(eigvects/sqrt(eigvals)))**2).sum(axis=1),index=ind_sup_label,name="Sq. Dist.")
             #cos2 of the supplementary individuals
             ind_sup_cos2 = ((ind_sup_coord**2).T/ind_sup_sqdist).T
             #convert to ordered dictionary
-            ind_sup_ = OrderedDict(coord=ind_sup_coord,cos2=ind_sup_cos2,dist2=ind_sup_sqdist)
+            ind_sup_ = {"coord": ind_sup_coord, "cos2": ind_sup_cos2, "dist2": ind_sup_sqdist}
             #convert to namedtuple
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
         
         return self
 
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
         X : Dataframe of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
@@ -315,20 +341,21 @@ class PCoA(BaseEstimator,TransformerMixin):
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to ``X``.
+        """Apply dimensionality reduction to X.
 
-        ``X`` is projected on the first principal components previously extracted from a training set.
+        X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
-            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+            New data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
         X_new : DataFrame of shape (n_rows, ncp)
-            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+            Projection of X in the first principal components, where ``n_rows`` is the number of rows 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes
@@ -338,7 +365,9 @@ class PCoA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if X is an object of class pd.DataFrame
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        check_is_dataframe(X)
+        if not isinstance(X,DataFrame):
+            raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                            "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set index name as None
@@ -361,11 +390,12 @@ class PCoA(BaseEstimator,TransformerMixin):
         dist = X
         if self.metric != "precomputed":
             n_rows = X.shape[0]
-            dist = DataFrame(squareform(pdist(concat((X,self.call_.X),axis=0),metric=self.metric,**(self.metric_params if self.metric_params is not None else {})))[:n_rows,n_rows:],
+            dist = DataFrame(squareform(pdist(concat((X,self.call_.X),axis=0),metric=self.metric,
+                                              **(self.metric_params if self.metric_params is not None else {})))[:n_rows,n_rows:],
                              index=X.index,columns=self.call_.X.index)
         #double centering
         D = dist**2
         d1 = D.sum(axis=1)
         S = (-0.5*(((D.T - d1).T - self.call_.d2) + self.call_.d3))
         #coordinates for the new rows
-        return DataFrame(S.values.dot(self.evd_.V[:,:self.evd_.ncp]/sqrt(self.evd_.d[:self.evd_.ncp])),index=X.index,columns=self.eig_.index[:self.evd_.ncp])
+        return DataFrame(S.to_numpy().dot(self.evd_.V[:,:self.evd_.ncp]/sqrt(self.evd_.d[:self.evd_.ncp])),index=X.index,columns=self.eig_.index[:self.evd_.ncp])

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from numpy import ndarray, array,ones, sqrt, linalg, log, cumsum,mean, nan
+from numpy import ndarray, array,ones, sqrt
 from pandas import DataFrame, Series, concat, CategoricalDtype
-from scipy.stats import chi2
-from collections import namedtuple,OrderedDict
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -17,8 +16,6 @@ from ..functions.statistics import wmean, wstd, wcorr, func_groupby
 from ..functions.utils import check_is_bool, check_is_dataframe
 from ..functions.func_eta2 import func_eta2
 from ..functions.func_predict import func_predict
-from ..functions.cov2corr import cov2corr
-from ..others._kaisermsa import kaisermsa
 from ..others._splitmix import splitmix
 from ..others._disjunctive import disjunctive
 
@@ -32,25 +29,25 @@ class PCA(BaseEstimator,TransformerMixin):
     Parameters
     ----------
     scale_unit : bool, default = True
-        If ``True``, then the data are scaled to unit variance.
+        If True, then the data are scaled to unit variance.
 
     iv : int, list, tuple or range, default = None
         The indexes or names of the instrumental (explanatory) variables (continuous and/or categorical).
 
     ortho : bool, default = False
-        If ``True``, then the principal component analysis with orthogonal instrumental variables (PCAoiv) is performed.
+        If True, then the principal component analysis with orthogonal instrumental variables (PCAoiv) is performed.
 
     partial : int, str, list, tuple or range, default = None
         The indexes or the names of the partial variables (continuous and/or categorical).
 
-    group : int, str
+    group : int, str, default = None
         The indexe or name of the categorical variable which allows for between-class or within-class analysis.
 
     option : str, default = "between"
         Which class analysis should be performns.
 
-        - 'between' for between-class analysis.
-        - 'within' for within-class analysis.
+        * 'between' for between-class analysis.
+        * 'within' for within-class analysis.
 
     ncp : int, default = 5
         The number of dimensions kept in the results.
@@ -68,10 +65,11 @@ class PCA(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary variables (continuous and/or categorical).
     
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
      
-    Returns
-    -------
+    Attributes
+    ----------
     call_ : call
         An object containing the summary called parameters with the following attributes:
 
@@ -132,7 +130,7 @@ class PCA(BaseEstimator,TransformerMixin):
         y : Series of shape (n_rows,), optional
             The group distribution.
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     ind_ : ind
@@ -208,11 +206,13 @@ class PCA(BaseEstimator,TransformerMixin):
     svd_ : svd
         An object containing all the results for the generalized singular value decomposition (GSVD) with the following attributes:
         
-        vs : 1d numpy array of shape (maxcp,)
+        vs : 1d numpy array of shape (rank,)
             The singular values.
-        U : 2d numpy array of shape (n_rows, maxcp) or (n_groups, maxcp)
+        d : 1d numpy array of shape (rank,)
+            The eigen values (= square singular values).
+        U : 2d numpy array of shape (n_rows, rank) or (n_groups, rank)
             The left singular vectors.
-        V : 2d numpy array of shape (n_columns, maxcp)
+        V : 2d numpy array of shape (n_columns, rank)
             The right singular vectors.
         rank : int
             The maximum number of components.
@@ -221,24 +221,21 @@ class PCA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Escofier B., Pagès J. (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    [1] Escofier B, Pagès J. `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. 2008, Dunod, Paris 4ed.
 
     [2] Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
 
-    [3] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
+    [3] Lebart L., Piron M., & Morineau A. `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_, 2006, Dunod, Paris 4ed.
 
     [4] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
 
-    [5] Rakotomalala, Ricco (2020), `Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2 <https://hal.science/hal-04868625v1>_`, Version 1.0
+    [5] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_
     
-    See also
+    See Also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet
+    sprintf : Print the analysis results
+    summary : Printing summaries of general factor analysis model
     
     Examples
     --------
@@ -249,7 +246,19 @@ class PCA(BaseEstimator,TransformerMixin):
     PCA(ind_sup=range(41,46), sup_var=(10,11,12))
     """
     def __init__(
-            self, scale_unit=True, iv=None, ortho=False, partial=None, group=None, option="between", ncp=5, row_w=None, col_w=None, ind_sup=None, sup_var=None, tol = 1e-7
+            self, 
+            scale_unit = True, 
+            iv = None, 
+            ortho = False, 
+            partial = None, 
+            group = None, 
+            option = "between", 
+            ncp = 5, 
+            row_w = None, 
+            col_w = None, 
+            ind_sup = None, 
+            sup_var = None, 
+            tol = 1e-7
     ):
         self.scale_unit = scale_unit
         self.iv = iv
@@ -265,16 +274,16 @@ class PCA(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` in the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` in the number of rows 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -282,38 +291,42 @@ class PCA(BaseEstimator,TransformerMixin):
             Returns the instance itself
         """ 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if scale_unit is a boolean
+        # check if scale_unit is a boolean
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         check_is_bool(self.scale_unit)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if ortho is a boolean
+        # check if ortho is a boolean
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.iv is not None: 
             check_is_bool(self.ortho)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #group validation
+        # group validation
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.group is not None and not isinstance(self.group,(int,str)):
-            raise TypeError("'group' must be either an objet of type int or str")
-        if self.group is not None and not self.option in ("between","within"):
-            raise ValueError("'option' should be one of 'between', 'within'")
+        if self.group is not None:
+            if not isinstance(self.group,(int,str)):
+                raise TypeError("group must be either an objet of type int or str")
+            if not (self.option in ("between","within")):
+                raise ValueError("option should be one of 'between', 'within'")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #preprocessing
+        # preprocessing
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         X = preprocessing(X=X)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #get instrumental variables labels, partial variables labels and grouping variable label
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        iv_label, partial_label, group_label = get_sup_label(X=X,indexes=self.iv, axis=1) , get_sup_label(X=X,indexes=self.partial,axis=1), get_sup_label(X=X,indexes=self.group,axis=1)
+        iv_label      = get_sup_label(X=X,indexes=self.iv, axis=1)
+        partial_label = get_sup_label(X=X,indexes=self.partial,axis=1)
+        group_label   = get_sup_label(X=X,indexes=self.group,axis=1)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #get supplementary elements labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        ind_sup_label, sup_var_label = get_sup_label(X=X,indexes=self.ind_sup,axis=0), get_sup_label(X=X,indexes=self.sup_var,axis=1)
+        ind_sup_label = get_sup_label(X=X,indexes=self.ind_sup,axis=0)
+        sup_var_label = get_sup_label(X=X,indexes=self.sup_var,axis=1)
 
         #make a copy of the original data
         Xtot = X.copy()
@@ -349,7 +362,7 @@ class PCA(BaseEstimator,TransformerMixin):
         if self.group is not None:
             y, X = X[group_label[0]], X.drop(columns=group_label)
             #unique element in y
-            uq_classe = sorted(list(y.unique()))
+            uq_classe = sorted(y.unique())
             #convert y to categorical data type
             y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
 
@@ -366,19 +379,19 @@ class PCA(BaseEstimator,TransformerMixin):
         if self.row_w is None: 
             ind_w = Series(ones(n_rows)/n_rows,index=X.index,name="weight")
         elif not isinstance(self.row_w,(list,tuple,ndarray,Series)): 
-            raise TypeError("'row_w' must be a 1d array-like of rows weights.")
+            raise TypeError("row_w must be a 1d array-like of rows weights.")
         elif len(self.row_w) != n_rows: 
-            raise ValueError(f"'row_w' must be 1d array-like of shape ({n_rows},).")
+            raise ValueError(f"row_w must be 1d array-like of shape ({n_rows},).")
         else: 
             ind_w = Series(array(self.row_w)/sum(self.row_w),index=X.index,name="weight")
         
         #set columns weights
-        if self.col_w is None: 
+        if self.col_w is None:
             var_w = Series(ones(n_cols),index=X.columns,name="weight")
         elif not isinstance(self.col_w,(list,tuple,ndarray,Series)): 
-            raise TypeError("'col_w' must be a 1d array-like of columns weights.")
+            raise TypeError("col_w must be a 1d array-like of columns weights.")
         elif len(self.col_w) != n_cols: 
-            raise ValueError(f"'col_w' must be a 1d array-like of shape ({n_cols},).")
+            raise ValueError(f"col_w must be a 1d array-like of shape ({n_cols},).")
         else: 
             var_w = Series(array(self.col_w),index=X.columns,name="weight")
 
@@ -386,7 +399,7 @@ class PCA(BaseEstimator,TransformerMixin):
         x_center, x_scale = wmean(X=X,w=ind_w), wstd(X=X,w=ind_w)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #principal components analysis with partial variables (PCApartial)
+        # principal components analysis with partial variables (PCApartial)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         Xcod = X.copy()
         if self.partial is not None:
@@ -398,15 +411,19 @@ class PCA(BaseEstimator,TransformerMixin):
             Xcod = concat((model1[k].resid.to_frame(k) for k in X.columns),axis=1)
     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #standardization: z_ik = (x_ik - m_k)/s_k
+        # standardization: z_ik = (x_ik - m_k)/s_k
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #compute weighted average and weighted standard deviation
-        center, scale = wmean(X=Xcod,w=ind_w), wstd(X=Xcod,w=ind_w) if self.scale_unit else Series(ones(n_cols),index=Xcod.columns,name="scale")
+        center= wmean(X=Xcod,w=ind_w)
+        if self.scale_unit:
+            scale = wstd(X=Xcod,w=ind_w)
+        else:
+            scale = Series(ones(n_cols),index=Xcod.columns,name="scale")
         #standardization: z_ik = (x_ik - m_k)/s_k
         Zcod = (Xcod - center)/scale
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #principal components analysis with (orthogonal) instrumental variables
+        # principal components analysis with (orthogonal) instrumental variables
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         Z, col_w = Zcod.copy(), var_w.copy()
         if self.iv is not None:
@@ -418,7 +435,10 @@ class PCA(BaseEstimator,TransformerMixin):
             #separate weighted least squared model
             model2 = wlsreg(X=zs,Y=Zcod,w=ind_w)
             #residuals or fitted variables
-            Z = concat((model2[k].resid.to_frame(k) for k in Zcod.columns),axis=1) if self.ortho else concat((model2[k].fittedvalues.to_frame(k) for k in Zcod.columns),axis=1)
+            if self.ortho:
+                Z = concat((model2[k].resid.to_frame(k) for k in Zcod.columns),axis=1) 
+            else:
+                Z = concat((model2[k].fittedvalues.to_frame(k) for k in Zcod.columns),axis=1)
             #set columns weights
             col_w = Series(ones(Zcod.shape[1]),index=Zcod.columns,name="weight")
 
@@ -432,9 +452,10 @@ class PCA(BaseEstimator,TransformerMixin):
             bary = func_groupby(X=Z,by=y,func="mean",w=ind_w).loc[uq_classe,:]
             #update tab and row_w
             if self.option == "between":
-                tab, row_w = bary.copy(), Series([ind_w.loc[y[y==k].index].sum() for k in uq_classe],index=uq_classe,name="weight")
+                tab = bary.copy()
+                row_w = Series([ind_w.loc[y[y==k].index].sum() for k in uq_classe],index=uq_classe,name="weight")
             else:
-                tab, row_w = Z - bary.loc[y.values,:].values, ind_w.copy()
+                tab, row_w = Z - bary.loc[y.to_numpy(),:].to_numpy(), ind_w.copy()
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #fit generalized factor analysis model and extract all elements
@@ -442,18 +463,24 @@ class PCA(BaseEstimator,TransformerMixin):
         fit_ = gFA(X=tab,ncp=self.ncp,row_w=row_w,col_w=col_w,tol=self.tol)
 
         #extract elements
-        self.svd_, self.eig_, ncp, self.quanti_var_ = fit_.svd, fit_.eig, fit_.ncp, namedtuple("quanti_var",fit_.col.keys())(*fit_.col.values())
+        self.svd_, self.eig_= fit_.svd, fit_.eig
+        # reset number of components
+        ncp = self.svd_.ncp
+        # convert to namedtuple and add to model attribute
+        self.quanti_var_  = namedtuple("quanti_var",fit_.col.keys())(*fit_.col.values())
 
         #convert to ordered dictionary - call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Xcod=Xcod,Zcod=Zcod,Z=Z,bary=bary,tab=tab,x_center=x_center,x_scale=x_scale,center=center,scale=scale,ind_w=ind_w,row_w=row_w,var_w=var_w,col_w=col_w,ncp=ncp,
-                            iv=iv_label,partial=partial_label,group=group_label,ind_sup=ind_sup_label,sup_var=sup_var_label)
+        call_ = {"Xtot": Xtot, "X": X, "Xcod": Xcod, "Zcod": Zcod, "Z": Z, "bary": bary, "tab": tab, 
+                 "x_center": x_center, "x_scale": x_scale, "center": center, "scale": scale, 
+                 "ind_w": ind_w, "row_w": row_w, "var_w": var_w, "col_w": col_w, "ncp": ncp,
+                 "iv": iv_label, "partial": partial_label, "group": group_label, "ind_sup": ind_sup_label, "sup_var": sup_var_label}
         #add elements
         if self.partial is not None:
-            call_ = {**call_, **OrderedDict(t=t,tcod=tcod,model1=model1)}
+            call_ = {**call_, **{"t": t, "tcod": tcod, "model1": model1}}
         if self.iv is not None:
-            call_ = {**call_, **OrderedDict(z=z,zcod=zcod,zs=zs,z_center=z_center,z_scale=z_scale,model2=model2)}
+            call_ = {**call_, **{"z": z, "zcod": zcod, "zs": zs, "z_center": z_center, "z_scale": z_scale, "model2": model2}}
         if self.group is not None:
-            call_ = {**call_, **OrderedDict(y=y)}
+            call_ = {**call_, **{"y": y}}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -463,12 +490,15 @@ class PCA(BaseEstimator,TransformerMixin):
         ind_ = fit_.row 
         if self.group is not None:
             #ratio - percentage of between-class/within-class inertia
-            res_ = gSVD(X=Z,ncp=self.ncp,row_w=ind_w,col_w=col_w)
+            res_ = gSVD(X=Z,ncp=self.ncp,row_w=ind_w,col_w=col_w,tol=self.tol)
             if self.option == "between":
                 group_, ind_ = fit_.row, func_predict(X=Z,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0)
             else:
                 group_ = func_predict(X=bary,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0)
-            self.ratio_, self.group_ = sum(self.eig_.iloc[:,0])/sum(res_.vs**2), namedtuple("group",group_.keys())(*group_.values())
+            self.ratio_ = sum(self.eig_.iloc[:,0])/sum(res_.d)
+            self.group_ = namedtuple("group",group_.keys())(*group_.values())
+        
+        # convert to namedtuple and add to model attribute
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -479,7 +509,7 @@ class PCA(BaseEstimator,TransformerMixin):
             #coordinates for the partial variables
             partial_coord = wcorr(X=concat((self.call_.tcod,self.ind_.coord),axis=1),w=ind_w).iloc[:ntod,ntod:]
             #convert to ordered dictionary
-            partial_ = OrderedDict(coord=partial_coord,cos2=partial_coord**2)
+            partial_ = {"coord": partial_coord, "cos2": partial_coord**2}
             #convert to namedtuple
             self.partial_ = namedtuple("partial",partial_.keys())(*partial_.values())
 
@@ -491,7 +521,7 @@ class PCA(BaseEstimator,TransformerMixin):
             #coordinates for the instrumental variables
             iv_coord = wcorr(X=concat((self.call_.zcod,self.ind_.coord),axis=1),w=ind_w).iloc[:nzcod,nzcod:]
             #convert to ordered dictionary
-            iv_ = OrderedDict(coord=iv_coord,cos2=iv_coord**2)
+            iv_ = {"coord": iv_coord, "cos2": iv_coord**2}
             #convert to namedtuple
             self.iv_ = namedtuple("iv",iv_.keys())(*iv_.values())
 
@@ -506,10 +536,12 @@ class PCA(BaseEstimator,TransformerMixin):
                 #split t_ind_sup
                 split_t_ind_sup = splitmix(t_ind_sup)
                 #extract elements
-                t_ind_sup_quanti_var, t_ind_sup_quali_var, nt_ind_sup_quanti_var, nt_ind_sup_quali_var = split_t_ind_sup.quanti, split_t_ind_sup.quali, split_t_ind_sup.k1, split_t_ind_sup.k2
-                #initialization
-                tcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.tcod.columns).astype(float)
-                #check if numerics variables
+                t_ind_sup_quanti_var, t_ind_sup_quali_var = split_t_ind_sup.quanti, split_t_ind_sup.quali
+                nt_ind_sup_quanti_var, nt_ind_sup_quali_var = split_t_ind_sup.k1, split_t_ind_sup.k2
+                
+                # initialization
+                tcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.tcod.columns).astype("float")
+                # check if numerics variables
                 if nt_ind_sup_quanti_var > 0:
                     #replace with numerics columns
                     tcod_ind_sup.loc[:,t_ind_sup_quanti_var.columns] = t_ind_sup_quanti_var
@@ -519,12 +551,14 @@ class PCA(BaseEstimator,TransformerMixin):
                     categorics = [x for x in self.call_.tcod.columns if x not in self.call_.t.columns]
                     #replace with dummies
                     tcod_ind_sup.loc[:,categorics] = disjunctive(X=t_ind_sup_quali_var,cols=categorics,prefix=True,sep="")
-                #insert constant to features
+                # insert constant to features
                 tcod_ind_sup.insert(0,"const",1)
-                #residuals
-                Xcod_ind_sup = concat(((X_ind_sup[k] - self.call_.model1[k].predict(tcod_ind_sup)).to_frame(k) for k in X_ind_sup.columns),axis=1)
+                # predictions
+                t_pred_ind_sup = concat((self.call_.model1[k].predict(tcod_ind_sup).to_frame(k) for k in X_ind_sup.columns),axis=1)
+                # residuals
+                Xcod_ind_sup = X_ind_sup - t_pred_ind_sup.to_numpy()
                 
-            #standardization: z_ik = (x_ik - m_k)/s_k
+            # standardization: z_ik = (x_ik - m_k)/s_k
             Zcod_ind_sup = (Xcod_ind_sup - self.call_.center)/self.call_.scale
 
             #principal component analysis with instrumental variables
@@ -533,9 +567,11 @@ class PCA(BaseEstimator,TransformerMixin):
                 #split z_ind_sup
                 split_z_ind_sup = splitmix(z_ind_sup)
                 #extract elements
-                z_ind_sup_quanti_var, z_ind_sup_quali_var, nz_ind_sup_quanti_var, nz_ind_sup_quali_var = split_z_ind_sup.quanti, split_z_ind_sup.quali, split_z_ind_sup.k1, split_z_ind_sup.k2
+                z_ind_sup_quanti_var, z_ind_sup_quali_var= split_z_ind_sup.quanti, split_z_ind_sup.quali
+                nz_ind_sup_quanti_var, nz_ind_sup_quali_var  = split_z_ind_sup.k1, split_z_ind_sup.k2
+                
                 #initialization
-                zcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.zcod.columns).astype(float)
+                zcod_ind_sup = DataFrame(index=ind_sup_label,columns=self.call_.zcod.columns).astype("float")
                 #check if numerics variables
                 if nz_ind_sup_quanti_var > 0:
                     #replace with numerics columns
@@ -555,11 +591,11 @@ class PCA(BaseEstimator,TransformerMixin):
                 Z_ind_sup = concat((self.call_.model2[k].predict(zs_ind_sup).to_frame(k) for k in Zcod_ind_sup.columns),axis=1)
                 #residuals for orthogonal instrumental variables
                 if self.ortho: 
-                    Z_ind_sup = Zcod_ind_sup - Z_ind_sup.values
+                    Z_ind_sup = Zcod_ind_sup - Z_ind_sup.to_numpy()
 
             #within class analysis - suppress within effect
             if self.group is not None and self.option == "within":
-                Z_ind_sup = Z_ind_sup - bary.loc[y_ind_sup.values,:].values
+                Z_ind_sup = Z_ind_sup - bary.loc[y_ind_sup.to_numpy(),:].to_numpy()
 
             #statistics for supplementary individuals
             ind_sup_ = func_predict(X=Z_ind_sup,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0)
@@ -572,7 +608,8 @@ class PCA(BaseEstimator,TransformerMixin):
         if self.sup_var is not None:
             #split X_sup_var
             split_X_sup_var = splitmix(X=X_sup_var)
-            X_quanti_var_sup, X_quali_var_sup, n_quanti_var_sup, n_quali_var_sup = split_X_sup_var.quanti, split_X_sup_var.quali, split_X_sup_var.k1, split_X_sup_var.k2
+            X_quanti_var_sup, X_quali_var_sup = split_X_sup_var.quanti, split_X_sup_var.quali
+            n_quanti_var_sup, n_quali_var_sup = split_X_sup_var.k1, split_X_sup_var.k2
             
             #statistics for supplementary continuous variables
             if n_quanti_var_sup > 0:
@@ -586,7 +623,8 @@ class PCA(BaseEstimator,TransformerMixin):
                     Xcod_quanti_var_sup = concat((model1_sup[k].resid.to_frame(k) for k in X_quanti_var_sup.columns),axis=1)
 
                 #compute weighted average for supplementary continuous variables
-                center_sup, scale_sup = wmean(X=Xcod_quanti_var_sup,w=ind_w), wstd(X=Xcod_quanti_var_sup,w=ind_w) if self.scale_unit else ones(n_quanti_var_sup)
+                center_sup = wmean(X=Xcod_quanti_var_sup,w=ind_w)
+                scale_sup = wstd(X=Xcod_quanti_var_sup,w=ind_w) if self.scale_unit else ones(n_quanti_var_sup)
                 #standardization: z_ik = (x_ik - m_k)/s_k
                 Zcod_quanti_var_sup = (Xcod_quanti_var_sup - center_sup)/scale_sup
 
@@ -596,12 +634,18 @@ class PCA(BaseEstimator,TransformerMixin):
                     #separate weighted least squared model
                     model2_sup = wlsreg(X=self.call_.zs,Y=Zcod_quanti_var_sup,w=ind_w)
                     #residuals or fitted variables
-                    Z_quanti_var_sup = concat((model2_sup[k].resid.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1) if self.ortho else concat((model2_sup[k].fittedvalues.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1)
-                    
+                    if self.ortho:
+                        Z_quanti_var_sup = concat((model2_sup[k].resid.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1)
+                    else:
+                        Z_quanti_var_sup = concat((model2_sup[k].fittedvalues.to_frame(k) for k in Zcod_quanti_var_sup.columns),axis=1)
+
                 #within class analysis - suppress within effect
                 if self.group is not None:
                     bary_quanti_var_sup = func_groupby(X=Z_quanti_var_sup,by=y,func="mean",w=ind_w).loc[uq_classe,:]
-                    Z_quanti_var_sup = bary_quanti_var_sup if self.option == "between" else Z_quanti_var_sup - bary_quanti_var_sup.loc[y.values,:].values
+                    if self.option == "between":
+                        Z_quanti_var_sup = bary_quanti_var_sup
+                    else:
+                        Z_quanti_var_sup = Z_quanti_var_sup - bary_quanti_var_sup.loc[y.to_numpy(),:].to_numpy()
 
                 #statistics for supplementary continuous variables
                 quanti_var_sup_ = func_predict(X=Z_quanti_var_sup,Y=fit_.svd.U[:,:ncp],w=row_w,axis=1)
@@ -626,27 +670,27 @@ class PCA(BaseEstimator,TransformerMixin):
                 #coordinates for the supplementary categorical variables - Eta-squared
                 quali_var_sup_coord = func_eta2(X=self.ind_.coord,by=X_quali_var_sup,w=ind_w,excl=None)
                 #convert to ordered dictionary
-                quali_var_sup_ = OrderedDict(coord=quali_var_sup_coord)
+                quali_var_sup_ = {"coord": quali_var_sup_coord}
                 #convert to namedtuple
                 self.quali_var_sup_ = namedtuple("quali_var_sup",quali_var_sup_.keys())(*quali_var_sup_.values())
                 
         return self
     
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+            Training data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, a)
+        X_new : DataFrame of shape (n_rows, ncp)
             Transformed values.
         """
         self.fit(X)
@@ -654,19 +698,21 @@ class PCA(BaseEstimator,TransformerMixin):
     
     def transform(self,X):
         """
-        Apply dimensionality reduction to ``X``.
+        Apply dimensionality reduction to X
 
-        ``X`` is projected on the first principal components previously extracted from a training set.
+        X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
-            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+            New data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
         X_new : DataFrame of shape (n_rows, ncp)
-            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+            Projection of X in the first principal components, where ``n_rows`` is the number of rows 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes
@@ -714,9 +760,11 @@ class PCA(BaseEstimator,TransformerMixin):
             #split t
             split_t = splitmix(t)
             #extract elements
-            t_quanti_var, t_quali_var, nt_quanti_var, nt_quali_var = split_t.quanti, split_t.quali, split_t.k1, split_t.k2
+            t_quanti_var, t_quali_var = split_t.quanti, split_t.quali
+            nt_quanti_var, nt_quali_var = split_t.k1, split_t.k2
+            
             #initialization
-            tcod = DataFrame(index=X.index,columns=self.call_.tcod.columns).astype(float)
+            tcod = DataFrame(index=X.index,columns=self.call_.tcod.columns).astype("float")
             #check if numerics variables
             if nt_quanti_var > 0:
                 #replace with numerics columns
@@ -729,8 +777,10 @@ class PCA(BaseEstimator,TransformerMixin):
                 tcod.loc[:,categorics] = disjunctive(X=t_quali_var,cols=categorics,prefix=True,sep="")
             #insert constant to features
             tcod.insert(0,"const",1)
+            # predictions
+            tpred = concat((self.call_.model1[k].predict(tcod).to_frame(k) for k in X.columns),axis=1)
             #residuals
-            Xcod = concat(((X[k] - self.call_.model1[k].predict(tcod)).to_frame(k) for k in X.columns),axis=1)
+            Xcod = X - tpred.to_numpy()
             
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #standardization: z_ik = (x_ik - m_k)/s_k
@@ -745,9 +795,11 @@ class PCA(BaseEstimator,TransformerMixin):
             #split z
             split_z = splitmix(z)
             #extract elements
-            z_quanti_var, z_quali_var, nz_quanti_var, nz_quali_var = split_z.quanti, split_z.quali, split_z.k1, split_z.k2
+            z_quanti_var, z_quali_var = split_z.quanti, split_z.quali
+            nz_quanti_var, nz_quali_var = split_z.k1, split_z.k2
+            
             #initialization
-            zcod = DataFrame(index=X.index,columns=self.call_.zcod.columns).astype(float)
+            zcod = DataFrame(index=X.index,columns=self.call_.zcod.columns).astype("float")
             #check if numerics variables
             if nz_quanti_var > 0:
                 #replace with numerics columns
@@ -767,119 +819,13 @@ class PCA(BaseEstimator,TransformerMixin):
             Z = concat((self.call_.model2[k].predict(zs).to_frame(k) for k in Zcod.columns),axis=1)
             #residuals for orthogonal instrumental variables
             if self.ortho: 
-                Z = Zcod - Z.values
+                Z = Zcod - Z.to_numpy()
 
         #within class analysis - suppress within effect
         if self.group is not None and self.option == "within":
-            Z = Z - self.call_.bary.loc[y.values,:].values
+            Z = Z - self.call_.bary.loc[y.to_numpy(),:].to_numpy()
+        
         #coordinates for the new nrows
         coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.svd_.ncp])
         coord.columns = self.eig_.index[:self.svd_.ncp]
         return coord
-
-def statsPCA(
-        obj
-):
-    """
-    Statistics with Principal Component Analysis
-
-    Performs statistics with principal component analysis
-
-    Parameters
-    ----------
-    obj : class
-        An object of class :class:`~scientisttools.PCA`.
-
-    Returns
-    -------
-    result : statPCAResult
-        A object with the following attributes
-
-        corr_ : corr
-            An object containing all the results for the correlation with the following attributes:  
-
-            corrcoef: DataFrame of shape (n_columns, n_columns) 
-                The pearson correlation coefficient matrix.
-            pcorrcoef: DataFrame of shape (n_columns, n_columns) 
-                The partial pearson correlation coefficient matrix
-            reconst: DataFrame of shape (n_columns, n_columns) 
-                The reconstitution pearson correlation coefficient matrix
-            residual: DataFrame of shape (n_columns, n_columns) 
-                The residual correlation matrix
-
-        others_ : others
-            An object with the following attributes:
-
-            threshold : DataFrame of shape (1,2)
-                Eigen values threshold: kaiser, kaiser proportion and KSS (Karlis - Saporta - Spinaki).
-            bartlett: DataFrame of shape (1,4)
-                The Bartlett's test of Spericity.
-            broken: Series of shape (max_components, 2)
-                The broken's stick threshold.
-            msa: Series of shape (n_columns + 1,)
-                The Kaiser measure of sampling adequacy.
-            
-    """
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if the estimator is fitted by verifying the presence of fitted attributes
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    check_is_fitted(obj)
-    
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if obj is an object of class PCA
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    if obj.__class__.__name__ != "PCA":
-        raise TypeError("'obj' must be an object of class PCA")
-
-    #set number of rows and columns
-    n_rows, n_cols = obj.call_.X.shape
-    maxncp, colnames = obj.eig_.shape[0], obj.call_.Z.columns
-
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #correlation matrix
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #covariance/correlation of Z and reconst
-    M = wcorr(obj.call_.Z,w=obj.call_.row_w,ddof=0)
-    #inverse of M
-    try: 
-        inv_M = DataFrame(linalg.inv(M),index=colnames,columns=colnames)
-    except linalg.LinAlgError: 
-        inv_M = DataFrame(linalg.pinv(M,hermitian=True),index=colnames,columns=colnames)
-    #weighted partial correlation matrix and reconst covariance/correlation
-    partial_M, reconst_M = -1*cov2corr(inv_M), (obj.quanti_var_.coord.T * obj.call_.col_w).T.dot(obj.quanti_var_.coord.T)
-    for c in partial_M.columns:
-        partial_M.loc[c,c] = 1
-    #residual covariance/correlation
-    resid_M = M - reconst_M.values
-    for c in resid_M.columns:
-        resid_M.loc[c,c] = nan
-    #convert to ordered dictionary
-    corr_ = OrderedDict(corrcoef=M,pcorrcoef=partial_M,reconst=reconst_M,resid=resid_M)
-    #convert to namedtuple
-    corr_ = namedtuple("corr",corr_.keys())(*corr_.values())
-
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #bartlett's test
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #Bartlett - statistics
-    bartlett_stats, bs_dof = -(n_rows-1-(2*n_cols+5)/6)*sum(log(obj.eig_.iloc[:,0])), n_cols*(n_cols-1)/2
-    bs_pvalue = chi2.sf(bartlett_stats,df=bs_dof)
-    bartlett = DataFrame([[linalg.det(M),bartlett_stats,bs_dof,bs_pvalue]],columns=["|CORR.MATRIX|","CHISQ","dof","p-value"],index=["Bartlett's test"])
-    bartlett["dof"] = bartlett["dof"].astype(int)
-
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #others informations
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #Karlis - Saporta - Spinaki threshold
-    kss_th =  1 + 2*sqrt((maxncp-1)/(n_rows-1))
-    #eigen value threshold
-    eig_th = DataFrame([[mean(obj.eig_.iloc[:,0]),kss_th]],columns=["Kaiser-Guttman","Karlis-Saporta-Spinaki"],index=["Critical values"])
-    
-    #broken-stick crticial values
-    broken = Series(cumsum([1/x for x in range(maxncp,0,-1)])[::-1],name="Broken-stick critical values",index=[f"Dim{x+1}" for x in range(maxncp)])
-    broken = concat((obj.eig_.iloc[:,0],broken),axis=1)
-    #convert to ordered dictionary
-    others_ = OrderedDict(threshold=eig_th,bartlett=bartlett,broken=broken,msa=kaisermsa(X=obj.call_.X,w=obj.call_.ind_w))
-    #convert to namedtuple
-    others_ = namedtuple("others",others_.keys())(*others_.values())
-    return namedtuple("statsPCAResult",["corr_","others_"])(corr_,others_)

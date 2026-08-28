@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from numpy import linalg, cumsum, c_, sqrt
 from pandas import DataFrame
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -22,8 +22,7 @@ class FArot(BaseEstimator,TransformerMixin):
         The number of rotated principal factors.
 
     normalize : bool, default = True
-        To perform Kaiser normalization and de-normalization prior to and following rotation. Used for 'varimax' and 'promax' rotations.
-        If ``None``, default for 'promax' is ``False``, and default for 'varimax' is ``True``.
+        To perform Kaiser normalization and de-normalization prior to and following rotation.
         
     max_iter : int, optional, default = 1000
         The maximum number of iterations.
@@ -31,8 +30,8 @@ class FArot(BaseEstimator,TransformerMixin):
     tol : float, optional, default = 1e-5
         The convergence threshold.
 
-    Returns
-    -------
+    Attributes
+    ----------
     call_ : call
         An object with the following attributes:
 
@@ -51,10 +50,7 @@ class FArot(BaseEstimator,TransformerMixin):
         center : Series of shape (n_columns,)
             The variables weighted average.
         scale : Series of shape (n_columns,)
-            The variables standard deviation:
-            
-            - If `scale_unit = True`, then standard deviation are computed using variables weighted standard deviation
-            - If `scale_unit = False`, then standard deviation are a vector of ones with length number of variables.
+            The variables standard deviation.
         ncp : int
             The number of components kepted.
         ind_sup : None, list
@@ -129,14 +125,11 @@ class FArot(BaseEstimator,TransformerMixin):
 
     [9] SAS, <Factor analysis - SAS annotated output https://stats.oarc.ucla.edu/sas/output/factor-analysis/>_.
 
-    See also
+    See Also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet
+    sprintf : Print the analysis results
+    summary : Printing summaries of general factor analysis model
 
     Examples
     --------
@@ -165,7 +158,11 @@ class FArot(BaseEstimator,TransformerMixin):
     FArot()
     """
     def __init__(
-            self, ncp=2, normalize=True, max_iter=1000, tol=1e-5
+            self, 
+            ncp = 2, 
+            normalize = True, 
+            max_iter = 1000, 
+            tol = 1e-5
     ):
         self.ncp = ncp
         self.normalize = normalize
@@ -173,16 +170,15 @@ class FArot(BaseEstimator,TransformerMixin):
         self.tol = tol
     
     def fit(self,obj,y=None):
-        """
-        Fit the model to ``obj``
+        """Fit the model to obj
 
         Parameters
         ----------
         obj : class
             An object of class :class:`~scientisttools.FA`.
 
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -193,33 +189,31 @@ class FArot(BaseEstimator,TransformerMixin):
         #check max_iter is an integer
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.max_iter < 0: 
-            raise ValueError("'max_iter' must be equal to or greater than 0.")
+            raise ValueError("max_iter must be positive")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if obj is an object of class FA
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if obj.__class__.__name__ != "FA": 
-            raise ValueError("`obj` must be an object of class FA")
+            raise ValueError("obj must be an object of class FA")
         
         #set scale unit
         self.scale_unit = obj.scale_unit
         #set number of columns and maximum number of components kepted
-        n_cols, maxncp = obj.quanti_var_.coord.shape
+        n_cols, rank = obj.quanti_var_.coord.shape
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set number of components
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ncp is None: 
-            ncp = int(maxncp)
-        elif not isinstance(self.ncp,int): 
-            raise TypeError("'ncp' must be an integer.")
+            ncp = rank
         elif self.ncp < 1: 
-            raise ValueError("'ncp' must be equal or greater than 1.")
+            raise ValueError("'ncp' must be strictly positive")
         else: 
-            ncp = int(min(self.ncp,maxncp))
+            ncp = int(min(self.ncp,rank))
 
         #store call informations
-        call_ = {**obj.call_._asdict(), **OrderedDict(obj=obj,ncp=ncp)}
+        call_ = {**obj.call_._asdict(), **{"obj": obj, "ncp": ncp}}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -238,7 +232,7 @@ class FArot(BaseEstimator,TransformerMixin):
         #update final communality
         quanti_var_infos["Final"] = quanti_var_coord.pow(2).mul(obj.call_.col_w,axis=0).sum(axis=1) 
         #convert to ordered citionary
-        quanti_var_ = OrderedDict(coord=quanti_var_coord, contrib=quanti_var_ctr,infos=quanti_var_infos)
+        quanti_var_ = {"coord": quanti_var_coord, "contrib": quanti_var_ctr, "infos": quanti_var_infos}
         #convert to namedtuple
         self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
 
@@ -259,7 +253,7 @@ class FArot(BaseEstimator,TransformerMixin):
         ind_coord = obj.ind_.coord.iloc[:,:ncp].dot(self.rotmat_.values)
         ind_coord.columns = self.eig_.index[:ncp]
         #convert to ordered dictionary
-        ind_ = OrderedDict(coord=ind_coord)
+        ind_ = {"coord": ind_coord}
         #convert to namedtuple
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
@@ -271,7 +265,7 @@ class FArot(BaseEstimator,TransformerMixin):
             ind_sup_coord = obj.ind_sup_.coord.iloc[:,:ncp].dot(self.rotmat_.values)
             ind_sup_coord.columns = self.eig_.index[:ncp]
             #convert to dictionary
-            ind_sup_ = OrderedDict(coord=ind_sup_coord)
+            ind_sup_ = {"coord": ind_sup_coord}
             #convert to namedtuple
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
@@ -283,7 +277,7 @@ class FArot(BaseEstimator,TransformerMixin):
             quanti_var_sup_coord = obj.quanti_var_sup_.coord.iloc[:,:ncp].dot(self.rotmat_.values)
             quanti_var_sup_coord.columns = self.eig_.index[:ncp]
             #convert to dictionary
-            quanti_var_sup_ = OrderedDict(coord=quanti_var_sup_coord)
+            quanti_var_sup_ = {"coord": quanti_var_sup_coord}
             #convert to namedtuple
             self.quanti_var_sup_ = namedtuple("quanti_var_sup",quanti_var_sup_.keys())(*quanti_var_sup_.values())
 
@@ -303,30 +297,29 @@ class FArot(BaseEstimator,TransformerMixin):
             #vtest for the supplementary levels
             levels_sup_vtest = (levels_sup_coord.T * sqrt((n_rows - 1)/((1/p_k_sup) - 1))).T/sqrt(ss_loadings[:self.call_.ncp])
             #convert to dictionary
-            levels_sup_ = OrderedDict(coord=levels_sup_coord,vtest=levels_sup_vtest)
+            levels_sup_ = {"coord": levels_sup_coord, "vtest": levels_sup_vtest}
             #convert to namedtuple
             self.levels_sup_ = namedtuple("levels_sup",levels_sup_.keys())(*levels_sup_.values())
 
             #coordinates for the supplementary qualitative variables - Eta-squared
             quali_var_sup_coord = func_eta2(X=self.ind_.coord,by=X_quali_var_sup,w=self.call_.row_w,excl=None)
             #convert to ordered dictionary
-            quali_var_sup_ = OrderedDict(coord=quali_var_sup_coord)
+            quali_var_sup_ = {"coord": quali_var_sup_coord}
             #convert to namedtuple
             self.quali_var_sup_ = namedtuple("quali_var_sup",quali_var_sup_.keys())(*quali_var_sup_.values())
         
         return self
 
     def fit_transform(self,obj,y=None):
-        """
-        Fit the model with ``obj`` and apply the dimensionality reduction
+        """Fit the model with obj and apply the dimensionality reduction
 
         Parameters
         ----------
         obj : class
             An object of class :class:`~scientisttools.FA`.
 
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
             
         Returns
         -------
@@ -337,20 +330,20 @@ class FArot(BaseEstimator,TransformerMixin):
         return self.ind_.coord
 
     def transform(self,X):
-        """
-        Apply the dimensionality reduction on ``X``
+        """Apply the dimensionality reduction on X
         
         X is projected on the principal factor previously extracted from a training set.
 
         Parameters
         ----------
         X : Dataframe of shape (n_samples, n_columns)
-            New data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            New data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
         X_new : Dataframe of shape (n_samples, ncp)
-            Projection of ``X`` in the principal factor.
+            Projection of X in the principal factor.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes
@@ -358,6 +351,6 @@ class FArot(BaseEstimator,TransformerMixin):
         check_is_fitted(self)
 
         #apply transition relation
-        coord = self.call_.obj.transform(X).iloc[:,:self.call_.ncp].dot(self.rotmat_.values)
+        coord = X.iloc[:,:self.call_.ncp].dot(self.rotmat_.values)
         coord.columns = self.eig_.index[:self.call_.ncp]
         return coord
