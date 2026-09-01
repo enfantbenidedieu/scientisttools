@@ -127,7 +127,7 @@ def summary(obj,
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     print(f"                     {method_desc(name=name)} - Results                     ")
 
-    if obj.__class__.__name__ not in ("CANCORR","CCA","COIA","Procrustes"):
+    if not (obj.__class__.__name__ in ("CANCORR","CCA","COIA","Procrustes")):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #importance of components
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -414,53 +414,73 @@ def summary(obj,
                     stats = stats.to_markdown(tablefmt=tablefmt,**kwargs)
                 print(stats)
 
-        for i in range(2):
-            print(f"\nRaw Canonical Coefficients for {obj.call_.name_group[i]}:")
-            cancoef = obj.cancoef_[i]
+            print(f"\nRaw Canonical Coefficients for {obj.call_.name_group[0]}:")
+            xcancoef = obj.cancoef_.iloc[:obj.call_.group[0],:]
             if to_markdown: 
-                cancoef = cancoef.to_markdown(tablefmt=tablefmt,**kwargs)
-            print(cancoef)
+                xcancoef = xcancoef.to_markdown(tablefmt=tablefmt,**kwargs)
+            print(xcancoef)
+            
+            print(f"\nRaw Canonical Coefficients for {obj.call_.name_group[1]}:")
+            ycancoef = obj.cancoef_.iloc[obj.call_.group[0]:,:]
+            if to_markdown: 
+                ycancoef = ycancoef.to_markdown(tablefmt=tablefmt,**kwargs)
+            print(ycancoef)
 
-        for i in range(2):
-            print(f"\nIndividuals coordinates for {obj.call_.name_group[i]}:")
-            ind_coord = obj.ind_[i].head(nbelt)
-            if to_markdown: 
-                ind_coord = ind_coord.to_markdown(tablefmt=tablefmt,**kwargs)
-            print(ind_coord)
+        print(f"\nIndividuals coordinates for {obj.call_.name_group[0]}:")
+        ind_xcoord = obj.ind_.coord_partiel.iloc[:nbelt,:]
+        ind_xcoord.index = obj.call_.X.index[:nbelt]
+        if to_markdown: 
+            ind_xcoord = ind_xcoord.to_markdown(tablefmt=tablefmt,**kwargs)
+        print(ind_xcoord)
+        
+        print(f"\nIndividuals coordinates for {obj.call_.name_group[1]}:")
+        ind_ycoord = obj.ind_.coord_partiel.iloc[obj.call_.X.shape[0]:(obj.call_.X.shape[0]+nbelt),:]
+        ind_ycoord.index = obj.call_.X.index[:nbelt]
+        if to_markdown:
+            ind_ycoord = ind_ycoord.to_markdown(tablefmt=tablefmt,**kwargs)
+        print(ind_ycoord)
         
         # Canonical Structure Correlations
-        xquanti_var_coord, yquanti_var_coord = obj.quanti_var_
+        quanti_var_ = obj.quanti_var_
         print(f"\nCorrelations Between the {obj.call_.name_group[0]} and Their Canonical Variables")
-        xxcoord = xquanti_var_coord.xscores.head(nbelt)
+        xxcoord = quanti_var_.xxcoord.head(nbelt)
         if to_markdown: 
             xxcoord = xxcoord.to_markdown(tablefmt=tablefmt,**kwargs)
         print(xxcoord)
 
         print(f"\nCorrelations Between the {obj.call_.name_group[1]} and Their Canonical Variables")
-        yycoord = yquanti_var_coord.yscores.head(nbelt)
+        yycoord = quanti_var_.yycoord.head(nbelt)
         if to_markdown: 
             yycoord = yycoord.to_markdown(tablefmt=tablefmt,**kwargs)
         print(yycoord)
 
         print(f"\nCorrelations Between the {obj.call_.name_group[0]} and The Canonical Variables of the {obj.call_.name_group[1]}")
-        xycoord = xquanti_var_coord.yscores.head(nbelt)
+        xycoord = quanti_var_.xycoord.head(nbelt)
         if to_markdown:
             xycoord = xycoord.to_markdown(tablefmt=tablefmt,**kwargs)
         print(xycoord)
 
         print(f"\nCorrelations Between the {obj.call_.name_group[1]} and The Canonical Variables of the {obj.call_.name_group[0]}")
-        yxcoord = yquanti_var_coord.xscores.head(nbelt)
+        yxcoord = quanti_var_.yxcoord.head(nbelt)
         if to_markdown:
             yxcoord = yxcoord.to_markdown(tablefmt=tablefmt,**kwargs)
         print(yxcoord)
 
         if hasattr(obj, "ind_sup_"):
-            for i in range(2):
-                print(f"\nSupplementary individuals coordinates for {obj.call_.name_group[i]}:")
-                ind_sup_coord = obj.ind_sup_[i].head(nbelt)
-                if to_markdown: 
-                    ind_sup_coord = ind_sup_coord.to_markdown(tablefmt=tablefmt,**kwargs)
-                print(ind_sup_coord)
+            nbelt_sup = min(nbelt, len(obj.call_.ind_sup))
+            print(f"\nSupplementary individuals coordinates for {obj.call_.name_group[0]}:")
+            ind_sup_xcoord = obj.ind_sup_.coord.iloc[:nbelt_sup,:]
+            ind_sup_xcoord.index = obj.call_.ind_sup[:nbelt_sup]
+            if to_markdown: 
+                ind_sup_xcoord = ind_sup_xcoord.to_markdown(tablefmt=tablefmt,**kwargs)
+            print(ind_sup_xcoord)
+            
+            print(f"\nSupplementary individuals coordinates for {obj.call_.name_group[1]}:")
+            ind_sup_ycoord = obj.ind_sup_.coord_partiel.iloc[nbelt_sup:(nbelt_sup+len(obj.call_.ind_sup)),:]
+            ind_sup_ycoord.index = obj.call_.ind_sup[:nbelt_sup]
+            if to_markdown: 
+                ind_sup_ycoord = ind_sup_ycoord.to_markdown(tablefmt=tablefmt,**kwargs)
+            print(ind_sup_ycoord)
     elif obj.__class__.__name__ == "CCA":
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #importance of components
@@ -610,25 +630,35 @@ def summary(obj,
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         text = f"\nIndividuals (the {nbelt} first):" if obj.call_.X.shape[0] >= nbelt else "\nIndividuals:"
         print(text)
-        for i, g in enumerate(obj.call_.name_group):
-            print(f"{g}:")
-            coord = obj.ind_[i].coord.iloc[:min(nbelt,obj.ind_[i].coord.shape[0]),:ncp]
-            if to_markdown:
-                coord = coord.to_markdown(tablefmt=tablefmt,**kwargs)
-            print(coord)
-            print("")
+        print(f"{obj.call_.name_group[0]}:")
+        xcoord = obj.ind_.coord_partiel.iloc[:nbelt,:ncp]
+        xcoord.index = obj.call_.X.index[:nbelt]
+        if to_markdown:
+            xcoord = xcoord.to_markdown(tablefmt=tablefmt,**kwargs)
+        print(xcoord)
+        
+        print(f"\n{obj.call_.name_group[1]}:")
+        ycoord = obj.ind_.coord_partiel.iloc[obj.call_.X.shape[0]:(nbelt+obj.call_.X.shape[0]),:ncp]
+        ycoord.index = obj.call_.X.index[:nbelt]
+        if to_markdown:
+            ycoord = ycoord.to_markdown(tablefmt=tablefmt,**kwargs)
+        print(ycoord)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #results for continuous variables
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         print("\nContinuous:")
-        for i, g in enumerate(obj.call_.name_group):
-            print(f"{g}:")
-            coord = obj.quanti_var_[i].coord.iloc[:min(nbelt,obj.quanti_var_[i].coord.shape[0]),:ncp]
-            if to_markdown: 
-                coord = coord.to_markdown(tablefmt=tablefmt,**kwargs)
-            print(coord)
-            print("")
+        print(f"{obj.call_.name_group[0]}:")
+        xcoord = obj.quanti_var_.xcoord.iloc[:min(nbelt,obj.call_.X1.shape[1]),:ncp]
+        if to_markdown: 
+            xcoord = xcoord.to_markdown(tablefmt=tablefmt,**kwargs)
+        print(xcoord)
+        
+        print(f"\n{obj.call_.name_group[1]}:")
+        ycoord = obj.quanti_var_.ycoord.iloc[:min(nbelt,obj.call_.X2.shape[1]),:ncp]
+        if to_markdown:
+            ycoord = ycoord.to_markdown(tablefmt=tablefmt,**kwargs)
+        print(ycoord)
 
 
 

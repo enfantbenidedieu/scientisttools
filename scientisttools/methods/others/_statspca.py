@@ -14,7 +14,7 @@ def statsPCA(obj):
     """
     Statistics with Principal Component Analysis
 
-    Performs statistics with principal component analysis
+    Performs statistics with principal component analysis (PCA).
 
     Parameters
     ----------
@@ -26,7 +26,7 @@ def statsPCA(obj):
     result : statPCAResult
         A object with the following attributes
 
-        corr_ : corr
+        corr : corr
             An object containing all the results for the correlation with the following attributes:  
 
             corrcoef: DataFrame of shape (n_columns, n_columns) 
@@ -38,17 +38,23 @@ def statsPCA(obj):
             residual: DataFrame of shape (n_columns, n_columns) 
                 The residual correlation matrix
 
-        others_ : others
+        others : others
             An object with the following attributes:
 
             threshold : DataFrame of shape (1,2)
                 Eigen values threshold: kaiser, kaiser proportion and KSS (Karlis - Saporta - Spinaki).
             bartlett: DataFrame of shape (1,4)
                 The Bartlett's test of Spericity.
-            broken: Series of shape (max_components, 2)
+            broken: Series of shape (rank, 2)
                 The broken's stick threshold.
             msa: Series of shape (n_columns + 1,)
                 The Kaiser measure of sampling adequacy.
+                
+    References
+    ----------
+    [1] Ricco Rakotomalala. Analyse de corrélation. 2025. ⟨`hal-05066618 <https://hal.science/hal-05066618v1>`_⟩
+    
+    [1] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_.
                 
     Examples
     --------
@@ -57,8 +63,11 @@ def statsPCA(obj):
     >>> # run PCA
     >>> clf = PCA()
     >>> clf.fit(decathlon.actif)
+    PCA()
     >>> # statistics with PCA
     >>> stats = statsPCA(clf)
+    >>> stats._fields
+    ... ("corr","others")
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #check if the estimator is fitted by verifying the presence of fitted attributes

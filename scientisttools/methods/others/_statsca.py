@@ -9,7 +9,7 @@ def statsCA(obj):
     """
     Statistics with Correspondence Analysis
 
-    Performs statistics with correspondence analysis
+    Performs statistics with correspondence analysis (CA)
 
     Parameters
     ----------
@@ -18,10 +18,10 @@ def statsCA(obj):
 
     Returns
     -------
-    result : statCAResult
+    result : statsCAResult
         A object with the following attributes:
 
-        goodness_ : goodness
+        goodness : goodness
             An object with the following attributes:
 
             test : DataFrame of shape (2, 3)
@@ -29,7 +29,7 @@ def statsCA(obj):
             association : DataFrame of shape (6, 2)
                 The degree of association between two nominal variables ("cramer", "tschuprow", "pearson").
 
-        residual_ : residual
+        residual : residual
             An object with the following attributes:
 
             resid : DataFrame of shape (n_rows, n_columns) 
@@ -43,22 +43,27 @@ def statsCA(obj):
             att_rep_ind : DataFrame of shape (n_rows, n_columns)  
                 The attraction repulsion index.
 
-        kaiser_ : DataFrame of shape (1,2)
+        kaiser : DataFrame of shape (1,2)
             The kaiser threshold.
 
     References
     ----------
-    [1] Ricco Rakotomalala. `Etude des dépendances - Variables qualitatives <https://hal.science/hal-05110267v1>`_. 2025.
+    [1] Ricco Rakotomalala. Etude des dépendances - Variables qualitatives. 2025. `hal-05110267 <https://hal.science/hal-05110267v1>`_
+    
+    [2] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_.
     
     Examples
     --------
     >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, statsCA
+    >>> # correspondence analysis (CA)
     >>> clf = CA(row_sup=range(14,18),col_sup=(5,6,7),sup_var=8)
     >>> clf.fit(children.data)
     CA(col_sup=(5,6,7),row_sup=range(14,18),sup_var=8)
     >>> # statistics with correspondence analysis
     >>> stats = statsCA(clf)
+    >>> stats._fields
+    ... ("goodness","residual","kaiser")
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #check if the estimator is fitted by verifying the presence of fitted attributes

@@ -9,7 +9,7 @@ def statsMCA(obj ):
     """
     Statistics with Multiple Correspondence Analysis
 
-    Performs statistics with multiple correspondence analysis
+    Performs statistics with multiple correspondence analysis (MCA).
 
     Parameters
     ----------
@@ -21,7 +21,7 @@ def statsMCA(obj ):
     result : statMCAResult
         A object with the following attributes
 
-        correction_ : correction
+        correction : correction
             An object containing eigenvalues correction, with the following attributes:
 
             benzecri : DataFrame of shape (..., 3)
@@ -29,7 +29,7 @@ def statsMCA(obj ):
             greenacre : DataFrame of shape (..., 3)
                 The greenacre correction.
 
-        others_ : others
+        others : others
             An object of others statistics, with the following attributes:
 
             inertia : float
@@ -39,7 +39,7 @@ def statsMCA(obj ):
 
     References
     ----------
-    [1] Rakotomalala, Ricco (2020), Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2, Version 1.0
+    [1] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_.
 
     Examples
     --------
@@ -50,6 +50,7 @@ def statsMCA(obj ):
     MCA(sup_var=range(4))
     >>> #statistics with multiple correspondence analysis
     >>> stats = statsMCA(clf)
+    ... ("correction","others")
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #check if the estimator is fitted by verifying the presence of fitted attributes

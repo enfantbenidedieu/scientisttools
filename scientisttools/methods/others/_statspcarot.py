@@ -23,7 +23,7 @@ def statsPCArot(obj):
     result : statPCArotResult
         A object with the following attributes
 
-        corr_ : corr
+        corr : corr
             An object containing all the results for the correlation with the following attributes:  
 
             corrcoef: DataFrame of shape (n_columns, n_columns) 
@@ -35,7 +35,7 @@ def statsPCArot(obj):
             residual: DataFrame of shape (n_columns, n_columns) 
                 The residual correlation matrix after rotation
 
-        others_ : others
+        others : others
             An object with the following attributes:  
 
             vaccounted: DataFrame of shape (6, n_components)
@@ -48,12 +48,17 @@ def statsPCArot(obj):
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, PCArot, statsPCArot
+    >>> # principal component analysis
     >>> clf = PCA()
     >>> clf.fit(decathlon.actif)
     PCA()
+    >>> # varimax rotation in PCA
     >>> clfrot = PCArot()
     >>> clfrot.fit(clf)
+    PCArot()
     >>> stats = statsPCArot(clfrot)
+    >>> stats._fields
+    ... ("corr","others")
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #check if the estimator is fitted by verifying the presence of fitted attributes

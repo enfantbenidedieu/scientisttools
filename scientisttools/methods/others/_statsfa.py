@@ -12,7 +12,7 @@ def statsFA(obj):
     """
     Statistics with Factor Analysis
 
-    Performs statistics with Factor Analysis.
+    Performs statistics with Factor Analysis (FA).
 
     Parameters
     ----------
@@ -24,7 +24,7 @@ def statsFA(obj):
     result : statsFAResult
         An object with the following attributes:
 
-        corr_ : corr
+        corr : corr
             An object with the following attributes:
             
             corrcoef : DataFrame of shape (n_columns, n_columns)
@@ -36,7 +36,7 @@ def statsFA(obj):
             residual : DataFrame of shape (n_columns, n_columns)
                 Residual correlations after the factor model is applied.
             
-        others_ : others
+        others : others
             An object with the following attributes:
 
             vaccounted : DataFrame of shape (7, ncp)
@@ -55,7 +55,8 @@ def statsFA(obj):
     >>> clf = FA(ncp=2,warn_message=False)
     >>> clf.fit(beer)
     FA(ncp=2,warn_message=False)
-    >>> stats = statsFA(clf)     
+    >>> stats = statsFA(clf)
+    ... ("corr","others")    
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #check if the estimator is fitted by verifying the presence of fitted attributes
