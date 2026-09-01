@@ -250,17 +250,19 @@ class MCA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    [1] Escofier B, Pagès J. (2008). `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. Dunod. Paris 4ed.
+    
+    [2] Le Roux B. and Rouanet H. (2004). Geometric Data Analysis: From Correspondence Analysis to Stuctured Data Analysis, Kluwer Academic Publishers, Dordrecht (June 2004).
 
-    [2] Le Roux B. and Rouanet H., Geometric Data Analysis: From Correspondence Analysis to Stuctured Data Analysis, Kluwer Academic Publishers, Dordrecht (June 2004).
-
-    [3] Le Roux B. and Rouanet H., Multiple Correspondence Analysis, SAGE, Series: continuous Applications in the Social Sciences, Volume 163, CA:Thousand Oaks (2010).
+    [3] Le Roux B. and Rouanet H. (2010). Multiple Correspondence Analysis, SAGE, Series: continuous Applications in the Social Sciences, Volume 163, CA:Thousand Oaks (2010).
 
     [4] Le Roux B. and Jean C. (2010), Développements récents en analyse des correspondances multiples, Revue MODULARD, Numéro 42
 
-    [5] Lebart L., Piron M., & Morineau A. (2006). Statistique exploratoire multidimensionnelle. Dunod, Paris 4ed.
+    [5] Lebart L., Piron M., & Morineau A. (2006). `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_. Dunod. Paris 4ed.
+    
+    [6] Pagès J. (2013). `Analyse factorielle multiple avec R : Pratique R <https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r>`_. EDP sciences.
 
-    [6] Rakotomalala, Ricco (2020), `Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2 <https://hal.science/hal-04868625v1>_`, Version 1.0
+    [7] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_.
 
     See Also
     --------

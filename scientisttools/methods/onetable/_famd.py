@@ -165,7 +165,7 @@ class FAMD(BaseEstimator,TransformerMixin):
         vtest : DataFrame of shape (n_levels, ncp)
             The value-test of the levels.
 
-    levels_sup_ : levels_sup_, optional
+    levels_sup_ : levels_sup, optional
         An object containing all the results for the supplementary levels with the following attributes:
         
         coord : DataFrame of shape (n_levels_sup, ncp)
@@ -244,11 +244,11 @@ class FAMD(BaseEstimator,TransformerMixin):
     
     References
     ----------
-    [1] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    [1] Escofier B, Pagès J. (2008). `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. Dunod. Paris 4ed.
     
     [2] Pagès, J. Analyse factorielle de données mixtes. Revue de Statistique Appliquée, Volume 52 (2004) no. 4, pp. 93-111. `RSA_2004__52_4_93_0 <https://www.numdam.org/item/RSA_2004__52_4_93_0/>`_
 
-    [3] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. edp sciences
+    [3] Pagès J. (2013). `Analyse factorielle multiple avec R : Pratique R <https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r>`_. EDP sciences.
 
     See Also
     --------
@@ -428,7 +428,7 @@ class FAMD(BaseEstimator,TransformerMixin):
             # set number of categorics by categorical variable
             nb_moda = X_quali.nunique().to_numpy()
             # set levels weights
-            levels_w = Series(repeat(var_w[X_quali.columns],nb_moda),index=dummies.columns,name="weight")
+            levels_w = Series(repeat(var_w[X_quali.columns].values,nb_moda),index=dummies.columns,name="weight")
             # concatenate
             Xcod, col_w = concat_empty(Xcod,dummies,axis=1), concat_empty(col_w,levels_w,axis=0)
             scale = concat_empty(scale,Series(sqrt(p_k),index=dummies.columns,name="scale"),axis=0)

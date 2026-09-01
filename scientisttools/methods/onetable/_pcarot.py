@@ -81,7 +81,7 @@ class PCArot(TransformerMixin,BaseEstimator):
         z_scale : Series of shape (n_feature_quanti_var,), optional
             The weighted standard deviation of features variables
         obj : class
-            An object of class :class:`scientisttools.PCA`.
+            An object of class :class:`~scientisttools.PCA`.
 
     eig_ : DataFrame of shape (ncp, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
@@ -126,6 +126,10 @@ class PCArot(TransformerMixin,BaseEstimator):
 
     rotmat_ : DataFrame of shape (ncp, ncp)
         The rotation matrix and factor correlations matrix.
+        
+    References
+    ----------
+    [1] Chavent, M., Kuentz, V., Saracco, J. (2011), Orthogonal Rotation in PCAMIX. Advances in Classification and Data Analysis. `arXiv:1112.0301 <https://arxiv.org/abs/1112.0301>_.
 
     See Also
     --------
@@ -137,11 +141,11 @@ class PCArot(TransformerMixin,BaseEstimator):
     --------
     >>> from scientisttools.datasets import load_dataset
     >>> from scientisttools import PCA, PCArot
-    >>> pca = PCA(ind_sup=(18,19),sup_var=(6,7,8))
-    >>> pca.fit(autos2006)
+    >>> clf = PCA(ind_sup=(18,19),sup_var=(6,7,8))
+    >>> clf.fit(autos2006.data)
     PCA(ind_sup=(18,19),sup_var=(6,7,8))
-    >>> pcarot = PCArot()
-    >>> pcarot.fit(pca)
+    >>> clf2 = PCArot()
+    >>> clf2.fit(clf)
     PCArot()
     """
     def __init__(

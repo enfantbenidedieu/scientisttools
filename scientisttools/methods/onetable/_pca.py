@@ -223,13 +223,11 @@ class PCA(BaseEstimator,TransformerMixin):
     ----------
     [1] Escofier B, Pagès J. `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. 2008, Dunod, Paris 4ed.
 
-    [2] Saporta G. (2006). Probabilites, Analyse des données et Statistiques. Technip
+    [2] Lebart L., Piron M., & Morineau A. `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_, 2006, Dunod, Paris 4ed.
 
-    [3] Lebart L., Piron M., & Morineau A. `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_, 2006, Dunod, Paris 4ed.
+    [3] Pagès J. (2013). `Analyse factorielle multiple avec R : Pratique R <https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r>`_. EDP sciences.
 
-    [4] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. EDP sciences
-
-    [5] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_
+    [4] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_
     
     See Also
     --------

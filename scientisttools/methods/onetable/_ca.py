@@ -244,9 +244,9 @@ class CA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Escofier B, Pagès J. `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. 2008. Dunod. Paris 4ed.
+    [1] Escofier B, Pagès J. (2008). `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. Dunod. Paris 4ed.
     
-    [2] Lebart L., Piron M., & Morineau A. `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_. 2006. Dunod. Paris 4ed.
+    [2] Lebart L., Piron M., & Morineau A. (2006). `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_. Dunod. Paris 4ed.
     
     [3] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_.
 

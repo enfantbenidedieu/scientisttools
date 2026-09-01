@@ -22,16 +22,16 @@ class PCoA(BaseEstimator,TransformerMixin):
         Number of embedding dimensions.
 
     metric :  str or callable, default = 'euclidean'
-        Metric to use for dissimilarity computation. Default is "euclidean".
+        Metric to use for dissimilarity computation.
 
-        If metric is a string, it must be one of the options allowed by
-        `scipy.spatial.distance.pdist` for its metric parameter, or a metric
+        * If metric is a string, it must be one of the options allowed by 
+        :func:`scipy.spatial.distance.pdist` for its metric parameter, or a metric
         listed in :func:`sklearn.metrics.pairwise.distance_metrics`
 
-        If metric is "precomputed", X is assumed to be a distance matrix and
+        * If metric is "precomputed", X is assumed to be a distance matrix and
         must be square during fit.
 
-        If metric is a callable function, it takes two arrays representing 1D
+        * If metric is a callable function, it takes two arrays representing 1D
         vectors as inputs and must return one value indicating the distance
         between those vectors. This works for Scipy's metrics, but is less
         efficient than passing the metric name as a string.
@@ -83,9 +83,9 @@ class PCoA(BaseEstimator,TransformerMixin):
     evd_ : evdResult
         An object containing all the eigen values decomposition, with the following attributes:
 
-        V : 2D array-like of shape (n_samples, rank)
+        V : 2d array-like of shape (n_samples, rank)
             The eigen vectors.
-        d : 1D array-like of shape (rank,)
+        d : 1d array-like of shape (rank,)
             The eigen values.
         rank : int
             The maximum number of components.
@@ -116,9 +116,9 @@ class PCoA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Borg, I.; Groenen P. Modern Multidimensional Scaling - Theory and Applications. Springer Series in Statistics. 2005.
+    [1] Borg, I.; Groenen P. `Modern Multidimensional Scaling - Theory and Applications <https://link.springer.com/book/10.1007/978-1-4757-2711-1>`_. Springer Series in Statistics. 1997.
 
-    [2] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python, `hal-04868625v1 <https://hal.science/hal-04868625v1>`_. 2020.
+    [2] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_
 
     Notes
     -----

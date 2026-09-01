@@ -115,15 +115,15 @@ class FArot(BaseEstimator,TransformerMixin):
 
     [4] Marley W. Watkins (2018), Exploratory Factor Analysis : A guide to best practice, Journal of Black Psychology, Vol. 44(3) 219-246
 
-    [5] Rakotomalala R. (2020), Pratique des méthodes factorielles avec Python, Université Lumière Lyon 2, Version 1.0
+    [5] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_.
 
-    [6] wikipedia (en), <Exploratory factor analysis https://en.wikipedia.org/wiki/Exploratory_factor_analysis>_.
+    [6] wikipedia (en), `Exploratory factor analysis <https://en.wikipedia.org/wiki/Exploratory_factor_analysis>`_.
 
-    [7] datalab, <Exploratory factor analysis https://datatab.fr/tutorial/exploratory-factor-analysis>_.
+    [7] datalab, `Exploratory factor analysis <https://datatab.fr/tutorial/exploratory-factor-analysis>`_.
 
-    [8] Manuel Jamovi, <Analyse factorielle https://jmeunierp8.github.io/ManuelJamovi/s15.html>_.
+    [8] Manuel Jamovi, `Analyse factorielle <https://jmeunierp8.github.io/ManuelJamovi/s15.html>`_.
 
-    [9] SAS, <Factor analysis - SAS annotated output https://stats.oarc.ucla.edu/sas/output/factor-analysis/>_.
+    [9] SAS, `Factor analysis - SAS annotated output <https://stats.oarc.ucla.edu/sas/output/factor-analysis/>`_.
 
     See Also
     --------

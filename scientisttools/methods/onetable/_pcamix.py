@@ -267,19 +267,19 @@ class PCAmix(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Chavent, M., Kuentz, V., Saracco, J. (2012), Multivariate analysis of mixed type data: The PCAmixdata R package. arXiv:1411.4911v1
+    [1] Chavent, M., Kuentz, V., Saracco, J. (2012), Multivariate analysis of mixed type data: The PCAmixdata R package. `arXiv:1411.4911v1 <https://arxiv.org/abs/1411.4911>`_
 
-    [2] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    [2] Escofier B, Pagès J. `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. 2008, Dunod, Paris 4ed.
 
-    [3] Hill M., Smith A. (1976). Principal Component Analysis of taxonomic data withmulti-state discrete characters. Taxon, 25, pp. 249-255
+    [3] Hill M., Smith A. (1976). `Principal Component Analysis of taxonomic data withmulti-state discrete characters <https://www.jstor.org/stable/1219449>`_. Taxon, 25, pp. 249-255
 
-    [4] Kiers H.A.L (1991). Simple structure in Component Analysis Techniques for mixtures of qualitative and quantitative variables. Psychometrika, 56, pp. 197-212. 
+    [4] Kiers H.A.L (1991). `Simple structure in Component Analysis Techniques for mixtures of qualitative and quantitative variables <https://three-mode.leidenuniv.nl/pdf/k/kiers1991b_pmet.pdf>`_. Psychometrika, 56, pp. 197-212. 
 
-    [5] Pagès J. (2004). <Analyse factorielle de donnees mixtes https://www.numdam.org/article/RSA_2004__52_4_93_0.pdf>_. Revue Statistique Appliquee. LII (4). pp. 93-111.
+    [5] Pagès, J. Analyse factorielle de données mixtes. Revue de Statistique Appliquée, Volume 52 (2004) no. 4, pp. 93-111. `RSA_2004__52_4_93_0 <https://www.numdam.org/item/RSA_2004__52_4_93_0/>`_
 
-    [6] Pagès J. (2013). Analyse factorielle multiple avec R : Pratique R. edp sciences
+    [6] Pagès J. (2013). `Analyse factorielle multiple avec R : Pratique R <https://math.institut-agro-rennes-angers.fr/fr/ouvrages/analyse-factorielle-multiple-avec-r>`_. EDP sciences.
 
-    [7] Rakotomalala, Ricco (2020), <Pratique des méthodes factorielles avec Python https://hal.science/hal-04868625v1>_. Université Lumière Lyon 2, Version 1.0
+    [7] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_
 
     See Also
     --------
@@ -479,7 +479,7 @@ class PCAmix(BaseEstimator,TransformerMixin):
             #set number of categorics by qualitative variable
             nb_moda = X_quali.nunique().to_numpy()
             #level weights
-            levels_w = Series([y/x for x,y in zip(center2,repeat(var_w.loc[X_quali.columns],nb_moda))],index=dummies.columns,name="weight")
+            levels_w = Series([y/x for x,y in zip(center2,repeat(var_w.loc[X_quali.columns].values,nb_moda))],index=dummies.columns,name="weight")
             #concatenate
             Xcod, col_w = concat_empty(Xcod,dummies,axis=1), concat_empty(col_w,levels_w,axis=0)
             center, scale = concat_empty(center,center2,axis=0), concat_empty(scale,scale2,axis=0)
@@ -526,7 +526,9 @@ class PCAmix(BaseEstimator,TransformerMixin):
         fit_ = gFA(X=tab,ncp=self.ncp,row_w=row_w,col_w=col_w,tol=self.tol)
 
         #extract elements
-        self.svd_, self.eig_, ncp = fit_.svd, fit_.eig, fit_.ncp
+        self.svd_, self.eig_ = fit_.svd, fit_.eig
+        # update number of componets
+        ncp = self.svd_.ncp
 
         #coordinates for the columns (G = MVD)
         fit_.col["coord"] = (fit_.col["coord"].T * col_w).T

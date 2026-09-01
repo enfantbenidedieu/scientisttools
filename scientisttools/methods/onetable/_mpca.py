@@ -71,7 +71,7 @@ class MPCA(BaseEstimator,TransformerMixin):
     call_ : call
         An object containing the summary called parameters with the following attributes:
 
-         Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
+        Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
             Input data.
         X : DataFrame of shape (n_rows, n_columns)
             Active data.
@@ -163,7 +163,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         infos : DataFrame of shape (n_rows, 4), optional
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals.
 
-    ind_sup_ : ind_sup
+    ind_sup_ : ind_sup, optional
         An object containing all the results for the supplementary individuals, with the following attributes:
 
         coord : DataFrame of shape (n_rows_plus, ncp)
@@ -185,13 +185,13 @@ class MPCA(BaseEstimator,TransformerMixin):
         An object containing all the results for the active levels, with the following attributes:
         
         coord : DataFrame of shape (n_levels, ncp)
-            The coordinates of the levels.
+            The coordinates of the levels (=barycenter coordinates)
         contrib : DataFrame of shape (n_levels, ncp)
             The relative contributions of the levels.
         vtest : DataFrame of shape (n_levels, ncp)
             The value-test of the levels.
 
-    levels_sup_ : levels_sup_
+    levels_sup_ : levels_sup, optional
         An object containing all the results for the supplementary levels, with the following attributes:
         
         coord : DataFrame of shape (n_levels_sup, ncp)
@@ -213,7 +213,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         contrib : DataFrame of shape (n_quali_var, ncp)
             The contributions of the qualitative variables.
 
-    quali_var_sup_ : quali_var_sup 
+    quali_var_sup_ : quali_var_sup, optional
         An object containing all the results for the supplementary qualitative variables, with the following attributes:
 
         coord : DataFrame of shape (n_quali_var_sup, ncp)
@@ -231,7 +231,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         infos : DataFrame of shape (n_quanti_var + n_levels, 4)
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the variables.
 
-    quanti_var_sup_ : quanti_var_sup
+    quanti_var_sup_ : quanti_var_sup, optional
         An object containing all the results for the supplementary quantitative variables, with the following attributes:
         
         coord : DataFrame of shape (n_quanti_var_sup, ncp)
@@ -270,15 +270,13 @@ class MPCA(BaseEstimator,TransformerMixin):
     
     References
     ----------
-    [1] Abdesselam R. (2006), Analyse en Composantes Principales Mixtes, CREM UMR CNRS 6211
+    [1] Abdesselam R. (2006), `Analyse en Composantes Principales Mixtes <https://www.researchgate.net/publication/5087866_Analyse_en_composantes_principales_mixte>`_. CREM UMR CNRS 6211.
     
-    [2] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    [2] Escofier B, Pagès J. (2008). `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. Dunod. Paris 4ed.
 
-    [3] Husson, F., Le, S. and Pages, J. (2010). Exploratory Multivariate Analysis by Example Using R, Chapman and Hall.
+    [3] Pagès, J. Analyse factorielle de données mixtes. Revue de Statistique Appliquée, Volume 52 (2004) no. 4, pp. 93-111. `RSA_2004__52_4_93_0 <https://www.numdam.org/item/RSA_2004__52_4_93_0/>`_
 
-    [4] Pages J. (2004). Analyse factorielle de donnees mixtes. Revue Statistique Appliquee. LII (4). pp. 93-111.
-
-    [5] Rakotomalala, R (2020), Pratique des méthodes factorielles avec Python. Université Lumière Lyon 2, Version 1.0
+    [4] Ricco Rakotomalala. Pratique des Méthodes Factorielles avec Python. 2020. `hal-04868625 <https://hal.science/hal-04868625>`_.
 
     See Also
     --------
@@ -470,7 +468,7 @@ class MPCA(BaseEstimator,TransformerMixin):
         #duplicate according to number of levels
         nb_moda = Series([X_quali[j].nunique() for j in X_quali.columns],index=X_quali.columns)
         #levels weights
-        levels_w = Series(repeat(var_w.loc[X_quali.columns],nb_moda),index=dummies.columns,name="weight")
+        levels_w = Series(repeat(var_w.loc[X_quali.columns].values,nb_moda),index=dummies.columns,name="weight")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #concatenate
