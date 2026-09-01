@@ -17,7 +17,7 @@ class VARHCPC(BaseEstimator,TransformerMixin):
     Parameters
     -----------
     ncl : int.  default = 3
-        If a (positive) integer, the tree is cut with nb_cluters clusters. If None, the tree is automatically cut.
+        If a (positive) integer, the tree is cut with ncl clusters. If None, the tree is automatically cut.
 
     method : {"average","complete","single","ward"}, default = "ward"
         The linkage algorithm to use. The following are methods for calculating the distance between the
@@ -131,13 +131,7 @@ class VARHCPC(BaseEstimator,TransformerMixin):
         member : DataFrame of shape (n_samples_sup, 3)
             Cluster's members of supplementary variables (distance to own cluster, distance to next closest, ratio (own/next)).
 
-    References
-    ----------
-    [1] R. Rakotomalala, « Classification de variables », Tutoriels Tanagra pour le Data Mining.
-
-    [2] Lebart L., Piron M., & Morineau A. (2006). `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_. Dunod. Paris 4ed.
-
-    See Also
+    See also
     --------
     VARKMeansPC : Variables K-Means Clustering on Principal Components
     

@@ -22,7 +22,7 @@ class HCPC(BaseEstimator,TransformerMixin):
     Parameters
     ----------
     ncl : int, default =  3
-        If a (positive) integer, the tree is cut with nb.cluters clusters. if None, the tree is automatically cut.
+        If a (positive) integer, the tree is cut with ncl clusters. if None, the tree is automatically cut.
 
     consol : bool, default = False
         If True, a k-means consolidation is performed after agglomerative hierarchical clustering.

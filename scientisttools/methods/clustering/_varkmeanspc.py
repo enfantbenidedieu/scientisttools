@@ -9,7 +9,7 @@ from sklearn.utils.validation import check_is_fitted
 
 class VARKMeansPC(BaseEstimator,TransformerMixin):
     """
-    Variables K-Means Clustering on Principal Components (VARKmeansPC)
+    Variables K-Means Clustering on Principal Components (VARKMeansPC)
     
     Performs k-means clustering on continuous variables using principal components.
 
@@ -78,13 +78,7 @@ class VARKMeansPC(BaseEstimator,TransformerMixin):
         member : DataFrame of shape (n_samples_sup, 3)
             Cluster's members of supplementary variables (distance to own cluster, distance to next closest, ratio (own/next)).
 
-    References
-    ----------
-    [1] R. Rakotomalala, « Classification de variables », Tutoriels Tanagra pour le Data Mining.
-
-    [2] Lebart L., Piron M., & Morineau A. (2006). `Statistique exploratoire multidimensionnelle <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/2023-12/010038111.pdf>`_. Dunod. Paris 4ed.
-
-    See Also
+    See also
     --------
     VARHCPC : Variables Agglomerative Hierachical Clustering on Principal Components
     
