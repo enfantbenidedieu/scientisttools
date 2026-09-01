@@ -2,37 +2,26 @@
 from numpy import ndarray
 from pandas import Series
 
-def get_indices(x,value) -> list:
+def get_indices(x,value):
     """
     Fill all occurrences of an element
-
-    Description
-    ------------
-    Fill all occurrences of an element
-
-    Usage
-    -----
-    ```python
-    >>> get_indices(x,value)
-    ```
 
     Parameters
     ----------
-    `x` : a list/tuple/ndarray/Series of element
+    x : 1d array-like of shape (n_samples,)
+        Input data.
 
-    `value` : value for which occurence should be find
+    value : int
+        value for which occurence should be find
 
     Return
     ------
-    list with occurrences
-
-    Author(s)
-    ---------
-    Duvérier DJIFACK ZEBAZE djifacklab@gmail.com
+    indices : list
+        Occurrences of an element.
     """
     #check if x is a list, a tuple, an array or a pandas series
     if not isinstance(x, (list,tuple,ndarray,Series)):
-        raise TypeError("'x' must be a list/tuple/array/Series")
+        raise TypeError("x must be a list/tuple/array/Series")
     
     #convert to list
     if isinstance(x,ndarray):
@@ -40,9 +29,9 @@ def get_indices(x,value) -> list:
     elif isinstance(x,tuple):
         x = list(x)
     elif isinstance(x,Series):
-        x = x.values.tolist()
+        x = x.to_numpy().tolist()
 
-    indices = list()
+    indices = []
     i = 0
     while True:
         try:

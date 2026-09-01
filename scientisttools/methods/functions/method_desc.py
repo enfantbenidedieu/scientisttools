@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from pandas import DataFrame
 
-def method_desc(
-        name
-):
+def method_desc(name):
     """
     Method description
 
@@ -21,14 +19,11 @@ def method_desc(
         case "CA": return "Correspondence Analysis"
         case "FA": return "Factor Analysis"
         case "FAMD": return "Factor Analysis of Mixed Data"
-        case "FAMDrot": return "Varimax rotation in Factor Analysis of Mixed Data"
         case "FArot": return "Varimax rotation in Factor Analysis"
         case "MCA": return "Multiple Correspondence Analysis"
-        case "MCArot": return "Varimax rotation in Multiple Correspondence Analysis"
         case "MPCA": return "Mixed Principal Component Analysis"
         case "PCA": return "Principal Component Analysis"
         case "PCAmix": return "Principal Component Analysis of Mixed Data"
-        case "PCAmixrot": return "Varimax rotation in Principal Component Analysis of Mixed Data"
         case "PCArot": return "Varimax rotation in Principal Component Analysis"
         case "PCoA": return "Principal Coordinates Analysis"
         #two tables methods
@@ -64,11 +59,8 @@ def method_desc(
         case "PMFA": return "Procuste Multiple Factor Analysis"
         case "STATIS": return "Structuration de Tableaux A Trois Indices de la Statistique"
         #others functions
-       
 
-def attr_desc(
-        attr
-):
+def attr_desc(attr):
     """
     Attributes description
 

@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from pandas import CategoricalDtype, DataFrame, Series
 
-def revalue(
-        X,
-) -> DataFrame:
+def revalue(X):
     """
     Revalue Categorical Variables
 
@@ -29,12 +27,13 @@ def revalue(
     #check if X is an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if not isinstance(X,DataFrame):
-        raise TypeError(f"{type(X)} is not supported. X must be an object of class pd.DataFrame")
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+            "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #check if all columns are categorics
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    if not all(X[k].dtype in ("object","category") for k in X.columns):
+    if not all(X[k].dtype in ("object","category","str") for k in X.columns):
         raise TypeError("All columns in X must be categorics.")
     
     #find columns with at least one element in common
@@ -61,5 +60,5 @@ def revalue(
           
     #convert to categorical
     for q in X.columns:
-        X[q] = X[q].astype(CategoricalDtype(categories=sorted(list(X[q].dropna().unique())),ordered=True))
+        X[q] = X[q].astype(CategoricalDtype(categories=sorted(X[q].dropna().unique()),ordered=True))
     return X

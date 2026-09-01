@@ -5,9 +5,7 @@ from pandas import Series
 #interns functions
 from .utils import convert_series_to_dataframe, check_is_dataframe
 
-def func_coinertia(
-        X,Y,xcol_w=None,ycol_w=None,row_w=None
-):
+def func_coinertia(X,Y,xcol_w=None,ycol_w=None,row_w=None):
     """
     Calculate the coinertia coefficients between two groups X and Y
 
@@ -20,10 +18,10 @@ def func_coinertia(
         Second group
         
     xcol_w : 1d array-like of shape (n_xcolumns,), default = None
-        An optional variables weights for ``X``.
+        An optional variables weights for X.
 
     ycol_w : 1d array-like of shape (n_ycolumns,), default = None
-        An optional variables weights for ``Y``.
+        An optional variables weights for Y.
 
     row_w : 1d array-like of shape (n_samples,), default = None
         An optional individuals weights.
@@ -75,9 +73,9 @@ def func_coinertia(
     if row_w is None:
         row_w = ones(n_samples)/n_samples
     elif not isinstance(row_w,(list,tuple,ndarray,Series)):
-        raise TypeError("'row_w' must be a 1d array-like of individuals weights.")
+        raise TypeError("row_w must be a 1d array-like of individuals weights.")
     elif len(row_w) != n_samples:
-        raise ValueError(f"'row_w' must be a 1d array-like with length {n_samples}.")
+        raise ValueError(f"row_w must be a 1d array-like with length {n_samples}.")
     else:
         row_w = array(row_w)/sum(row_w)
 
@@ -85,9 +83,9 @@ def func_coinertia(
     if xcol_w is None:
         xcol_w = ones(n_xcols)
     elif not isinstance(xcol_w,(list,tuple,ndarray,Series)):
-        raise TypeError("'xcol_w' must be a 1d array-like of Y-variables weights.")
+        raise TypeError("xcol_w must be a 1d array-like of Y-variables weights.")
     elif len(xcol_w) != n_xcols:
-        raise ValueError(f"'xcol_w' must be a 1d array-like with length {n_xcols}.")
+        raise ValueError(f"xcol_w must be a 1d array-like with length {n_xcols}.")
     else:
         xcol_w = array(xcol_w)
     
@@ -95,9 +93,9 @@ def func_coinertia(
     if ycol_w is None:
         ycol_w = ones(n_ycols)
     elif not isinstance(ycol_w,(list,tuple,ndarray,Series)):
-        raise TypeError("'ycol_w' must be a 1d array-like of Y-variables weights.")
+        raise TypeError("ycol_w must be a 1d array-like of Y-variables weights.")
     elif len(ycol_w) != n_ycols:
-        raise ValueError(f"'ycol_w' must be a 1d array-like with length {n_ycols}.")
+        raise ValueError(f"ycol_w must be a 1d array-like with length {n_ycols}.")
     else:
         ycol_w = array(ycol_w)
     return trace(linalg.multi_dot([X,diag(xcol_w),X.T,diag(row_w),Y,diag(ycol_w),Y.T,diag(row_w)]))

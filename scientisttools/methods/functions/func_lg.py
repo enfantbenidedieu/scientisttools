@@ -2,9 +2,7 @@
 from numpy import ndarray, array, ones, sum, average, sqrt, repeat
 from pandas import Series, DataFrame
 
-def func_Lg(
-        X,Y,row_w=None, xcol_w=None,ycol_w=None
-):
+def func_Lg(X,Y,row_w=None, xcol_w=None,ycol_w=None):
     """
     Calulate the Lg coefficients
     
@@ -12,18 +10,21 @@ def func_Lg(
 
     Parameters
     ----------
-    X : Dataframe of shape (n_samples, n_columns)
-        First groups
+    X : Dataframe of shape (n_samples, n_xcolumns)
+        First group.
 
-    Y : Dataframe of shape (n_samples, n_columns)
-        Second group
+    Y : Dataframe of shape (n_samples, n_ycolumns)
+        Second group.
         
-    X_weights : an optional variables weights (by default, a list/tuple of 1 for uniform variables weights), the weights are given only for the variables in X
+    xcol_w : 1d array-like of shape (n_xcolumns,), default = None
+        An optional variables weights for X.
 
-    Y_weights : an optional variables weights (by default, a list/tuple of 1 for uniform variables weights), the weights are given only for the variables in Y
+    ycol_w : 1d array-like of shape (n_ycolumns,), default = None
+        An optional variables weights for Y.
 
-    ind_weights : `ind_weights` : an optional individuals weights (by default, a list/tuple of 1/(number of active individuals) for uniform individuals weights), the weights are given only for active individuals.
-
+    row_w : 1d array-like of shape (n_samples,), default = None
+        An optional individuals weights.
+        
     Returns
     -------
     lg : float
@@ -38,12 +39,14 @@ def func_Lg(
         Y = Y.to_frame()
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if X is an object of class pd.DataFrame
+    #check if X and Y are an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if not isinstance(X,DataFrame):
-        raise TypeError(f"{type(X)} is not supported. X must be an object of class pd.DataFrame")
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
     if not isinstance(Y,DataFrame):
-        raise TypeError(f"{type(Y)} is not supported. Y must be an object of class pd.DataFrame")
+        raise TypeError(f"{type(Y)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
     
     #check if len are equal
     if X.shape[0] != Y.shape[0]:
@@ -94,6 +97,7 @@ def func_Lg(
         ycol_w = array(ycol_w)
 
     #update X and Y
-    X = X.sub(average(X,axis=0,weights=row_w),axis=1).mul(sqrt(xcol_w),axis=1).mul(sqrt(row_w),axis=0)
-    Y = Y.sub(average(Y,axis=0,weights=row_w),axis=1).mul(sqrt(ycol_w),axis=1).mul(sqrt(row_w),axis=0)
-    return sum([sum(X.iloc[:,i].dot(Y)**2) for i in range(X.shape[1])])
+    X = (((X - average(X,axis=0,weights=row_w)) * sqrt(xcol_w)).T * sqrt(row_w)).T
+    Y = (((Y - average(Y,axis=0,weights=row_w)) * sqrt(ycol_w)).T * sqrt(row_w)).T
+    lg = sum([sum(X.iloc[:,i].dot(Y)**2) for i in range(n_xcols)])
+    return lg

@@ -4,9 +4,7 @@ from numpy import max, abs, dot, eye
 import numpy.linalg as linalg
 from collections import namedtuple
 
-def gensvd(
-          Rxy,Rxx=None,Ryy=None, nu=None, nv=None, tol=1e-10
-):
+def gensvd(Rxy,Rxx=None,Ryy=None, nu=None, nv=None, tol=1e-10):
     """
     Generalized Singular Value Decomposition of Matrices
     
@@ -23,20 +21,27 @@ def gensvd(
 
     Returns
     -------
-    xcoef : 2d array-like of shape (p,s)
-        The coefficients of ``X``.
-    ycoef : 2d array-like of shape (q,s)
-        The coefficients of ``Y``.
-    cor : 1d array-like of shape(s,) with s = min(p,q)
-        The squared correlations values
+    result : gensvdResult
+        An object with the following attributes:
+        
+        xcoef : 2d array-like of shape (p,s)
+            The coefficients of X.
+        ycoef : 2d array-like of shape (q,s)
+            The coefficients of Y.
+        cor : 1d array-like of shape(s,) with s = min(p,q)
+            The squared correlations values
     """
     #set nu and nv
-    if nu is None: nu = Rxy.shape[0]
-    if nv is None: nv = Rxy.shape[1]
+    if nu is None: 
+        nu = Rxy.shape[0]
+    if nv is None: 
+        nv = Rxy.shape[1]
 
     #set Rxx and Ryy
-    if Rxx is None: Rxx = eye(nu)
-    if Ryy is None: Ryy = eye(nv)
+    if Rxx is None: 
+        Rxx = eye(nu)
+    if Ryy is None: 
+        Ryy = eye(nv)
 
     #check if Rxx is square
     if Rxx.shape[0] != Rxx.shape[1]:
@@ -54,7 +59,8 @@ def gensvd(
         warn("Ryy not symmetric.")
         Ryy = 0.5*(Ryy + Ryy.T)
     
-    Rxxinv, Ryyinv  = linalg.inv(linalg.cholesky(Rxx,upper=True)), linalg.inv(linalg.cholesky(Ryy,upper=True))
+    Rxxinv = linalg.inv(linalg.cholesky(Rxx,upper=True))
+    Ryyinv = linalg.inv(linalg.cholesky(Ryy,upper=True))
     D = Rxxinv.T.dot(Rxy).dot(Ryyinv)
     if nu >= nv:
         U, vs, V = linalg.svd(D)

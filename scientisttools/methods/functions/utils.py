@@ -17,9 +17,7 @@ def is_namedtuple(v):
 def is_series(x):
     return isinstance(x,Series)
 
-def convert_series_to_dataframe(
-        X
-):
+def convert_series_to_dataframe(X):
     """
     Convert pd.Series to pd.DataFrame
     
@@ -32,9 +30,7 @@ def convert_series_to_dataframe(
         X = X.to_frame()
     return X
 
-def check_is_dataframe(
-        X
-):
+def check_is_dataframe(X):
     """
     Performs is_dataframe validation
 
@@ -49,11 +45,10 @@ def check_is_dataframe(
     #check if X is an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if not is_dataframe(X):
-        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-def check_is_series(
-        X
-):
+def check_is_series(X):
     """
     Performs is_series validation
 
@@ -68,11 +63,10 @@ def check_is_series(
     #check if X is an object of class pd.Series
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if not is_series(X):
-        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.Series. For more information see: https://pandas.pydata.org/docs/reference/api/pandas.Series.html")
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pd.Series.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.Series.html")
 
-def check_is_bool(
-        X
-):
+def check_is_bool(X):
     """
     Performs is_bool validation
 
@@ -89,9 +83,7 @@ def check_is_bool(
     if not is_bool(X):
         raise TypeError(f"{type(X)} is not supported.")
 
-def check_is_object_or_category_dtype(
-        X
-):
+def is_object_or_category_dtype(X):
     """
     Performs is_object_or_category_dtype validation
 
@@ -100,30 +92,12 @@ def check_is_object_or_category_dtype(
     X : 1d array-like of shape (n_samples,)
         Input data for which check should be done
     """
-    if not (X.dtype in ["object","category"]):
-        return False
-    else:
-        return True
-    
-def is_object_or_category_dtype(
-        X
-):
-    """
-    Performs is_object_or_category_dtype validation
-
-    Parameters
-    ----------
-    X : 1d array-like of shape (n_samples,)
-        Input data for which check should be done
-    """
-    if not (X.dtype in ["object","category"]):
+    if not (X.dtype in ["object","category","str"]):
         return False
     else:
         return True
 
-def is_all_object_or_category_dtype(
-        X
-):
+def is_all_object_or_category_dtype(X):
     """
     Performs is_all_object_or_category_dtype validation
 
@@ -141,9 +115,7 @@ def is_all_object_or_category_dtype(
     else:
         return True
     
-def is_all_numeric_dtype(
-        X
-):
+def is_all_numeric_dtype(X):
     """
     Performs is_all_numeric_dtype validation
 
@@ -161,9 +133,7 @@ def is_all_numeric_dtype(
     else:
         return True
     
-def col_dtype(
-        X
-):
+def col_dtype(X):
     """
     Single column date type
 
@@ -175,18 +145,14 @@ def col_dtype(
     else:
         raise TypeError("Not conventient columns type")
     
-def cols_dtypes(
-        X
-):
+def cols_dtypes(X):
     """
     Columns data types
     
     """
     return [col_dtype(X.iloc[:,i]) for i in  range(X.shape[1])]
     
-def check_is_all_object_or_category_dtype(
-        X
-):
+def check_is_all_object_or_category_dtype(X):
     """
     Performs is_all_object_or_category_dtype validation
 
@@ -200,9 +166,7 @@ def check_is_all_object_or_category_dtype(
     else:
         pass
 
-def check_is_all_numeric_dtype(
-        X
-):
+def check_is_all_numeric_dtype(X):
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #check if all columns in X are numerics
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------

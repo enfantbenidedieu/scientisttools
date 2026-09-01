@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from pandas import concat
 
-def concat_empty(
-        initial,actual,axis=0, **kwargs
-):
+def concat_empty(initial, actual, axis=0, **kwargs):
     """
     Concatenate DataFrame or Series
 
@@ -11,10 +9,10 @@ def concat_empty(
 
     Parameters
     ----------
-    initial : Series or DataFrame
+    initial : Series of shape (n_samples,) or DataFrame of shape (n_samples, n_columns) or None
         Initial objects.
 
-    actual : Series or DataFrame
+    actual : Series of shape (n_samples,) or DataFrame of shape (n_samples, n_columns)
         actual objects.
     
     axis : {0/'index', 1/'columns'}, default 0
@@ -25,5 +23,8 @@ def concat_empty(
     obj : DataFrame or Series
         Concatenate object.
     """
-    obj = actual if initial is None else concat((initial,actual),axis=axis,**kwargs)
+    if initial is None:
+        obj = actual 
+    else:
+        obj = concat((initial,actual),axis=axis,**kwargs)
     return obj                                      

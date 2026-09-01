@@ -8,56 +8,56 @@ from .utils import convert_series_to_dataframe, check_is_dataframe, is_all_numer
 from .get_indices import get_indices
 from .cov2corr import cov2corr
 
-def wmean(
-        X, w=None
-) -> Series:
+def wmean(X, w=None):
     """
     Weighted average
 
-    Compute the weighted average of all columns in ``X``.
+    Compute the weighted average of all columns in X.
 
     Parameters
     ----------
     X : array-like of shape (n_samples,) or (n_samples, n_columns)
-        Input data containing the data to be averaged. ``X`` must be an object of class ``pandas.Series`` or ``pandas.DataFrame``.
+        Input data containing the data to be averaged. 
     
     w : 1d array-like of shape (n_samples,) default = None
-         Weights associated with the values in ``X``.
+         Weights associated with the values in X.
 
     Returns
     -------
     wmean : Series of shape (n_columns,)
-        The weighted average of ``X``.
+        The weighted average of X.
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #convert pd.Series to pd.DataFrame
+    # convert pd.Series to pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    X = convert_series_to_dataframe(X)
+    if isinstance(X,Series):
+        X = X.to_frame()
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if X is an object of class pd.DataFrame
+    # check if X is an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    check_is_dataframe(X)
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    
     return Series(average(X,axis=0,weights=w),index=X.columns,name="center")
 
-def wvar(
-        X, w=None,ddof=0
-) -> Series:  
+def wvar(X, w=None,ddof=0):  
     """
     Weighted variance
 
-    Compute the weighted variance of all columns in ``X``.
+    Compute the weighted variance of all columns in X.
 
     Parameters
     ----------
     X : array-like of shape (n_samples,) or (n_samples, n_columns)
-        Input data containing the data to be averaged. ``X`` must be an object of class ``pandas.Series`` or ``pandas.DataFrame``.
+        Input data containing the data to be averaged.
     
     w : 1d array-like of shape (n_samples,) default = None
-         Weights associated with the values in ``X``.
+         Weights associated with the values in X.
 
     ddof : int, default = 0
-        If not ``None`` the default value implied by bias is overridden. Note that ``ddof=1`` will return the unbiased estimate, 
+        If not None the default value implied by bias is overridden. Note that ``ddof=1`` will return the unbiased estimate, 
         even if both fweights and aweights are specified, and ``ddof=0`` will return the simple average. 
         The default value is :math:`0`.
 
@@ -67,19 +67,21 @@ def wvar(
         The weighted variance of ``X``.
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #convert pd.Series to pd.DataFrame
+    # convert pd.Series to pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    X = convert_series_to_dataframe(X)
+    if isinstance(X,Series):
+        X = X.to_frame()
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if X is an object of class pd.DataFrame
+    # check if X is an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    check_is_dataframe(X)
-    return Series([cov(m=X.iloc[:,j],aweights=w,ddof=ddof) for j in range(X.shape[1])],index=X.columns,name="variance").astype(float)
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    
+    return Series([cov(m=X.iloc[:,j],aweights=w,ddof=ddof) for j in range(X.shape[1])],index=X.columns,name="variance").astype("float")
 
-def wstd(
-        X, w=None, ddof=0
-) -> Series:  
+def wstd(X, w=None, ddof=0):  
     """
     Weighted standard deviation
 
@@ -105,9 +107,7 @@ def wstd(
     """
     return Series(wvar(X=X,w=w,ddof=ddof).transform(sqrt).values,index=X.columns,name="scale")
 
-def wcov(
-        X, w=None, ddof=0
-) -> DataFrame:
+def wcov(X, w=None, ddof=0):
     """
     Weighted Covariance Matrix
 
@@ -130,18 +130,15 @@ def wcov(
         Weighted covariance matrix.
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if X is a an object of class pd.DataFrame
+    # check if X is an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    check_is_dataframe(X)
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if X has at least two columns
-    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     return DataFrame(cov(X,rowvar=False,aweights=w,ddof=ddof),index=X.columns,columns=X.columns)
 
-def wcorr(
-        X, w=None, ddof=0
-) -> DataFrame:
+def wcorr(X, w=None, ddof=0):
     """
     Weighted pearson correlation coefficient
     
@@ -156,8 +153,8 @@ def wcorr(
         An optional rows weights.
 
     ddof : int, default = 0
-        If not ``None`` the default value implied by bias is overridden. Note that ``ddof=1`` will return the unbiased estimate, 
-        even if both fweights and aweights are specified, and ``ddof=0`` will return the simple average. 
+        If not None the default value implied by bias is overridden. Note that ddof=1 will return the unbiased estimate, 
+        even if both fweights and aweights are specified, and ddof=0 will return the simple average. 
         The default value is :math:`0`.
 
     Returns
@@ -165,11 +162,16 @@ def wcorr(
     wcorr : DataFrame of shape (n_columns, n_columns)
         The weighted correlation matrix of the variables.
     """
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # check if X is an object of class pd.DataFrame
+    #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    
     return cov2corr(wcov(X=X,w=w,ddof=ddof))
 
-def wpcorr(
-        X,partial=None,w=None, ddof=0
-) -> DataFrame:
+def wpcorr(X,partial=None,w=None, ddof=0):
     """
     Weighted Linear partial correlation
     
@@ -181,10 +183,10 @@ def wpcorr(
         Input data with the different variables. Each column is taken as a variable.
 
     partial : str, default = None
-        The partial variable. if ``None``, then 
+        The partial variable. if None, then 
 
     w : 1d array-like of shape (n_samples,), optional, default = None
-        Weights associated with the values in ``X``.
+        Weights associated with the values in X.
 
     ddof : int, default = 0
         If not ``None`` the default value implied by bias is overridden. Note that ``ddof=1`` will return the unbiased estimate, 
@@ -204,9 +206,11 @@ def wpcorr(
     >>> pcorr
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if X is a pd.DataFrame
+    # check if X is an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    check_is_dataframe(X)
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
     if partial is None:
         #pearson correlation matrix
@@ -225,70 +229,72 @@ def wpcorr(
         pcorr = wcorr(X=Xhat,w=w,ddof=ddof)
     return pcorr  
     
-def summarize(
-        X
-) -> DataFrame:
+def summarize(X):
     """
     Summarize DataFrame
     
     Parameters
     ----------
-    X : DataFrame with shape (n_samples, n_columns) or a pandas Series of shape (n_samples,).
+    X : DataFrame with shape (n_samples, n_columns) or Series of shape (n_samples,).
         X contains either numerics or categoricals columns.
 
     Returns
     -------
-    result : Datarame
+    result : DataFrame of shape
+        Summaries
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #convert pd.Series to pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    X = convert_series_to_dataframe(X)
+    if isinstance(X,Series):
+        X = X.to_frame()
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if X is an object of class pd.DataFrame
+    # check if X is an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    check_is_dataframe(X)
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
     if is_all_numeric_dtype(X):
         res = X.describe().T.reset_index().rename(columns={"index" : "variable"})
-        res["count"] = res["count"].astype(int)
+        res["count"] = res["count"].astype("int")
         return res
     elif is_all_object_or_category_dtype(X):
         def freq_prop(q):
-            eff = X[q].value_counts().to_frame("count").reset_index().rename(columns={q : "categorie"}).assign(proportion = lambda x : x["count"]/x["count"].sum())
+            eff = (X[q].value_counts().to_frame("count").reset_index()
+                       .rename(columns={q : "categorie"})
+                       .assign(proportion = lambda x : x["count"]/x["count"].sum()))
             eff.insert(0,"variable",q)
             return eff
         return concat((freq_prop(q) for q in X.columns),axis=0, ignore_index=True)
     else:
         raise TypeError("All columns must be either numerics or categoricals.")
 
-def func_groupby(
-        X, by, func="mean", w=None, ddof=0
-) -> DataFrame:
+def func_groupby(X, by, func="mean", w=None, ddof=0):
     """
     Weighted statistics by group
 
-    Performns weighted statistics of quantitative variables by group.
+    Performns weighted statistics of continuous variables by group.
     
     Parameters
     ----------
     X : array-like of shape (n_samples,) or (n_samples, n_columns)
-        ``X`` Input data. ``X`` contains quantitative variables.
+        X Input data. X contains continuous variables.
       
     by : array-like of shape (n_samples,) or (n_samples, n_columns)
-        ``Y`` Input data. ``Y`` contains qualitative variables.
+        by Input data. by contains categorical variables.
 
     func : str, default = "mean"
         Statistics which should be performns. Possible values are:
 
-        - "sum" for sum, 
-        - "mean" for average, 
-        - "var" for variance and,
-        - "std" for standard deviation.
+        * "sum" for sum, 
+        * "mean" for average, 
+        * "var" for variance and,
+        * "std" for standard deviation.
 
     w : 1d array-like of shape (n_samples,) default = None
-        Weights associated with the values in ``X``.
+        Weights associated with the values in X.
 
     Returns
     -------
@@ -296,16 +302,23 @@ def func_groupby(
         The conditional statistics.
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #convert to an object of class pd.DataFrame if an object of class pd.Series
+    # convert to an object of class pd.DataFrame if an object of class pd.Series
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    X, by = convert_series_to_dataframe(X), convert_series_to_dataframe(by)
+    if isinstance(X,Series):
+        X = X.to_frame()
+    if isinstance(by,Series):
+        by = by.to_frame()
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    #check if input data are object of class pandas.DataFrame
+    # check if X and Y is an object of class pd.DataFrame
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    check_is_dataframe(X)
-    check_is_dataframe(by)
-
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    if not isinstance(by,DataFrame):
+        raise TypeError(f"{type(by)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
+    
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     #check if X and by have same number of rows
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -327,7 +340,7 @@ def func_groupby(
             w = array(w)/sum(w)
 
     def groupby(q):
-        modalite = sorted(list(unique(by[q])))
+        modalite = sorted(unique(by[q]))
         def statsby(kq):
             idx = get_indices(by[q],kq)
             if func == "sum": 

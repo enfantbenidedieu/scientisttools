@@ -4,17 +4,14 @@ from pandas import DataFrame, Series, crosstab, concat
 from scipy.stats import t, chi2_contingency, contingency
 from scipy.stats import chi2, contingency, chi2_contingency
 from statsmodels.api import WLS
-from collections import OrderedDict, namedtuple
-from typing import NamedTuple
+from collections import namedtuple
 
 #interns functions
 from .statistics import wcorr
 from .utils import check_is_dataframe, is_numeric_dtype, is_object_or_category_dtype, check_is_all_object_or_category_dtype
 from .concat_empty import concat_empty
 
-def wpearsonr(
-        x,y,w=None
-) -> NamedTuple:
+def wpearsonr(x,y,w=None):
     """
     Test for weighted pearson correlation coefficient.
 
@@ -23,13 +20,13 @@ def wpearsonr(
     Parameters
     ----------
     x : 1d array-like of shape (n_samples,)
-        ``x`` values.
+        x values.
 
     y : 1d array-like of shape (n_samples,)
-        ``y`` values.
+        y values.
 
     w : 1d array-like of shape (n_samples,) default = None
-        Weights associated with the values in ``x``.
+        Weights associated with the values in x.
 
     Returns
     -------
@@ -38,10 +35,8 @@ def wpearsonr(
     
         statistic : float
             The weighted Pearson product-moment correlation coefficient.
-        
         dof : int
             The degre of freedom.  
-        
         pvalue : float 
             The critical p-value associated.
     
@@ -58,12 +53,10 @@ def wpearsonr(
     t_stat, dof = statistic*sqrt(((len(x)-2)/(1- statistic**2))), len(x) - 2
     pvalue = 2*t.sf(abs(t_stat),dof)
     #convert to ordered dictionary
-    res_ = OrderedDict(statistic=statistic,dof=dof,pvalue=pvalue)
+    res_ = {"statistic":statistic,"dof":dof,"pvalue":pvalue}
     return namedtuple("wpearsonrResult",res_.keys())(*res_.values())
 
-def eta2test(
-        x,y,w=None
-) -> NamedTuple:
+def eta2test(x,y,w=None):
     """
     Test of Eta squared
 
@@ -72,13 +65,13 @@ def eta2test(
     Parameters
     ----------
     x : 1d array-like of shape (n_samples,)
-        ``x`` values. ``x`` contains categories values.
+        x values. x contains categories values.
 
     y : 1d array-like of shape (n_samples,)
-        ``y`` values. ``y`` contains numerics values.
+        y values. y contains numerics values.
 
     w : 1d array-like of shape (n_samples,) default = None
-        Weights associated with the values in ``x``.
+        Weights associated with the values in x.
 
     Returns
     -------
@@ -87,19 +80,19 @@ def eta2test(
     
         statistic : float
             The eta squared coefficient.
-        
         df_num : int
             The numerator degre of freedom.  
-
         df_denom : int
             The denominator degre of freedom.  
-        
         pvalue : float 
             The critical p-value associated.
 
     References
     ----------
     F. Bertrand, M. Maumy-Bertrand, Initiation à la Statistique avec R, Dunod, 4ème édition, 2023.
+    
+    Examples
+    --------
     """
     n_rows = len(x)
     #set weights
@@ -111,15 +104,17 @@ def eta2test(
         raise ValueError(f"'w' must be a 1d array-like of shape ({n_rows},).")
     else:
         w = array(w)/sum(w)
+        
     #weighted least squared
-    wls = WLS.from_formula("y ~ C(x)",weights=w,data=DataFrame(c_[y,x],columns=["y","x"])).fit()
-    #convert to ordered dictionary
-    res_ = OrderedDict(statistic=float(wls.rsquared),df_num=int(wls.df_model),df_denom=int(wls.df_resid),pvalue=float(wls.f_pvalue))
+    data = concat((Series(y,name="y"),Series(x,name="x")),axis=1)
+    # weighted least squared
+    wls = WLS.from_formula("y ~ C(x)",weights=w,data=data).fit()
+    #convert to dictionary
+    res_ = {"statistic":float(wls.rsquared),"df_num":int(wls.df_model),
+            "df_denom":int(wls.df_resid),"pvalue":float(wls.f_pvalue)}
     return namedtuple("eta2testResult",res_.keys())(*res_.values())
 
-def association(
-        X
-):
+def association(X):
     """
     Association between nominal variables
 
@@ -128,7 +123,7 @@ def association(
     Parameters
     ----------
     X : DataFrame of shape (n_samples, n_columns)
-        ``X`` contains nominal variables.
+        X contains nominal variables.
 
     Returns
     -------
@@ -137,10 +132,8 @@ def association(
 
         association : DataFrame of shape (n_columns*(n_columns - 1)/2, 5)
             The degree of association between two nominal variables ("cramer", "tschuprow", "pearson").
-
         chi2 : DataFrame of shape (n_columns*(n_columns - 1)/2, 4)
             The pearson's chi-squared test.
-        
         gtest : DataFrame of shape (n_columns*(n_columns - 1)/2, 4)
             The log-likelihood ratio (i.e the "G-test").
         
@@ -187,25 +180,23 @@ def association(
             tab = crosstab(X.iloc[:,i],X.iloc[:,j])
             #pearson chi-squared test
             statistic, pvalue, dof, _ = chi2_contingency(tab,lambda_=None,correction=False)
-            row_chi2 = DataFrame(OrderedDict(variable1=X.columns[i],variable2=X.columns[j],statistic=statistic,dof=dof,pvalue=pvalue),index=[idx])
+            row_chi2 = DataFrame({"variable1":X.columns[i],"variable2":X.columns[j],"statistic":statistic,"dof":dof,"pvalue":pvalue},index=[idx])
             chi2_test = concat_empty(chi2_test,row_chi2,axis=0,ignore_index=True)
             #log-likelihood test (G-test)
             g_stat, g_pvalue, g_dof = chi2_contingency(tab, lambda_="log-likelihood")[:3]
-            row_gtest = DataFrame(OrderedDict(variable1=X.columns[i],variable2=X.columns[j],statistic=g_stat,dof=g_dof,pvalue=g_pvalue),index=[idx])
+            row_gtest = DataFrame({"variable1":X.columns[i],"variable2":X.columns[j],"statistic":g_stat,"dof":g_dof,"pvalue":g_pvalue},index=[idx])
             g_test = concat_empty(g_test,row_gtest,axis=0,ignore_index=True)
             #others association tests (cramer, tschuprow, pearson)
             asso_test = [contingency.association(tab,method=k,correction=False) for k in ["cramer","tschuprow","pearson"]]
-            row_asso = DataFrame(OrderedDict(variable1=X.columns[i],variable2=X.columns[j],cramer=asso_test[0],tschuprow=asso_test[1],pearson=asso_test[2]),index=[idx])
+            row_asso = DataFrame({"variable1":X.columns[i],"variable2":X.columns[j],"cramer":asso_test[0],"tschuprow":asso_test[1],"pearson":asso_test[2]},index=[idx])
             association = concat_empty(association,row_asso,axis=0,ignore_index=True)
             idx += 1
     #transform to int
-    chi2_test["dof"], g_test["dof"] = chi2_test["dof"].astype(int), g_test["dof"].astype(int)
+    chi2_test["dof"], g_test["dof"] = chi2_test["dof"].astype("int"), g_test["dof"].astype("int")
     #convert to namedtuple
     return namedtuple("association",["association","chi2","gtest"])(association,chi2_test,g_test)
 
-def wcorrtest(
-        X,w=None
-) -> DataFrame:
+def wcorrtest(X,w=None):
     """
     Weighted correlation test
 
@@ -236,27 +227,36 @@ def wcorrtest(
     if w is None:
         w = ones(n_rows)/n_rows
     elif not isinstance(w,(list,tuple,ndarray,Series)):
-        raise TypeError("'w' must be a 1d array-like of rows weights.")
+        raise TypeError("w must be a 1d array-like of rows weights.")
     elif len(w) != n_rows:
-        raise ValueError(f"'w' must be a 1d array-like of shape ({n_rows},).")
+        raise ValueError(f"w must be a 1d array-like of shape ({n_rows},).")
     else:
         w = array(w)/sum(w)
         
     corr_test = DataFrame(columns=["variable1","variable2","test","statistic","pvalue"]).astype("float")
-    idx = 0
-    for i in range(n_cols-1):
-        for j in range(i+1,n_cols):
-            if is_numeric_dtype(X.iloc[:,i]) and is_numeric_dtype(X.iloc[:,j]):
-                res, test = wpearsonr(x=X.iloc[:,i].values,y=X.iloc[:,j].values,w=w), "Pearson correlation"
-            elif is_object_or_category_dtype(X.iloc[:,i]) and is_object_or_category_dtype(X.iloc[:,j]):
-                res, test = chi2_contingency(crosstab(X.iloc[:,i],X.iloc[:,j]),lambda_=None,correction=False), "Pearson chi-squared"
-            elif is_numeric_dtype(X.iloc[:,i]) and is_object_or_category_dtype(X.iloc[:,j]):
-                res, test = eta2test(x=X.iloc[:,j].values,y=X.iloc[:,i].values,w=w), "Eta-squared ratio"
-            elif is_object_or_category_dtype(X.iloc[:,i]) and is_numeric_dtype(X.iloc[:,j]):
-                res, test = eta2test(x=X.iloc[:,i].values,y=X.iloc[:,j].values,w=w), "Eta-squared ratio"
+    i = 0
+    for k in range(n_cols-1):
+        for l in range(k+1,n_cols):
+            # initialization
+            stats = {"variable1":X.columns[k],"variable2":X.columns[l]}
+            # pearson correlation
+            if is_numeric_dtype(X.iloc[:,k]) and is_numeric_dtype(X.iloc[:,l]):
+                res, test = wpearsonr(x=X.iloc[:,k].to_numpy(),y=X.iloc[:,l].to_numpy(),w=w), "Pearson correlation"
+            # pearson chi - squared
+            elif is_object_or_category_dtype(X.iloc[:,k]) and is_object_or_category_dtype(X.iloc[:,l]):
+                res, test = chi2_contingency(crosstab(X.iloc[:,k],X.iloc[:,l]),lambda_=None,correction=False), "Pearson chi-squared"
+            # eta2 ratio
+            elif is_numeric_dtype(X.iloc[:,k]) and is_object_or_category_dtype(X.iloc[:,l]):
+                res, test = eta2test(x=X.iloc[:,k].to_numpy(),y=X.iloc[:,l].to_numpy(),w=w), "Eta-squared ratio"
+            # eta2 ratio
+            elif is_object_or_category_dtype(X.iloc[:,k]) and is_numeric_dtype(X.iloc[:,l]):
+                res, test = eta2test(x=X.iloc[:,k].to_numpy(),y=X.iloc[:,l].to_numpy(),w=w), "Eta-squared ratio"
             else:
-                raise TypeError("Variables should be either quantitative or qualitative")
-            row_corr = DataFrame(OrderedDict(variable1=X.columns[i],variable2=X.columns[j],test=test,statistic=res.statistic,pvalue=res.pvalue),index=[idx])
+                raise TypeError("Variables should be either numerics or categorical")
+            # convert to DataFrame
+            row_corr = DataFrame({**stats,**{"test":test,"statistic":res.statistic,"pvalue":res.pvalue}},index=[i])
+            # concatenate
             corr_test = concat((corr_test,row_corr),axis=0,ignore_index=True)
-            idx += 1
+            # update i
+            i += 1
     return corr_test

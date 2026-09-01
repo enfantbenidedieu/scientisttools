@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
-from pandas import concat, get_dummies, CategoricalDtype
+from pandas import DataFrame, concat, get_dummies, CategoricalDtype
 from pandas.api.types import is_numeric_dtype, is_string_dtype
 
-#intern function
-from .utils import check_is_dataframe
-
-def model_matrix(
-        X
-):
+def model_matrix(X):
     """
     Model Matrix - Construct Design Matrices
 
@@ -24,7 +19,9 @@ def model_matrix(
         Output data.
     """
     #check if X is an instance of class pd.DataFrame
-    check_is_dataframe(X=X)
+    if not isinstance(X,DataFrame):
+        raise TypeError(f"{type(X)} is not supported. Please convert to a DataFrame with pandas.DataFrame.",
+                        "For more information see: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html")
 
     def recode(x):
         if is_numeric_dtype(x):

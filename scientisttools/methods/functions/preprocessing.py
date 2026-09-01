@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from numpy import number
 from pandas import DataFrame, options
-options.mode.copy_on_write = True #to avir
+options.mode.copy_on_write = True #to avoid
 from pandas.api.types import is_numeric_dtype
 
 #intern functions
@@ -9,9 +9,7 @@ from .utils import check_is_dataframe, is_object_or_category_dtype
 from .func_fillna import func_fillna
 from .revalue import revalue
 
-def preprocessing(
-        X
-) -> DataFrame:
+def preprocessing(X):
     """
     Preprocessing
 
@@ -20,7 +18,8 @@ def preprocessing(
     Parameters
     ----------
     X : DataFrame of shape (n_samples, n_columns)
-        Input data, where ``n_samples`` in the number of samples and ``n_columns`` is the number of columns.
+        Input data, where ``n_samples`` in the number of samples 
+        and ``n_columns`` is the number of columns.
 
     Returns
     -------

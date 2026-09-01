@@ -2,9 +2,7 @@
 from sklearn.impute import SimpleImputer
 from pandas import DataFrame, Series
 
-def func_fillna(
-        X, method = "mean"
-):
+def func_fillna(X, method = "mean"):
     """
     Fill NA/NAN
 
@@ -14,19 +12,20 @@ def func_fillna(
 
     Parameters
     ----------
-    X : DataFrame of shape (n_rows, n_columns)
+    X : Series of shape (n_samples,) or DataFrame of shape (n_samples, n_columns)
         Input data.
 
-    method : str, default = "mean"
+    method : {"mean","median","most_frequent"}, default = "mean"
         The imputation method:
 
-        - If 'mean', then replace missing values using the mean along each column. Can only be used with numeric data.
-        - If 'median', then replace missing values using the median along each column. Can only be used with numeric data.
-        - If 'most_frequent', then replace missing using the most frequent value along each column. Can be used with strings or numeric data. If there is more than one such value, only the smallest is returned.
+        * 'mean', then replace missing values using the mean along each column. Can only be used with numeric data.
+        * 'median', then replace missing values using the median along each column. Can only be used with numeric data.
+        * 'most_frequent', then replace missing using the most frequent value along each column. 
+            Can be used with strings or numeric data. If there is more than one such value, only the smallest is returned.
 
     Returns
     -------
-    X : array-like of shape (n_rows, n_columns)
+    Y : array-like of shape (n_samples, n_columns)
         Ouput data.
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -38,5 +37,11 @@ def func_fillna(
     if method not in ("mean","median","most_frequent"):
         raise ValueError("Not convenient method.")
     
+    if isinstance(X,Series):
+        colnames = X.name
+    else:
+        colnames = X.columns
+    
     clf = SimpleImputer(strategy=method)
-    return  DataFrame(clf.fit_transform(X),index=X.index,columns=X.columns)
+    Y = DataFrame(clf.fit_transform(X),index=X.index,columns=colnames)
+    return  Y
