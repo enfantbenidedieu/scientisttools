@@ -15,14 +15,14 @@ def fviz_corcircle(obj,
                    geom = ("arrow","text"),
                    repel = False,
                    col_var = "black",
-                   segment_args = dict(size=0.5,alpha=1),
-                   point_args = dict(size=1.5),
-                   text_args = dict(size=8),
+                   segment_args = {"size":0.5,"alpha":1},
+                   point_args = {"size":1.5},
+                   text_args = {"size":8},
                    quanti_sup = True,
                    col_quanti_sup = "blue",
-                   segment_args_quanti_sup = dict(linetype="dashed",size=0.5,alpha=1),
-                   point_args_quanti_sup = dict(size=1.5),
-                   text_args_quanti_sup = dict(size=8),
+                   segment_args_quanti_sup = {"linetype":"dashed","size":0.5,"alpha":1},
+                   point_args_quanti_sup = {"size":1.5},
+                   text_args_quanti_sup = {"size":8},
                    scale = 1,
                    circle = True,
                    col_circle = "gray",
@@ -42,7 +42,8 @@ def fviz_corcircle(obj,
     Parameters
     ----------
     obj : class
-        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.CA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`,:class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`, :class:`~scientisttools.DMFA`.
+        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.CA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, 
+        :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`, :class:`~scientisttools.DMFA`.
 
     axis : list, default = [0,1]
         The dimensions to be plotted.
@@ -60,14 +61,14 @@ def fviz_corcircle(obj,
     col_var : str, default = "black"
         Color for variables segments and/or texts.
 
-    segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"size":0.5,"alpha":1}
+        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size":1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size":8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     quanti_sup : bool, default = True
         If True, then show supplementary continuous variables segments and/or texts.
@@ -78,10 +79,10 @@ def fviz_corcircle(obj,
     segment_args_quanti_sup : dict, default = dict(linetype="dashed",size=0.5,alpha=1)
         A dictionary containing parameters (except color) for supplementary continuous variables segments.
 
-    point_args_quanti_sup : dict, default = dict(size = 1.5)
+    point_args_quanti_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary continuous variables points.
 
-    text_args_quanti_sup : dict, default = dict(size = 8)
+    text_args_quanti_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary continuous variables texts.
 
     scale : int, default = 1
@@ -112,10 +113,10 @@ def fviz_corcircle(obj,
         The subtitle of the graph you draw.
     
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -125,11 +126,15 @@ def fviz_corcircle(obj,
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, fviz_corcircle
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,13))
+    >>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,13))
     >>> clf.fit(decathlon.data)
     >>> # graph of variables
     >>> p = fviz_corcircle(clf)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_corcircle.png
+                                        
+            Correlation circle
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid object

@@ -15,8 +15,8 @@ def fviz_pca_ind(obj,
                  geom = ("point","text"),
                  repel = False,
                  col_ind = "black",
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  habillage = None,
@@ -27,12 +27,12 @@ def fviz_pca_ind(obj,
                  alpha = 0.1,
                  ind_sup = True,
                  col_ind_sup = "blue",
-                 point_args_ind_sup = dict(size=1.5),
-                 text_args_ind_sup = dict(size=8),
+                 point_args_ind_sup = {"size":1.5},
+                 text_args_ind_sup = {"size":8},
                  quali_sup = True,
                  col_quali_sup = "violet",
-                 point_args_quali_sup = dict(size=1.5),
-                 text_args_quali_sup = dict(size=8),
+                 point_args_quali_sup = {"size":1.5},
+                 text_args_quali_sup = {"size":8},
                  lim_cos2 = None,
                  lim_contrib = None,
                  x_lim = None,
@@ -46,8 +46,8 @@ def fviz_pca_ind(obj,
     """
     Visualize Principal Component Analysis - Graph of individuals
     
-    Principal components analysis (:class:`~scientisttools.PCA`) reduces the dimensionality of multivariate data, to two or three that can be visualized graphically with minimal loss of information. 
-    :class:`~scientisttools.fviz_pca_ind` provides plotnine-based elegant visualization of :class:`~scientisttools.PCA` outputs for individuals.
+    Principal components analysis (PCA) reduces the dimensionality of multivariate data, to two or three that can be visualized graphically with minimal loss of information. 
+    fviz_pca_ind() provides plotnine-based elegant visualization of PCA outputs for individuals.
 
     Parameters
     ----------
@@ -74,13 +74,13 @@ def fviz_pca_ind(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
-    gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
+    gradient_cols : list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
 
     legend_title : str, defaut = None
@@ -96,7 +96,7 @@ def fviz_pca_ind(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -116,10 +116,10 @@ def fviz_pca_ind(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals.
 
-    point_args_ind_sup : dict, default = dict(size = 1.5)
+    point_args_ind_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     quali_sup : bool, default = True
@@ -128,10 +128,10 @@ def fviz_pca_ind(obj,
     col_quali_sup : str, default = "red"
         Color for supplementary variable categories points and/or texts.
 
-    point_args_quali_sup : dict, default = dict(size = 1.5)
+    point_args_quali_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary variable categories points.
 
-    text_args_quali_sup : dict, default = dict(size = 8)
+    text_args_quali_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary variable categories texts.
 
     lim_cos2 : float, default = None
@@ -159,10 +159,10 @@ def fviz_pca_ind(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -170,20 +170,23 @@ def fviz_pca_ind(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_pca`
-        Visualize Principal Component Analysis
-    :class:`~scientisttools.get_pca`
-        Extract the results for individuals/variables - PCA
+    fviz_pca : Visualize Principal Component Analysis
+    get_pca : Extract the results for individuals/variables - PCA
 
     Examples
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, fviz_pca_ind
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    >>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> clf.fit(decathlon.data)
+    PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> # graph of individuals
     >>> p = fviz_pca_ind(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pca_ind.png
+                                                
+            Graph of individuals - PCA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class PCA
@@ -274,17 +277,17 @@ def fviz_pca_var(obj,
                  geom = ("arrow","text"),
                  repel = False,
                  col_var = "black",
-                 segment_args = dict(size=0.5),
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 segment_args = {"size":0.5},
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  palette = "Dark2",
                  quanti_sup = True,
                  col_quanti_sup = "blue",
-                 segment_args_quanti_sup = dict(linetype="dashed",size=0.5),
-                 point_args_quanti_sup = dict(size=1.5),
-                 text_args_quanti_sup = dict(size=8),
+                 segment_args_quanti_sup = {"linetype":"dashed","size":0.5},
+                 point_args_quanti_sup = {"size":1.5},
+                 text_args_quanti_sup = {"size":8},
                  scale = 1,
                  lim_cos2 = None,
                  lim_contrib = None,
@@ -301,8 +304,8 @@ def fviz_pca_var(obj,
     """
     Visualize Principal Component Analysis - Graph of variables
     
-    Principal components analysis (:class:`~scientisttools.PCA`) reduces the dimensionality of multivariate data, to two or three that can be visualized graphically with minimal loss of information. 
-    :class:`~scientisttools.fviz_pca_var` provides plotnine-based elegant visualization of :class:`~scientisttools.PCA` outputs for variables.
+    Principal components analysis (PCA) reduces the dimensionality of multivariate data, to two or three that can be visualized graphically with minimal loss of information. 
+    fviz_pca_var() provides plotnine-based elegant visualization of PCA outputs for variables.
 
     Parameters
     ----------
@@ -330,14 +333,14 @@ def fviz_pca_var(obj,
         In this case, the colors for variables are automatically controlled by their 
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
 
-    segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters (except color) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"size" : 0.5}
+        A dictionary containing parameters (except color) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for variables points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for variables points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     quanti_sup : bool, default = True
         If True, then show supplementary continuous variables segments, points and/or texts.
@@ -345,13 +348,13 @@ def fviz_pca_var(obj,
     col_quanti_sup : str, default = "blue"
         Color for supplementary continuous variables segments, points and/or texts.
 
-    segment_args_quanti_sup : dict, default = dict(linetype="dashed",size=0.5,alpha=1)
+    segment_args_quanti_sup : dict, default = {"linetype":"dashed","size":0.5}
         A dictionary containing parameters (except color) for supplementary continuous variables segments.
 
-    point_args_quanti_sup : dict, default = dict(size = 1.5)
+    point_args_quanti_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary continuous variables points.
 
-    text_args_quanti_sup : dict, default = dict(size = 8)
+    text_args_quanti_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary continuous variables texts.
 
     scale : int, default = 1
@@ -382,10 +385,10 @@ def fviz_pca_var(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -393,21 +396,23 @@ def fviz_pca_var(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_pca`
-        Visualize Principal Component Analysis
-    :class:`~scientisttools.get_pca`
-        Extract the results for individuals/variables - PCA
+    fviz_pca : Visualize Principal Component Analysis
+    get_pca : Extract the results for individuals/variables - PCA
 
     Examples
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, fviz_pca_var
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    >>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> clf.fit(decathlon.data)
-    PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> # graph of variables
     >>> p = fviz_pca_var(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pca_var.png
+                                                
+            Graph of variables (=correlation circle) - PCA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class PCA
@@ -485,12 +490,12 @@ def fviz_pca_biplot(obj,
                     repel_ind = False,
                     repel_var = False,
                     col_ind = "black",
-                    point_args_ind = dict(size=1.5),
-                    text_args_ind = dict(size=8),
+                    point_args_ind = {"size":1.5},
+                    text_args_ind = {"size":8},
                     col_var = "steelblue",
-                    segment_args_var = dict(size=0.5),
-                    point_args_var = dict(size=1.5),
-                    text_args_var = dict(size=8),
+                    segment_args_var = {"size":0.5},
+                    point_args_var = {"size":1.5},
+                    text_args_var = {"size":8},
                     gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                     legend_title = None,
                     habillage = None,
@@ -501,17 +506,17 @@ def fviz_pca_biplot(obj,
                     alpha = 0.1,
                     ind_sup = True,
                     col_ind_sup = "blue",
-                    point_args_ind_sup = dict(size=1.5),
-                    text_args_ind_sup = dict(size=8),
+                    point_args_ind_sup = {"size":1.5},
+                    text_args_ind_sup = {"size":8},
                     quali_sup = True,
                     col_quali_sup = "violet",
-                    point_args_quali_sup = dict(size=1.5),
-                    text_args_quali_sup = dict(size=8),
+                    point_args_quali_sup = {"size":1.5},
+                    text_args_quali_sup = {"size":8},
                     quanti_sup = True,
                     col_quanti_sup = "darkblue",
                     segment_args_quanti_sup = dict(linetype="dashed",size=0.5),
-                    point_args_quanti_sup = dict(size=1.5),
-                    text_args_quanti_sup = dict(size=8),
+                    point_args_quanti_sup = {"size":1.5},
+                    text_args_quanti_sup = {"size":8},
                     x_lim = None,
                     y_lim = None,
                     x_label = None,
@@ -524,7 +529,7 @@ def fviz_pca_biplot(obj,
     Visualize Principal Component Analysis - Biplot of individuals and variables
     
     Principal components analysis (PCA) reduces the dimensionality of multivariate data, to two or three that can be visualized graphically with minimal loss of information. 
-    :class:`~scientisttools.fviz_pca_biplot` provides plotnine-based elegant visualization of PCA outputs for individuals and variables.
+    fviz_pca_biplot() provides plotnine-based elegant visualization of PCA outputs for individuals and variables.
 
     Parameters
     ----------
@@ -563,25 +568,25 @@ def fviz_pca_biplot(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args_ind : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args_ind : dict, default = {"size":1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args_ind : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args_ind : dict, default = {"size":8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     col_var : str, default = "steelblue"
         Color for variables.
 
-    segment_args_var : dict, default = dict(size = 0.5)
-        A dictionary containing parameters (except color) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args_var : dict, default = {"size" : 0.5}
+        A dictionary containing parameters (except color) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    point_args_var : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for variables points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args_var : dict, default = {"size":1.5}
+        A dictionary containing parameters (except color) for variables points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args_var : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args_var : dict, default = {"size":8}
+        A dictionary containing parameters (except color) for variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
-    gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
+    gradient_cols : list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
 
     legend_title : str, defaut = None
@@ -597,7 +602,7 @@ def fviz_pca_biplot(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -617,10 +622,10 @@ def fviz_pca_biplot(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals.
 
-    point_args_ind_sup : dict, default = dict(ize = 1.5)
+    point_args_ind_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
     
     quali_sup : bool, default = True
@@ -629,10 +634,10 @@ def fviz_pca_biplot(obj,
     col_quali_sup : str, default = "red"
         Color for supplementary variable categories points and/or texts.
 
-    point_args_quali_sup : dict, default = dict(size = 1.5)
+    point_args_quali_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary variable categories points.
 
-    text_args_quali_sup : dict, default = dict(size = 8)
+    text_args_quali_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary variable categories texts.
 
     quanti_sup : bool, default = True
@@ -641,13 +646,13 @@ def fviz_pca_biplot(obj,
     col_quanti_sup : str, default = "blue"
         Color for supplementary continuous variables segments, points and/or texts.
 
-    segment_args_quanti_sup : dict, default = dict(linetype="dashed",size=0.5,alpha=1)
+    segment_args_quanti_sup : dict, default = {"linetype":"dashed","size":0.5}
         A dictionary containing parameters (except color) for supplementary continuous variables segments.
 
-    point_args_quanti_sup : dict, default = dict(size = 1.5)
+    point_args_quanti_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary continuous variables points.
 
-    text_args_quanti_sup : dict, default = dict(size = 8)
+    text_args_quanti_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary continuous variables texts.
 
     x_lim : list, tuple, default = None
@@ -669,10 +674,10 @@ def fviz_pca_biplot(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -680,20 +685,23 @@ def fviz_pca_biplot(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_pca`
-        Visualize Principal Component Analysis
-    :class:`~scientisttools.get_pca`
-        Extract the results for individuals/variables - PCA
+    fviz_pca : Visualize Principal Component Analysis
+    get_pca : Extract the results for individuals/variables - PCA
 
     Examples
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, fviz_pca_biplot
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    >>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> clf.fit(decathlon.data)
+    PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> # biplot of individuals and variables
     >>> p = fviz_pca_biplot(clf,repel_ind=True,repel_var=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pca_biplot.png
+                                            
+            Biplot of individuals and variables - PCA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is a PCA class
@@ -821,8 +829,8 @@ def fviz_pca(obj,
     """
     Visualize Principal Component Analysis
     
-    Principal components analysis (:class:`~scientisttools.PCA`) reduces the dimensionality of multivariate data, to two or three that can be visualized graphically with minimal loss of information. 
-    :class:`~scientisttools.fviz_pca_ind` provides plotnine-based elegant visualization of :class:`~scientisttools.PCA` outputs.
+    Principal components analysis (PCA) reduces the dimensionality of multivariate data, to two or three that can be visualized graphically with minimal loss of information. 
+    fviz_pca_ind() provides plotnine-based elegant visualization of PCA outputs.
 
     Parameters
     ----------
@@ -839,9 +847,9 @@ def fviz_pca(obj,
     **kwargs: Any
         Parameters use by one of this function. See:
         
-        * :class:`scientisttools.fviz_pca_ind`: Graph of individuals
-        * :class:`scientisttools.fviz_pca_var`: Graph of variables
-        * :class:`scientisttools.fviz_pca_biplot`: Biplot of individuals and variables
+        * :class:`~scientisttools.fviz_pca_ind`: Graph of individuals
+        * :class:`~scientisttools.fviz_pca_var`: Graph of variables
+        * :class:`~scientisttools.fviz_pca_biplot`: Biplot of individuals and variables
     
     Returns
     -------
@@ -849,30 +857,38 @@ def fviz_pca(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_pca_ind`
-        Visualize Principal Component Analysis - Graph of individuals
-    :class:`~scientisttools.fviz_pca_var`
-        Visualize Principal Component Analysis - Graph of variables
-    :class:`~scientisttools.fviz_pca_biplot`
-        Visualize Principal Component Analysis - Biplot of individuals and variables
-    :class:`~scientisttools.get_pca`
-        Extract the results for individuals/variables - PCA
+    get_pca : Extract the results for individuals/variables - PCA
     
     Examples
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, fviz_pca
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    >>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> clf.fit(decathlon.data)
+    PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> # graph of individuals
     >>> p = fviz_pca(clf,choice="ind",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pca_ind.png
+                                            
+            Graph of individuals - PCA
+            
     >>> # graph of variables
     >>> p = fviz_pca(clf,choice="var",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pca_var.png
+                                            
+            Graph of variables (=correlation circle) - PCA
+            
     >>> # biplot of individuals and variables
     >>> p = fviz_pca(clf,repel_ind=True,repel_var=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pca_biplot.png
+                                        
+            Biplot of individuals and variables - PCA
     """
     if choice == "ind":
         return fviz_pca_ind(obj,**kwargs)
@@ -881,4 +897,4 @@ def fviz_pca(obj,
     elif choice == "biplot":
         return fviz_pca_biplot(obj,**kwargs)
     else:
-        raise ValueError("choice should be one of 'ind', 'var', 'biplot'")
+        raise ValueError(f"{choice} is not supported.")

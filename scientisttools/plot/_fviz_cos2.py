@@ -16,7 +16,7 @@ def fviz_cos2(obj,
               y_label = None,
               top = None,
               col_bar = "steelblue",
-              bar_args = dict(fill="steelblue",width=0.8),
+              bar_args = {"fill":"steelblue","width":0.8},
               sort = "desc",
               angle = 45,
               pntheme = theme_minimal(),
@@ -25,14 +25,15 @@ def fviz_cos2(obj,
     """
     Visualize the quality of representation of row/columns elements
     
-    This function can be used to visualize the quality of representation of rows/columns from the results of Principal Component Analysis (:class:`~scientisttools.PCA`), 
-    Correspondence Analysis (:class:`~scientistools.CA`), Multiple Correspondence Analysis (:class:`~scientisttools.MCA`), Factor Analysis of Mixed Data (:class:`~scientisttools.FAMD`), 
-    Principal Component Analysis of Mixed Data (:class:`~scientisttools.PCAmix`), Mixed Principal Component Analysis (:class:`~scientisttools.MPCA`), and Multiple Factor Analysis (:class:`~scientisttools.MFA`) functions. 
+    This function can be used to visualize the quality of representation of rows/columns from the results of Principal Component Analysis (PCA), 
+    Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), 
+    Principal Component Analysis of Mixed Data (PCAmix), Mixed Principal Component Analysis (MPCA), and Multiple Factor Analysis (MFA) functions. 
         
     Parameters
     ----------
     obj : class
-        An object of class :class:`~ scientisttools.PCA`, :class:`~ scientisttools.CA`, :class:`~ scientisttools.MCA`, :class:`~ scientisttools.FAMD`, :class:`~ scientisttools.PCAmix`, :class:`~ scientisttools.MPCA`, :class:`~ scientisttools.MFA`
+        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.CA`, :class:`~scientisttools.MCA`, 
+        :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`
 
     choice : {"row","col","ind","quanti_var","levels","quali_var","freq","group","partial_axes"}, default = "ind"
         The element to subset. Allowed values are :
@@ -58,8 +59,8 @@ def fviz_cos2(obj,
     col_bar : str, default = "steelblue"
         Outline color for the bar plot.
 
-    bar_args : dict, default = dict(fill="steelblue",width=0.8)
-        A dictionary containing parameters (except color) for bar plot (see `plotnine.geom_bar <https://plotnine.org/reference/geom_bar.html>`).
+    bar_args : dict, default = {"fill":"steelblue","width":0.8}
+        A dictionary containing parameters (except color) for bar plot (see `plotnine.geom_bar <https://plotnine.org/reference/geom_bar.html>`_).
             
     sort : {None, "asc","desc"}, default = "desc"
         None or a string specifying whether the value should be sorted. Allowed values are:
@@ -75,14 +76,18 @@ def fviz_cos2(obj,
         A boolean to either add or not a grid customization.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
     
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
     A plotnine object.
+    
+    See also
+    --------
+    fviz_contrib : Visualize the contributions of row/columns elements
 
     Examples
     --------
@@ -90,24 +95,34 @@ def fviz_cos2(obj,
     >>> from scientisttools import MCA, fviz_cos2
     >>> clf = MCA(sup_var=range(4))
     >>> clf.fit(poison.data)
+    MCA(sup_var=range(4))
     >>> # cos2 of individuals
     >>> p = fviz_cos2(clf,choice="ind",axis=0)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_cos2_ind.png
+                                
+            Cos2 of individuals
+    
     >>> # cos2 of variable categories
     >>> p = fviz_cos2(clf,choice="levels",axis=0)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_cos2_levels.png
+                                    
+            Cos2 of variables categories
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid class
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if not (obj.__class__.__name__ in ("PCA","CA","MCA","FAMD","PCAmix","MPCA","MFA","DMFA")):
-        raise TypeError("'obj' must be an object of class PCA, CA, MCA, FAMD, PCAmix, MPCA, MFA, DMFA")    
+        raise TypeError("obj must be an object of class PCA, CA, MCA, FAMD, PCAmix, MPCA, MFA, DMFA")    
         
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid element
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if not (choice in ("row","col","ind","var","quanti_var","levels","quali_var","freq","group")):
-        raise ValueError("'element' should be one of 'row', 'col', 'ind', 'var', 'quanti_var', levels, 'quali_var', 'freq', 'group'.")
+        raise ValueError("element should be one of 'row', 'col', 'ind', 'var', 'quanti_var', levels, 'quali_var', 'freq', 'group'.")
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # set axis
@@ -116,9 +131,9 @@ def fviz_cos2(obj,
     if axis is None:
         axis = 0
     elif not isinstance(axis,int):
-        raise TypeError("'axis' must be an integer.")
+        raise TypeError("axis must be an integer.")
     elif axis not in list(range(0,ncp)):
-        raise TypeError(f"'axis' must be an integer between 0 and {ncp-1}.")
+        raise TypeError(f"axis must be an integer between 0 and {ncp-1}.")
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # extract cos2

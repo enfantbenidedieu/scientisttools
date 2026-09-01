@@ -10,8 +10,8 @@ def fviz_ca_row(obj,
                 geom = ("point","text"),
                 repel = False,
                 col_row = "black",
-                point_args = dict(size=1.5),
-                text_args = dict(size=8),
+                point_args = {"size":1.5},
+                text_args = {"size":8},
                 gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                 legend_title = None,
                 habillage = None,
@@ -22,12 +22,12 @@ def fviz_ca_row(obj,
                 alpha = 0.1,
                 row_sup = True,
                 col_row_sup = "blue",
-                point_args_row_sup = dict(size=1.5),
-                text_args_row_sup = dict(size=8),
+                point_args_row_sup = {"size":1.5},
+                text_args_row_sup = {"size":8},
                 quali_sup = True,
                 col_quali_sup = "violet",
-                point_args_quali_sup = dict(size=1.5),
-                text_args_quali_sup = dict(size=8),
+                point_args_quali_sup = {"size":1.5},
+                text_args_quali_sup = {"size":8},
                 lim_cos2 = None,
                 lim_contrib = None,
                 x_lim = None,
@@ -41,8 +41,8 @@ def fviz_ca_row(obj,
     """
     Visualize Correspondence Analysis - Graph of row variables
     
-    Correspondence analysis (:class:`scientisttools.CA`) is an extension of Principal Component Analysis (:class:`scientisttools.PCA`) suited to analyze frequencies formed by two categorical variables. 
-    :class:`~scientisttools.fviz_ca_row` provides plotnine-based elegant visualization of :class:`~scientisttools.CA` outputs for rows.
+    Correspondence analysis (CA) is an extension of Principal Component Analysis (PCA) suited to analyze frequencies formed by two categorical variables. 
+    fviz_ca_row() provides plotnine-based elegant visualization of CA outputs for rows.
 
     Parameters
     ----------
@@ -69,13 +69,13 @@ def fviz_ca_row(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`) except color.
+    point_args : dict, default = {"size":1.5}
+        A dictionary containing parameters for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_) except color.
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size":8}
+        A dictionary containing parameters for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
-    gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
+    gradient_cols : list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
 
     legend_title : str, defaut = None
@@ -91,13 +91,13 @@ def fviz_ca_row(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
-        * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
+        * "eulclid": draws a circle with the radius equal to ``level``, representing the euclidean distance from the center.
 
     level : float, default = 0.95
         The size of the concentration ellipse in normal probability.
@@ -111,10 +111,10 @@ def fviz_ca_row(obj,
     col_row_sup : str, default = "blue"
         Color for supplementary row variables points and/or texts.
 
-    point_args_row_sup : dict, default = dict(size = 1.5)
+    point_args_row_sup : dict, default = {"size":1.5}
         A dictionary containing parameters for supplementary row variables points except color.
 
-    text_args_row_sup : dict, default = dict(size = 8)
+    text_args_row_sup : dict, default = {"size":8}
         A dictionary containing parameters for supplementary row variables texts.
 
     quali_sup : bool, default = True
@@ -123,10 +123,10 @@ def fviz_ca_row(obj,
     col_quali_sup : str, default = "violet"
         Color for supplementary variable categories points and/or texts.
 
-    point_args_quali_sup : dict, default = dict(size = 1.5)
+    point_args_quali_sup : dict, default = {"size":1.5}
         A dictionary containing parameters for supplementary variable categories points except color.
 
-    text_args_quali_sup : dict, default = dict(size = 8)
+    text_args_quali_sup : dict, default = {"size":8}
         A dictionary containing parameters for supplementary variable categories texts.
 
     lim_cos2 : float, default = None
@@ -154,10 +154,10 @@ def fviz_ca_row(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -165,26 +165,29 @@ def fviz_ca_row(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_ca`
-        Visualize Correspondence Analysis
-    :class:`~scientisttools.get_ca`
-        Extract the results for rows/columns - CA
+    fviz_ca : Visualize Correspondence Analysis
+    get_ca : Extract the results for rows/columns - CA
 
     Examples
     --------
     >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, fviz_ca_row
     >>> clf = CA(ncp=2,row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
-    >>> clf.fit(children)
+    >>> clf.fit(children.data)
+    CA(col_sup=(5,6,7),ncp=2,row_sup=(14,15,16,17),sup_var=8)
     >>> # graph of row variables
     >>> p = fviz_ca_row(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_ca_row.png
+    
+        Graph of row variables - CA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is a CA class
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if obj.__class__.__name__ != "CA":
-        raise TypeError("'obj' must be a CA class")
+        raise TypeError("obj must be an object of class CA")
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # show active row points
@@ -269,8 +272,8 @@ def fviz_ca_col(obj,
                 geom = ("point","text"),
                 repel = False,
                 col_col = "black",
-                point_args = dict(size=1.5),
-                text_args = dict(size=8),
+                point_args = {"size":1.5},
+                text_args = {"size":8},
                 gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                 legend_title = None,
                 palette = "Dark2",
@@ -280,8 +283,8 @@ def fviz_ca_col(obj,
                 alpha = 0.1,
                 col_sup = True,
                 col_col_sup = "blue",
-                point_args_col_sup = dict(size=1.5),
-                text_args_col_sup = dict(size=8),
+                point_args_col_sup = {"size":1.5},
+                text_args_col_sup = {"size":8},
                 lim_cos2 = None,
                 lim_contrib = None,
                 x_lim = None,
@@ -295,8 +298,8 @@ def fviz_ca_col(obj,
     """
     Visualize Correspondence Analysis - Graph of column variables
    
-    Correspondence analysis (:class:`scientisttools.CA`) is an extension of Principal Component Analysis (:class:`scientisttools.PCA`) suited to analyze frequencies formed by two categorical variables. 
-    :class:`~scientisttools.fviz_ca_col` provides plotnine-based elegant visualization of :class:`~scientisttools.CA` outputs for columns.
+    Correspondence analysis (CA) is an extension of Principal Component Analysis (:class:`~scientisttools.PCA`) suited to analyze frequencies formed by two categorical variables. 
+    fviz_ca_col() provides plotnine-based elegant visualization of CA outputs for columns.
 
     Parameters
     ----------
@@ -322,11 +325,11 @@ def fviz_ca_col(obj,
         In this case, the colors for column variables are automatically controlled by their 
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y").
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`) except color.
+    point_args : dict, default = {"size":1.5}
+        A dictionary containing parameters for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_) except color.
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size":8}
+        A dictionary containing parameters for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
@@ -341,7 +344,7 @@ def fviz_ca_col(obj,
         If True, draws ellipses around the points.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -361,10 +364,10 @@ def fviz_ca_col(obj,
     col_col_sup : str, default = "blue"
         Color for supplementary column variables points and/or texts.
 
-    point_args_col_sup : dict, default = dict(size = 1.5)
+    point_args_col_sup : dict, default = {"size":1.5}
         A dictionary containing parameters for supplementary column variables points except color.
 
-    text_args_col_sup : dict, default = dict(size = 8)
+    text_args_col_sup : dict, default = {"size":8}
         A dictionary containing parameters for supplementary column variables texts.
 
     lim_cos2 : float, default = None
@@ -392,10 +395,10 @@ def fviz_ca_col(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -403,26 +406,29 @@ def fviz_ca_col(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_ca`
-        Visualize Correspondence Analysis
-    :class:`~scientisttools.get_ca`
-        Extract the results for rows/columns - CA
+    fviz_ca : Visualize Correspondence Analysis
+    get_ca : Extract the results for rows/columns - CA
 
     Examples
     --------
     >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, fviz_ca_col
     >>> clf = CA(ncp=2,row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
-    >>> clf.fit(children)
+    >>> clf.fit(children.data)
+    CA(col_sup=(5,6,7),ncp=2,row_sup=(14,15,16,17),sup_var=8)
     >>> # graph of column variables
     >>> p = fviz_ca_col(clf,repel=True)
-    >>> print(p)
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_ca_col.png
+        
+            Graph of column variables - CA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class CA
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if obj.__class__.__name__ != "CA":
-        raise TypeError("'obj' must be an object of class CA")
+        raise TypeError("obj must be an object of class CA")
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # show active columns points
@@ -493,11 +499,11 @@ def fviz_ca_biplot(obj,
                    repel_row = True,
                    repel_col = True,
                    col_row = "black",
-                   point_args_row = dict(size=1.5),
-                   text_args_row = dict(size=8),
+                   point_args_row = {"size":1.5},
+                   text_args_row = {"size":8},
                    col_col = "steelblue",
-                   point_args_col = dict(size=1.5),
-                   text_args_col = dict(size=8),
+                   point_args_col = {"size":1.5},
+                   text_args_col = {"size":8},
                    gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                    legend_title = None,
                    habillage = None,
@@ -508,16 +514,16 @@ def fviz_ca_biplot(obj,
                    alpha = 0.1,
                    row_sup = True,
                    col_row_sup = "red",
-                   point_args_row_sup = dict(size=1.5),
-                   text_args_row_sup = dict(size=8),
+                   point_args_row_sup = {"size":1.5},
+                   text_args_row_sup = {"size":8},
                    quali_sup = True,
                    col_quali_sup = "violet",
-                   point_args_quali_sup = dict(size=1.5),
-                   text_args_quali_sup = dict(size=8),
+                   point_args_quali_sup = {"size":1.5},
+                   text_args_quali_sup = {"size":8},
                    col_sup = True,
                    col_col_sup = "darkblue",
-                   point_args_col_sup = dict(size=1.5),
-                   text_args_col_sup = dict(size=8),
+                   point_args_col_sup = {"size":1.5},
+                   text_args_col_sup = {"size":8},
                    x_lim = None,
                    y_lim = None,
                    x_label = None,
@@ -529,8 +535,8 @@ def fviz_ca_biplot(obj,
     """
     Visualize Correspondence Analysis - Biplot of row and column variables
 
-    Correspondence analysis (:class:`scientisttools.CA`) is an extension of Principal Component Analysis (:class:`scientisttools.PCA`) suited to analyze frequencies formed by two categorical variables. 
-    :class:`~scientisttools.fviz_ca_biplot` provides plotnine-based elegant visualization of :class:`~scientisttools.CA` outputs for rows and columns.
+    Correspondence analysis (CA) is an extension of Principal Component Analysis (PCA) suited to analyze frequencies formed by two categorical variables. 
+    fviz_ca_biplot() provides plotnine-based elegant visualization of CA outputs for rows and columns.
     
     Parameters
     ----------
@@ -567,22 +573,22 @@ def fviz_ca_biplot(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args_row : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for row variables points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args_row : dict, default = {"size":1.5}
+        A dictionary containing parameters (except color) for row variables points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args_row : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for row variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args_row : dict, default = {"size":8}
+        A dictionary containing parameters (except color) for row variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     col_col : str, default = "steelblue"
         Color for column variables
 
-    point_args_col : dict, default = dict(size = 1.5)
+    point_args_col : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for column variables points.
 
-    text_args_col : dict, default = dict(size = 8)
+    text_args_col : dict, default = {"size":8}
         A dictionary containing parameters (except color) for column variables texts.
 
-    gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
+    gradient_cols : list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
 
     legend_title : str, defaut = None
@@ -598,7 +604,7 @@ def fviz_ca_biplot(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -618,10 +624,10 @@ def fviz_ca_biplot(obj,
     col_row_sup : str, default = "red"
         Color for supplementary row variables points and/or texts.
 
-    point_args_row_sup : dict, default = dict(size = 1.5)
+    point_args_row_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary row variables points.
 
-    text_args_row_sup : dict, default = dict(size = 8)
+    text_args_row_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary row variables texts.
 
     quali_sup : bool, default = True
@@ -630,10 +636,10 @@ def fviz_ca_biplot(obj,
     col_quali_sup : str, default = "violet"
         Color for supplementary variable categories points and/or texts.
 
-    point_args_quali_sup : dict, default = dict(size = 1.5)
+    point_args_quali_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary variable categories points.
 
-    text_args_quali_sup : dict, default = dict(size = 8)
+    text_args_quali_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary variable categories texts.
 
     col_sup : bool, default = True
@@ -642,10 +648,10 @@ def fviz_ca_biplot(obj,
     col_col_sup : str, default = "red"
         Color for supplementary column variables points and/or texts.
 
-    point_args_col_sup : dict, default = dict(size = 1.5)
+    point_args_col_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (excpt color) for supplementary column variables points.
 
-    text_args_col_sup : dict, default = dict(size = 8)
+    text_args_col_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary column variables texts.
 
     x_lim : list, tuple, default = None
@@ -667,10 +673,10 @@ def fviz_ca_biplot(obj,
         The subtitle of the graph you draw.
     
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -678,20 +684,23 @@ def fviz_ca_biplot(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_ca`
-        Visualize Correspondence Analysis
-    :class:`~scientisttools.get_ca`
-        Extract the results for rows/columns - CA
+    fviz_ca : Visualize Correspondence Analysis
+    get_ca : Extract the results for rows/columns - CA
 
     Examples
     --------
     >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, fviz_ca_biplot
     >>> clf = CA(ncp=2,row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
-    >>> clf.fit(children)
+    >>> clf.fit(children.data)
+    CA(col_sup=(5,6,7),ncp=2,row_sup=(14,15,16,17),sup_var=8)
     >>> # biplot of row and column variables
     >>> p = fviz_ca_biplot(clf,repel_row=True,repel_col=True)
-    >>> print(p)
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_ca_biplot.png
+        
+            Biplot of row and column variables - CA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class CA
@@ -810,8 +819,8 @@ def fviz_ca(obj,
     """
     Visualize Correspondence Analysis
 
-    Correspondence analysis (:class:`scientisttools.CA`) is an extension of Principal Component Analysis (:class:`scientisttools.PCA`) suited to analyze frequencies formed by two categorical variables.
-    :class:`~scientisttools.fviz_ca` provides plotnine-based elegant visualization of :class:`scientisttools.CA` outputs.
+    Correspondence analysis (:class:`~scientisttools.CA`) is an extension of Principal Component Analysis (:class:`~scientisttools.PCA`) suited to analyze frequencies formed by two categorical variables.
+    :class:`~scientisttools.fviz_ca` provides plotnine-based elegant visualization of :class:`~scientisttools.CA` outputs.
 
     Parameters
     ----------
@@ -829,10 +838,10 @@ def fviz_ca(obj,
     **kwargs: Any
         Parameters use by one of this function. See:
         
-        * :class:`scientisttools.fviz_ca_row`: Graph of row variables 
-        * :class:`scientisttools.fviz_ca_col`: Graph of column variables
-        * :class:`scientisttools.fviz_ca_biplot`: Biplot of row and column variables
-        * :class:`scientisttools.fviz_corcircle`: Graph of continuous variables (=correlation circle)
+        * :class:`~scientisttools.fviz_ca_row`: Graph of row variables 
+        * :class:`~scientisttools.fviz_ca_col`: Graph of column variables
+        * :class:`~scientisttools.fviz_ca_biplot`: Biplot of row and column variables
+        * :class:`~scientisttools.fviz_corcircle`: Graph of continuous variables (=correlation circle)
 
     Returns
     -------
@@ -840,32 +849,38 @@ def fviz_ca(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_ca_biplot`
-        Visualize Correspondence Analysis - Biplot of row and column variables
-    :class:`~scientisttools.fviz_ca_col`
-        Visualize Correspondence Analysis - Graph of column variables
-    :class:`~scientisttools.fviz_ca_row`
-        Visualize Correspondence Analysis - Graph of row variables
-    :class:`~scientisttools.fviz_corcircle`
-        Graph of continuous variables (=correlation circle)
-    :class:`~scientisttools.get_ca`
-        Extract the results for rows/columns - CA
+    get_ca : Extract the results for rows/columns - CA
 
     Examples
     --------
     >>> from scientisttools.datasets import children
     >>> from scientisttools import CA, fviz_ca
     >>> clf = CA(ncp=2,row_sup=(14,15,16,17),col_sup=(5,6,7),sup_var=8)
-    >>> clf.fit(children)
+    >>> clf.fit(children.data)
+    CA(col_sup=(5,6,7),ncp=2,row_sup=(14,15,16,17),sup_var=8)
     >>> # graph of row variables
     >>> p1 = fviz_ca(clf, choice = "row")
     >>> print(p1.show())
+    
+    .. figure:: ../_static/fviz_ca_row.png
+        
+            Graph of row variables - CA
+    
     >>> # graph of colum variables
     >>> p2 = fviz_ca(clf, choice = "col")
     >>> print(p2.show())
+    
+    .. figure:: ../_static/fviz_ca_col.png
+        
+            Graph of column variables - CA
+    
     >>> # biplot of row and colum variables
     >>> p3 = fviz_ca(clf, choice = "biplot")
     >>> print(p3.show())
+    
+    .. figure:: ../_static/fviz_ca_biplot.png
+        
+            Biplot of row and column variables - CA
     """
     if choice == "row":
         return fviz_ca_row(obj,**kwargs)
@@ -876,4 +891,4 @@ def fviz_ca(obj,
     elif choice == "quanti_sup" and hasattr(obj,"quanti_var_sup_"):
         return fviz_corcircle(obj,**kwargs)
     else:
-        raise ValueError("'choice' should be one of 'row', 'col', 'biplot'")
+        raise ValueError(f"{choice} is not supported.")

@@ -84,7 +84,7 @@ def fviz_dend(obj,
     palette : str, list, tuple, default = "Dark2"
         If string, the color palette to be used for coloring or filling by groups. If list or tuple, the colors for labels.
 
-    text_size : int, dafeult = 8
+    text_size : int, default = 8
         The size for labels.
 
     line_size : int, default = 1
@@ -109,10 +109,10 @@ def fviz_dend(obj,
         The subtitle of the graph you draw. If None, then a title is chosen.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -120,22 +120,17 @@ def fviz_dend(obj,
 
     See also
     --------
-    :class:`~scientisttools.CatVARHCPC`
-        Categorical Variables Hierachical Clustering on Principal Components (CatVARHCPC).
-    :class:`~scientisttools.HCPC`
-        Hierarchical Clustering on Principal Components (HCPC).
-    :class:`~scientisttools.VARHCPC`
-        Variables Agglomerative Hierachical Clustering on Principal Components (VARHCPC).
-    :class:`~scientisttools.fviz_cluster`
-        Visualize Clustering Analysis.
-    :class:`~scientisttools.fviz_dend2`
-        Visualization of Dendrogram.
+    CatVARHCPC : Categorical Variables Hierachical Clustering on Principal Components (CatVARHCPC).
+    HCPC : Hierarchical Clustering on Principal Components (HCPC).
+    VARHCPC : Variables Agglomerative Hierachical Clustering on Principal Components (VARHCPC).
+    fviz_cluster : Visualize Clustering Analysis.
+    fviz_dend2 : Visualization of Dendrogram.
 
-    Reference
-    ---------
-    [1] `pygal <https://anyplot.ai/dendrogram-basic/python/pygal>`.
+    References
+    ----------
+    [1] `pygal <https://anyplot.ai/dendrogram-basic/python/pygal>`_.
     
-    [2] `dendrogram basic <https://anyplot.ai/dendrogram-basic>`.
+    [2] `dendrogram basic <https://anyplot.ai/dendrogram-basic>`_.
 
     Examples
     --------
@@ -143,10 +138,32 @@ def fviz_dend(obj,
     >>> from scientisttools import PCA, HCPC, fviz_dend
     >>> clf = PCA(ncp=3)
     >>> clf.fit(usarrests)
-    >>> clf2 = HCPC(ncl=4,consol=False,order=False)
-    >>> clf2.fit(clf)
-    >>> p = fviz_dend(obj=clf2,color_labels_by_cluster=True)
+    PCA(ncp=3)
+    >>> hc = HCPC(ncl=4,consol=False,order=False)
+    >>> hc.fit(clf)
+    HCPC(consol=False,ncl=4,order=False)
+    >>> p = fviz_dend(obj=hc,color_labels_by_cluster=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dend.png
+            
+            Visualize dendrogram
+    
+    >>> # visualize dendrogram - fill rectangle
+    >>> p = fviz_dend(obj=hc,color_labels_by_cluster=True,rect = True,rect_fill = True)
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dend_fill.png
+            
+            Visualize dendrogram (fill rectangle)
+    
+    >>> # horizontal view of dendrogram
+    >>> p = fviz_dend(obj=hc,horiz=True,color_labels_by_cluster=True,rect = True,rect_fill = True)
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dend_horiz.png
+                
+            Visualize dendrogram (fill rectangle and horizontal view)
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check object class name

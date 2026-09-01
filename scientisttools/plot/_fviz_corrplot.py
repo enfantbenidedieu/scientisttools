@@ -59,10 +59,10 @@ def fviz_corrplot(X,
         If True, then add legend.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
     
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -72,14 +72,23 @@ def fviz_corrplot(X,
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, fviz_corrplot
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    >>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> clf.fit(decathlon.data)
     >>> # variables squared cosinus
-    >>> p = fviz_corrplot(clf.quanti_var_.cos2,title="Variables cos2",legend_title="Cos2")
+    >>> p = fviz_corrplot(clf.quanti_var_.cos2,title="Cosinus",legend_title="Cos2")
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_corrplot_cos2.png
+                                    
+            Variables cos2 distribution
+    
     >>> # variables contributions
-    >>> p = fviz_corrplot(clf.quanti_var_.contrib,title="Variables contributions",legend_title="Contrib")
+    >>> p = fviz_corrplot(clf.quanti_var_.contrib,title="Contributions",legend_title="Contrib")
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_corrplot_ctr.png
+                                        
+            Variables contributions distribution
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if X is an instance of pandas DataFrame

@@ -16,8 +16,8 @@ def fviz_mca_ind(obj,
                  geom = ("point","text"),
                  repel = False,
                  col_ind ="black",
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  habillage = None,
@@ -28,8 +28,8 @@ def fviz_mca_ind(obj,
                  alpha = 0.1,
                  ind_sup = True,
                  col_ind_sup = "blue",
-                 point_args_ind_sup = dict(size=1.5),
-                 text_args_ind_sup = dict(size=8),
+                 point_args_ind_sup = {"size":1.5},
+                 text_args_ind_sup = {"size":8},
                  lim_cos2 = None,
                  lim_contrib = None,
                  x_lim = None,
@@ -44,8 +44,8 @@ def fviz_mca_ind(obj,
     """
     Visualize Multiple Correspondence Analysis - Graph of individuals
     
-    Multiple Correspondence Analysis (:class:`~scientisttools.MCA`) is an extension of simple (:class:`~scientisttools.CA) to analyse a data table containing more than two categorical variables. 
-    :class:`~scientisttools.fviz_mca_ind` provides plotnine-based elegant visualization of :class:`~scientisttools.MCA` outputs for individuals.
+    Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. 
+    fviz_mca_ind() provides plotnine-based elegant visualization of MCA outputs for individuals.
 
     Parameters
     ----------
@@ -72,13 +72,13 @@ def fviz_mca_ind(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
-    gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
+    gradient_cols : list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
 
     legend_title : str, defaut = None
@@ -94,7 +94,7 @@ def fviz_mca_ind(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -114,10 +114,10 @@ def fviz_mca_ind(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals.
 
-    point_args_ind_sup : dict, default = dict(size = 1.5)
+    point_args_ind_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     lim_cos2 : float, default = None
@@ -145,10 +145,10 @@ def fviz_mca_ind(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -156,10 +156,8 @@ def fviz_mca_ind(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mca`
-        Visualize Multiple Correspondence Analysis
-    :class:`~scientisttools.get_mca`
-        Extract the results for individuals/variables - MCA
+    fviz_mca : Visualize Multiple Correspondence Analysis
+    get_mca : Extract the results for individuals/variables - MCA
 
     Examples
     --------
@@ -167,9 +165,14 @@ def fviz_mca_ind(obj,
     >>> from scientisttools import MCA, fviz_mca_ind
     >>> clf = MCA(sup_var=range(4))
     >>> clf.fit(poison.data)
+    MCA(sup_var=range(4))
     >>> # graph of individuals
     >>> p = fviz_mca_ind(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mca_ind.png
+                                
+            Graph of individuals - MCA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class MCA
@@ -246,8 +249,8 @@ def fviz_mca_var(obj,
                  geom = ("point","text"),
                  repel = False,
                  col_var = "black",
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  palette = "Dark2",
@@ -257,12 +260,12 @@ def fviz_mca_var(obj,
                  alpha = 0.1,
                  quali_sup = True,
                  col_quali_sup = "blue",
-                 point_args_quali_sup = dict(size=1.5),
-                 text_args_quali_sup = dict(size=8),
+                 point_args_quali_sup = {"size":1.5},
+                 text_args_quali_sup = {"size":8},
                  quanti_sup = True,
                  col_quanti_sup = "red",
-                 point_args_quanti_sup = dict(size=1.5),
-                 text_args_quanti_sup = dict(size=8),
+                 point_args_quanti_sup = {"size":1.5},
+                 text_args_quanti_sup = {"size":8},
                  lim_cos2 = None,
                  lim_contrib = None,
                  x_lim = None,
@@ -277,7 +280,7 @@ def fviz_mca_var(obj,
     Visualize Multiple Correspondence Analysis - Graph of variables
     
     Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. 
-    :class:`~scientisttools.fviz_mca_var` provides plotnine-based elegant visualization of :class:`~scientisttools.MCA` outputs for categories.
+    fviz_mca_var() provides plotnine-based elegant visualization of MCA outputs for variables categories or categorical variables.
 
     Parameters
     ----------
@@ -309,13 +312,13 @@ def fviz_mca_var(obj,
         In this case, the colors for variablescategories are automatically controlled by their 
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
-    gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
+    gradient_cols : list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
 
     legend_title : str, defaut = None
@@ -328,10 +331,10 @@ def fviz_mca_var(obj,
         If True, draws ellipses around the points.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
-        * "convex": plot convex hull of a set of points as :class:`~scientisttools.convex_ellipse`.
-        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.confidence_ellipse`.
+        * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
+        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
         * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
@@ -348,10 +351,10 @@ def fviz_mca_var(obj,
     col_quali_sup : str, default = "blue"
         Color for supplementary variables or variable categories points and/or texts.
 
-    point_args_quali_sup : dict, default = dict(size = 1.5)
+    point_args_quali_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary variables or variable categories points.
 
-    text_args_quali_sup : dict, default = dict(size = 8)
+    text_args_quali_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary variables or variable categories texts.
 
     quanti_sup : bool, default = True
@@ -360,10 +363,10 @@ def fviz_mca_var(obj,
     col_quanti_sup : str, default = "red"
         Color for supplementary continuous variables points and/or texts.
 
-    point_args_quanti_sup : dict, default = dict(size = 1.5)
+    point_args_quanti_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary continuous variables points.
 
-    text_args_quanti_sup : dict, default = dict(size = 8)
+    text_args_quanti_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary continuous variables texts.
 
     lim_cos2 : float, default = None
@@ -391,10 +394,10 @@ def fviz_mca_var(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -402,26 +405,37 @@ def fviz_mca_var(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mca`
-        Visualize Multiple Correspondence Analysis
-    :class:`~scientisttools.get_mca`
-        Extract the results for individuals/variables - MCA
+    fviz_mca : Visualize Multiple Correspondence Analysis
+    get_mca : Extract the results for individuals/variables - MCA
 
     Examples
     --------
     >>> from scientisttools.datasets import poison
     >>> from scientisttools import MCA, fviz_mca_var
-    >>> clf = MCA(sup_var=(0,1,2,3))
+    >>> clf = MCA(sup_var=range(4))
     >>> clf.fit(poison.data)
-    >>> # graph of categories
+    MCA(sup_var=range(4))
+    >>> # graph of categorical variables
     >>> p = fviz_mca_var(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mca_quali_var.png
+                                    
+            Graph of categorical variables - MCA
+    
+    >>> # graph of variable categories
+    >>> p = fviz_mca_var(clf,choice="levels",repel=True)
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mca_var.png
+                                    
+            Graph of variable categories - MCA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class MCA
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if obj.__class__.__name__ != "MCA":
-        raise TypeError("'obj' must be a MCA class")
+        raise TypeError("obj must be a MCA class")
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # graph of variable categories
@@ -543,11 +557,11 @@ def fviz_mca_biplot(obj,
                     repel_ind = False,
                     repel_var = False,
                     col_ind = "black",
-                    point_args_ind = dict(size=1.5),
-                    text_args_ind = dict(size=8),
+                    point_args_ind = {"size":1.5},
+                    text_args_ind = {"size":8},
                     col_var = "steelblue",
-                    point_args_var = dict(size=1.5),
-                    text_args_var = dict(size=8),
+                    point_args_var = {"size":1.5},
+                    text_args_var = {"size":8},
                     gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                     legend_title = None,
                     habillage = None,
@@ -558,12 +572,12 @@ def fviz_mca_biplot(obj,
                     alpha = 0.1,
                     ind_sup = False,
                     col_ind_sup = "red",
-                    point_args_ind_sup = dict(size=1.5),
-                    text_args_ind_sup = dict(size=8),
+                    point_args_ind_sup = {"size":1.5},
+                    text_args_ind_sup = {"size":8},
                     quali_sup = False,
                     col_quali_sup = "blue",
-                    point_args_quali_sup = dict(size=1.5),
-                    text_args_quali_sup = dict(size=8),
+                    point_args_quali_sup = {"size":1.5},
+                    text_args_quali_sup = {"size":8},
                     x_lim = None,
                     y_lim = None,
                     x_label = None,
@@ -575,8 +589,8 @@ def fviz_mca_biplot(obj,
     """
     Visualize Multiple Correspondence Analysis - Biplot of individuals and variable categories
     
-    Multiple Correspondence Analysis (:class:`~scientisttools.MCA`) is an extension of simple CA to analyse a data table containing more than two categorical variables. 
-    :class:`~scientisttools.fviz_mca_biplot` provides plotnine-based elegant visualization of :class:`~scientisttools.MCA` outputs for individuals and variable categories.
+    Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. 
+    fviz_mca_biplot() provides plotnine-based elegant visualization of MCA outputs for individuals and variable categories.
 
     Parameters
     ----------
@@ -609,22 +623,22 @@ def fviz_mca_biplot(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args_ind : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args_ind : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args_ind : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args_ind : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     col_var : str, default = "steelblue"
         Color for column variables
 
-    point_args_var : dict, default = dict(size = 1.5)
+    point_args_var : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for variable categories points.
 
-    text_args_var : dict, default = dict(size = 8)
+    text_args_var : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for variable categories texts.
 
-    gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
+    gradient_cols : list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
 
     legend_title : str, defaut = None
@@ -640,7 +654,7 @@ def fviz_mca_biplot(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -657,10 +671,10 @@ def fviz_mca_biplot(obj,
     col_ind_sup : str, default = "red"
         Color for supplementary individuals.
 
-    point_args_ind_sup : dict, default = dict(size = 1.5)
+    point_args_ind_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     quali_sup : bool, default = True
@@ -669,10 +683,10 @@ def fviz_mca_biplot(obj,
     col_quali_sup : str, default = "blue"
         Color for supplementary variables or variable categories points and/or texts.
 
-    point_args_quali_sup : dict, default = dict(size = 1.5)
+    point_args_quali_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary variables or variable categories points.
 
-    text_args_quali_sup : dict, default = dict(size = 8)
+    text_args_quali_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary variables or variable categories texts.
 
     x_lim : list, tuple, default = None
@@ -694,10 +708,10 @@ def fviz_mca_biplot(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -705,10 +719,8 @@ def fviz_mca_biplot(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mca`
-        Visualize Multiple Correspondence Analysis
-    :class:`~scientisttools.get_mca`
-        Extract the results for individuals/variables - MCA
+    fviz_mca : Visualize Multiple Correspondence Analysis
+    get_mca : Extract the results for individuals/variables - MCA
 
     Examples
     --------
@@ -716,9 +728,14 @@ def fviz_mca_biplot(obj,
     >>> from scientisttools import MCA, fviz_mca_biplot
     >>> clf = MCA(sup_var=range(4))
     >>> clf.fit(poison.data)
+    MCA(sup_var=range(4))
     >>> # biplot of individuals and categories
     >>> p = fviz_mca_biplot(clf,repel_ind=True,repel_var=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mca_biplot.png
+                                    
+            Biplot of individuals and variable categories - MCA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class MCA
@@ -823,7 +840,7 @@ def fviz_mca(obj,
     Visualize Multiple Correspondence Analysis
     
     Multiple Correspondence Analysis (MCA) is an extension of simple CA to analyse a data table containing more than two categorical variables. 
-    :class:`~scientisttols.fviz_mca` provides plotnine-based elegant visualization of :class:`~scientisttools.MCA` outputs.
+    fviz_mca() provides plotnine-based elegant visualization of MCA outputs.
 
     Parameters
     ----------
@@ -834,7 +851,7 @@ def fviz_mca(obj,
         The graph to plot. Allowed values include:
 
         * 'ind' for the individuals graphs
-        * 'levels' for the variables categories graphs
+        * 'levels' for the variable categories graphs
         * 'var' for the variables graphs 
         * 'biplot' for biplot of individuals and variable categories
         * 'quanti_sup' for the supplementary continuous variables (=correlation circle)
@@ -842,10 +859,10 @@ def fviz_mca(obj,
     **kwargs: Any
         Parameters use by one of this function. See:
         
-        * :class:`scientisttools.fviz_mca_ind`: Graph of individuals
-        * :class:`scientisttools.fviz_mca_var`: Graph of variables and variable categories
-        * :class:`scientisttools.fviz_mca_biplot`: Biplot of individuals and variable categories
-        * :class:`scientisttools.fviz_corcircle`: Graph of variables (=correlation circle)
+        * :class:`~scientisttools.fviz_mca_ind`: Graph of individuals
+        * :class:`~scientisttools.fviz_mca_var`: Graph of variables and variable categories
+        * :class:`~scientisttools.fviz_mca_biplot`: Biplot of individuals and variable categories
+        * :class:`~scientisttools.fviz_corcircle`: Graph of variables (=correlation circle)
     
     Returns
     -------
@@ -853,14 +870,7 @@ def fviz_mca(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mca_ind`
-        Visualize Multiple Correspondence Analysis - Graph of individuals
-    :class:`~scientisttools.fviz_mca_var`
-        Visualize Multiple Correspondence Analysis - Graph of variables
-    :class:`~scientisttools.fviz_mca_biplot`
-        Visualize Multiple Correspondence Analysis - Biplot of individuals and variables
-    :class:`~scientisttools.get_mca`
-        Extract the results for individuals/variables - MCA
+    get_mca : Extract the results for individuals/variables - MCA
 
     Examples
     --------
@@ -868,21 +878,46 @@ def fviz_mca(obj,
     >>> from scientisttools import MCA, fviz_mca_biplot
     >>> clf = MCA(sup_var=range(4))
     >>> clf.fit(poison.data)
+    MCA(sup_var=range(4))
     >>> # graph of individuals
     >>> p = fviz_mca(clf,choice="ind",repel=True)
     >>> print(p.show())
-    >>> # graph of variables categories
+    
+    .. figure:: ../_static/fviz_mca_ind.png
+                                    
+            Graph of individuals - MCA
+    
+    >>> # graph of variable categories
     >>> p = fviz_mca(clf,choice="levels",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mca_var.png
+                                    
+            Graph of variable categories - MCA
+    
     >>> # graph of variables correlations (=eta squared)
     >>> p = fviz_mca(clf,choice="var",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mca_quali_var.png
+                                    
+            Graph of categorical variables - MCA
+    
     >>> # biplot of individuals and variable categories
     >>> p = fviz_mca(clf,choice="biplot",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mca_biplot.png
+                                    
+            Biplot of individuals and variable categories - MCA
+    
     >>> # graph of supplementary continuous variables (=correlation circle)
     >>> p = fviz_mca(clf,choice="quanti_sup",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mca_corcircle.png
+                                    
+            Correlation circle - MCA
     """    
     if choice == "ind":
         return fviz_mca_ind(obj,**kwargs)
@@ -890,7 +925,7 @@ def fviz_mca(obj,
         return fviz_mca_var(obj,choice=choice,**kwargs)
     elif choice == "biplot":
         return fviz_mca_biplot(obj,**kwargs)
-    elif choice == "quanti_sup":
+    elif choice == "quanti_sup" and hasattr(obj,"quanti_var_sup_"):
         return fviz_corcircle(obj,**kwargs)
     else:
         raise ValueError("choice should be one of 'ind', 'levels', 'var', 'biplot', 'quanti_sup'")

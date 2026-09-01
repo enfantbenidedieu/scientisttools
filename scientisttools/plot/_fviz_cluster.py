@@ -33,9 +33,9 @@ def fviz_cluster(obj,
                  axis = [0,1],
                  geom = ("point","text"),
                  repel = True,
-                 point_args = dict(size=1.5),
-                 segment_args = dict(size=0.5),
-                 text_args = dict(size=8),
+                 point_args = {"size":1.5},
+                 segment_args = {"size":0.5},
+                 text_args = {"size":8},
                  cluster_center = False, 
                  center_marker_size = 5,
                  center_arrow_size = 1,
@@ -47,9 +47,9 @@ def fviz_cluster(obj,
                  alpha = 0.2,
                  add_sup = True,
                  color_sup = "black",
-                 point_args_sup = dict(size=1.5),
-                 segment_args_sup = dict(linetype="dashed",size=0.5),
-                 text_args_sup = dict(size=8),
+                 point_args_sup = {"size":1.5},
+                 segment_args_sup = {"linetype":"dashed","size":0.5},
+                 text_args_sup = {"size":8},
                  circle = True,
                  col_circle = "gray",
                  x_lim = None,
@@ -66,7 +66,8 @@ def fviz_cluster(obj,
     Parameters
     ----------
     obj : class
-        An object of class :class:`~scientisttools.CatVARHCPC`, :class:`~scientisttools.CatVARKMeansPC`, :class:`~scientisttools.HCPC`, :class:`~scientisttools.KMeansPC`, :class:`~scientisttools.VARHCPC`, :class:`~scientisttools.VARKMeansPC`.
+        An object of class :class:`~scientisttools.CatVARHCPC`, :class:`~scientisttools.CatVARKMeansPC`, :class:`~scientisttools.HCPC`, 
+        :class:`~scientisttools.KMeansPC`, :class:`~scientisttools.VARHCPC`, :class:`~scientisttools.VARKMeansPC`.
 
     axis : list, default = [0,1]
         The dimensions to be plotted.
@@ -83,14 +84,14 @@ def fviz_cluster(obj,
     repel : bool, default = True
         Whether to avoid overplotting text labels or not.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"size" : 0.5}
+        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     cluster_center : bool, default = False
         If True, then plot cluster centers data points.
@@ -111,13 +112,13 @@ def fviz_cluster(obj,
         If True, draws ellipses around the points.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
-        * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
+        * "eulclid": draws a circle with the radius equal to ``level``, representing the euclidean distance from the center.
 
     level : float, default = 0.95
         The confidence level at which to draw the ellipse.
@@ -131,13 +132,13 @@ def fviz_cluster(obj,
     color_sup : str, default = "black"
         The color name for the supplementary data points or segments.
 
-    point_args_sup : dict, default = dict(shape = ">",size = 1.5)
+    point_args_sup : dict, default = {"shape" : ">", "size" : 1.5}
         A dictionary containing parameters for supplementary data points.
 
-    segment_args_sup : dict, default = dict(linetype="solid",size = 0.5)
+    segment_args_sup : dict, default = {"linetype" : "solid", "size" : 0.5}
         A dictionary containing parameters for supplementary segments.
 
-    text_args_sup : dict, default = dict(size = 8)
+    text_args_sup : dict, default = {"size" : 8}
         A dictionary containing parameters for supplementary texts.
 
     circle : bool, default = True
@@ -165,14 +166,19 @@ def fviz_cluster(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
     A plotnine object.
+    
+    See also
+    --------
+    fviz_dend : Visualization of Dendrogram.
+    fviz_dend2 : Visualization of Dendrogram
 
     Examples
     --------
@@ -180,16 +186,21 @@ def fviz_cluster(obj,
     >>> from scientisttools import PCA, HCPC, fviz_cluster
     >>> clf = PCA(ncp=3)
     >>> clf.fit(usarrests)
-    >>> clf2 = HCPC(ncl=4,consol=False,order=False)
-    >>> clf2.fit(clf)
-    >>> p = fviz_cluster(obj=clf2,repel=True,show_clust_cent=True,ellipse=True)
+    >>> hc = HCPC(ncl=4,consol=False,order=False)
+    >>> hc.fit(clf)
+    HCPC(consol=False,ncl=4,order=False)
+    >>> p = fviz_cluster(obj=hc,repel=True,cluster_center=True,add_ellipses=True,ellipse_type="convex")
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_cluster.png
+        
+            Visualize cluster analysis - Factor Map (PCA + HCPC)
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check object class name
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if not (obj.__class__.__name__ in ("CatVARHCPC","CatVARKMeansPC","VARHCPC","VARKMeansPC","HCPC","KMeansPC")):
-        raise TypeError("'obj' must be an object of class CatVARHCPC, CatVARKMeansPC, VARHCPC, VARKMeansPC, HCPC, KMeansPC")
+        raise TypeError("obj must be an object of class CatVARHCPC, CatVARKMeansPC, VARHCPC, VARKMeansPC, HCPC, KMeansPC")
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid axis

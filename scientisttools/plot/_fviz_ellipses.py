@@ -28,8 +28,8 @@ def fviz_ellipses(obj,
                   axis = [0,1],
                   geom = ("point","text"),
                   repel = False,
-                  point_args = dict(size=1.5),
-                  text_args = dict(size=8),
+                  point_args = {"size":1.5},
+                  text_args = {"size":8},
                   habillage = None,
                   palette = "Dark2",
                   add_ellipses = False, 
@@ -50,7 +50,8 @@ def fviz_ellipses(obj,
     Parameters
     ----------
     obj : class
-        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.MCA`,:class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA` or :class:`~scientisttools.DMFA`.
+        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.MCA`,:class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, 
+        :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA` or :class:`~scientisttools.DMFA`.
 
     axis : list, default = [0,1]
         The dimensions to be plotted.
@@ -65,11 +66,11 @@ def fviz_ellipses(obj,
     repel : bool, default = False
         Whether to avoid overplotting individuals text labels or not.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     habillage : list, tuple, default = None 
         The indexes or names of the categorical variables.
@@ -81,7 +82,7 @@ def fviz_ellipses(obj,
         If True, draws ellipses around the points.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -111,10 +112,10 @@ def fviz_ellipses(obj,
         The title of the graph you draw. If None, then a title is chosen.
 
     pntheme : function, default = theme_bw() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -126,8 +127,14 @@ def fviz_ellipses(obj,
     >>> from scientisttools import FAMD, fviz_ellipses
     >>> clf = FAMD()
     >>> clf.fit(wine.data)
+    FAMD()
+    >>> # draw ellipses
     >>> p = fviz_ellipses(clf,habillage=("Label", "Soil"),add_ellipses=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_ellipses.png
+                                        
+            Separate confidence ellipses
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if the estimator is fitted by verifying the presence of fitted attributes
@@ -221,7 +228,7 @@ def fviz_ellipses(obj,
         p = p + geom_text(aes(color="habillage"),**text_args,show_legend=False)
 
     # draw ellipses
-    if ellipse:
+    if add_ellipses:
         if ellipse_type in ("confidence","convex"):
             p = (
                 p 

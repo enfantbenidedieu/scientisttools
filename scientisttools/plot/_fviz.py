@@ -47,7 +47,8 @@ def check_is_valid_axis(obj,
     Parameters
     ----------
     obj : class
-        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.CA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`
+        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.CA`, :class:`~scientisttools.MCA`, 
+        :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`
     
     axis : list, default = [0,1]
         The dimensions to be plotted.
@@ -115,13 +116,13 @@ def coord_adjust(coord,
    
     Parameters
     ----------
-    coord : DataFrame of shape (n_samples, n_components)
+    coord : DataFrame of shape (n_samples, ncp)
         Factor coordinates.
 
-    cos2 : DataFrame of shape (n_samples, n_components)
+    cos2 : DataFrame of shape (n_samples, ncp)
         Squared cosinus.
 
-    contrib : DataFrame of shape (n_samples, n_components)
+    contrib : DataFrame of shape (n_samples, ncp)
         Contributions contributions.
 
     color : str, 1darray, km class, list, tuple, Series, default = "black"
@@ -148,7 +149,7 @@ def coord_adjust(coord,
 
     Returns
     -------
-    coord : DataFrame of shape (n_samples, n_components)
+    coord : DataFrame of shape (n_samples, ncp)
         Factor coordinates.
 
     legend_title : str
@@ -269,8 +270,8 @@ def fviz_scatter(obj,
                  geom = ("point","text"),
                  repel = False,
                  color = "black",
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  habillage = None,
@@ -287,7 +288,8 @@ def fviz_scatter(obj,
     Parameters
     ----------
     obj : class
-        An object of class :class:`~scientisttools.CA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.MCA`, :class:`~scientisttools.MFA`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.PCA`, :class:`~scientisttools.PCAmix`
+        An object of class :class:`~scientisttools.CA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.MCA`, :class:`~scientisttools.MFA`, 
+        :class:`~scientisttools.MPCA`, :class:`~scientisttools.PCA`, :class:`~scientisttools.PCAmix`
 
     choice : str, default = "ind"
         Name of the active choices.
@@ -312,11 +314,11 @@ def fviz_scatter(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
@@ -334,7 +336,7 @@ def fviz_scatter(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -645,7 +647,7 @@ def fviz_circle(p,
 
     Reference
     ---------
-    [1] `Draw a circle with ggplot2 <https://stackoverflow.com/questions/6862742/draw-a-circle-with-ggplot2>`
+    [1] `Draw a circle with ggplot2 <https://stackoverflow.com/questions/6862742/draw-a-circle-with-ggplot2>`_
 
     Examples
     --------
@@ -680,9 +682,9 @@ def fviz_arrow(obj,
                geom = ("arrow","text"),
                repel = False,
                color = "black",
-               segment_args = dict(size=0.5,alpha=1),
-               point_args = dict(size=1.5),
-               text_args = dict(size=8),
+               segment_args = {"size":0.5,"alpha":1},
+               point_args = {"size":1.5},
+               text_args = {"size":8},
                gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                legend_title = None,
                palette = "Dark2",
@@ -697,7 +699,8 @@ def fviz_arrow(obj,
     Parameters
     ----------
     obj : class 
-        an object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`
+        an object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix`, 
+        :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`
 
     axis : list, default = [0,1]
         The dimensions to be plotted.
@@ -720,14 +723,14 @@ def fviz_arrow(obj,
         In this case, the colors for variables are automatically controlled by their 
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
 
-    segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"size" : 0.5}
+        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high correlation values.
@@ -934,8 +937,8 @@ def add_scatter(p,
                 geom = ("point","text"),
                 repel = False,
                 color = "blue",
-                point_args = dict(shape="^",size=1.5),
-                text_args = dict(size=8)):
+                point_args = {"shape":"^","size":1.5},
+                text_args = {"size":8}):
     """
     Add points/texts to plotnine graph
 
@@ -963,11 +966,11 @@ def add_scatter(p,
     color : str, default = "blue"
         Color for the points and/or texts.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for points (see `geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for texts (see `geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     Returns
     -------
@@ -977,9 +980,9 @@ def add_scatter(p,
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, fviz_scatter, add_scatter
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    >>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> clf.fit(decathlon.data)
-    PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> # show active individuals points
     >>> p = fviz_scatter(clf,choice="ind",repel=True)
     >>> # show supplementary individuals points
@@ -1055,9 +1058,9 @@ def add_arrow(p,
               geom = ("arrow","text"),
               repel = False,
               color = "blue",
-              segment_args = dict(linetype="dashed",size=0.5),
-              point_args = dict(size=1.5),
-              text_args = dict(size=8)):
+              segment_args = {"linetype":"dashed","size":0.5},
+              point_args = {"size":1.5},
+              text_args = {"size":8}):
     """
     Add arrows/points/texts to plotnine object
 
@@ -1087,14 +1090,14 @@ def add_arrow(p,
     color : str, default = "blue"
         Color for the segments, points and/or texts.
 
-    segment_args : dict, default = dict(linetype="dashed",size = 0.5)
-        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"linetype":"dashed","size":0.5}
+        A dictionary containing parameters (except color) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size":1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size":8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     Returns
     -------
@@ -1104,9 +1107,9 @@ def add_arrow(p,
     --------
     >>> from scientisttools.datasets import decathlon
     >>> from scientisttools import PCA, fviz_arrow, add_arrow
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    >>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> clf.fit(decathlon.data)
-    PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
+    PCA(ind_sup=range(41,46),sup_var=(10,11,12))
     >>> # show active variables segments
     >>> p = fviz_arrow(clf,repel=True)
     >>> # show supplementary continuous variables segments
@@ -1252,10 +1255,10 @@ def set_axis(p,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------

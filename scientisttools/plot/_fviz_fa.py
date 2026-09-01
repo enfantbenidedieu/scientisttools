@@ -9,12 +9,12 @@ def fviz_fa_ind(obj,
                 geom = ("point","text"),
                 repel = False,
                 col_ind = "black",
-                point_args = dict(size=1.5),
-                text_args = dict(size=8),
+                point_args = {"size":1.5},
+                text_args = {"size":8},
                 ind_sup = True,
                 col_ind_sup = "blue",
-                point_args_ind_sup = dict(size=1.5),
-                text_args_ind_sup = dict(size=8),
+                point_args_ind_sup = {"size":1.5},
+                text_args_ind_sup = {"size":8},
                 x_lim = None,
                 y_lim = None,
                 x_label = None,
@@ -26,8 +26,8 @@ def fviz_fa_ind(obj,
     """
     Visualize Factor Analysis - Graph of individuals
 
-    Factor analysis (:class:`~scientisttools.FA`) is a statistical technique that is used to reduce data to a smaller set of summary variables and to explore the underlying theoretical structure of the phenomena. 
-    It is used to identify the structure of the relationship between the variable and the respondent. :class:`~scientisttools.fviz_fa_ind` provides plotnine-based elegant visualization of :class:`~scientisttools.FA` outputs for individuals.
+    Factor analysis (FA) is a statistical technique that is used to reduce data to a smaller set of summary variables and to explore the underlying theoretical structure of the phenomena. 
+    It is used to identify the structure of the relationship between the variable and the respondent. fviz_fa_ind() provides plotnine-based elegant visualization of FA outputs for individuals.
    
     Parameters
     ----------
@@ -50,11 +50,11 @@ def fviz_fa_ind(obj,
     col_ind : str, default = "black"
         Color for individuals.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size":1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size":8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     ind_sup : bool, default = True
         If True, then show supplementary individuals points and/or texts.
@@ -62,10 +62,10 @@ def fviz_fa_ind(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals points and/or texts.
 
-    point_args_ind_sup : dict, default = dict(size = 1.5)
+    point_args_ind_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     x_lim : list, tuple, default = None
@@ -87,10 +87,10 @@ def fviz_fa_ind(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -98,10 +98,8 @@ def fviz_fa_ind(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_fa`
-        Visualize Factor Analysis.
-    :class:`~scientisttools.get_fa`
-        Extract the results for individuals/variables - FA
+    fviz_fa : Visualize Factor Analysis
+    get_fa : Extract the results for individuals/variables - FA
     
     Examples
     --------
@@ -109,9 +107,14 @@ def fviz_fa_ind(obj,
     >>> from scientisttools import FA, fviz_fa_ind
     >>> clf = FA(ncp=2,max_iter=1)
     >>> clf.fit(beer)
+    FA(ncp=2,max_iter=1)
     >>> # graph of individuals
     >>> p = fviz_fa_ind(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_fa_ind.png
+                            
+            Graph of individuals - FA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is a FA class
@@ -177,12 +180,12 @@ def fviz_fa_var(obj,
                 geom = ("arrow","text"),
                 repel = False,
                 col_var ="black",
-                segment_args = dict(size=0.5),
-                text_args = dict(size=8),
+                segment_args = {"size":0.5},
+                text_args = {"size":8},
                 quanti_sup = True,
                 col_quanti_sup = "blue",
-                segment_args_quanti_sup = dict(linetype="dashed",size=0.5),
-                text_args_quanti_sup = dict(size=8),
+                segment_args_quanti_sup = {"linetype":"dashed","size":0.5},
+                text_args_quanti_sup = {"size":8},
                 scale = 1,
                 circle = True,
                 col_circle = "gray",
@@ -197,8 +200,8 @@ def fviz_fa_var(obj,
     """
     Visualize Factor Analysis - Graph of variables
 
-    Factor analysis is a statistical technique that is used to reduce data to a smaller set of summary variables and to explore the underlying theoretical structure of the phenomena. 
-    It is used to identify the structure of the relationship between the variable and the respondent. :class:`~scientisttools.fviz_fa_var` provides plotnine-based elegant visualization of :class:`~scientisttools.FA` outputs for variables.
+    Factor analysis (FA) is a statistical technique that is used to reduce data to a smaller set of summary variables and to explore the underlying theoretical structure of the phenomena. 
+    It is used to identify the structure of the relationship between the variable and the respondent. fviz_fa_var() provides plotnine-based elegant visualization of FA outputs for variables.
    
     Parameters
     ----------
@@ -221,11 +224,11 @@ def fviz_fa_var(obj,
     col_var : str, default = "black"
         Color for variables. 
 
-    segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters (except color and arrow ) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"size" : 0.5}
+        A dictionary containing parameters (except color and arrow ) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     quanti_sup : bool, default = True
         If True, then show supplementary continuous variables segments and/or texts.
@@ -233,10 +236,10 @@ def fviz_fa_var(obj,
     col_quanti_sup : str, default = "blue"
         Color for supplementary continuous variables segments and/or texts.
 
-    segment_args_quanti_sup : dict, default = dict(linetype="dashed",size=0.5,alpha=1)
+    segment_args_quanti_sup : dict, default = {"linetype":"dashed","size":0.5}
         A dictionary containing parameters for supplementary continuous variables segments except color.
 
-    text_args_quanti_sup : dict, default = dict(size = 8)
+    text_args_quanti_sup : dict, default = {"size" : 8}
         A dictionary containing parameters for supplementary continuous variables texts.
 
     scale : int, default = 1
@@ -267,10 +270,10 @@ def fviz_fa_var(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -278,10 +281,8 @@ def fviz_fa_var(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_fa`
-        Visualize Factor Analysis.
-    :class:`~scientisttools.get_fa`
-        Extract the results for individuals/variables - FA
+    fviz_fa : Visualize Factor Analysis.
+    get_fa : Extract the results for individuals/variables - FA
 
     Examples
     --------
@@ -289,9 +290,14 @@ def fviz_fa_var(obj,
     >>> from scientisttools import FA, fviz_fa_var
     >>> clf = FA(ncp=2,max_iter=1)
     >>> clf.fit(beer)
+    FA(ncp=2,max_iter=1)
     >>> # graph of variables
     >>> p = fviz_fa_var(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_fa_var.png
+                                
+            Graph of variables - FA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is a FA class
@@ -366,19 +372,19 @@ def fviz_fa_biplot(obj,
                     repel_ind = False,
                     repel_var = True,
                     col_ind = "black",
-                    point_args_ind = dict(size=1.5),
-                    text_args_ind = dict(size=8),
+                    point_args_ind = {"size":1.5},
+                    text_args_ind = {"size":8},
                     col_var = "steelblue",
-                    segment_args_var = dict(size=0.5),
-                    text_args_var = dict(size = 8),
+                    segment_args_var = {"size":0.5},
+                    text_args_var = {"size" : 8},
                     ind_sup = True,
                     col_ind_sup = "blue",
-                    point_args_ind_sup = dict(size=1.5),
-                    text_args_ind_sup = dict(size=8),
+                    point_args_ind_sup = {"size":1.5},
+                    text_args_ind_sup = {"size":8},
                     quanti_sup = True,
                     col_quanti_sup = "darkblue",
-                    segment_args_quanti_sup = dict(linetype="dashed",size=0.5),
-                    text_args_quanti_sup = dict(size=8),
+                    segment_args_quanti_sup = {"linetype":"dashed","size":0.5},
+                    text_args_quanti_sup = {"size":8},
                     x_lim = None,
                     y_lim = None,
                     x_label = None,
@@ -388,10 +394,10 @@ def fviz_fa_biplot(obj,
                     pntheme = theme_minimal(),
                     **kwargs):
     """
-    Visualize Factor Analysis (FA) - Biplot of individuals and variables
+    Visualize Factor Analysis - Biplot of individuals and variables
 
-    Factor analysis (:class:`~scientisttools.FA`) is a statistical technique that is used to reduce data to a smaller set of summary variables and to explore the underlying theoretical structure of the phenomena. 
-    It is used to identify the structure of the relationship between the variable and the respondent. :class:`~scientisttools.fviz_fa_biplot` provides plotnine-based elegant visualization of :class:`~scientisttools.FA` outputs for individuals and variables.
+    Factor analysis (FA) is a statistical technique that is used to reduce data to a smaller set of summary variables and to explore the underlying theoretical structure of the phenomena. 
+    It is used to identify the structure of the relationship between the variable and the respondent. fviz_fa_biplot() provides plotnine-based elegant visualization of FA outputs for individuals and variables.
    
     Parameters
     ----------
@@ -424,19 +430,19 @@ def fviz_fa_biplot(obj,
     col_ind : str, default = "black"
         Color for individuals.
 
-    point_args_ind : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args_ind : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args_ind : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args_ind : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     col_var : str, default = "steelblue"
         Color for variables.
 
-    segment_args_var : dict, default = dict(size = 0.5)
-        A dictionary containing parameters (except color) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args_var : dict, default = {"size" : 0.5}
+        A dictionary containing parameters (except color) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    text_args_var : dict, default = dict(size = 8)
+    text_args_var : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for variables texts.
 
     ind_sup : bool, default = True
@@ -445,10 +451,10 @@ def fviz_fa_biplot(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals points and/or texts.
 
-    point_args_ind_sup : dict, default = dict(shape="^",size = 1.5)
+    point_args_ind_sup : dict, default = {"shape":"^","size" : 1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     quanti_sup : bool, default = True
@@ -457,10 +463,10 @@ def fviz_fa_biplot(obj,
     col_quanti_sup : str, default = "darkblue"
         Color for supplementary continuous variables segments and/or texts.
 
-    segment_args_quanti_sup : dict, default = dict(linetype="dashed",size=0.5,alpha=1)
+    segment_args_quanti_sup : dict, default = {"linetype":"dashed","size":0.5}
         A dictionary containing parameters for supplementary continuous variables segments except color.
 
-    text_args_quanti_sup : dict, default = dict(size = 8)
+    text_args_quanti_sup : dict, default = {"size" : 8}
         A dictionary containing parameters for supplementary continuous variables texts.
 
     x_lim : list, tuple, default = None
@@ -482,10 +488,10 @@ def fviz_fa_biplot(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -493,10 +499,8 @@ def fviz_fa_biplot(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_fa`
-        Visualize Factor Analysis.
-    :class:`~scientisttools.get_fa`
-        Extract the results for individuals/variables - FA
+    fviz_fa : Visualize Factor Analysis.
+    get_fa : Extract the results for individuals/variables - FA
     
     Examples
     --------
@@ -504,15 +508,20 @@ def fviz_fa_biplot(obj,
     >>> from scientisttools import FA, fviz_fa_biplot
     >>> clf = FA(ncp=2,max_iter=1)
     >>> clf.fit(beer)
+    FA(ncp=2,max_iter=1)
     >>> # biplot - graph of individuals and variables
     >>> p = fviz_fa_biplot(clf,repel_ind=True,repel_var=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_fa_biplot.png
+                                
+            Biplot of individuals and variables - FA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is a FA class
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if obj.__class__.__name__ != "FA":
-        raise TypeError("'obj' must be a FA class.")
+        raise TypeError("obj must be a FA class.")
 
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # show active individuals points
@@ -607,10 +616,10 @@ def fviz_fa(obj,
             choice="biplot",
             **kwargs):
     """
-    Visualize Factor Analysis (FA)
+    Visualize Factor Analysis
 
-    Factor analysis (:class:`~scientisttools.FA`) is a statistical technique that is used to reduce data to a smaller set of summary variables and to explore the underlying theoretical structure of the phenomena. 
-    It is used to identify the structure of the relationship between the variable and the respondent. :class:`~scientisttools.fviz_fa` provides plotnine-based elegant visualization of :class:`~scientisttools.FA` outputs.
+    Factor analysis (FA) is a statistical technique that is used to reduce data to a smaller set of summary variables and to explore the underlying theoretical structure of the phenomena. 
+    It is used to identify the structure of the relationship between the variable and the respondent. fviz_fa() provides plotnine-based elegant visualization of FA outputs.
     
     Parameters
     ----------
@@ -627,22 +636,13 @@ def fviz_fa(obj,
     **kwargs: Any
         Parameters use by one of this function. See:
         
-        * :class:`scientisttools.fviz_fa_ind`: Graph of individuals
-        * :class:`scientisttools.fviz_fa_var`: Graph of variables (=correlation circle)
-        * :class:`scientisttools.fviz_fa_biplot`: Biplot of individuals and variables
+        * :class:`~scientisttools.fviz_fa_ind`: Graph of individuals
+        * :class:`~scientisttools.fviz_fa_var`: Graph of variables (=correlation circle)
+        * :class:`~scientisttools.fviz_fa_biplot`: Biplot of individuals and variables
     
     Returns
     -------
     A plotnine object.
-
-    See also
-    --------
-    :class:`~scientisttools.fviz_fa_ind`
-        Visualize Factor Analysis - Graph of individuals
-    :class:`~scientisttools.fviz_fa_var`
-        Visualize Factor Analysis - Graph of variables (=correlation circle)
-    :class:`~scientisttools.fviz_fa_biplot`
-        Visualize Factor Analysis - Biplot of individuals and variables
     
     Examples
     --------
@@ -650,15 +650,30 @@ def fviz_fa(obj,
     >>> from scientisttools import FA, fviz_fa
     >>> clf = FA(ncp=2,max_iter=1)
     >>> clf.fit(beer)
+    FA(ncp=2,max_iter=1)
     >>> # graph of individuals
     >>> p = fviz_fa(clf, choice = "ind", repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_fa_ind.png
+                                
+            Graph of individuals - FA
+    
     >>> # graph of variables
     >>> p = fviz_fa(clf, choice = "var", repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_fa_var.png
+                                
+            Graph of variables - FA
+    
     >>> # biplot - graph of individuals and variables
     >>> p = fviz_fa(clf, choice = "biplot", repel_ind=True, repel_var=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_fa_biplot.png
+                                
+            Biplot of individuals and variables - FA
     """
     if choice == "ind":
         return fviz_fa_ind(obj,**kwargs)

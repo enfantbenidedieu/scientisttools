@@ -22,12 +22,12 @@ def fviz_pcoa_ind(obj,
                   geom = ("point","text"),
                   repel = False,
                   col_ind = "black",
-                  point_args = dict(size=1.5),
-                  text_args = dict(size=8),
+                  point_args = {"size":1.5},
+                  text_args = {"size":8},
                   ind_sup = True,
                   col_ind_sup = "blue",
-                  point_args_ind_sup = dict(size=1.5),
-                  text_args_ind_sup = dict(size=8),
+                  point_args_ind_sup = {"size":1.5},
+                  text_args_ind_sup = {"size":8},
                   x_label = None,
                   y_label = None,
                   x_lim = None,
@@ -39,8 +39,8 @@ def fviz_pcoa_ind(obj,
     """
     Visualize Principal Coordinates Analysis - Graph of individuals
 
-    Principal Coordinates Analysis (from :class:`~scientisttools.PCoA`), also known as classical multidimensional scaling (MDS), is a method used to explore and visualize similarities or dissimilarities among a set of objects or samples. 
-    :class:`~scientisttools.fviz_pcoa_ind` provides plotnine-based elegant visualization of from :class:`~scientisttools.PCoA` outputs for individuals.
+    Principal Coordinates Analysis (PCoA), also known as classical multidimensional scaling (MDS), is a method used to explore and visualize similarities or dissimilarities among a set of objects or samples. 
+    fviz_pcoa_ind() provides plotnine-based elegant visualization of from PCoA outputs for individuals.
 
     Parameters
     ----------
@@ -63,11 +63,11 @@ def fviz_pcoa_ind(obj,
     col_ind : str, default = "black"
         Color for individuals.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     ind_sup : bool, default = True
         If True, show supplementary individuals points and/or texts.
@@ -75,10 +75,10 @@ def fviz_pcoa_ind(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals.
 
-    point_args_ind_sup : dict, default = dict(size = 1.5)
+    point_args_ind_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     x_lim : list, tuple, default = None
@@ -100,10 +100,10 @@ def fviz_pcoa_ind(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -111,18 +111,22 @@ def fviz_pcoa_ind(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_pcoa`
-        Visualize Principal Coordinates Analysis.
+    fviz_pcoa : Visualize Principal Coordinates Analysis.
 
     Examples
     --------
     >>> from scientisttools.datasets import autosmds
     >>> from scientisttools import PCoA, fviz_pcoa_ind
-    >>> clf = PCoA(ncp=2,ind_sup=(12,13,14))
-    >>> clf.fit(autosmds)
+    >>> clf = PCoA(ncp=2,metric="euclidean",ind_sup=(12,13,14))
+    >>> clf.fit(autosmds.data)
     PCoA(ind_sup=(12,13,14),ncp=2)
+    >>> # graph of individuals
     >>> p = fviz_pcoa_ind(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pcoa_ind.png
+                                                
+            Graph of individuals - PCoA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class PCoA
@@ -199,8 +203,8 @@ def fviz_pcoa_shepard(obj,
     """
     Visualize Principal Coordinates Analysis - Shepard Diagram
     
-    Principal Coordinates Analysis (from :class:`~scientisttools.PCoA`), also known as classical multidimensional scaling (MDS), is a method used to explore and visualize similarities or dissimilarities among a set of objects or samples. 
-    :class:`~scientisttools.fviz_pcoa_shepard` provides plotnine-based elegant visualization of from :class:`~scientisttools.PCoA` outputs. It plots a Shepard diagram which is a scatter plot of InputDist and OutputDist.
+    Principal Coordinates Analysis (PCoA), also known as classical multidimensional scaling (MDS), is a method used to explore and visualize similarities or dissimilarities among a set of objects or samples. 
+    fviz_pcoa_shepard() provides plotnine-based elegant visualization of from PCoA outputs. It plots a Shepard diagram which is a scatter plot of InputDist and OutputDist.
 
     Parameters
     ----------
@@ -217,11 +221,11 @@ def fviz_pcoa_shepard(obj,
     color : str, default = "black"
         Color for scatter.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    line_args : dict, default = dict(linetype="dashed")
-        A dictionary containing parameters (except color) for line (see `plotnine.geom_line <https://plotnine.org/reference/geom_line.html>`).
+    line_args : dict, default = {"linetype":"dashed"}
+        A dictionary containing parameters (except color) for line (see `plotnine.geom_line <https://plotnine.org/reference/geom_line.html>`_).
 
     x_lim : list, tuple, default = None
         The range of the plotted 'x' values.
@@ -242,10 +246,10 @@ def fviz_pcoa_shepard(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -253,22 +257,26 @@ def fviz_pcoa_shepard(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_pcoa`
-         Visualize Principal Coordinates Analysis.
+    fviz_pcoa : Visualize Principal Coordinates Analysis.
 
     References
     ----------
-    [1] `Sheparddiagram <https://github.com/Mthrun/DataVisualizations/blob/master/R/Sheparddiagram.R>`
+    [1] `Sheparddiagram <https://github.com/Mthrun/DataVisualizations/blob/master/R/Sheparddiagram.R>`_
 
     Examples
     --------
     >>> from scientisttools.datasets import autosmds
     >>> from scientisttools import PCoA, fviz_pcoa_shepard
-    >>> clf = PCoA(ncp=2,ind_sup=(12,13,14))
-    >>> clf.fit(autosmds)
+    >>> clf = PCoA(ncp=2,metric="euclidean",ind_sup=(12,13,14))
+    >>> clf.fit(autosmds.data)
     PCoA(ind_sup=(12,13,14),ncp=2)
+    >>> # shepard diagram
     >>> p = fviz_pcoa_shepard(clf)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pcoa_shepard.png
+                                                    
+            Shepard Diagram - PCoA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if PCoA class
@@ -338,8 +346,8 @@ def fviz_pcoa(obj,
     """
     Visualize Principal Coordinates Analysis
 
-    Principal Coordinates Analysis (from :class:`~scientisttools.PCoA`), also known as classical multidimensional scaling (MDS), is a method used to explore and visualize similarities or dissimilarities among a set of objects or samples. 
-    :class:`~scientisttools.fviz_pcoa` provides plotnine-based elegant visualization of from :class:`~scientisttools.PCoA` outputs.
+    Principal Coordinates Analysis (PCoA), also known as classical multidimensional scaling (MDS), is a method used to explore and visualize similarities or dissimilarities among a set of objects or samples. 
+    fviz_pcoa() provides plotnine-based elegant visualization of from PCoA outputs.
 
     Parameters
     ----------
@@ -355,33 +363,35 @@ def fviz_pcoa(obj,
     **kwargs: Any
         Parameters use by one of this function. See:
         
-        * :class:`scientisttools.fviz_pcoa_ind`: Graph of individuals
-        * :class:`scientisttools.fviz_pcoa_shepard`: Shepard Diagram
+        * :class:`~scientisttools.fviz_pcoa_ind`: Graph of individuals
+        * :class:`~scientisttools.fviz_pcoa_shepard`: Shepard Diagram
 
     Returns
     -------
     A plotnine object.
 
-    See also
-    --------
-    :class:`~scientisttools.fviz_pcoa_ind`
-        Visualize Principal Coordinates Analysis - Graph of individuals
-    :class:`~scientisttools.fviz_pcoa_shepard`
-        Visualize Principal Coordinates Analysis - Shepard Diagram
-
     Examples
     --------
     >>> from scientisttools.datasets import autosmds
     >>> from scientisttools import PCoA, fviz_pcoa
-    >>> clf = PCoA(ncp=2,ind_sup=(12,13,14))
-    >>> clf.fit(autosmds)
+    >>> clf = PCoA(metric="euclidean",ind_sup=(12,13,14))
+    >>> clf.fit(autosmds.data)
     PCoA(ind_sup=(12,13,14),ncp=2)
     >>> # graph of individuals
     >>> p = fviz_pcoa(clf,choice="ind",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pcoa_ind.png
+                                                        
+            Graph of individuals - PCoA
+    
     >>> # shepard diagram
     >>> p = fviz_pcoa(clf,choice="shepard")
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_pcoa_shepard.png
+                                                        
+            Shepard Diagram - PCoA
     """
     if choice == "ind":
         return fviz_pcoa_ind(obj,**kwargs)

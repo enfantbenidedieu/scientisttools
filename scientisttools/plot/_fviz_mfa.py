@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from numpy import repeat
 from pandas import DataFrame, concat, merge
 from mizani.palettes import brewer_pal
 from plotnine import (
@@ -31,25 +32,25 @@ def fviz_mfa_ind(obj,
                  geom = ("point","text"),
                  repel = False,
                  col_ind = "black",
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  habillage = None,
                  palette = "Dark2",
                  partiel = None,
                  geom_partiel = "arrow",
-                 point_args_partiel = dict(size=1.5),
-                 segment_args_partiel = dict(size=0.5,alpha=1),
-                 text_args_partiel = dict(size=8),
+                 point_args_partiel = {"size":1.5},
+                 segment_args_partiel = {"size":0.5,"alpha":1},
+                 text_args_partiel = {"size":8},
                  add_ellipses = False,
                  ellipse_type = "convex",
                  level = 0.95,
                  alpha = 0.1,
                  ind_sup = True,
                  col_ind_sup = "blue",
-                 point_args_ind_sup = dict(size=1.5),
-                 text_args_ind_sup = dict(size=8),
+                 point_args_ind_sup = {"size":1.5},
+                 text_args_ind_sup = {"size":8},
                  lim_cos2 = None,
                  lim_contrib = None,
                  x_lim = None,
@@ -63,8 +64,8 @@ def fviz_mfa_ind(obj,
     """
     Visulize Multiple Factor Analysis - Graph of individuals
 
-    Multiple factor analysis (:class:`~scientisttools.MFA`) is used to analyze a data set in which individuals are described by several sets of variables (continuous and/or categorical) structured into groups. 
-    :class:`~scientisttools.fviz_mfa_ind` provides plotnine-based elegant visualization of :class:`~scientisttools.MFA` individuals outputs.
+    Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (continuous and/or categorical) structured into groups. 
+    fviz_mfa_ind() provides plotnine-based elegant visualization of MFA individuals outputs.
 
     Parameters
     ----------
@@ -91,11 +92,11 @@ def fviz_mfa_ind(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
@@ -121,23 +122,23 @@ def fviz_mfa_ind(obj,
         * ("arrow","text") to show both arrows and texts.
         * ("point","text") to show both points and texts.
 
-    point_args_partiel : dict, default = dict(size = 1.5)
+    point_args_partiel : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for partiel points.
 
-    segment_args_partiel : dict, default = dict(size=0.5,alpha=1)
+    segment_args_partiel : dict, default = {"size":0.5,"alpha":1}
         A dictionary containing parameters (except color) for partiel segments.
 
-    text_args_partiel : dict, default = dict(size = 8)
+    text_args_partiel : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for partiel texts.
 
     add_ellipses : bool, default = False
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
-        * "convex": plot convex hull of a set of points as :class:`~scientisttools.convex_ellipse`.
-        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.confidence_ellipse`.
+        * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
+        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
         * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
@@ -154,10 +155,10 @@ def fviz_mfa_ind(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals.
 
-    point_args_ind_sup : dict, default = dict(size = 1.5)
+    point_args_ind_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     lim_cos2 : float, default = None
@@ -185,10 +186,10 @@ def fviz_mfa_ind(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -196,10 +197,8 @@ def fviz_mfa_ind(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mfa`
-        Visualize Multiple Factor Analysis
-    :class:`~scientisttools.get_mfa`
-        Extract the results for individuals/variables/group/partial axes - MFA
+    fviz_mfa : Visualize Multiple Factor Analysis
+    get_mfa : Extract the results for individuals/variables/group/partial axes - MFA
 
     Examples
     --------
@@ -207,9 +206,22 @@ def fviz_mfa_ind(obj,
     >>> from scientisttools import MFA, fviz_mfa_ind
     >>> clf = MFA(group=wine.group,group_type=("n","s","s","s","s","s"),name_group = wine.name,num_group_sup=(0,5))
     >>> clf.fit(wine.data)
+    MFA(group=[2,5,3,10,9,2],group_type=("n","s","s","s","s","s"),name_group=["origin","odor","visual","odor.after.shaking","taste","overall"],num_group_sup=(0,5))
     >>> # graph of individuals
     >>> p = fviz_mfa_ind(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_ind.png
+                                
+            Graph of individuals - MFA
+    
+    >>> # graph of partiel individuals
+    >>> p = fviz_mfa_ind(clf,repel=True,partiel = clf.ind_.coord.index[:3].tolist())
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_ind_partiel.png
+                                    
+            Graph of partiel individuals - MFA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class MFA
@@ -249,31 +261,30 @@ def fviz_mfa_ind(obj,
             partiel_label = obj.ind_.coord.index.tolist()
         else:
             partiel_label = get_sup_label(X=obj.ind_.coord,indexes=partiel,axis=0)
-        # find partiel coordinates
-        coord = DataFrame().astype("float")
-        for i, g in enumerate(obj.ind_.coord_partiel._fields):
-            data = obj.ind_.coord_partiel[i].loc[partiel_label,:]
-            data.loc[:,"habillage"] = g
-            data.index = [f"{x}.{g}" for x in data.index]
-            coord = concat((coord,data),axis=0)
-        # reset index
-        coord["habillage"] = coord["habillage"].astype("category")
         # convert to string
         partiel_label = [f"{x}" for x in partiel_label]
         # compromise coordinates
-        ind_coord = obj.ind_.coord
-        # change index type to string
-        coord.index, ind_coord.index = coord.index.astype("str"), ind_coord.index.astype("str")
-
-        # add x and y
-        coord["x"], coord["y"] = 0.0,0.0
-        for i in partiel_label:
-            n = [x for x in coord.index if x.startswith(i)]
-            coord.loc[n,"x"] = ind_coord.loc[i,f"Dim{axis[0]+1}"]
-            coord.loc[n,"y"] = ind_coord.loc[i,f"Dim{axis[1]+1}"]
-
+        coord = obj.ind_.coord.loc[:,[f"Dim{axis[0]+1}",f"Dim{axis[1]+1}"]].rename(columns={f"Dim{axis[0]+1}" : "x",f"Dim{axis[1]+1}" : "y"})
+        # convert index to columns
+        coord = coord.reset_index().rename(columns={"index" : "rownames"})
+        
+        # find partiel coordinates
+        index = obj.group_.coord.index
+        coord_partiel = obj.ind_.coord_partiel.loc[:,[f"Dim{axis[0]+1}",f"Dim{axis[1]+1}"]]
+        partiel_label_index = [x for x in coord_partiel.index for i in partiel_label if x.startswith(i) ]
+        # subset
+        coord_partiel = coord_partiel.loc[partiel_label_index,:]
+        # set index
+        coord_partiel.index = partiel_label*len(index)
+        coord_partiel["habillage"] = repeat(index,len(partiel_label))
+        # reset index
+        coord_partiel["habillage"] = coord_partiel["habillage"].astype("category")
+        # convert index to columns
+        coord_partiel = coord_partiel.reset_index().rename(columns={"index" : "rownames"})
+        # left join
+        coord_partiel = coord_partiel.merge(coord,how="left",on="rownames")
+        
         # set colors
-        index = coord["habillage"].unique().tolist()
         if isinstance(palette,str):
             colors = brewer_pal(type="qual", palette=palette)(len(index))
         elif isinstance(palette,(list,tuple)):
@@ -291,25 +302,24 @@ def fviz_mfa_ind(obj,
 
         # overlapped texts
         if repel and ("text" in geom):
-            text_args["adjust_text"] = dict(arrowprops=dict(arrowstyle='-',lw=1.0))
+            text_args["adjust_text"] = {"arrowprops":{"arrowstyle":'-',"lw":1.0}}
         
         # show points
-        if "point" in geom_partiel:
-            p = p + geom_point(
-                data=coord,
-                mapping=aes(
-                    x = f"Dim{axis[0]+1}",
-                    y = f"Dim{axis[1]+1}",
-                    color = "habillage"
-                ),
-                inherit_aes=False,
-                **point_args_partiel
-            )
+        p = p + geom_point(
+            data=coord_partiel,
+            mapping=aes(
+                x = f"Dim{axis[0]+1}",
+                y = f"Dim{axis[1]+1}",
+                color = "habillage"
+            ),
+            inherit_aes=False,
+            **point_args_partiel
+        )
         
         # draw segment
         if "arrow" in geom_partiel:
             p = p + geom_segment(
-                data=coord,
+                data=coord_partiel,
                 mapping=aes(
                     x="x",
                     y="y",
@@ -317,18 +327,17 @@ def fviz_mfa_ind(obj,
                     yend = f"Dim{axis[1]+1}",
                     color = "habillage"
                 ),
-                arrow = arrow(angle=30,length=0.2/2.54),
                 inherit_aes=False,
                 **segment_args_partiel
             )
 
         if "text" in geom_partiel:
             p = p + geom_text(
-                data=coord,
+                data=coord_partiel,
                 mapping=aes(
                     x = f"Dim{axis[0]+1}",
                     y = f"Dim{axis[1]+1}",
-                    label = coord.index,
+                    label = "rownames",
                     color = "habillage"
                 ),
                 inherit_aes=False,
@@ -372,7 +381,7 @@ def fviz_mfa_ind(obj,
         axis = axis,
         x_lim = x_lim,
         y_lim = y_lim,
-        x_label = x_label,
+        x_label = x_label, 
         y_label = y_label,
         title = title,
         subtitle = subtitle,
@@ -387,9 +396,9 @@ def fviz_mfa_var(obj,
                  geom = ("arrow","point","text"),
                  repel = False,
                  col_var = "black",
-                 segment_args = dict(size=0.5),
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 segment_args = {"size":0.5},
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  palette = "Dark2",
@@ -399,9 +408,9 @@ def fviz_mfa_var(obj,
                  alpha = 0.1,
                  var_sup = True,
                  col_var_sup = "blue",
-                 segment_args_var_sup = dict(linetype="dashed",size=0.5),
-                 point_args_var_sup = dict(size=1.5),
-                 text_args_var_sup = dict(size=8),
+                 segment_args_var_sup = {"linetype":"dashed","size":0.5},
+                 point_args_var_sup = {"size":1.5},
+                 text_args_var_sup = {"size":8},
                  scale = 1,
                  circle = True,
                  col_circle = "gray",
@@ -419,8 +428,8 @@ def fviz_mfa_var(obj,
     """
     Visualize Multiple Factor Analysis - Graph of variables/group/partial axes
 
-    Multiple factor analysis (:class:`~scientisttools.MFA`) is used to analyze a data set in which individuals are described by several sets of variables (continuous, categorical or mixed) structured into groups. 
-    :class:`~scientisttools.fviz_mfa_var` provides plotnine-based elegant visualization of :class:`~scientisttools.MFA` variables, groups and partial axes outputs.
+    Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (continuous, categorical or mixed) structured into groups. 
+    fviz_mfa_var() provides plotnine-based elegant visualization of MFA variables, groups and partial axes outputs.
 
     Parameters
     ----------
@@ -457,14 +466,14 @@ def fviz_mfa_var(obj,
         In this case, the colors for variablescategories are automatically controlled by their 
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
 
-    segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters  (except color and arrow) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"size" : 0.5}
+        A dictionary containing parameters  (except color and arrow) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {size : 1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
@@ -481,8 +490,8 @@ def fviz_mfa_var(obj,
     ellipse_type : str, default = "confidence"
         String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
-        * "convex": plot convex hull of a set of points as :class:`~scientisttools.convex_ellipse`.
-        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.confidence_ellipse`.
+        * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
+        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
         * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
@@ -499,13 +508,13 @@ def fviz_mfa_var(obj,
     col_var_sup : str, default = "blue"
         Color for supplementary variables or variables categories points and/or texts.
 
-    segment_args_var_sup : dict, default = dict(linetype="dashed",size = 0.5)
+    segment_args_var_sup : dict, default = {"linetype":"dashed","size" : 0.5}
         A dictionary containing parameters (except color and arrow) for supplementar variables segments.
 
-    point_args_var_sup : dict, default = dict(size = 1.5)
+    point_args_var_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary variables points.
 
-    text_args_var_sup : dict, default = dict(size = 8)
+    text_args_var_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary variables texts.
 
     scale : int, default = 1
@@ -542,10 +551,10 @@ def fviz_mfa_var(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -553,10 +562,8 @@ def fviz_mfa_var(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mfa`
-        Visualize Multiple Factor Analysis
-    :class:`~scientisttools.get_mfa`
-        Extract the results for individuals/variables/group/partial axes - MFA
+    fviz_mfa : Visualize Multiple Factor Analysis
+    get_mfa : Extract the results for individuals/variables/group/partial axes - MFA
 
     Examples
     --------
@@ -564,15 +571,30 @@ def fviz_mfa_var(obj,
     >>> from scientisttools import MFA, fviz_mfa_var
     >>> clf = MFA(group=wine.group,group_type=("n","s","s","s","s","s"),name_group = wine.name,num_group_sup=(0,5))
     >>> clf.fit(wine.data)
+    MFA(group=[2,5,3,10,9,2],group_type=("n","s","s","s","s","s"),name_group=["origin","odor","visual","odor.after.shaking","taste","overall"],num_group_sup=(0,5))
     >>> # graph of variables (=correlation circle)
     >>> p = fviz_mfa_var(clf,choice="quanti_var",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_var.png
+                                    
+            Graph of continuous variables - MFA
+    
     >>> # graph of groups
     >>> p = fviz_mfa_var(clf,choice="group",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_group.png
+                                    
+            Graph of groups - MFA
+    
     >>> # graph of partial axes
     >>> p = fviz_mfa_var(clf,choice ="partial_axes",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_partial_axes.png
+                                    
+            Graph of partial axes - MFA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class MFA
@@ -642,7 +664,7 @@ def fviz_mfa_var(obj,
             if choice in ("levels","freq"):
                 # overlapping texts
                 if repel and "text" in geom:
-                    text_args["adjust_text"] = dict(arrowprops=dict(arrowstyle='-',lw=1.0))
+                    text_args["adjust_text"] = {"arrowprops":{"arrowstyle":'-',"lw":1.0}}
                 # show points
                 if "point" in geom:
                     p = p + geom_point(aes(color="group"),**point_args)
@@ -813,10 +835,7 @@ def fviz_mfa(obj,
     Visualize Multiple Factor Analysis
 
     Multiple factor analysis (MFA) is used to analyze a data set in which individuals are described by several sets of variables (continous and/or categorical) structured into groups.
-    :class:`~scientisttools.fviz_mfa` provides plotnine-based elegant visualization of :class:`~scientisttools.MFA` outputs.
-    
-        * :class:`~scientisttools.fviz_mfa_ind`: Graph of individuals
-        * :class:`~scientisttools.fviz_mfa_var`: Graph of variables/group/partial axes
+    fviz_mfa() provides plotnine-based elegant visualization of MFA outputs.
 
     Parameters
     ----------
@@ -836,8 +855,8 @@ def fviz_mfa(obj,
     **kwargs: Any
         Parameters use by one of this function. See:
         
-        * :class:`scientisttools.fviz_mfa_ind`: Graph of individuals
-        * :class:`scientisttools.fviz_mfa_var`: Graph of variables/group/partial axes
+        * :class:`~scientisttools.fviz_mfa_ind`: Graph of individuals
+        * :class:`~scientisttools.fviz_mfa_var`: Graph of variables/group/partial axes
 
     Returns
     -------
@@ -845,12 +864,7 @@ def fviz_mfa(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mfa_ind`
-        Visualize Multiple Factor Analysis - Graph of individuals
-    :class:`~scientisttools.fviz_mfa_var`
-        Visualize Multiple Factor Analysis - Graph of variables/group/partial axes
-    :class:`~scientisttools.get_mfa`
-        Extract the results for individuals/variables/group/partial axes - MFA
+    get_mfa : Extract the results for individuals/variables/group/partial axes - MFA
 
     Examples
     --------
@@ -858,18 +872,38 @@ def fviz_mfa(obj,
     >>> from scientisttools import MFA, fviz_mfa
     >>> clf = MFA(group=wine.group,group_type=("n","s","s","s","s","s"),name_group = wine.name,num_group_sup=(0,5))
     >>> clf.fit(wine.data)
+    MFA(group=[2,5,3,10,9,2],group_type=("n","s","s","s","s","s"),name_group=["origin","odor","visual","odor.after.shaking","taste","overall"],num_group_sup=(0,5))
     >>> # graph of individuals
     >>> p = fviz_mfa(clf,choice="ind",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_ind.png
+                                    
+            Graph of individuals - MFA
+    
     >>> # graph of variables (=correlation circle)
     >>> p = fviz_mfa(clf,choice="quanti_var",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_var.png
+                                    
+            Graph of continuous variables - MFA
+    
     >>> # graph of groups
     >>> p = fviz_mfa(clf,choice="group",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_group.png
+                                    
+            Graph of groups - MFA
+    
     >>> # graph of partial axes
     >>> p = fviz_mfa(clf,choice="partial_axes",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mfa_partial_axes.png
+                                    
+            Graph of partial axes - MFA
     """
     if choice == "ind":
         return fviz_mfa_ind(obj,**kwargs)

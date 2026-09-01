@@ -18,9 +18,9 @@ def fviz_screeplot(obj,
                    choice = "proportion",
                    geom = ("bar","line"),
                    col_bar = "steelblue",
-                   bar_args = dict(fill="steelblue",width=None),
+                   bar_args = {"fill":"steelblue","width":None},
                    col_line = "black",
-                   line_args = dict(),
+                   line_args = {},
                    show_labels = False,
                    ncp = 10,
                    y_lim = None,
@@ -53,14 +53,14 @@ def fviz_screeplot(obj,
     col_bar : str, default = "steelblue"
         Outline color for the bar plot.
 
-    bar_args : dict, default = dict(fill="steelblue",width=None)
-        A dictionary containing parameters (except color) for bar plot (see `plotnine.geom_bar <https://plotnine.org/reference/geom_bar.html>`).
+    bar_args : dict, default = {"fill":"steelblue","width":None}
+        A dictionary containing parameters (except color) for bar plot (see `plotnine.geom_bar <https://plotnine.org/reference/geom_bar.html>`_).
 
     col_line, str, default = "black"
         Color for the line plot.
 
-    line_args : dict, default = dict()
-        A dictionary containing parameters (except color) for line plot (see `plotnine.geom_line <https://plotnine.org/reference/geom_line.html>`).
+    line_args : dict, default = {}
+        A dictionary containing parameters (except color) for line plot (see `plotnine.geom_line <https://plotnine.org/reference/geom_line.html>`_).
 
     show_labels : bool, default = False
         If True, labels are added at the top of bars or points showing the information retained by each dimension.
@@ -84,29 +84,33 @@ def fviz_screeplot(obj,
         The subtitle of the graph you draw.
     
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
     A plotnine object.
 
-    See also
+    See Also
     --------
-    :class:`~scientisttools.get_eig`
-        Extract the eigenvalues/variances of the principal dimensions
-    :class:`~scientisttools.get_eigenvalue`
-        An alias of :class:`~scientisttools.get_eig`
+    get_eig : Extract the eigenvalues/variances of the principal dimensions
+    get_eigenvalue : An alias of :class:`~scientisttools.get_eig`
     
     Examples
     --------
-    >>> from scientisttools.datasets import decathlon
+    >>> from scientisttools.datasets import housetasks
     >>> from scientisttools import PCA, fviz_screeplot
-    >>> clf = PCA(ind_sup=(41,42,43,44,45),sup_var=(10,11,12))
-    >>> clf.fit(decathlon.data)
-    >>> print(fviz_screeplot(clf))
+    >>> clf = CA()
+    >>> clf.fit(housetasks)
+    CA()
+    >>> p = fviz_screeplot(clf)
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_eig.png
+        
+            Scree plot
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj has eig_ as attribute
@@ -133,7 +137,7 @@ def fviz_screeplot(obj,
         if y_label is None:
             y_label = "Cumulative % of explained variances"
     else:
-        raise ValueError("'choice' must be one of 'proportion', 'eigenvalue', 'cumulative'")
+        raise ValueError("choice must be one of 'proportion', 'eigenvalue', 'cumulative'")
 
     if isinstance(geom,str):
         if geom not in ("bar","line"):
@@ -198,7 +202,38 @@ def fviz_screeplot(obj,
 def fviz_eig(obj,**kwargs):
     """
     Visualize the eigenvalues/variances of dimensions
+    
+    This function support the results of multiple general factor analysis methods such as PCA (Principal Component Analysis), CA (Correspondence Analysis), MCA (Multiple Correspondence Analysis), etc...
+    
+    Parameters
+    ----------
+    obj : class
+        An object of class which have ``eig_`` as attribute.
 
-    see :class:`~scientisttools.fviz_screeplot`
+    **kwargs : Any
+        See :class:`~scientisttools.fviz_screeplot`.
+        
+    Returns
+    -------
+    A plotnine object.
+
+    See also
+    --------
+    get_eig : Extract the eigenvalues/variances of the principal dimensions
+    get_eigenvalue : An alias of :class:`~scientisttools.get_eig`
+    
+    Examples
+    --------
+    >>> from scientisttools.datasets import housetasks
+    >>> from scientisttools import PCA, fviz_eig
+    >>> clf = CA()
+    >>> clf.fit(housetasks)
+    CA()
+    >>> p = fviz_eig(clf)
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_eig.png
+        
+            Scree plot
     """
     return fviz_screeplot(obj,**kwargs)

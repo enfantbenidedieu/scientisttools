@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from numpy import repeat
 from pandas import concat, Categorical
 from mizani.palettes import brewer_pal
 from plotnine import (
@@ -29,8 +30,8 @@ def fviz_dmfa_ind(obj,
                   axis = [0,1],
                   geom = ("point","text"),
                   repel = False,
-                  point_args = dict(size=1.5),
-                  text_args = dict(size=8),
+                  point_args = {"size":1.5},
+                  text_args = {"size":8},
                   palette = "Dark2",
                   add_ellipses = False, 
                   ellipse_type = "confidence",
@@ -38,12 +39,12 @@ def fviz_dmfa_ind(obj,
                   alpha = 0.1,
                   ind_sup = True,
                   col_ind_sup = "blue",
-                  point_args_ind_sup = dict(size=1.5),
-                  text_args_ind_sup = dict(size=8),
+                  point_args_ind_sup = {"size":1.5},
+                  text_args_ind_sup = {"size":8},
                   quali_sup = True,
                   col_quali_sup = "violet",
-                  point_args_quali_sup = dict(size=1.5),
-                  text_args_quali_sup = dict(size=8),
+                  point_args_quali_sup = {"size":1.5},
+                  text_args_quali_sup = {"size":8},
                   lim_cos2 = None,
                   lim_contrib = None,
                   x_lim = None,
@@ -57,8 +58,8 @@ def fviz_dmfa_ind(obj,
     """
     Visualize Dual Multiple Factor Analysis - Graph of individuals
     
-    Dual Multiple Factor Analysis (:class:`~scientisttools.DMFA`) is used to analyze a data set in which variables are described by several sets of individuals structured into groups.
-    :class:`~scientisttools.fviz_dmfa_ind` provides plotnine-based elegant visualization of :class:`~scientisttools.DMFA` outputs for individuals.
+    Dual Multiple Factor Analysis (DMFA) is used to analyze a data set in which variables are described by several sets of individuals structured into groups.
+    fviz_dmfa_ind() provides plotnine-based elegant visualization of DMFA outputs for individuals.
 
     Parameters
     ----------
@@ -78,11 +79,11 @@ def fviz_dmfa_ind(obj,
     repel : bool, default = False
         Whether to avoid overplotting individuals text labels or not.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size":1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size":8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     palette : str, list, tuple, default = "Dark2"
         If string, the color palette to be used for coloring or filling by groups. If list or tuple, the colors for labels.
@@ -91,13 +92,13 @@ def fviz_dmfa_ind(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
-        * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
+        * "eulclid": draws a circle with the radius equal to ``level``, representing the euclidean distance from the center.
 
     level : float, default = 0.95
         The size of the concentration ellipse in normal probability.
@@ -111,10 +112,10 @@ def fviz_dmfa_ind(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals.
 
-    point_args_ind_sup : dict, default = dict(size = 1.5)
+    point_args_ind_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     quali_sup : bool, default = True
@@ -123,10 +124,10 @@ def fviz_dmfa_ind(obj,
     col_quali_sup : str, default = "violet"
         Color for supplementary variable categories points and/or texts.
 
-    point_args_quali_sup : dict, default = dict(size = 1.5)
+    point_args_quali_sup : dict, default = {"size":1.5}
         A dictionary containing parameters (except color) for supplementary variable categories points.
 
-    text_args_quali_sup : dict, default = dict(size = 8)
+    text_args_quali_sup : dict, default = {"size":8}
         A dictionary containing parameters (except color) for supplementary variable categories texts.
 
     lim_cos2 : float, default = None
@@ -160,10 +161,10 @@ def fviz_dmfa_ind(obj,
         If True, then add a vertical line.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -171,10 +172,8 @@ def fviz_dmfa_ind(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_dmfa`
-        Visualize Dual Multiple Factor Analysis
-    :class:`~scientisttools.get_dmfa`
-        Extract the results for individuals/variables/group - DMFA
+    fviz_dmfa : Visualize Dual Multiple Factor Analysis
+    get_dmfa : Extract the results for individuals/variables/group - DMFA
 
     Examples
     --------
@@ -182,15 +181,20 @@ def fviz_dmfa_ind(obj,
     >>> from scientisttools import DMFA, fviz_dmfa_ind
     >>> clf = DMFA(group=4)
     >>> clf.fit(iris)
+    DMFA(group=4)
     >>> # graph of individuals
-    >>> p = fviz_dmfa_ind(clf,repel=True)
+    >>> p = fviz_dmfa_ind(clf,repel=True,legend_position = "bottom")
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dmfa_ind.png
+                    
+            Graph of individuals - DMFA
     """
     #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class DMFA
     #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if obj.__class__.__name__ != "DMFA":
-        raise TypeError("'obj' must be an object of class DMFA")
+        raise TypeError("obj must be an object of class DMFA")
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # show active individuals points
@@ -274,16 +278,16 @@ def fviz_dmfa_var(obj,
                   geom = ("arrow","point","text"),
                   repel = False,
                   col_var = "black",
-                  point_args = dict(size=1.5),
-                  segment_args = dict(size=0.5),
-                  text_args = dict(size=8),
+                  point_args = {"size":1.5},
+                  segment_args = {"size":0.5},
+                  text_args = {"size":8},
                   gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                   legend_title = None,
                   palette = "Dark2",
                   quanti_sup = True,
                   col_quanti_sup = "violet",
-                  segment_args_quanti_sup = dict(linetype="dashed",size=0.5),
-                  text_args_quanti_sup = dict(size=8),
+                  segment_args_quanti_sup = {"linetype":"dashed","size":0.5},
+                  text_args_quanti_sup = {"size":8},
                   scale = 1,
                   lim_cos2 = None,
                   lim_contrib = None,
@@ -300,8 +304,8 @@ def fviz_dmfa_var(obj,
     """
     Visualize Dual Multiple Factor Analysis - Graph of variables
 
-    Dual Multiple Factor Analysis (:class:`~scientisttools.DMFA`) is used to analyze a data set in which variables are described by several sets of individuals structured into groups.
-    :class:`~scientisttools.fviz_dmfa_var` provides plotnine-based elegant visualization of :class:`~scientisttools.DMFA` outputs for variables and groups.
+    Dual Multiple Factor Analysis (DMFA) is used to analyze a data set in which variables are described by several sets of individuals structured into groups.
+    fviz_dmfa_var() provides plotnine-based elegant visualization of DMFA outputs for variables and groups.
     
     Parameters
     ----------
@@ -335,16 +339,16 @@ def fviz_dmfa_var(obj,
         In this case, the colors for variablescategories are automatically controlled by their 
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
 
-    segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters  (except color and arrow) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"size":0.5}
+        A dictionary containing parameters  (except color and arrow) for variables segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for variables points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size":1.5}
+        A dictionary containing parameters (except color) for variables points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for variables texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
-    gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
+    gradient_cols : list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
 
     legend_title : str, defaut = None
@@ -357,13 +361,13 @@ def fviz_dmfa_var(obj,
         If True, draws ellipses around the points.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
-        * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
+        * "eulclid": draws a circle with the radius equal to ``level``, representing the euclidean distance from the center.
 
     level : float, default = 0.95
         The size of the concentration ellipse in normal probability.
@@ -377,13 +381,13 @@ def fviz_dmfa_var(obj,
     col_var_sup : str, default = "blue"
         Color for supplementary variables or variables categories points and/or texts.
 
-    segment_args_var_sup : dict, default = dict(linetype="dashed",size = 0.5)
+    segment_args_var_sup : dict, default = {"linetype":"dashed","size" : 0.5}
         A dictionary containing parameters (except color and arrow) for supplementar variables segments.
 
-    point_args_var_sup : dict, default = dict(size = 1.5)
+    point_args_var_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary variables points.
 
-    text_args_var_sup : dict, default = dict(size = 8)
+    text_args_var_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary variables texts.
 
     scale : int, default = 1
@@ -420,10 +424,10 @@ def fviz_dmfa_var(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
     
     Returns
     -------
@@ -431,10 +435,8 @@ def fviz_dmfa_var(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_dmfa`
-        Visualize Dual Multiple Factor Analysis
-    :class:`~scientisttools.get_dmfa`
-        Extract the results for individuals/variables/group - DMFA
+    fviz_dmfa : Visualize Dual Multiple Factor Analysis
+    get_dmfa : Extract the results for individuals/variables/group - DMFA
 
     Examples
     --------
@@ -442,18 +444,36 @@ def fviz_dmfa_var(obj,
     >>> from scientisttools import DMFA, fviz_dmfa_var
     >>> clf = DMFA(group=4)
     >>> clf.fit(iris)
+    DMFA(group=4)
     >>> # graph of variables
     >>> p = fviz_dmfa_var(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dmfa_var.png
+                        
+            Graph of variables (=correlation circle) - DMFA
+            
+    >>> # graph of variables
+    >>> p = fviz_dmfa_var(clf,col_var="group",repel=True)
+    >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dmfa_var_group.png
+                        
+            Graph of variables (=correlation circle) - DMFA
+    
     >>> # graph of groups
     >>> p = fviz_dmfa_var(clf,choice="group",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dmfa_group.png
+                            
+            Graph of groups - DMFA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if obj is an object of class DMFA
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if obj.__class__.__name__ != "DMFA":
-        raise TypeError("'obj' must be an object of class DMFA")
+        raise TypeError("obj must be an object of class DMFA")
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid axis
@@ -487,14 +507,13 @@ def fviz_dmfa_var(obj,
             # insert habillage
             coord["habillage"] = "var"
             # add partial coordinates
-            index = list(obj.var_partiel_._fields)
-            for i,k in enumerate(index):
-                data = obj.var_partiel_[i].mul(scale)
-                # insert habillage
-                data["habillage"] = k 
-                # concatenate
-                coord = concat((coord,data),axis=0)
+            index = obj.call_.name_group
+            coord_partiel = obj.quanti_var_.coord_partiel
+            # set index
+            coord_partiel.index = coord.index.tolist()*len(index)
+            coord_partiel["habillage"] = repeat(index,obj.quanti_var_.coord.shape[0])
             # convert to categorical
+            coord = concat((coord,coord_partiel),axis=0)
             coord["habillage"] = Categorical(coord["habillage"],categories=index+["var"])
 
             # set colors
@@ -619,8 +638,8 @@ def fviz_dmfa(obj,
     """
     Visualize Dual Multiple Factor Analysis
     
-    Dual Multiple Factor Analysis (:class:`~scientisttools.DMFA`) is used to analyze a data set in which variables are described by several sets of individuals structured into groups.
-    :class:`~scientisttools.fviz_dmfa` provides plotnine-based elegant visualization of :class:`~scientisttools.DMFA` outputs.
+    Dual Multiple Factor Analysis (DMFA) is used to analyze a data set in which variables are described by several sets of individuals structured into groups.
+    fviz_dmfa() provides plotnine-based elegant visualization of DMFA outputs.
 
     Parameters
     ----------
@@ -637,8 +656,8 @@ def fviz_dmfa(obj,
     **kwargs: Any
         Parameters use by one of this function. See:
         
-        * :class:`scientisttools.fviz_dmfa_ind`: Graph of individuals
-        * :class:`scientisttools.fviz_dmfa_var`: Graph of variables
+        * :class:`~scientisttools.fviz_dmfa_ind`: Graph of individuals
+        * :class:`~scientisttools.fviz_dmfa_var`: Graph of variables
 
     Returns
     -------
@@ -646,12 +665,7 @@ def fviz_dmfa(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_dmfa_ind`
-        Visualize Dual Multiple Factor Analysis - Graph of individuals
-    :class:`~scientisttools.fviz_dmfa_var`
-        Visualize Dual Multiple Factor Analysis - Graph of variables
-    :class:`~scientisttools.get_dmfa`
-        Extract the results for individuals/variables/group - DMFA
+    get_dmfa : Extract the results for individuals/variables/group - DMFA
 
     Examples
     --------
@@ -659,19 +673,34 @@ def fviz_dmfa(obj,
     >>> from scientisttools import DMFA, fviz_dmfa
     >>> clf = DMFA(group=4)
     >>> clf.fit(iris)
+    DMFA(group=4)
     >>> # graph of individuals
     >>> p = fviz_dmfa(clf,choice="ind",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dmfa_ind.png
+                        
+            Graph of individuals - DMFA
+    
     >>> # graph of variables
     >>> p = fviz_dmfa(clf,choice="var",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dmfa_var.png
+                        
+            Graph of variables - DMFA
+    
     >>> # graph of groups
     >>> p = fviz_dmfa(clf,choice="group",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_dmfa_group.png
+                        
+            Graph of groups - DMFA
     """
     if choice == "ind":
         return fviz_dmfa_ind(obj,**kwargs)
     elif choice in ("var","group"):
         return fviz_dmfa_var(obj,choice=choice,**kwargs)
     else:
-        raise ValueError("'element' should be one of 'ind', 'var', 'group'")
+        raise ValueError("element should be one of 'ind', 'var', 'group'")

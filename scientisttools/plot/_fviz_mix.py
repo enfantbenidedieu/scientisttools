@@ -15,8 +15,8 @@ def fviz_mix_ind(obj,
                  geom = ("point","text"),
                  repel = False,
                  col_ind ="black",
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB","#E7B800","#FC4E07"),
                  legend_title = None,
                  habillage = None,
@@ -27,8 +27,8 @@ def fviz_mix_ind(obj,
                  alpha = 0.1,
                  ind_sup = True,
                  col_ind_sup = "blue",
-                 point_args_ind_sup = dict(size = 1.5),
-                 text_args_ind_sup = dict(size=8),
+                 point_args_ind_sup = {"size" : 1.5},
+                 text_args_ind_sup = {"size":8},
                  lim_cos2 = None,
                  lim_contrib = None, 
                  x_lim = None,
@@ -43,8 +43,8 @@ def fviz_mix_ind(obj,
     """
     Visualize Mixed Data - Graph of individuals
     
-    Factor Analysis of Mixed Data (:class:`~scientisttools.FAMD`), Principal Component Analysis of Mixed Data (:class:`~scientisttools.PCAmix`) and Mixed Principal Component Analysis (:class:`~scientisttools.MPCA`) are, a particular case of :class:`~scientisttools.PCA`, used to analyze a data set containing both continuous and categorical variables.
-    :class:`~scientisttools.fviz_mix_ind` provides plotnine-based elegant visualization of :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix` and :class:`~scientisttools.MPCA` outputs for individuals.
+    Factor Analysis of Mixed Data (FAMD), Principal Component Analysis of Mixed Data (PCAmix) and Mixed Principal Component Analysis (MPCA) are, a particular case of :class:`~scientisttools.PCA`, used to analyze a data set containing both continuous and categorical variables.
+    fviz_mix_ind() provides plotnine-based elegant visualization of FAMD, PCAmix and MPCA outputs for individuals.
 
     Parameters
     ----------
@@ -71,11 +71,11 @@ def fviz_mix_ind(obj,
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
         To use automatic coloring (by cos2, contrib, ....), make sure that habillage = None.
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for individuals points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for individuals texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
@@ -93,7 +93,7 @@ def fviz_mix_ind(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
         * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
         * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
@@ -113,10 +113,10 @@ def fviz_mix_ind(obj,
     col_ind_sup : str, default = "blue"
         Color for supplementary individuals.
 
-    point_args_ind_sup : dict, default = dict(size = 1.5)
+    point_args_ind_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary individuals points.
 
-    text_args_ind_sup : dict, default = dict(size = 8)
+    text_args_ind_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary individuals texts.
 
     lim_cos2 : float, default = None
@@ -144,10 +144,10 @@ def fviz_mix_ind(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -155,20 +155,23 @@ def fviz_mix_ind(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mix`
-        Visualize Mixed Data
-    :class:`~scientisttools.get_mix`
-        Extract the results for individuals and variables - FAMD/PCAmix/MPCA
+    fviz_mix : Visualize Mixed Data
+    get_mix : Extract the results for individuals and variables - FAMD/PCAmix/MPCA
 
     Examples
     --------
     >>> from scientisttools.datasets import autos2005
     >>> from scientisttools import FAMD, fviz_mix_ind
-    >>> clf = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
-    >>> clf.fit(autos2005)
+    >>> clf = FAMD(ind_sup=range(38,45),sup_var=range(12,16))
+    >>> clf.fit(autos2005.data)
+    FAMD(ind_sup=range(38,45),sup_var=range(12,16))
     >>> # graph of individuals
     >>> p = fviz_mix_ind(clf)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mix_ind.png
+                                            
+            Graph of individuals - MFA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid object class
@@ -245,9 +248,9 @@ def fviz_mix_var(obj,
                  geom = ("arrow","point","text"),
                  repel = False,
                  col_var ="black",
-                 segment_args = dict(size=0.5,alpha=1),
-                 point_args = dict(size=1.5),
-                 text_args = dict(size=8),
+                 segment_args = {"size":0.5,"alpha":1},
+                 point_args = {"size":1.5},
+                 text_args = {"size":8},
                  gradient_cols = ("#00AFBB", "#E7B800", "#FC4E07"),
                  legend_title = None,
                  palette = "Dark2",
@@ -257,13 +260,13 @@ def fviz_mix_var(obj,
                  alpha = 0.1,
                  quanti_sup = True,
                  col_quanti_sup = "red",
-                 segment_args_quanti_sup = dict(linetype="dashed",size=0.5,alpha=1),
-                 point_args_quanti_sup = dict(size=1.5),
-                 text_args_quanti_sup = dict(size=8),
+                 segment_args_quanti_sup = {"linetype":"dashed","size":0.5,"alpha":1},
+                 point_args_quanti_sup = {"size":1.5},
+                 text_args_quanti_sup = {"size":8},
                  quali_sup = True,
                  col_quali_sup = "blue",
-                 point_args_quali_sup = dict( size=1.5),
-                 text_args_quali_sup = dict(size=8),
+                 point_args_quali_sup = {"size":1.5},
+                 text_args_quali_sup = {"size":8},
                  lim_cos2 = None,
                  lim_contrib = None,
                  scale = 1,
@@ -280,8 +283,8 @@ def fviz_mix_var(obj,
     """
     Visualize Mixed Data - Graph of variables
     
-    Factor Analysis of Mixed Data (:class:`~scientisttools.FAMD`), Principal Component Analysis of Mixed Data (:class:`~scientisttools.PCAmix`) and Mixed Principal Component Analysis (:class:`~scientisttools.MPCA`) are, a particular case of :class:`~scientisttools.PCA`, used to analyze a data set containing both continuous and categorical variables.
-    :class:`~scientisttools.fviz_mix_var` provides plotnine-based elegant visualization of :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix` and :class:`~scientisttools.MPCA` outputs for variables.
+    Factor Analysis of Mixed Data (FAMD), Principal Component Analysis of Mixed Data (PCAmix) and Mixed Principal Component Analysis (MPCA) are, a particular case of :class:`~scientisttools.PCA`, used to analyze a data set containing both continuous and categorical variables.
+    fviz_mix_var() provides plotnine-based elegant visualization of FAMD, PCAmix and MPCA outputs for variables.
 
     Parameters
     ----------
@@ -316,14 +319,14 @@ def fviz_mix_var(obj,
         In this case, the colors for variablescategories are automatically controlled by their 
         qualities of representation ("cos2"), contributions ("contrib"), coordinates (x**2+y**2, "coord"), x values ("x") or y values ("y"). 
 
-    segment_args : dict, default = dict(size = 0.5)
-        A dictionary containing parameters  (except color and arrow) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`).
+    segment_args : dict, default = {"size" : 0.5}
+        A dictionary containing parameters  (except color and arrow) for segments (see `plotnine.geom_segment <https://plotnine.org/reference/geom_segment.html>`_).
 
-    point_args : dict, default = dict(size = 1.5)
-        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`).
+    point_args : dict, default = {"size" : 1.5}
+        A dictionary containing parameters (except color) for points (see `plotnine.geom_point <https://plotnine.org/reference/geom_point.html>`_).
 
-    text_args : dict, default = dict(size = 8)
-        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`).
+    text_args : dict, default = {"size" : 8}
+        A dictionary containing parameters (except color) for texts (see `plotnine.geom_text <https://plotnine.org/reference/geom_text.html>`_).
 
     gradient_cols:  list, tuple, default = ("#00AFBB", "#E7B800", "#FC4E07")
         Three colors for low, mid and high values.
@@ -338,10 +341,10 @@ def fviz_mix_var(obj,
         If True, draws ellipses around the points when habillage is not None.
 
     ellipse_type : str, default = "confidence"
-        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>` including one of "t", "norm" or "euclid" for plotting concentration ellipses.
+        String specifying frame type. Possible values are : "convex", "confidence" or types supported by `plotnine.stat_ellipse <https://plotnine.org/reference/stat_ellipse.html>`_ including one of "t", "norm" or "euclid" for plotting concentration ellipses.
 
-        * "convex": plot convex hull of a set of points as :class:`~scientisttools.convex_ellipse`.
-        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.confidence_ellipse`.
+        * "convex": plot convex hull of a set of points as :class:`~scientisttools.data_ellipse`.
+        * "confidence": plot confidence ellipses around group mean points as :class:`~scientisttools.data_ellipse`.
         * "t": assumes a multivariate t-distribution.
         * "norm": assumes a multivariate normal distribution.
         * "eulclid": draws a circle with the radius equal to `level`, representing the euclidean distance from the center.
@@ -358,13 +361,13 @@ def fviz_mix_var(obj,
     col_quanti_sup : str, default = "red"
         Color for supplementary continuous variables points, arrows and/or texts.
 
-    segment_args_quanti_sup : dict, default = dict(linetype="dashed",size = 0.5)
+    segment_args_quanti_sup : dict, default = {"linetype":"dashed","size" : 0.5}
         A dictionary containing parameters (except color and arrow) for supplementary continuous variables segments.
 
-    point_args_quanti_sup : dict, default = dict(size = 1.5)
+    point_args_quanti_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary continuous variables points.
 
-    text_args_quanti_sup : dict, default = dict(size = 8)
+    text_args_quanti_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary continuous variables texts.
 
     quali_sup : bool, default = True
@@ -373,10 +376,10 @@ def fviz_mix_var(obj,
     col_quali_sup : str, default = "blue"
         Color for supplementary categorical variables or variables categories points and/or texts.
 
-    point_args_quali_sup : dict, default = dict(size = 1.5)
+    point_args_quali_sup : dict, default = {"size" : 1.5}
         A dictionary containing parameters (except color) for supplementary categorical variables or variables categories points.
 
-    text_args_quali_sup : dict, default = dict(size = 8)
+    text_args_quali_sup : dict, default = {"size" : 8}
         A dictionary containing parameters (except color) for supplementary categorical variables or variables categories texts.
 
     lim_cos2 : float, default = None
@@ -404,10 +407,10 @@ def fviz_mix_var(obj,
         The subtitle of the graph you draw.
 
     pntheme : function, default = theme_minimal() 
-        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`).
+        Plotnine theme name. Allowed values include plotnine official themes (see `themes <https://plotnine.org/guide/themes-premade.html>`_).
 
     **kwargs : Any
-        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`.
+        Parameters use by `plotnine.theme <https://plotnine.org/reference/theme.html#plotnine.theme>`_.
 
     Returns
     -------
@@ -415,26 +418,39 @@ def fviz_mix_var(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mix`
-        Visualize Mixed Data
-    :class:`~scientisttools.get_mix`
-        Extract the results for individuals and variables - FAMD/PCAmix/MPCA
+    fviz_mix : Visualize Mixed Data
+    get_mix : Extract the results for individuals and variables - FAMD/PCAmix/MPCA
 
     Examples
     --------
     >>> from scientisttools.datasets import autos2005
     >>> from scientisttools import FAMD, fviz_mix_var
-    >>> clf = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
-    >>> clf.fit(autos2005)
+    >>> clf = FAMD(ind_sup=range(38,45),sup_var=range(12,16))
+    >>> clf.fit(autos2005.data)
+    FAMD(ind_sup=range(38,45),sup_var=range(12,16))
     >>> # graph of continuous variables
     >>> p = fviz_mix_var(clf, choice = "quanti_var")
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mix_quanti_var.png
+                                            
+            Graph of continuous variables - MFA
+    
     >>> # graph of variable categories
     >>> p = fviz_mix_var(clf, choice = "levels")
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mix_levels.png
+                                            
+            Graph of variable categories - MFA
+    
     >>> # graph of variables
     >>> p = fviz_mix_var(clf, choice = "var")
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mix_var.png
+                                            
+            Graph of variables - MFA
     """
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid object class
@@ -591,8 +607,8 @@ def fviz_mix(obj,
     """
     Visualize Mixed Data
 
-    Factor Analysis of Mixed Data (:class:`~scientisttools.FAMD`), Principal Component Analysis of Mixed Data (:class:`~scientisttools.PCAmix`) and Mixed Principal Component Analysis (:class:`~scientisttools.MPCA`) are, a particular case of :class:`~scientisttools.PCA`, used to analyze a data set containing both continuous and categorical variables.
-    :class:`~scientisttools.fviz_mix` provides plotnine-based elegant visualization of :class:`~scientisttools.FAMD`, :class:`~scientisttools.PCAmix` and :class:`~scientisttools.MPCA` outputs.
+    Factor Analysis of Mixed Data (FAMD), Principal Component Analysis of Mixed Data (PCAmix) and Mixed Principal Component Analysis (MPCA) are, a particular case of :class:`~scientisttools.PCA`, used to analyze a data set containing both continuous and categorical variables.
+    fviz_mix() provides plotnine-based elegant visualization of FAMD, PCAmix and MPCA outputs.
 
     Parameters
     ----------
@@ -610,8 +626,8 @@ def fviz_mix(obj,
     **kwargs: Any
         Parameters use by one of this function. See:
         
-        * :class:`scientisttools.fviz_mix_ind`: Graph of individuals
-        * :class:`scientisttools.fviz_mix_var`: Graph of variables
+        * :class:`~scientisttools.fviz_mix_ind`: Graph of individuals
+        * :class:`~scientisttools.fviz_mix_var`: Graph of variables
         
     Returns
     -------
@@ -619,35 +635,50 @@ def fviz_mix(obj,
 
     See also
     --------
-    :class:`~scientisttools.fviz_mix_ind`
-        Visualize Mixed Data - Graph of individuals
-    :class:`~scientisttools.fviz_mix_var`
-        Visualize Mixed Data - Graph of variables
-    :class:`~scientisttools.get_mix`
-        Extract the results for individuals and variables - FAMD/PCAmix/MPCA
+    get_mix : Extract the results for individuals and variables - FAMD/PCAmix/MPCA
 
     Examples
     --------
     >>> from scientisttools.datasets import autos2005
     >>> from scientisttools import FAMD, fviz_mix
-    >>> clf = FAMD(ind_sup=(38,39,40,41,42,43,44),sup_var=(12,13,14,15))
-    >>> clf.fit(autos2005)
+    >>> clf = FAMD(ind_sup=range(38,45),sup_var=range(12,16))
+    >>> clf.fit(autos2005.data)
+    FAMD(ind_sup=range(38,45),sup_var=range(12,16))
     >>> # graph of individuals
     >>> p = fviz_mix(clf,repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mix_ind.png
+                                            
+            Graph of individuals - MFA
+    
     >>> # graph of variable categories
     >>> p = fviz_mix(clf,choice="levels",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mix_levels.png
+                                            
+            Graph of variable categories - MFA
+    
     >>> # graph of continuous variables (=correlation circle)
     >>> p = fviz_mix(clf,choice="quanti_var",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mix_quanti_var.png
+                                            
+            Graph of continuous variables - MFA
+    
     >>> # graph of variables
     >>> p = fviz_mix(clf,choice="var",repel=True)
     >>> print(p.show())
+    
+    .. figure:: ../_static/fviz_mix_var.png
+                                        
+            Graph of variables - MFA
     """
     if choice == "ind":
         return fviz_mix_ind(obj,**kwargs)
     elif choice in ("levels","quanti_var","var"):
         return fviz_mix_var(obj,choice=choice,**kwargs)
     else:
-        raise ValueError("choice should be one of 'ind', 'levels', 'quanti_var', 'var'.")
+        raise ValueError(f"{choice} is not supported.")
