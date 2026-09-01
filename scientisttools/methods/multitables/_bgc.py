@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, array, ndarray, linalg, diff, insert, cumsum, c_,nan, diag, sum,sqrt
+from numpy import ones, array, repeat, ndarray, linalg, diff, insert, cumsum, c_,nan, diag, sum,sqrt
 from pandas import DataFrame, Series, concat, CategoricalDtype
-from itertools import chain, repeat
 from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -10,10 +9,10 @@ from sklearn.utils.validation import check_is_fitted
 from ..functions.preprocessing import preprocessing
 from ..functions.get_sup_label import get_sup_label
 from ..functions.statistics import wmean, wstd
+from ..functions.spca import sPCA
+from ..functions.rvstats import RVstats
 from ..functions.utils import check_is_bool, is_all_numeric_dtype, is_all_object_or_category_dtype, check_is_dataframe
 from ..others._disjunctive import disjunctive
-from ..others._spca import sPCA
-from ..others._rvstats import RVstats
 
 class BGC(BaseEstimator,TransformerMixin):
     """
@@ -30,7 +29,8 @@ class BGC(BaseEstimator,TransformerMixin):
         The number of dimensions kept in the results.
 
     sncp : int, default = None
-        The number of dimensions kept in separate principal component analysis (sPCA). If None, then sncp is equal to :math:`min(K-1,p)` where p is the number of columns and K the number of groups.
+        The number of dimensions kept in separate principal component analysis (sPCA). If None, then sncp is equal 
+        to :math:`min(K-1,p)` where p is the number of columns and K the number of groups.
 
     group : int, str
         The indexe or name of the categorical variable which allows to make the group of individuals.
@@ -45,12 +45,13 @@ class BGC(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary individuals.
 
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
 
-    Returns
-    -------
+    Attributes
+    ----------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters, with the following attributes:
 
         Xtot : DataFrame of shape (n_samples + n_samples_sup, n_columns)
             Input data.
@@ -95,9 +96,23 @@ class BGC(BaseEstimator,TransformerMixin):
         ind_sup : None, list, default = None
             The names of the supplementary individuals.
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
+    evd_ : evdResult
+        An object containing all the results for the eigen value decomposition (EVD), with the following attributes:
+
+        V : 2d numpy array of shape (n_columns, rank)
+            The eigen vectors.
+        d : 1d numpy array of shape (rank,)
+            The eigen values.
+        vs : 1d numpy array of shape (rank,)
+            The singular values, 
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
+    
     group_ : group
         An object containing all the results for the groups, with the following attributes:
 
@@ -105,7 +120,7 @@ class BGC(BaseEstimator,TransformerMixin):
             The trace RV between groups.
         RV : DataFrame of shape (n_groups, n_groups)
             The RV coefficient between groups.
-        eig : DataFrame of shape (maxcp_rv, 4)
+        eig : DataFrame of shape (rank_rv, 4)
             The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
         coord : DataFrame of shape (n_groups, n_groups)
             The coordinates of the groups.
@@ -137,34 +152,19 @@ class BGC(BaseEstimator,TransformerMixin):
     separate_analyses_ : dict
         The results for the separates Principal Component Analysis (sPCA).
 
-    evd_ : evdResult
-        An object containing all the results for the eigen value decomposition (EVD), with the following attributes:
-        
-        d : 1d numpy array of shape (maxcp,)
-            The eigen values.
-        V : 2d numpy array of shape (n_columns, ncp)
-            The eigen vectors.
-        rank : int
-            The maximum number of components.
-        ncp : int
-            The number of components kepted.
-
     References
     ----------
-    [1] W. J. Krzanowski (1979). Between-groups comparison of principal components, \emph{Journal of the American Statistical Association}, 74, 703-707. `https://doi.org/10.2307/2286995 <https://doi.org/10.2307/2286995>`_.
+    [1] W. J. Krzanowski (1979). Between-groups comparison of principal components, *Journal of the American Statistical Association*, 74, 703-707. `https://doi.org/10.2307/2286995 <https://doi.org/10.2307/2286995>`_.
     
-    [2] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `General overview of methods of analysis of multi-group datasets <https://editions-rnti.fr/render_pdf.php?p=1001883>`_, \emph{Revue des Nouvelles Technologies de l'Information}, 25, 108-123.
+    [2] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `General overview of methods of analysis of multi-group datasets <https://editions-rnti.fr/render_pdf.php?p=1001883>`_, *Revue des Nouvelles Technologies de l'Information*, 25, 108-123.
     
-    [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `Analyses factorielles de donnees structurees en groupes d'individus <https://www.numdam.org/item/JSFS_2013__154_3_44_0.pdf>`_,\emph{Journal de la Societe Francaise de Statistique}, 154(3), 44-57.
+    [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `Analyses factorielles de donnees structurees en groupes d'individus <https://www.numdam.org/item/JSFS_2013__154_3_44_0.pdf>`_, *Journal de la Societe Francaise de Statistique*, 154(3), 44-57.
     
     See also
     --------
-    :class:`~scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`~scientisttools.sprintf`
-        Print the analysis results.
-    :class:`~scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet.
+    sprintf : Print the analysis results.
+    summary : Printing summaries of general factor analysis model.
 
     Examples
     --------
@@ -180,7 +180,15 @@ class BGC(BaseEstimator,TransformerMixin):
     BGC(group=0,ind_sup=range(400,435),ncp=2,scale_unit=False)
     """
     def __init__(
-            self, scale_unit = True, ncp = 2, sncp = None,  group = None, row_w = None, col_w = None, ind_sup = None, tol = 1e-7
+            self, 
+            scale_unit = True, 
+            ncp = 2, 
+            sncp = None,  
+            group = None, 
+            row_w = None, 
+            col_w = None, 
+            ind_sup = None, 
+            tol = 1e-7
     ):  
         self.scale_unit = scale_unit
         self.ncp = ncp
@@ -192,16 +200,16 @@ class BGC(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to X
+        """Fit the model to X.
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` in the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -255,10 +263,10 @@ class BGC(BaseEstimator,TransformerMixin):
         if not (is_all_numeric_dtype(x) or is_all_object_or_category_dtype(x)):
             raise TypeError("Not applied to mixed data") 
 
-        #unique element in y
-        uq_classe = sorted(y.unique().tolist())
+        # unique element in y
+        name_group = sorted(y.unique())
         #convert y to categorical data type
-        y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
+        y = y.astype(CategoricalDtype(categories=name_group,ordered=True))
 
         #number of rows and number of columns
         n_rows, n_vars = x.shape
@@ -287,7 +295,7 @@ class BGC(BaseEstimator,TransformerMixin):
             var_w = Series(array(self.col_w),index=x.columns,name="weight")
 
         #group index
-        group_dict = {k : y[y==k].index.tolist() for k in uq_classe}
+        group_dict = {k : y[y==k].index for k in name_group}
      
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
@@ -295,29 +303,32 @@ class BGC(BaseEstimator,TransformerMixin):
         #set variables xcod - reorder 
         Xcod, col_w, dummies, M = x.copy(), var_w.copy(), None, None
         if is_all_object_or_category_dtype(x):
+            # disjunctive table
             dummies = disjunctive(x)
-            M = concat(((1 - ((dummies.loc[rows,:].T * row_w[rows]/sum(row_w[rows])).sum(axis=1))).to_frame(g) for g, rows in group_dict.items()),axis=1).T    
-            Xcod = dummies*M.loc[y.values,:].values
-            # extended variables weights
-            mvar_w = list(chain(*[repeat(i,k) for i, k in zip(var_w,[x[j].nunique() for j in x.columns])]))
+            # transformation of the indicator variables
+            M = concat(((1 - ((dummies.loc[r,:].T * row_w[r]/sum(row_w[r])).sum(axis=1))).to_frame(g) for g, r in group_dict.items()),axis=1).T
+            # recode data
+            Xcod = dummies*M.loc[y.to_numpy(),:].to_numpy()
             # columns weights for variable categories
-            col_w = Series([x*y for x,y in zip(ones(dummies.shape[1]),mvar_w)],index=dummies.columns,name="weight")
-
+            col_w = Series(repeat(var_w.to_numpy(),x.nunique().to_numpy()),index=dummies.columns,name="weight")
+            
         # number of columns
         n_cols = Xcod.shape[1]
-
-        # set number of components
-        if self.sncp is None: 
-            sncp = min(len(uq_classe) - 1, n_cols)
-        elif self.sncp < 1: 
-            raise ValueError("'sncp' must be strictly positive")
-        else: 
-            sncp = int(min(sncp,len(uq_classe) - 1, n_cols))
         
+        # set number of components in separate principal component analysis
+        if self.sncp is None:
+            sncp = int(min(n_cols,len(name_group)-1))
+        elif not isinstance(self.sncp,int):
+            raise TypeError("sncp must be an integer")
+        elif self.sncp < 1: 
+            raise ValueError("sncp must be strictly positive")
+        else: 
+            sncp = self.sncp
+
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # separate general factor analysis
+        # separate principal component analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # separate general factor analysis
+        # separate principal component analysis
         model = sPCA(X=Xcod,y=y,scale_unit=self.scale_unit,ncp=sncp,row_w=row_w,col_w=col_w,tol=self.tol)
             
         # store separate analysis
@@ -343,7 +354,7 @@ class BGC(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # compromise matrix
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        W = DataFrame(sum([model[g].svd_.V[:,:model[g].svd_.ncp].dot(model[g].svd_.V[:,:model[g].svd_.ncp].T) for g in uq_classe],axis=0),
+        W = DataFrame(sum([model[g].svd_.V[:,:model[g].svd_.ncp].dot(model[g].svd_.V[:,:model[g].svd_.ncp].T) for g in name_group],axis=0),
                       index=Xcod.columns,columns=Xcod.columns)
     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -357,20 +368,22 @@ class BGC(BaseEstimator,TransformerMixin):
         #set number of components
         if self.ncp is None:
             ncp = rank
+        elif not isinstance(self.ncp,int):
+            raise TypeError("ncp must be an integer")
         elif self.ncp < 1: 
-            raise ValueError("'ncp' must be equal or greater than 1.")
+            raise ValueError("ncp must be strictly positive")
         else: 
             ncp = int(min(self.ncp,rank))
 
         #Store call informations
         call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"Zcod":Zcod,"Z":Z,"W":W,
                  "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"ncp":ncp,"sncp": sncp,
-                 "row_w":row_w,"var_w":var_w,"col_w":col_w,"group":group_label,"ind_sup":ind_sup_label}
+                 "row_w":row_w,"var_w":var_w,"col_w":col_w,"group":group_label,"name_group":name_group,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
         #convert to ordered dictionary
-        evd_ = {"V":evd[0][:,:rank], "d":evd[1][:rank], "vs":sqrt(evd[1][:rank]), "ncp":ncp, "rank":rank}
+        evd_ = {"V":evd[0][:,:rank], "d":evd[1][:rank], "vs":sqrt(evd[1][:rank]), "rank":rank, "ncp":ncp}
         #convert to namedtuple
         self.evd_ = namedtuple("evdResult",evd_.keys())(*evd_.values())
     
@@ -396,11 +409,11 @@ class BGC(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         group_ = RVstats(model=model,tol=self.tol)
         # lambda - specific variances of group
-        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in uq_classe),axis=1).T
-        # add to group
-        group_["lambd"] = lambd
+        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in name_group),axis=1).T
         # explained variance
-        group_["expl_var"] = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in uq_classe),axis=1).T
+        expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in name_group),axis=1).T
+        # add to dictionary
+        group_ = {**group_, **{"lambd":lambd,"expl_var":expl_var}}
         #store all group informations
         self.group_ = namedtuple("group",group_.keys())(*group_.values())
 
@@ -424,10 +437,10 @@ class BGC(BaseEstimator,TransformerMixin):
 
             Xcod_ind_sup = X_ind_sup
             if is_all_object_or_category_dtype(X_ind_sup):
-                Xcod_ind_sup = disjunctive(X_ind_sup,cols=dummies.columns) * M.loc[y_ind_sup.values,:].values
+                Xcod_ind_sup = disjunctive(X_ind_sup,cols=dummies.columns) * M.loc[y_ind_sup.to_numpy(),:].to_numpy()
             
             #standardization
-            Z_ind_sup = (((Xcod_ind_sup - center.loc[y_ind_sup.values,:].values)/scale.loc[y_ind_sup.values,:].values) - z_center)/z_scale
+            Z_ind_sup = (((Xcod_ind_sup - center.loc[y_ind_sup.to_numpy(),:].to_numpy())/scale.loc[y_ind_sup.to_numpy(),:].to_numpy()) - z_center)/z_scale
             #coordinates for supplementary individuals
             ind_sup_coord = (Z_ind_sup * col_w).dot(self.evd_.V[:,:ncp])
             ind_sup_coord.columns = self.eig_.index[:ncp]
@@ -439,16 +452,16 @@ class BGC(BaseEstimator,TransformerMixin):
         return self
         
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X
+        """Fit the model with X and apply the dimensionality reduction on X.
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
@@ -459,20 +472,22 @@ class BGC(BaseEstimator,TransformerMixin):
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to X.
+        """Apply dimensionality reduction to X.
 
-        X is projected on the first principal components previously extracted from a training set.
+        X is projected on the first principal components previously extracted 
+        from a training set.
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            New data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            New data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
         X_new : DataFrame of shape (n_samples, ncp)
-            Projection of X in the first principal components, where ``n_samples`` is the number of samples and ``ncp`` is the number of the components.
+            Projection of X in the first principal components, where ``n_samples`` 
+            is the number of samples and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes
@@ -500,10 +515,10 @@ class BGC(BaseEstimator,TransformerMixin):
 
         Xcod = X.copy()
         if is_all_object_or_category_dtype(X):
-            Xcod = disjunctive(X,cols=self.call_.dummies.columns) * self.call_.M.loc[y.values,:].values
+            Xcod = disjunctive(X,cols=self.call_.dummies.columns) * self.call_.M.loc[y.to_numpy(),:].to_numpy()
         
         #standardization
-        Z = (((Xcod - self.call_.center.loc[y.values,:].values)/self.call_.scale.loc[y.values,:].values) - self.call_.z_center)/self.call_.z_scale
+        Z = (((Xcod - self.call_.center.loc[y.to_numpy(),:].to_numpy())/self.call_.scale.loc[y.to_numpy(),:].to_numpy()) - self.call_.z_center)/self.call_.z_scale
         # coordinates for news individuals
         coord = (Z * self.call_.col_w).dot(self.evd_.V[:,:self.evd_.ncp])
         coord.columns = self.eig_.index[:self.evd_.ncp]

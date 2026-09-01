@@ -2,12 +2,13 @@
 from numpy import ndarray,zeros, nan, inf
 from pandas import Series, DataFrame, concat
 from itertools import chain, repeat
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 
 #intern functions
 from ..functions.gfa import gFA
 from ..functions.preprocessing import preprocessing
+from ..functions.concat_empty import concat_empty
 from ..functions.func_predict import func_predict
 
 class ICA(BaseEstimator,TransformerMixin):
@@ -25,7 +26,7 @@ class ICA(BaseEstimator,TransformerMixin):
         The number of rows in each rows groups.
 
     name_row_group : list, tuple, default = None
-        The name of the rows groups. If ``None``, the group are named RowGr1, RowGr2 and so on.
+        The name of the rows groups. If None, the group are named RowGr1, RowGr2 and so on.
 
     col_group : list, tuple
         The number of columns in each columns groups.
@@ -39,10 +40,10 @@ class ICA(BaseEstimator,TransformerMixin):
     num_col_group_sup : list, tuple, default = None
         The indexes of the illustrative columns groups.
 
-    Parameters
+    Attributes
     ----------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters, with the following attributes:
 
         Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
             Input data.
@@ -184,12 +185,9 @@ class ICA(BaseEstimator,TransformerMixin):
     
     See Also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet.
+    sprintf : Print the analysis results.
+    summary : Printing summaries of general factor analysis model.
 
     Examples
     --------
@@ -210,14 +208,14 @@ class ICA(BaseEstimator,TransformerMixin):
         self.num_col_group_sup = num_col_group_sup
 
     def fit(self,X,y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns),
-            Training data, where ``n_rows`` in the number of rows and ``n_columns`` is the number of columns.
-            ``X`` is a contingency table containing absolute frequencies.
+            Training data, where ``n_rows`` in the number of rows 
+            and ``n_columns`` is the number of columns.
+            X is a contingency table containing absolute frequencies.
 
         y : None
             y is ignored.
@@ -305,23 +303,23 @@ class ICA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #assigned rows and columns to groups
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        row_group_dict, k = OrderedDict(), 0
+        row_group_dict, k = {}, 0
         for i, g in zip(range(len(row_group)),name_row_group):
-            row_group_dict[g] = list(X.index[k:(k+row_group[i])])
+            row_group_dict[g] = X.index[k:(k+row_group[i])].tolist()
             k += row_group[i]
 
-        col_group_dict, k = OrderedDict(), 0
+        col_group_dict, k = {}, 0
         for i, g in zip(range(len(col_group)),name_col_group):
-            col_group_dict[g] = list(X.columns[k:(k+col_group[i])])
+            col_group_dict[g] = X.columns[k:(k+col_group[i])].tolist()
             k += col_group[i]
         
         if self.num_row_group_sup is not None:
-            row_group_sup_dict = OrderedDict({g : row_group_dict[g] for i, g in enumerate(name_row_group) if i in num_row_group_sup})
-            row_group_dict = OrderedDict({g : row_group_dict[g] for i, g in enumerate(name_row_group) if not i in num_row_group_sup})
+            row_group_sup_dict = {g : row_group_dict[g] for i, g in enumerate(name_row_group) if i in num_row_group_sup}
+            row_group_dict = {g : row_group_dict[g] for i, g in enumerate(name_row_group) if not i in num_row_group_sup}
         
         if self.num_col_group_sup is not None:
-            col_group_sup_dict = OrderedDict({g : col_group_dict[g] for i, g in enumerate(name_col_group) if i in num_col_group_sup})
-            col_group_dict = OrderedDict({g : col_group_dict[g] for i, g in enumerate(name_col_group) if not i in num_col_group_sup})
+            col_group_sup_dict = {g : col_group_dict[g] for i, g in enumerate(name_col_group) if i in num_col_group_sup}
+            col_group_dict = {g : col_group_dict[g] for i, g in enumerate(name_col_group) if not i in num_col_group_sup}
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #extract supplementary labels
@@ -356,7 +354,7 @@ class ICA(BaseEstimator,TransformerMixin):
         #rows sums, columns sums and sum of all elements
         row_s, col_s, total = X.sum(axis=1), X.sum(axis=0), int(X.sum().sum())
         # #rows and columns margins and frequencies
-        row_m, col_m, P = row_s.div(total), col_s.div(total), X.div(total)
+        row_m, col_m, P = row_s/total, col_s/total, X/total
         #rows and columns weights
         row_w, col_w = row_m, col_m
         #set names
@@ -373,22 +371,20 @@ class ICA(BaseEstimator,TransformerMixin):
         #columns sums of frequencies by group - sum of frequencies for all rows in each group
         A = concat((P.loc[r,:].sum(axis=0).to_frame(g) for r, g in zip(list(row_group_dict.values()),list(row_group_dict.keys()))),axis=1).T
         #weight A with normed group row weight
-        Aw = A.loc[y_row,:].mul(row_m_n.values,axis=0)
+        Aw = (A.loc[y_row,:].T * row_m_n.values).T
 
         #rows sums of frequencies by group - sum of frequencies for all columns in each group
         B = concat((P.loc[:,c].sum(axis=1).to_frame(g) for c, g in zip(list(col_group_dict.values()),list(col_group_dict.keys()))),axis=1)
         #multiply col_group_freq by col_m_n
-        Bw = B.loc[:,y_col].mul(col_m_n.values,axis=1)
+        Bw = B.loc[:,y_col] * col_m_n.values
 
         #sum of frequencies by rows and columns groups
         C = concat((A.loc[:,c].sum(axis=1).to_frame(g) for c, g in zip(list(col_group_dict.values()),list(col_group_dict.keys()))),axis=1)
         #multiply col_group_freq by col_m_n
-        Cw = C.loc[y_row,y_col].mul(row_m_n.values,axis=0).mul(col_m_n.values,axis=1)
+        Cw = (C.loc[y_row,y_col].T * row_m_n.values).T * col_m_n.values
 
-        #standardized (formula p45)
-        Z = (P.sub(Aw.values).sub(Bw.values).add(Cw.values)).div(row_m,axis=0).div(col_m,axis=1)
-        #fill NA, +/-inf if 1e-15
-        Z = Z.replace([nan,inf,-inf], 1e-15)  
+        #standardized (formula p45) and fill NA, +/-inf if 1e-15
+        Z = (((P - Aw.values - Bw.values + Cw.values).T/row_m).T/col_m).replace([nan,inf,-inf], 1e-15)  
         #Standardized data using for GSVD
         tab = Z.copy()
 
@@ -397,11 +393,13 @@ class ICA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         fit_ = gFA(X=tab,ncp=self.ncp,row_w=row_w,col_w=col_w)
         #extract elements
-        self.svd_, self.eig_, ncp = fit_.svd, fit_.eig, fit_.ncp
+        self.svd_, self.eig_ = fit_.svd, fit_.eig
+        # update number of components
+        ncp = self.svd_.ncp
 
         #store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Z=Z,tab=tab,total=total,row_s=row_s,col_s=col_s,row_m=row_m,col_m=col_m,row_w=row_w,col_w=col_w,ncp=ncp,
-                            row_group=row_group,col_group=col_group,row_sup=row_sup_label,col_sup=col_sup_label)
+        call_ = {"Xtot":Xtot,"X":X,"Z":Z,"tab":tab,"total":total,"row_s":row_s,"col_s":col_s,"row_m":row_m,"col_m":col_m,"row_w":row_w,"col_w":col_w,"ncp":ncp,
+                 "row_group":row_group,"col_group":col_group,"row_sup":row_sup_label,"col_sup":col_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
         
@@ -417,9 +415,9 @@ class ICA(BaseEstimator,TransformerMixin):
         #contributions for rows groups
         row_group_ctr = concat((fit_.row["contrib"].loc[r,:].sum(axis=0).to_frame(g) for r, g in zip(list(row_group_dict.values()),list(row_group_dict.keys()))),axis=1).T
         #coordinates for rows groups
-        row_group_coord = row_group_ctr.div(row_group_w.mul(100),axis=0).mul(self.eig_.iloc[:ncp,0],axis=1)
+        row_group_coord = (row_group_ctr.T/(100*row_group_w)).T*self.eig_.iloc[:ncp,0]
         #convert to ordered dictionary
-        row_group_ = OrderedDict(coord=row_group_coord,contrib=row_group_ctr,infos=row_group_infos)
+        row_group_ = {"coord":row_group_coord,"contrib":row_group_ctr,"infos":row_group_infos}
         #convert to namedtuple
         self.row_group_ = namedtuple("row_group",row_group_.keys())(*row_group_.values())
 
@@ -435,25 +433,27 @@ class ICA(BaseEstimator,TransformerMixin):
         #contributions for rows groups
         col_group_ctr = concat((fit_.col["contrib"].loc[c,:].sum(axis=0).to_frame(g) for c, g in zip(list(col_group_dict.values()),list(col_group_dict.keys()))),axis=1).T
         #coordinates for rows groups
-        col_group_coord = col_group_ctr.div(col_group_w.mul(100),axis=0).mul(self.eig_.iloc[:ncp,0],axis=1)
+        col_group_coord = (col_group_ctr.T/(100*col_group_w)).T*self.eig_.iloc[:ncp,0]
         #convert to ordered dictionary
-        col_group_ = OrderedDict(coord=col_group_coord,contrib=col_group_ctr,infos=col_group_infos)
+        col_group_ = {"coord":col_group_coord,"contrib":col_group_ctr,"infos":col_group_infos}
         #convert to namedtuple
         self.col_group_ = namedtuple("col_group",col_group_.keys())(*col_group_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #others rows informations : partiels coordinates
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #partiels coordinates for rows
-        coord_partiel = OrderedDict()
+        # partiels coordinates for rows
+        row_coord_partiel = None
         for g, c in col_group_dict.items():
             data = DataFrame(zeros(X.shape),index=tab.index,columns=tab.columns)
             data[c] = tab[c]
-            coord = data.mul(col_w,axis=1).dot(self.svd_.V[:,:ncp])
-            coord.columns = self.eig_.index[:ncp]
-            coord_partiel[g] = coord
+            coord_partiel = (data * col_w).dot(self.svd_.V[:,:ncp])
+            # set index and columns
+            coord_partiel.index, coord_partiel.columns = [f"{x}.{g}" for x in coord_partiel.index], self.eig_.index[:ncp]
+            # concatenate
+            row_coord_partiel = concat_empty(row_coord_partiel,coord_partiel ,axis=0)
         #add to dictionary
-        fit_.row["coord_partiel"] = namedtuple("coord",coord_partiel.keys())(*coord_partiel.values())
+        fit_.row["coord_partiel"] = row_coord_partiel
         #convert to namedtuple
         self.row_ = namedtuple("row",fit_.row.keys())(*fit_.row.values())
 
@@ -461,15 +461,17 @@ class ICA(BaseEstimator,TransformerMixin):
         #others columns informations : partiels coordinates
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #partiels coordinates for columns
-        coord_partiel = OrderedDict()
+        col_coord_partiel = None
         for g, r in row_group_dict.items():
             data = DataFrame(zeros(X.shape),index=tab.index,columns=tab.columns)
             data.loc[r,:] = tab.loc[r,:]
-            coord = data.mul(row_w,axis=0).T.dot(self.svd_.U[:,:ncp])
-            coord.columns = self.eig_.index[:ncp]
-            coord_partiel[g] = coord
+            coord_partiel = (data.T * row_w).dot(self.svd_.U[:,:ncp])
+            # set index and columns
+            coord_partiel.index, coord_partiel.columns = [f"{x}.{g}" for x in coord_partiel.index], self.eig_.index[:ncp]
+            # concatenate
+            col_coord_partiel = concat_empty(col_coord_partiel,coord_partiel,axis=0)
         #add to dictionary
-        fit_.col["coord_partiel"] = namedtuple("coord",coord_partiel.keys())(*coord_partiel.values())
+        fit_.col["coord_partiel"] = col_coord_partiel
         #convert to namedtuple
         self.col_ = namedtuple("col",fit_.col.keys())(*fit_.col.values())
 
@@ -478,7 +480,7 @@ class ICA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.num_row_group_sup is not None:
             #frequencies of supplementary rows
-            P_row_sup = X_row_sup.div(total)
+            P_row_sup = X_row_sup/total
             #margins for supplementary rows
             row_sup_m = P_row_sup.sum(axis=1)
 
@@ -490,36 +492,35 @@ class ICA(BaseEstimator,TransformerMixin):
             #sum of frequencies by row group
             A = concat((P_row_sup.loc[r,:].sum(axis=0).to_frame(g) for r, g in zip(list(row_group_sup_dict.values()),list(row_group_sup_dict.keys()))),axis=1).T
             #weighted A by row_m_n
-            Aw = A.loc[y_row_sup,:].mul(row_sup_m_n.values,axis=0)
+            Aw = (A.loc[y_row_sup,:].T * row_sup_m_n.values).T
 
             #sum of row sup frequencies by col group
             B = concat((P_row_sup.loc[:,c].sum(axis=1).to_frame(g) for c, g in zip(list(col_group_dict.values()),list(col_group_dict.keys()))),axis=1)
             #weighted B by col_m_n
-            Bw = B.loc[:,y_col].mul(col_m_n.values,axis=1)
+            Bw = B.loc[:,y_col] * col_m_n.values
 
             #sum of frequencies by col group
             C = concat((A.loc[:,c].sum(axis=1).to_frame(g) for c, g in zip(list(col_group_dict.values()),list(col_group_dict.keys()))),axis=1)
             #multiply col_group_freq by col_m_n
-            Cw = C.loc[y_row_sup,y_col].mul(row_sup_m_n.values,axis=0).mul(col_m_n.values,axis=1)
+            Cw = (C.loc[y_row_sup,y_col].T * row_sup_m_n.values).T * col_m_n.values
 
-            #standardization (formula p45)
-            Z_row_sup = (P_row_sup.sub(Aw.values).sub(Bw.values).add(Cw.values)).div(row_sup_m,axis=0).div(col_m,axis=1)
-            #fill NA, +/-inf if 1e-15
-            Z_row_sup = Z_row_sup.replace([nan,inf,-inf], 1e-15)  
-
+            #standardization (formula p45) and fill NA, +/-inf if 1e-15
+            Z_row_sup = (((P_row_sup - Aw.values - Bw.values + Cw.values).T/row_sup_m).T/col_m).replace([nan,inf,-inf], 1e-15)
             #statistics for supplementary rows
-            row_sup_ = func_predict(X=Z_row_sup,Y=fit_.svd.V,w=col_w,axis=0)
-
+            row_sup_ = func_predict(X=Z_row_sup,Y=fit_.svd.V[:,:ncp],w=col_w,axis=0)
             #partiels coordinates for supplementary rows
-            coord_partiel = OrderedDict()
+            row_sup_coord_partiel = None
             for g, c in col_group_dict.items():
                 data = DataFrame(zeros(Z_row_sup.shape),index=Z_row_sup.index,columns=Z_row_sup.columns)
                 data[c] = Z_row_sup[c]
-                coord = data.mul(col_w,axis=1).dot(self.svd_.V[:,:ncp])
-                coord.columns = self.eig_.index[:ncp]
-                coord_partiel[g] = coord
+                # partiel coordinates
+                coord_partiel = (data * col_w).dot(self.svd_.V[:,:ncp])
+                # set index and columns
+                coord_partiel.index, coord_partiel.columns = [f"{x}.{g}" for x in row_sup_label], self.eig_.index[:ncp]
+                # concatenate
+                row_sup_coord_partiel = concat_empty(row_sup_coord_partiel,coord_partiel,axis=0)
             #add to dictionary
-            row_sup_["coord_partiel"] = namedtuple("coord",coord_partiel.keys())(*coord_partiel.values())
+            row_sup_["coord_partiel"] = row_sup_coord_partiel
             #convert to namedtuple
             self.row_sup_ = namedtuple("row_sup",row_sup_.keys())(*row_sup_.values())
 
@@ -527,10 +528,10 @@ class ICA(BaseEstimator,TransformerMixin):
             #weight of supplementary columns group
             row_sup_group_w = Series([row_sup_m.loc[x].sum() for x in list(row_group_sup_dict.values())],index=list(row_group_sup_dict.keys()),name="weight")
             #coordinates for the supplementary columns groups
-            A = row_sup_["coord"].pow(2).mul(row_sup_m_n,axis=0)
+            A = ((row_sup_["coord"]**2).T * row_sup_m_n).T
             coord = concat((A.loc[r,:].sum(axis=0).to_frame(g) for r, g in zip(list(row_group_sup_dict.values()),list(row_group_sup_dict.keys()))),axis=1).T
             #convert to ordered dictionary
-            row_sup_group_ = OrderedDict(coord=coord,weight=row_sup_group_w)
+            row_sup_group_ = {"coord":coord,"weight":row_sup_group_w}
             #convert to namedtuple
             self.row_sup_group_ = namedtuple("row_sup_group",row_sup_group_.keys())(*row_sup_group_.values())
 
@@ -539,7 +540,7 @@ class ICA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.num_col_group_sup is not None:
             #frequencies of supplementary columns
-            P_col_sup = X_col_sup.div(total)
+            P_col_sup = X_col_sup/total
             #margins for supplementary columns
             col_sup_m = P_col_sup.sum(axis=0)
 
@@ -551,61 +552,61 @@ class ICA(BaseEstimator,TransformerMixin):
             #colums sums of supplementary columns frequencies by supplementary columns groups
             A = concat((P_col_sup.loc[r,:].sum(axis=0).to_frame(g) for r, g in zip(list(row_group_dict.values()),list(row_group_dict.keys()))),axis=1).T
             #weighted A with row_w_n
-            Aw = A.loc[y_row,:].mul(row_m_n.values,axis=0)
+            Aw = (A.loc[y_row,:].T * row_m_n.values).T
 
             #rows sums of supplementary columns frequencies by supplementary columns groups
             B = concat((P_col_sup.loc[:,c].sum(axis=1).to_frame(g) for c, g in zip(list(col_group_sup_dict.values()),list(col_group_sup_dict.keys()))),axis=1)
             #multiply B with col_m_n
-            Bw = B.loc[:,y_col_sup].mul(col_sup_m_n.values,axis=1)
+            Bw = B.loc[:,y_col_sup] * col_sup_m_n.values
 
             #sum of supplementary columns frequencies by rows groups and supplementary columns groups
             C = concat((A.loc[:,r].sum(axis=1).to_frame(g) for r, g in zip(list(col_group_sup_dict.values()),list(col_group_sup_dict.keys()))),axis=1)
             #multiply C by row_m_n and col_sup_m_n
-            Cw = C.loc[y_row,y_col_sup].mul(row_m_n.values,axis=0).mul(col_sup_m_n.values,axis=1)
+            Cw = (C.loc[y_row,y_col_sup].T * row_m_n.values).T * col_sup_m_n.values
 
-            #standardized (formula p45)
-            Z_col_sup = (P_col_sup.sub(Aw.values).sub(Bw.values).add(Cw.values)).div(row_m,axis=0).div(col_sup_m,axis=1)
-            #fill NA, +/-inf if 1e-15
-            Z_col_sup = Z_col_sup.replace([nan,inf,-inf], 1e-15)  
-
+            #standardized (formula p45) and fill NA, +/-inf if 1e-15
+            Z_col_sup = (((P_col_sup - Aw.values - Bw.values + Cw.values).T/row_m).T/col_sup_m).replace([nan,inf,-inf], 1e-15)  
             #statistics for supplementary columns
-            col_sup_ = func_predict(X=Z_col_sup,Y=fit_.svd.U,w=row_w,axis=1)
+            col_sup_ = func_predict(X=Z_col_sup,Y=fit_.svd.U[:,:ncp],w=row_w,axis=1)
         
             #partiels coordinates supplementary columns
-            coord_partiel = OrderedDict()
+            col_sup_coord_partiel = None
             for g, c in row_group_dict.items():
                 data = DataFrame(zeros(Z_col_sup.shape),index=Z_col_sup.index,columns=Z_col_sup.columns)
                 data.loc[c,:] = Z.loc[c,:]
-                coord = data.mul(row_w,axis=0).T.dot(self.svd_.U[:,:ncp])
-                coord.columns = self.eig_.index[:ncp]
-                coord_partiel[g] = coord
+                # partiel coordinates
+                coord_partiel = (data.T * row_w).dot(self.svd_.U[:,:ncp])
+                # set index and columns
+                coord_partiel.index, coord_partiel.columns = [f"{x}.{g}" for x in col_sup_label], self.eig_.index[:ncp]
+                # concatenate
+                col_sup_coord_partiel = concat_empty(col_sup_coord_partiel,coord_partiel,axis=0)
             #add to dictionary
-            col_sup_["coord_partiel"] = namedtuple("coord",coord_partiel.keys())(*coord_partiel.values())
+            col_sup_["coord_partiel"] = col_sup_coord_partiel
             #convert to namedtuple
             self.col_sup_ = namedtuple("col_sup",col_sup_.keys())(*col_sup_.values())
 
             #statistics for supplementary columns groups
-            #weight of supplementary columns group
+            # weight of supplementary columns group
             col_sup_group_w = Series([col_sup_m.loc[x].sum() for x in list(col_group_sup_dict.values())],index=list(col_group_sup_dict.keys()),name="weight")
-            #coordinates for the supplementary columns groupes
-            A = col_sup_["coord"].pow(2).mul(col_sup_m_n,axis=0)
+            # coordinates for the supplementary columns groupes
+            A = ((col_sup_["coord"]**2).T * col_sup_m_n).T
             coord = concat((A.loc[c,:].sum(axis=0).to_frame(g) for c, g in zip(list(col_group_sup_dict.values()),list(col_group_sup_dict.keys()))),axis=1).T
-            #convert to ordered dictionary
-            col_sup_group_ = OrderedDict(coord=coord,weight=col_sup_group_w)
-            #convert to namedtuple
+            # convert to ordered dictionary
+            col_sup_group_ = {"coord":coord,"weight":col_sup_group_w}
+            # convert to namedtuple
             self.col_sup_group_ = namedtuple("col_sup_group",col_sup_group_.keys())(*col_sup_group_.values())
 
         return self
     
     def fit_transform(self,X,y=None):
         """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
             Training data, where ``n_rows`` in the number of rows and ``n_columns`` is the number of columns.
-            ``X`` is a contingency table containing absolute frequencies.
+            X is a contingency table containing absolute frequencies.
 
         y : None
             y is ignored

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, array, ndarray, empty, linalg, identity, outer, cumsum, c_, diag, sum 
+from numpy import ones, array, repeat, ndarray, empty, linalg, identity, outer, cumsum, c_, diag, sum 
 from pandas import DataFrame, Series, concat, CategoricalDtype
-from itertools import chain, repeat
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from functools import reduce
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -11,9 +10,10 @@ from sklearn.utils.validation import check_is_fitted
 from ..functions.preprocessing import preprocessing
 from ..functions.get_sup_label import get_sup_label
 from ..functions.statistics import wmean, wstd
+from ..functions.spca import sPCA
+from ..functions.rvstats import RVstats
 from ..functions.utils import check_is_bool, is_all_numeric_dtype, is_all_object_or_category_dtype, check_is_dataframe
 from ..others._disjunctive import disjunctive
-from ..others._splitgroup import splitgroup, RVstats
 
 class DCCSWA(BaseEstimator,TransformerMixin):
     """
@@ -24,16 +24,20 @@ class DCCSWA(BaseEstimator,TransformerMixin):
     Parameters
     ----------
     scale_unit : bool, default = True
-        If ``True``, then the data are scaled to unit variance.
+        If True, then the data are scaled to unit variance.
 
     ncp : int, default = 5
         The number of dimensions kept in the results.
+        
+    sncp : int, default = None
+            The number of dimensions kept in separate principal component analysis (sPCA). If None, then sncp is equal 
+            to :math:`min(K-1,p)` where p is the number of columns and K the number of groups.
 
     group : int, str
         The indexe or name of the categorical variable which allows to make the group of individuals.
 
-    row_w : 1d array-like of shape (n_rows,), default = None
-        An optional rows weights. The weights are given only for the active rows.
+    row_w : 1d array-like of shape (n_samples,), default = None
+        An optional individuals weights. The weights are given only for the active individuals.
 
     col_w : 1d array-like of shape (n_columns,), default = None
         An optional columns weights. The weights are given only for the active columns.
@@ -42,30 +46,31 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary individuals.
     
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
 
     Returns
     -------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters, with the following attributes:
 
-        Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
+        Xtot : DataFrame of shape (n_samples + n_samples_sup, n_columns)
             Input data.
-        X : DataFrame of shape (n_rows, n_columns)
+        X : DataFrame of shape (n_samples, n_columns)
             Active data.
-        x : DataFrame of shape (n_rows, n_columns - 1)
+        x : DataFrame of shape (n_samples, n_columns - 1)
             The Data
-        y : Series of shape (n_rows,)
+        y : Series of shape (n_samples,)
             The vector of factors associated with group structure
-        Xcod : DataFrame of shape (n_rows, n_columns)
+        Xcod : DataFrame of shape (n_samples, n_columns)
             Recoded data.
-        dummies : DataFrame of shape (n_rows, n_levels)
+        dummies : DataFrame of shape (n_samples, n_levels)
             Disjunctive table.
         M : DataFrame of shape (n_groups, n_levels)
             The 1-proportion of levels associated to each group.
-        Zcod : DataFrame of shape (n_rows, n_columns)
+        Zcod : DataFrame of shape (n_samples, n_columns)
             The concatenated standardized data
-        Z : DataFrame of shape (n_rows, n_columns) 
+        Z : DataFrame of shape (n_samples, n_columns) 
             Standardized data.
         center : DataFrame of shape (n_groups, n_columns)
             The concatenated variables weighted average.
@@ -77,8 +82,10 @@ class DCCSWA(BaseEstimator,TransformerMixin):
             The weighted standard deviation of concatenate standardized data.
         ncp : int, default = 5
             The number of dimensions kept in the results.
-        row_w : Series of shape (n_rows,) or (n_groups,)
-            The rows weights.
+        sncp : int 
+            The number of dimensions kept in separate principal component analysis.
+        row_w : Series of shape (n_samples,)
+            The individuals weights.
         var_w : Series of shape (n_columns,)
             The variables weights.
         col_w : Series of shape (n_columns,)
@@ -87,6 +94,14 @@ class DCCSWA(BaseEstimator,TransformerMixin):
             The name of the group variables used to make the group of individuals.
         ind_sup : None, list
             The names of the supplementary individuals.
+            
+    evd_ : svdResult
+        An object containing all the results for the generalized singular value decomposition (GSVD), with the following attributes:
+        
+        V : 2d numpy array of shape (n_columns, ncp)
+            Matrix of common loadings.
+        ncp : int
+            The number of components kepted.
 
     explained_variance_ : DataFrame of shape (ncp, 2)
         The percentage of variance and the cumulative percentage of variance.
@@ -94,37 +109,31 @@ class DCCSWA(BaseEstimator,TransformerMixin):
     group_ : group
         An object containing all the results for the groups, with the following attributes:
 
-        eig : DataFrame of shape (maxcp_rv, 4)
-            The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
-
-        coord : DataFrame of shape (n_groups, n_groups)
-            The coordinates of the groups.
-
         traceRV : DataFrame of shape (n_groups, n_groups)
             The trace RV between groups.
-
         RV : DataFrame of shape (n_groups, n_groups)
             The RV coefficient between groups.
-
+        eig : DataFrame of shape (rank_rv, 4)
+            The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
+        coord : DataFrame of shape (n_groups, n_groups)
+            The coordinates of the groups.
         infos : DataFrame of shape (n_groups, 3)
             Additionals informations (weight, inertia and percentage of inertia) of the groups.
-
         lambd : DataFrame of shape (n_groups, ncp)
             The specific variances of groups.
-
         expl_var : DataFrame of shape (n_groups, ncp)
             Percentages of total variance recovered associated with each dimension.
 
     ind_ : ind
         An object containing all the results for the active individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_rows, ncp)
+        coord : DataFrame of shape (n_samples, ncp)
             The coordinates of the individuals.
 
     ind_sup_ : ind_sup, optional
         An object containing all the results for the supplementary individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_rows_plus, ncp)
+        coord : DataFrame of shape (n_samples_plus, ncp)
             The coordinates of the supplementary individuals.
 
     quanti_var_ : quanti_var
@@ -135,29 +144,18 @@ class DCCSWA(BaseEstimator,TransformerMixin):
 
     separate_analyses_ : dict
         The results for the separates Principal Component Analysis.
-
-    svd_ : svdResult
-        An object containing all the results for the generalized singular value decomposition (GSVD), with the following attributes:
-        
-        V : 2d numpy array of shape (n_columns, ncp)
-            Matrix of common loadings.
-        ncp : int
-            The number of components kepted.
-
+    
     References
     ----------
-    [1] E. M. Qannari, P. Courcoux, and E. Vigneau (2001). Common components and specific weights analysis performed on preference data. \emph{Food Quality and Preference}, 12(5-7), 365-368.
+    [1] E. M. Qannari, P. Courcoux, and E. Vigneau (2001). Common components and specific weights analysis performed on preference data. \emph{Food Quality and Preference}, 12(5-7), 365-368. `https://doi.org/10.1016/S0950-3293(01)00026-X <https://doi.org/10.1016/S0950-3293(01)00026-X>`_
     
     [2] A. Eslami (2013). Multivariate data analysis of multi-group datasets: application to biology. University  of Rennes I.
 
-    See Also
+    See also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet.
+    sprintf : Print the analysis results.
+    summary : Printing summaries of general factor analysis model.
 
     Examples
     --------
@@ -173,10 +171,19 @@ class DCCSWA(BaseEstimator,TransformerMixin):
     DCCSWA(group=0,ind_sup=range(400,435),ncp=2,scale_unit=False)
     """
     def __init__(
-            self, scale_unit = True, ncp = 5,  group = None, row_w = None, col_w = None, ind_sup = None, tol = 1e-7
+            self, 
+            scale_unit = True, 
+            ncp = 5,  
+            sncp = None,  
+            group = None, 
+            row_w = None, 
+            col_w = None, 
+            ind_sup = None, 
+            tol = 1e-7
     ):
         self.scale_unit = scale_unit
         self.ncp = ncp
+        self.sncp = sncp
         self.group = group
         self.row_w = row_w
         self.col_w = col_w
@@ -184,16 +191,16 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` in the number of samples and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored
 
         Returns
         -------
@@ -248,7 +255,7 @@ class DCCSWA(BaseEstimator,TransformerMixin):
             raise TypeError("Not applied to mixed data") 
 
         #unique element in y
-        uq_classe = sorted(list(y.unique()))
+        uq_classe = sorted(y.unique())
         #convert y to categorical data type
         y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
 
@@ -279,25 +286,41 @@ class DCCSWA(BaseEstimator,TransformerMixin):
             var_w = Series(array(self.col_w),index=x.columns,name="weight")
 
         #group index
-        group_dict = OrderedDict({k : list(y[y==k].index) for k in uq_classe})
+        group_dict = {k : y[y==k].index for k in uq_classe}
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-       #set variables xcod - reorder 
+        #set variables xcod - reorder 
         Xcod, col_w, dummies, M = x.copy(), var_w.copy(), None, None
         if is_all_object_or_category_dtype(x):
+            # disjunctive table
             dummies = disjunctive(x)
-            M = concat(((1 - ((dummies.loc[rows,:].T * row_w[rows]/sum(row_w[rows])).sum(axis=1))).to_frame(g) for g, rows in group_dict.items()),axis=1).T    
-            Xcod = dummies*M.loc[y.values,:].values
-            col_w = Series([x*y for x,y in zip(ones(dummies.shape[1]),list(chain(*[repeat(i,k) for i, k in zip(var_w,[x[j].nunique() for j in x.columns])])))],index=dummies.columns,name="weight")
+            # transformation of the indicator variables
+            M = concat(((1 - ((dummies.loc[r,:].T * row_w[r]/sum(row_w[r])).sum(axis=1))).to_frame(g) for g, r in group_dict.items()),axis=1).T
+            # recode data
+            Xcod = dummies*M.loc[y.to_numpy(),:].to_numpy()
+            # columns weights for variable categories
+            col_w = Series(repeat(var_w.to_numpy(),x.nunique().to_numpy()),index=dummies.columns,name="weight")
+        
         #set number of columns
         n_cols = Xcod.shape[1]
         
+        # set number of components of separate principal component analysis
+        if self.sncp is None: 
+            sncp = int(min(len(uq_classe) - 1, n_cols))
+        elif not isinstance(self.sncp,int):
+            raise TypeError("sncp must be an integer") 
+        elif self.sncp < 1: 
+            raise ValueError("sncp must be strictly positive")
+        else: 
+            sncp = self.sncp
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #splitgroup
+        # separate principal component analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        model = splitgroup(X=Xcod,y=y,scale_unit=self.scale_unit,ncp=self.ncp,row_w=row_w,col_w=col_w,tol=self.tol)
+        # separate principal component analysis
+        model = sPCA(X=Xcod,y=y,scale_unit=self.scale_unit,ncp=sncp,row_w=row_w,col_w=col_w,tol=self.tol)
 
         #store separete separate model
         self.separate_analyses_ = model
@@ -308,7 +331,8 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         #scale_unitd data
         Zcod = concat((model[g].call_.Z for g in list(model.keys())),axis=0,ignore_index=False).loc[y.index,:]
         #weighted average
-        center, scale = concat((model[g].call_.center.to_frame(g) for g in list(model.keys())),axis=1).T, concat((model[g].call_.scale.to_frame(g) for g in list(model.keys())),axis=1).T
+        center = concat((model[g].call_.center.to_frame(g) for g in list(model.keys())),axis=1).T
+        scale = concat((model[g].call_.scale.to_frame(g) for g in list(model.keys())),axis=1).T
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #standardization according to normed principal components analysis
@@ -326,15 +350,18 @@ class DCCSWA(BaseEstimator,TransformerMixin):
 
         #set number of components
         if self.ncp is None:
-            ncp = 5
+            ncp = int(min(len(uq_classe)-1,n_cols))
+        elif not isinstance(self.ncp,int):
+            raise TypeError("ncp must be an integer")
         elif self.ncp < 1: 
-            raise ValueError("'ncp' must be equal or greater than 1.")
+            raise ValueError("ncp must be strictly positive")
         else: 
             ncp = self.ncp
 
-        #Store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,x=x,y=y,Xcod=Xcod,dummies=dummies,M=M,Zcod=Zcod,Z=Z,center=center,scale=scale,z_center=z_center,z_scale=z_scale,ncp=ncp,
-                            row_w=row_w,var_w=var_w,col_w=col_w,group=group_label,ind_sup=ind_sup_label)
+        # Store call informations
+        call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"Zcod":Zcod,"Z":Z,
+                 "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"ncp":ncp,
+                 "row_w":row_w,"var_w":var_w,"col_w":col_w,"group":group_label,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -342,16 +369,17 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         #iterative algorithm - computation of matrix of common loading (V) and saliences (group contributions)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #make a copy
-        Ztab, covtab = OrderedDict({g : model[g].call_.Z for g in uq_classe}), OrderedDict({g : model[g].call_.Vb for g in uq_classe})
+        Ztab, covtab = {g : model[g].call_.Z for g in uq_classe}, {g : model[g].call_.Vb for g in uq_classe}
 
         #initialization
-        group_ctr, V, proportion = DataFrame(index=uq_classe,columns=[f"Dim{x+1}" for x in range(ncp)]).astype(float), empty((n_cols,ncp),dtype=float), empty((ncp,),dtype=float)
+        group_ctr = DataFrame(index=uq_classe,columns=[f"Dim{x+1}" for x in range(ncp)]).astype("float")
+        V, proportion = empty((n_cols,ncp),dtype=float), empty((ncp,),dtype=float)
         for i in range(ncp):
             #initialization
             ctr, threshold, max_iter, I0 = ones((len(uq_classe),)), 1e-10, 1e+6, inertia
             while max_iter > threshold:
-                #compromise variance covariance matrice
-                W = reduce(lambda x, y : x + y , [ctr[i]*covtab[g] for i, g in enumerate(uq_classe)])
+                # compromise variance covariance matrice
+                W = sum([ctr[i]*covtab[g] for i, g in enumerate(uq_classe)],axis=0)
                 #singular values decomposition
                 v = linalg.svd(W,hermitian=True)[0][:,0]
                 #update ctr
@@ -366,36 +394,36 @@ class DCCSWA(BaseEstimator,TransformerMixin):
 
             #update
             delta = identity(n_cols) - outer(v,v) 
-            Ztab = OrderedDict({g : Ztab[g].dot(delta) for g in uq_classe})
-            covtab = OrderedDict({g : Ztab[g].T.dot(Ztab[g]) for g in uq_classe})
+            Ztab = {g : Ztab[g].dot(delta) for g in uq_classe}
+            covtab = {g : Ztab[g].T.dot(Ztab[g]) for g in uq_classe}
         
         #convert to DataFrame
-        self.explained_variance_ = DataFrame(c_[proportion,cumsum(proportion)],columns=["Proportion (%)","Cumulative (%)"],index = [f"Dim{x+1}" for x in range(ncp)]) 
+        self.explained_variance_ = DataFrame(c_[proportion,cumsum(proportion)],columns=["Proportion (%)","Cumulative (%)"],index = group_ctr.columns) 
 
         #convert to namedtuple
-        self.svd_ = namedtuple("svdResult",["V","ncp"])(V,ncp)
+        self.evd_ = namedtuple("evdResult",["V","ncp"])(V,ncp)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #groups informations
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         group_ = RVstats(model=model,tol=self.tol)
-        #lambda - specific variances of group
-        lambd =  concat((Series(diag(self.svd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.svd_.V[:,:ncp])),index=self.explained_variance_.index[:ncp]).to_frame(g) for g in uq_classe),axis=1).T
-        #add to group
-        group_["lambd"] = lambd
-        #explained variance
-        group_["expl_var"] = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in uq_classe),axis=1).T
+        # lambda - specific variances of group
+        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=group_ctr.columns).to_frame(g) for g in uq_classe),axis=1).T
+        # explained variance
+        expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in uq_classe),axis=1).T
+        # update dictionary
+        group_ = {**group_, **{"lambd":lambd,"expl_var":expl_var}}
         #store all group informations
         self.group_ = namedtuple("group",group_.keys())(*group_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for individuals in compromises spaces
+        # statistics for individuals in compromises spaces
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #individuals coordinates
-        ind_coord = (Z * col_w).dot(self.svd_.V[:,:ncp])
-        ind_coord.columns = self.explained_variance_.index[:ncp]
+        # individuals coordinates
+        ind_coord = (Z * col_w).dot(self.evd_.V[:,:ncp])
+        ind_coord.columns = group_ctr.columns
         #convert to ordered dictionary
-        ind_ = OrderedDict(coord=ind_coord)
+        ind_ = {"coord":ind_coord}
         #convert to namedtuple
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values()) 
 
@@ -405,59 +433,60 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         if self.ind_sup is not None:
             #split in x and y
             y_ind_sup, X_ind_sup = X_ind_sup[group_label[0]], X_ind_sup.drop(columns=group_label)
-
+            # recode data for supplementary individuals
             Xcod_ind_sup = X_ind_sup
             if is_all_object_or_category_dtype(X_ind_sup):
-                Xcod_ind_sup = disjunctive(X_ind_sup,cols=dummies.columns) * M.loc[y_ind_sup.values,:].values
+                Xcod_ind_sup = disjunctive(X_ind_sup,cols=dummies.columns) * M.loc[y_ind_sup.to_numpy(),:].to_numpy()
             
             #standardization
-            Z_ind_sup = (((Xcod_ind_sup - center.loc[y_ind_sup.values,:].values)/scale.loc[y_ind_sup.values,:].values) - z_center)/z_scale
+            Z_ind_sup = (((Xcod_ind_sup - center.loc[y_ind_sup.to_numpy(),:].to_numpy())/scale.loc[y_ind_sup.to_numpy(),:].to_numpy()) - z_center)/z_scale
 
             #coordinates for supplementary individuals
-            ind_sup_coord = (Z_ind_sup *col_w).dot(self.svd_.V[:,:ncp])
+            ind_sup_coord = (Z_ind_sup * col_w).dot(self.evd_.V[:,:ncp])
             ind_sup_coord.columns = self.explained_variance_.index[:ncp]
             #convert to ordered dictionary
-            ind_sup_ = OrderedDict(coord=ind_sup_coord)
+            ind_sup_ = {"coord":ind_sup_coord}
             #convert to namedtuple
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
         return self
     
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, n_components)
+        X_new : DataFrame of shape (n_samples, ncp)
             Transformed values.
         """
         self.fit(X)
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to ``X``.
+        """Apply dimensionality reduction to X.
 
-        ``X`` is projected on the first principal components previously extracted from a training set.
+        X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            New data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, ncp)
-            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        X_new : DataFrame of shape (n_samples, ncp)
+            Projection of X in the first principal components, where ``n_samples`` is the number of samples 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes
@@ -485,11 +514,11 @@ class DCCSWA(BaseEstimator,TransformerMixin):
 
         Xcod = X
         if is_all_object_or_category_dtype(X):
-            Xcod = disjunctive(X,cols=self.call_.dummies.columns) * self.call_.M.loc[y.values,:].values
+            Xcod = disjunctive(X,cols=self.call_.dummies.columns) * self.call_.M.loc[y.to_numpy(),:].to_numpy()
         
         #standardization
-        Z = (((Xcod - self.call_.center.loc[y.values,:].values)/self.call_.scale.loc[y.values,:].values) - self.call_.z_center)/self.call_.z_scale
-        #coordinates for supplementary individuals
-        coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.svd_.ncp])
-        coord.columns = self.explained_variance_.index[:self.svd_.ncp]
+        Z = (((Xcod - self.call_.center.loc[y.to_numpy(),:].to_numpy())/self.call_.scale.loc[y.to_numpy(),:].to_numpy()) - self.call_.z_center)/self.call_.z_scale
+        #coordinates for new individuals
+        coord = (Z * self.call_.col_w).dot(self.evd_.V[:,:self.evd_.ncp])
+        coord.columns = self.explained_variance_.index[:self.evd_.ncp]
         return coord

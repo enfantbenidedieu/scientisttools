@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from numpy import ndarray,where, ones, array,sqrt,inf,nan,outer,array,sum,vstack,c_,insert,cumsum,diff,nan
+from numpy import ndarray,where, unique, ones, array,sqrt,inf,nan,outer,array,sum,vstack,c_,insert,cumsum,diff,nan
 from pandas import DataFrame, Series, concat
 from itertools import chain, repeat
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 
 #interns functions
@@ -192,12 +192,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
 
     See also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet.
+    sprintf : Print the analysis results.
+    summary : Printing summaries of general factor analysis model.
 
     Examples
     --------
@@ -208,7 +205,17 @@ class MCOIA(BaseEstimator,TransformerMixin):
     MCOIA(group=wine.group,type_group=("n","s","s","s","s","s"),name_group=wine.name,num_group_sup=(0,5))
     """
     def __init__(
-            self, excl = None, ncp = 5, group = None, type_group = None, name_group = None, option="lambda1", row_w = None, col_w = None, ind_sup = None, tol = 1e-7
+            self, 
+            excl = None, 
+            ncp = 5, 
+            group = None, 
+            type_group = None, 
+            name_group = None, 
+            option = "lambda1", 
+            row_w = None, 
+            col_w = None, 
+            ind_sup = None, 
+            tol = 1e-7
     ):
         self.excl = excl
         self.ncp = ncp
@@ -223,7 +230,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         
     def fit(self,X,y=None):
         """
-        Fit the model to ``X``
+        Fit the model to X
 
         Parameters
         ----------
@@ -291,7 +298,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #check if option is valid
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not (self.option in ("lambda1","inertia","uniform")):
-            raise ValueError("'option' must be one of 'lambda1', 'inertia', 'uniform'")
+            raise ValueError("option must be one of 'lambda1', 'inertia', 'uniform'")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #preprocessing
@@ -301,9 +308,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #assigned group name to label
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_dict, k = OrderedDict(), 0
+        group_dict, k = {}, 0
         for i, g in zip(range(len(group)),name_group):
-            group_dict[g] = list(X.columns[k:(k+group[i])])
+            group_dict[g] = X.columns[k:(k+group[i])]
             k += group[i]
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -316,7 +323,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         type_group_var, k = None, 0
         for i in range(len(group)):
-            colnames = list(X.columns[k:(k+group[i])])
+            colnames = X.columns[k:(k+group[i])]
             if type_group[i] in ("c","s"):
                 type_var = Series(repeat("quanti",group[i]),index=colnames)
             if type_group[i] == "f":
@@ -327,6 +334,36 @@ class MCOIA(BaseEstimator,TransformerMixin):
                 type_var = Series(cols_dtypes(X.loc[:,colnames]),index=colnames)
             type_group_var = concat_empty(type_group_var,type_var,axis=0)
             k += group[i]
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # assign each assign to group
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # assign each variable to group
+        var_group = DataFrame({
+            "variable" : X.columns,
+            "group" : list(chain(*[repeat(i,k) for i, k in zip(name_group,group)]))
+        })
+
+        # assign column to group
+        cols_group, k = None, 0
+        for i in range(len(group)):
+            vars_names = X.columns[k:(k+group[i])]
+            if type_group[i] in ("c","s","f"):
+                col_group = Series(repeat(name_group[i],group[i]),index=vars_names,name="group")
+            if type_group[i] == "n":
+                col_names = unique(X.loc[:,vars_names])
+                col_group = Series(repeat(name_group[i],len(col_names)),index=col_names,name="group")
+            if type_group[i] == "m":
+                col_dtypes = Series(cols_dtypes(X.loc[:,vars_names]),index=vars_names)
+                col_names1 = col_dtypes[col_dtypes=="quanti"].index
+                col_names2 = unique(X.loc[:,col_dtypes[col_dtypes=="quali"].index])
+                col_group1 = Series(repeat(name_group[i],len(col_names1)),index=col_names1,name="group")
+                col_group2 = Series(repeat(name_group[i],len(col_names2)),index=col_names2,name="group")
+                col_group = concat((col_group1,col_group2),axis=0)
+            cols_group = concat_empty(cols_group,col_group,axis=0)
+            k += group[i]
+        # reset index and rename
+        cols_group = cols_group.to_frame().reset_index().rename(columns={"index" : "variable"})
 
         #make a copy of the original data
         Xtot = X.copy()
@@ -375,14 +412,14 @@ class MCOIA(BaseEstimator,TransformerMixin):
             name_group_freq = [g for i, g in enumerate(name_group) if i in num_group_freq]
             
             if len(name_group_freq) > 0:
-                group_freq_dict = OrderedDict({k : group_dict[k] for k in name_group_freq})
+                group_freq_dict = {k : group_dict[k] for k in name_group_freq}
                 freq_cols = list(chain.from_iterable(group_freq_dict.values()))
                 #select frequencies data
                 N = X.loc[:,freq_cols]
                 #sum of all elements 
                 total = N.sum().sum()
                 #proportional table
-                P = N.div(total)
+                P = N/total
                 #set global row margin and columns margin
                 row_m, col_m = P.sum(axis=1), P.sum(axis=0)
                 #construction of recoded table
@@ -392,7 +429,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
                     #normalize such as sum equal to 1
                     row_w_g = row_m_g/sum(row_m_g)
                     #recoded columns and fill NA, +/-inf if 1e-15
-                    Xcod[cols] = P[cols].div(col_m[cols],axis=1).sub(row_w_g,axis=0).div(row_m,axis=0).replace([nan,inf,-inf], 1e-15)
+                    Xcod[cols] = (((P[cols]/col_m[cols]).T - row_w_g)/row_m).T.replace([nan,inf,-inf], 1e-15)
                 #update weights for rows and columns
                 ind_w, var_w[freq_cols] = row_m, col_m
 
@@ -403,7 +440,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #separate general factor analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis model for active group
-        model = OrderedDict()
+        model = {}
         for g, cols in group_dict.items():
             if self.type_group[name_group.index(g)] in ("c","f","s"):
                 scale_unit = False if self.type_group[name_group.index(g)] in ("c","f") else True
@@ -422,25 +459,27 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #standardized data
         Zcod = concat((model[g].call_.Z for g in name_group),axis=1)
-        #weighted average and standard deviation
-        center, scale = concat((model[g].call_.center for g in name_group),axis=0), concat((model[g].call_.scale for g in name_group),axis=0)
+        # weighted average and standard deviation
+        center = concat((model[g].call_.center for g in name_group),axis=0)
+        scale = concat((model[g].call_.scale for g in name_group),axis=0)
+        # number of components in all models
+        mncp = Series([model[g].call_.ncp for g in name_group],index=name_group)
         #active columns dictionary and columns weights
-        columns_dict = OrderedDict({g : list(model[g].call_.Z.columns) for g in name_group})
+        columns_dict = {g : model[g].call_.Z.columns for g in name_group}
         #columns index
-        columns_index = OrderedDict({g : [list(Zcod.columns).index(k) for k in cols] for g, cols in columns_dict.items()})
-
+        columns_index = {g : [Zcod.columns.tolist().index(k) for k in cols] for g, cols in columns_dict.items()}
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set columns weights for multiple factor analysis
+        # set columns weights for multiple co-inertia analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set alpha - weighted
+        # set alpha - weighted
         if self.option == "lambda1":
             alpha = Series([1/model[g].eig_.iloc[0,0] for g in name_group],index=name_group)
         elif self.option == "inertia":
             alpha = Series([1/sum(model[g].eig_.iloc[:,0]) for g in name_group],index=name_group)
         else:
             alpha = Series(ones(len(name_group)),index=name_group)
-        
-        #set columns weights for multiple coinertia analysis
+        # set columns weights for multiple co-inertia analysis
         col_w = concat((model[g].call_.col_w*alpha[g] for g in name_group),axis=0)
     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -463,7 +502,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
             fit_ = gSVD(tab,row_w=row_w,col_w=col_w,ncp=self.ncp,tol=self.tol)
             #normalization right matrix using mcoia variables weights by group and substract projection
             if (i == 0) or ((i > 0) and ((fit_.vs[0]/vs[0])**2) > self.tol):
-                v = fit_.V[:,0]/sqrt(col_w)
+                v = fit_.V[:,0]/sqrt(col_w.to_numpy())
                 for g, cols in columns_dict.items():
                     idx = columns_index[g]
                     v1 = v[idx]
@@ -472,7 +511,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
                     if v2 > self.tol:
                         v1 = v1/v2
                     #substract projection
-                    tab[cols] = tab[cols].sub(outer(tab[cols].mul(v1,axis=1).sum(axis=1),v1))
+                    tab[cols] = tab[cols] - outer((tab[cols] * v1).sum(axis=1),v1)
                     v[idx] = v1
                 U.append(fit_.U[:,0]), V.append(v), vs.append(float(fit_.vs[0]))
             else:
@@ -497,8 +536,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
             ncp = min(self.ncp,rank)
 
         #set call_ informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Xcod=Xcod,Zcod=Zcod,Z=Z,total=total,ind_w=ind_w,row_w=row_w,var_w=var_w,col_w=col_w,center=center,scale=scale,z_center=z_center,alpha=alpha,ncp=ncp,
-                            group=group,type_group=type_group,name_group=name_group,ind_sup=ind_sup_label)
+        call_ = {"Xtot":Xtot,"X":X,"Xcod":Xcod,"Zcod":Zcod,"Z":Z,"total":total,"ind_w":ind_w,"row_w":row_w,
+                 "var_w":var_w,"col_w":col_w,"center":center,"scale":scale,"z_center":z_center,"alpha":alpha,"ncp":ncp,
+                 "group":group,"type_group":type_group,"name_group":name_group,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -518,24 +558,22 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #synthetic scores for the individuals
         ind_synvar = DataFrame(self.svd_.U[:,:ncp],index=Z.index,columns=self.eig_.index[:ncp])
-        #individuals partial coordinates, normed partial coordinates
-        ind_partiel_coord, ind_partiel_coord_n = OrderedDict(), OrderedDict()
+        # partial coordinates and normed partial coordinates for individuals
+        ind_coord_partiel, ind_coord_partiel_n = None, None
         for g, cols in columns_dict.items():
-            nbcol = min(ncp,model[g].call_.ncp)
-            #partial scores of the individuals in group g
-            ind_partiel_coord_g = (Z[cols] * sqrt(col_w[cols])).dot((self.svd_.V[columns_index[g],:nbcol].T * array(model[g].call_.col_w)).T)
-            #normed partial scores of the individuals in group g
-            ind_partiel_coord_g_n = ind_partiel_coord_g/sqrt(((ind_partiel_coord_g.T * sqrt(row_w))**2).sum(axis=1))
+            #partial scores of the individuals
+            coord_partiel = (Z[cols] * sqrt(col_w[cols])).dot((self.svd_.V[columns_index[g],:ncp].T * model[g].call_.col_w.to_numpy()).T)
+            #normed partial scores of the individuals
+            coord_partiel_n = coord_partiel/sqrt(((coord_partiel.T * sqrt(row_w))**2).sum(axis=1))
             #set columns
-            ind_partiel_coord_g.columns, ind_partiel_coord_g_n.columns = self.eig_.index[:nbcol], self.eig_.index[:nbcol]
+            coord_partiel.columns, coord_partiel_n.columns = self.eig_.index[:ncp], self.eig_.index[:ncp]
+            # set index
+            coord_partiel.index, coord_partiel_n.index = [f"{x}.{g}" for x in Z.index], [f"{x}.{g}" for x in Z.index]
             #concatenate
-            ind_partiel_coord[g], ind_partiel_coord_n[g] = ind_partiel_coord_g, ind_partiel_coord_g_n
-
-        #convert to namedtuple
-        ind_partiel_coord = namedtuple("coord",ind_partiel_coord.keys())(*ind_partiel_coord.values())
-        ind_partiel_coord_n = namedtuple("coord",ind_partiel_coord_n.keys())(*ind_partiel_coord_n.values())
+            ind_coord_partiel = concat_empty(ind_coord_partiel,coord_partiel,axis=0) 
+            ind_coord_partiel_n = concat_empty(ind_coord_partiel_n,coord_partiel_n,axis=0)
         #convert to ordered dictionary
-        ind_ = OrderedDict(coord=ind_synvar,coord_partiel=ind_partiel_coord,coord_partiel_n=ind_partiel_coord_n)
+        ind_ = {"coord":ind_synvar,"coord_partiel":ind_coord_partiel,"coord_partiel_n":ind_coord_partiel_n}
         #convert to namedtuple - add to model attributes
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
@@ -545,22 +583,29 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #lambda : eigen values informations - after normalization
         lambd, mincp = None, ncp
         for g, cols in columns_dict.items():
-            nbcol = int(min(ncp,model[g].call_.ncp))
+            nbcol = min(ncp,mncp[g])
+            # squared singular values
             sqvs = gSVD(X=Z[cols],ncp=nbcol,row_w=row_w,col_w=col_w[cols],tol=self.tol).vs[:nbcol]**2
             lambd = concat_empty(lambd,Series(sqvs,index=[f"Dim{x+1}" for x in range(nbcol)]).to_frame(g).T,axis=0)
             mincp = min(mincp, nbcol)
         lambd = lambd.iloc[:,:mincp]
 
         #covariance
-        group_sqcov = concat((((ind_partiel_coord[i].iloc[:,:mincp].mul(self.svd_.U[:,:mincp]).T * row_w).sum(axis=1)**2).to_frame(g) for i, g in enumerate(name_group)),axis=1).T
+        group_sqcov, i = DataFrame(index=name_group,columns=self.eig_.index[:ncp]).astype("float"), 0
+        for g in name_group:
+            # partiel coordinates for individuals
+            coord_partiel = ind_coord_partiel.iloc[i:(i+n_rows),:ncp]
+            group_sqcov.loc[g,:] = (((coord_partiel * self.svd_.U[:,:ncp]).T * row_w.to_numpy()).sum(axis=1)**2)
+            # update i
+            i += n_rows
         
         #coinertia coefficients
-        coinertia = DataFrame(index=name_group,columns=name_group).astype(float)
+        coinertia = DataFrame(index=name_group,columns=name_group).astype("float")
         for g1, cols1 in columns_dict.items():
             for g2, cols2 in columns_dict.items():
                 coinertia.loc[g1,g2] = func_coinertia(X=Z[cols1],Y=Z[cols2],xcol_w=col_w[cols1],ycol_w=col_w[cols2],row_w=row_w)
         
-        #add MCOA coinertia coefficients
+        # add MCOA coinertia coefficients
         if self.option == "lambda1":
             den = self.eig_.iloc[0,0]
         elif self.option == "inertia":
@@ -572,7 +617,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #RV Coefficients
         RV = cov2corr(X=coinertia)
         #convert to ordered dictionary
-        group_ = OrderedDict(lambd=lambd,coinertia=coinertia,RV=RV,cov2=group_sqcov)
+        group_ = {"lambd":lambd,"coinertia":coinertia,"RV":RV,"cov2":group_sqcov}
         #convert to namedtuple
         self.group_ = namedtuple("group",group_.keys())(*group_.values())
 
@@ -580,84 +625,89 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #partial inertia 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #coordinates of partial axes - inertia axes onto co-inertia axis
-        partial_axes_coord = OrderedDict()
+        partial_axes_coord = None
         for g, cols in columns_dict.items():
-            nbcol = min(ncp,model[g].call_.ncp)
-            partial_coord = model[g].svd_.V[:,:nbcol].T.dot((self.svd_.V[columns_index[g],:nbcol].T * array(model[g].call_.col_w)).T)
+            nbcol = min(ncp,mncp[g])
+            coord_partial = model[g].svd_.V[:,:nbcol].T.dot((self.svd_.V[columns_index[g],:nbcol].T * model[g].call_.col_w.to_numpy()).T)
             for i in range(nbcol):
-                if partial_coord[i,i] < 0:
+                if coord_partial[i,i] < 0:
                     for j in range(nbcol):
-                        partial_coord[i,j] = - partial_coord[i,j]
-            partial_coord = DataFrame(partial_coord,index=model[g].eig_.index[:nbcol],columns= self.eig_.index[:nbcol])
-            partial_axes_coord[g] = partial_coord
-    
-        #convert to namedtuple
-        partial_axes_coord = namedtuple("coord",partial_axes_coord.keys())(*partial_axes_coord.values())
-        #convert to ordered dictionary
-        partial_axes_ = OrderedDict(coord_partiel=partial_axes_coord)
-        #convert to namedtuple
+                        coord_partial[i,j] = - coord_partial[i,j]
+            coord_partial = DataFrame(coord_partial,index=model[g].eig_.index[:nbcol],columns= self.eig_.index[:nbcol])
+            # concatenate
+            partial_axes_coord = concat_empty(partial_axes_coord,coord_partial,axis=0)
+        # convert dictionary
+        partial_axes_ = {"coord":partial_axes_coord,"cos2":partial_axes_coord**2}
+        # convert to namedtuple
         self.partial_axes_ = namedtuple("partial_axes",partial_axes_.keys())(*partial_axes_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for quantitative variables (coordinates on synthetic scores, contributions and cos2)
+        #statistics for continuous variables (coordinates on synthetic scores, contributions and cos2)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if "quanti" in type_group_var.values:
-            #quantitativate variables columns
-            quanti_var_cols = list(type_group_var[type_group_var == "quanti"].index)
+        if "quanti" in type_group_var.to_numpy():
+            # continuouos variables columns
+            quanti_var_cols = type_group_var[type_group_var == "quanti"].index
             #coordinates on synthetic scores of the quantitative variables
-            quanti_var_coord  = (Z[quanti_var_cols] * sqrt(col_w[quanti_var_cols])).T.dot((self.svd_.U[:,:ncp].T * array(row_w)).T)
+            quanti_var_coord  = (Z[quanti_var_cols] * sqrt(col_w[quanti_var_cols])).T.dot((self.svd_.U[:,:ncp].T * row_w.to_numpy()).T)
             quanti_var_coord.columns = self.eig_.index[:ncp]
             #convert to ordered dictionary
-            quanti_var_ = OrderedDict(coord=quanti_var_coord)
+            quanti_var_ = {"coord":quanti_var_coord, "cos2" : quanti_var_coord**2}
             #convert to namedtuple
             self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for levels (coordinates, partiel coordinates & value-test) and qualitative variables (coordinates & partial coordinates)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if "quali" in type_group_var.values:
-            #qualitativate variables columns
-            quali_var_cols = list(type_group_var[type_group_var == "quali"].index)
-            #select all qualitative variables
+        if "quali" in type_group_var.to_numpy():
+            # categorical variable columns
+            quali_var_cols = type_group_var[type_group_var == "quali"].index
+            # select all categorical variables
             X_quali_var = X[quali_var_cols]
-            #coordinates for the levels
+            # coordinates for the levels
             levels_coord = func_groupby(X=self.ind_.coord,by=X_quali_var,func="mean",w=row_w)
-            #proportion for the slevels
+            # proportion for the levels
             p_k = (disjunctive(X_quali_var).T * row_w).sum(axis=1)
-            #vtest for the levels
+            # vtest for the levels
             levels_vtest = (levels_coord.T * sqrt((n_rows-1)/((1/p_k) - 1))).T/self.svd_.vs[:ncp]
-            #partial coordinates of the levels
-            levels_partiel_coord = OrderedDict({g : func_groupby(X=self.ind_.coord_partiel._asdict()[g],by=X_quali_var,func="mean",w=row_w) for g in list(columns_dict.keys())})
-            #convert to namedtuple
-            levels_partiel_coord = namedtuple("coord_partiel",levels_partiel_coord.keys())(*levels_partiel_coord.values())
+            # coordinates for the categorical variables on synthetic scores - Eta-squared
+            quali_var_coord = func_eta2(X=self.ind_.coord,by=X_quali_var,w=row_w,excl=None)
+            # partial coordinates of the levels
+            levels_coord_partiel, quali_var_coord_partiel, i = None, None, 0
+            for g in list(columns_dict.keys()):
+                # extract individuals partiel coordinates
+                coord_partiel = ind_coord_partiel.iloc[i:(i+n_rows),:]
+                coord_partiel.index = ind_["coord"].index
+                coord1 = func_groupby(X=coord_partiel,by=X_quali_var,func="mean",w=row_w)
+                coord2 = func_eta2(X=coord_partiel,by=X_quali_var,w=row_w,excl=None)
+                # set index
+                coord1.index, coord2.index = [f"{x}.{g}" for x in coord1.index], [f"{x}.{g}" for x in coord2.index]
+                # concatenate
+                levels_coord_partiel = concat((levels_coord_partiel,coord1),axis=0)
+                quali_var_coord_partiel = concat((quali_var_coord_partiel,coord2),axis=0)
+                # update i
+                i += n_rows
             #convert to ordered dictionary
-            levels_ = OrderedDict(coord=levels_coord,coord_partiel=levels_partiel_coord,vtest=levels_vtest)
+            levels_ = {"coord":levels_coord,"coord_partiel":levels_coord_partiel,"vtest":levels_vtest}
             #conver to namedtuple
             self.levels_ = namedtuple("levels",levels_.keys())(*levels_.values())
 
-            ##statistics for the qualitative variables
-            #coordinates for the qualitative variables on synthetic scores - Eta-squared
-            quali_var_coord = func_eta2(X=self.ind_.coord,by=X_quali_var,w=row_w,excl=None)
-            #partiel coordinates
-            quali_var_coord_partiel = OrderedDict({g : func_eta2(X=self.ind_.coord_partiel._asdict()[g],by=X_quali_var,w=row_w,excl=None) for g in name_group})
-            #convert to namedtuple
-            quali_var_coord_partiel = namedtuple("coord_partiel",quali_var_coord_partiel.keys())(*quali_var_coord_partiel.values())
-            #convert to ordered dictionary
-            quali_var_ = OrderedDict(coord=quali_var_coord,coord_partiel=quali_var_coord_partiel)
-            #convert to namedtuple
+            ##statistics for the categorical variables
+            # convert to ordered dictionary
+            quali_var_ = {"coord":quali_var_coord,"coord_partiel":quali_var_coord_partiel}
+            # convert to namedtuple
             self.quali_var_ = namedtuple("quali_var",quali_var_.keys())(*quali_var_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for the frequencies : coordinates, cos2, contributions & infos
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if "freq" in type_group_var.values:
+        if "freq" in type_group_var.to_numpy():
             #frequencies columns
-            freq_cols = list(type_group_var[type_group_var == "freq"].index)
+            freq_cols = type_group_var[type_group_var == "freq"].index
             #coordinates on synthetic scores of the frequencies
-            freq_coord = (Z[freq_cols] * sqrt(col_w[freq_cols])).T.dot((self.svd_.U[:,:ncp].T * array(row_w)).T)
+            freq_coord = (Z[freq_cols] * sqrt(col_w[freq_cols])).T.dot((self.svd_.U[:,:ncp].T * row_w.to_numpy()).T)
             freq_coord.columns = self.eig_.index[:ncp]
             #convert to ordered dictionary
-            freq_ = OrderedDict(coord=freq_coord)
+            freq_ = {"coord":freq_coord, "cos2" : freq_coord**2}
             #convert to namedtuple
             self.freq_ = namedtuple("freq",freq_.keys())(*freq_.values())
 
@@ -682,11 +732,11 @@ class MCOIA(BaseEstimator,TransformerMixin):
                     Xcols_ind_sup = None
                     if n_ind_sup_quanti > 0:
                         if model[g].call_.k1 != n_ind_sup_quanti:
-                            raise TypeError("The number of quantitative variables must be the same")
+                            raise TypeError("The number of continuous variables must be the same")
                         Xcols_ind_sup = concat_empty(Xcols_ind_sup,Xcols_ind_sup_quanti,axis=1)
                     if n_ind_sup_quali > 0:
                         if model[g].call_.k2 != n_ind_sup_quali:
-                            raise TypeError("The number of qualitative variables must be the same")
+                            raise TypeError("The number of categorical variables must be the same")
                         Xcols_ind_sup = concat_empty(Xcols_ind_sup,disjunctive(X=Xcols_ind_sup_quali,cols=model[g].call_.dummies.columns),axis=1)
                     Z_ind_sup[Xcols_ind_sup.columns] = (Xcols_ind_sup - model[g].call_.center)/model[g].call_.scale
 
@@ -703,19 +753,20 @@ class MCOIA(BaseEstimator,TransformerMixin):
                         #normalize such sum is equal to 1
                         B_row_sup = row_rowsup_m_g/sum(row_rowsup_m_g)
                         #recoded columns
-                        Z_ind_sup[cols] = P_row_sup[cols].div(col_m[cols],axis=1).sub(B_row_sup,axis=0).div(row_sup_m,axis=0).replace([nan,inf,-inf], 1e-15)
+                        Z_ind_sup[cols] = (((P_row_sup[cols]/col_m[cols]).T - B_row_sup)/row_sup_m).T.replace([nan,inf,-inf],1e-15)
             
             #partial scores of the supplementary individuals
-            ind_sup_partiel_coord = OrderedDict()
+            ind_sup_coord_partiel = None
             for g, cols in columns_dict.items():
-                nbcol = min(ncp,model[g].call_.ncp)
-                ind_sup_partiel_coord_g = (Z_ind_sup[cols] * sqrt(col_w[cols])).dot((self.svd_.V[columns_index[g],:nbcol].T * array(model[g].call_.col_w)).T)
-                ind_sup_partiel_coord_g.columns = self.eig_.index[:nbcol]
-                ind_sup_partiel_coord[g] = ind_sup_partiel_coord_g
-            #convert to namedtuple
-            ind_sup_partiel_coord = namedtuple("coord_partiel",ind_sup_partiel_coord.keys())(*ind_sup_partiel_coord.values())
-            #convert to ordered dictionary
-            ind_sup_ = OrderedDict(coord_partiel = ind_sup_partiel_coord)
+                nbcol = min(ncp,mncp[g])
+                # partial coordinates
+                coord_partiel = (Z_ind_sup[cols] * sqrt(col_w[cols])).dot((self.svd_.V[columns_index[g],:nbcol].T * model[g].call_.col_w.to_numpy()).T)
+                # set index and columns
+                coord_partiel.columns, coord_partiel.index = self.eig_.index[:nbcol], [f"{x}.{g}" for x in ind_sup_label]
+                # concatenate
+                ind_sup_coord_partiel = concat_empty(ind_sup_coord_partiel,coord_partiel,axis=0)
+            #convert to dictionary
+            ind_sup_ = {"coord_partiel" : ind_sup_coord_partiel}
             #convert to namedtuple
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
@@ -723,7 +774,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
     
     def fit_transform(self,X,y=None):
         """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
@@ -735,7 +786,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, a)
+        X_new : DataFrame of shape (n_rows, n_components)
             Transformed values.
         """
         self.fit(X)

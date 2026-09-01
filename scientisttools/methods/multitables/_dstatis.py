@@ -2,8 +2,7 @@
 from numpy import ones, array, ndarray, linalg,insert, diff,nan, cumsum, c_, diag, sum,sqrt
 from pandas import DataFrame, Series, concat, CategoricalDtype
 from itertools import chain, repeat
-from collections import OrderedDict, namedtuple
-from functools import reduce
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
@@ -11,9 +10,10 @@ from sklearn.utils.validation import check_is_fitted
 from ..functions.preprocessing import preprocessing
 from ..functions.get_sup_label import get_sup_label
 from ..functions.statistics import wmean, wstd
+from ..functions.spca import sPCA
+from ..functions.rvstats import RVstats
 from ..functions.utils import check_is_bool, is_all_numeric_dtype, is_all_object_or_category_dtype, check_is_dataframe
 from ..others._disjunctive import disjunctive
-from ..others._splitgroup import splitgroup, RVstats
 
 class DSTATIS(BaseEstimator,TransformerMixin):
     """
@@ -24,7 +24,7 @@ class DSTATIS(BaseEstimator,TransformerMixin):
     Parameters
     ----------
     scale_unit : bool, default = True
-        If ``True``, then the data are scaled to unit variance.
+        If True, then the data are scaled to unit variance.
 
     ncp : int, default = 5
         The number of dimensions kept in the results.
@@ -32,8 +32,8 @@ class DSTATIS(BaseEstimator,TransformerMixin):
     group : int, str
         The indexe or name of the categorical variable which allows to make the group of individuals.
 
-    row_w : 1d array-like of shape (n_rows,), default = None
-        An optional rows weights. The weights are given only for the active rows.
+    row_w : 1d array-like of shape (n_samples,), default = None
+        An optional individuals weights. The weights are given only for the active individuals.
 
     col_w : 1d array-like of shape (n_columns,), default = None
         An optional columns weights. The weights are given only for the active columns.
@@ -42,30 +42,31 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary individuals.
 
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
 
     Returns
     -------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters, with the following attributes:
 
-        Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
+        Xtot : DataFrame of shape (n_samples + n_samples_sup, n_columns)
             Input data.
-        X : DataFrame of shape (n_rows, n_columns)
+        X : DataFrame of shape (n_samples, n_columns)
             Active data.
-        x : DataFrame of shape (n_rows, n_columns - 1)
+        x : DataFrame of shape (n_samples, n_columns - 1)
             The Data
-        y : Series of shape (n_rows,)
+        y : Series of shape (n_samples,)
             The vector of factors associated with group structure
-        Xcod : DataFrame of shape (n_rows, n_columns)
+        Xcod : DataFrame of shape (n_samples, n_columns)
             Recoded data.
-        dummies : DataFrame of shape (n_rows, n_levels)
+        dummies : DataFrame of shape (n_samples, n_levels)
             Disjunctive table.
         M : DataFrame of shape (n_groups, n_levels)
             The 1-proportion of levels associated to each group.
-        Zcod : DataFrame of shape (n_rows, n_columns)
+        Zcod : DataFrame of shape (n_samples, n_columns)
             The concatenated standardized data
-        Z : DataFrame of shape (n_rows, n_columns) 
+        Z : DataFrame of shape (n_samples, n_columns) 
             Standardized data.
         W : DataFrame of shape (n_columns, n_columns)
             The compromise loadings.
@@ -79,7 +80,7 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             The weighted standard deviation of concatenate standardized data.
         ncp : int, default = 5
             The number of dimensions kept in the results.
-        row_w : Series of shape (n_rows,) or (n_groups,)
+        row_w : Series of shape (n_samples,)
             The rows weights.
         var_w : Series of shape (n_columns,)
             The variables weights.
@@ -90,8 +91,22 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         ind_sup : None, list
             The names of the supplementary individuals.
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
+
+    evd_ : evdResult
+        An object containing all the results for the eigen value decomposition (EVD), with the following attributes:
+
+        V : 2d numpy array of shape (n_columns, rank)
+            The eigen vectors.
+        d : 1d numpy array of shape (rank,)
+            The eigen values.
+        vs : 1d numpy array of shape (rank,)
+            The singular values, which is squared root of eigen values.
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
 
     group_ : group
         An object containing all the results for the groups, with the following attributes:
@@ -120,13 +135,13 @@ class DSTATIS(BaseEstimator,TransformerMixin):
     ind_ : ind
         An object containing all the results for the active individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_rows, ncp)
+        coord : DataFrame of shape (n_samples, ncp)
             The coordinates of the individuals.
 
     ind_sup_ : ind_sup, optional
         An object containing all the results for the supplementary individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_rows_plus, ncp)
+        coord : DataFrame of shape (n_samples_plus, ncp)
             The coordinates of the supplementary individuals.
 
     quanti_var_ : quanti_var
@@ -138,18 +153,6 @@ class DSTATIS(BaseEstimator,TransformerMixin):
     separate_analyses_ : dict
         The results for the separates Principal Component Analysis.
 
-    svd_ : svdResult
-        An object containing all the results for the generalized singular value decomposition (GSVD), with the following attributes:
-        
-        vs : 1d numpy array of shape (maxcp,)
-            The singular values.
-        V : 2d numpy array of shape (n_columns, ncp)
-            The right singular vectors.
-        rank : int
-            The maximum number of components.
-        ncp : int
-            The number of components kepted.
-
     References
     ----------
     [1] C. Lavit (1988). Analyse conjointe de tableaux quantitatifs. Masson.
@@ -158,14 +161,11 @@ class DSTATIS(BaseEstimator,TransformerMixin):
 
     [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). General overview of methods of analysis of multi-group datasets, Revue des Nouvelles Technologies de l'Information, 25, 108-123.
     
-    See Also
+    See also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet.
+    sprintf : Print the analysis results.
+    summary : Printing summaries of general factor analysis model.
 
     Examples
     --------
@@ -188,12 +188,12 @@ class DSTATIS(BaseEstimator,TransformerMixin):
 
     def fit(self,X,y=None):
         """
-        Fit the model to ``X``
+        Fit the model to X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` in the number of samples and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` in the number of samples and ``n_columns`` is the number of columns.
 
         y : None
             y is ignored
@@ -251,7 +251,7 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             raise TypeError("Not applied to mixed data") 
 
         #unique element in y
-        uq_classe = sorted(list(y.unique()))
+        uq_classe = sorted(y.unique().tolist())
         #convert y to categorical data type
         y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
 
@@ -282,7 +282,7 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             var_w = Series(array(self.col_w),index=x.columns,name="weight")
 
         #group index
-        group_dict = OrderedDict({k : list(y[y==k].index) for k in uq_classe})
+        group_dict = {k : y[y==k].index.tolist()for k in uq_classe}
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
@@ -293,13 +293,16 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             dummies = disjunctive(x)
             M = concat(((1 - ((dummies.loc[rows,:].T * row_w[rows]/sum(row_w[rows])).sum(axis=1))).to_frame(g) for g, rows in group_dict.items()),axis=1).T    
             Xcod = dummies*M.loc[y.values,:].values
-            col_w = Series([x*y for x,y in zip(ones(dummies.shape[1]),list(chain(*[repeat(i,k) for i, k in zip(var_w,[x[j].nunique() for j in x.columns])])))],index=dummies.columns,name="weight")
+            # extend variables weights
+            mvar_w = list(chain(*[repeat(i,k) for i, k in zip(var_w,[x[j].nunique() for j in x.columns])]))
+            # variable categories weights
+            col_w = Series([x*y for x,y in zip(ones(dummies.shape[1]),mvar_w)],index=dummies.columns,name="weight")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #run separate general factor analysis
-        model = splitgroup(X=Xcod,y=y,scale_unit=self.scale_unit,ncp=self.ncp,row_w=row_w,col_w=col_w,tol=self.tol)
+        model = sPCA(X=Xcod,y=y,scale_unit=self.scale_unit,ncp=self.ncp,row_w=row_w,col_w=col_w,tol=self.tol)
             
         #store separate analysis
         self.separate_analyses_ = model
@@ -310,7 +313,8 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         #scale_unitd data
         Zcod = concat((model[g].call_.Z for g in list(model.keys())),axis=0,ignore_index=False).loc[y.index,:]
         #weighted average
-        center, scale = concat((model[g].call_.center.to_frame(g) for g in list(model.keys())),axis=1).T, concat((model[g].call_.scale.to_frame(g) for g in list(model.keys())),axis=1).T
+        center = concat((model[g].call_.center.to_frame(g) for g in list(model.keys())),axis=1).T
+        scale = concat((model[g].call_.scale.to_frame(g) for g in list(model.keys())),axis=1).T
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #standardization according to normed principal components analysis
@@ -327,15 +331,15 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         group_ = RVstats(model=model,tol=self.tol)
 
         #compromise variance covariance matrice
-        W = reduce(lambda x, y : x + y, [group_["infos"].loc[g,"Weight"]*model[g].call_.Vb for g in uq_classe])
-        
+        W = DataFrame(sum([group_["infos"].loc[g,"Weight"]*model[g].call_.Vb for g in uq_classe],axis=0),columns=Z.columns,index=Z.columns)
+
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #Singular Values Decomposition
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #singular values decomposition
-        svd = linalg.svd(W,hermitian=True)
+        # eigen value decomposition (= singular value decomposition of hermitian matrix)
+        evd = linalg.svd(W,hermitian=True)
         #set maximum number of components
-        rank = sum(svd[1]/svd[1][0] > self.tol)
+        rank = sum(evd[1]/evd[1][0] > self.tol)
         
         #set number of components
         if self.ncp is None:
@@ -346,27 +350,32 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             ncp = int(min(self.ncp,rank))
 
         #Store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,x=x,y=y,Xcod=Xcod,dummies=dummies,M=M,Zcod=Zcod,Z=Z,W=W,center=center,scale=scale,z_center=z_center,z_scale=z_scale,row_w=row_w,var_w=var_w,col_w=col_w,
-                            ncp=ncp,group=group_label,ind_sup=ind_sup_label)
+        call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"Zcod":Zcod,"Z":Z,"W":W,
+                 "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"row_w":row_w,"var_w":var_w,"col_w":col_w,
+                 "ncp":ncp,"group":group_label,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
+        # convert to dictionary
+        evd_ = {"V":evd[0][:,:rank], "d":evd[1][:rank], "vs":sqrt(evd[1][:rank]), "rank":rank, "ncp":ncp}
         #convert to namedtuple
-        self.svd_ = namedtuple("svdResult",["V","vs","rank","ncp"])(svd[0][:,:ncp],sqrt(svd[1][:rank]),rank,ncp)
+        self.evd_ = namedtuple("evdResult",evd_.keys())(*evd_.values())
 
         #eigen values informations
-        eigvals = svd[1][:rank]
+        eigvals = evd[1][:rank]
         eigdiff, eigprop = insert(-diff(eigvals),len(eigvals)-1,nan), 100*eigvals/sum(eigvals)
         #convert to DataFrame
-        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],index = [f"Dim{x+1}" for x in range(rank)])  
+        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],
+                              columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],
+                              index = [f"Dim{x+1}" for x in range(rank)])  
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for variables in compromises spaces
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #compromise loadings - columns coordinates
-        quanti_var_coord = DataFrame(self.svd_.V[:,:ncp]*self.svd_.vs[:ncp],index=Xcod.columns,columns=self.eig_.index[:self.ncp])
+        quanti_var_coord = DataFrame(self.evd_.V[:,:ncp]*self.evd_.vs[:ncp],index=Xcod.columns,columns=self.eig_.index[:self.ncp])
         #convert to ordered dictionary
-        quanti_var_ = OrderedDict(coord=quanti_var_coord)
+        quanti_var_ = {"coord":quanti_var_coord}
         #convert to namedtuple
         self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
 
@@ -374,7 +383,7 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         #lambda - specific variances of group
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #lambda - specific variances of group
-        lambd =  concat((Series(diag(self.svd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.svd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in uq_classe),axis=1).T
+        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in uq_classe),axis=1).T
         #add to group
         group_["lambd"] = lambd
         #explained variance
@@ -386,10 +395,10 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         #statistics for individuals in compromises spaces
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #individuals coordinates
-        ind_coord = (Z * col_w).dot(self.svd_.V[:,:ncp])
+        ind_coord = (Z * col_w).dot(self.evd_.V[:,:ncp])
         ind_coord.columns = self.eig_.index[:ncp]
         #convert to ordered dictionary
-        ind_ = OrderedDict(coord=ind_coord)
+        ind_ = {"coord":ind_coord}
         #convert to namedtuple
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
@@ -407,10 +416,10 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             #standardization
             Z_ind_sup = (((Xcod_ind_sup - center.loc[y_ind_sup.values,:].values)/scale.loc[y_ind_sup.values,:].values) - z_center)/z_scale
             #coordinates for supplementary individuals
-            ind_sup_coord = (Z_ind_sup * col_w).dot(self.svd_.V[:,:ncp])
+            ind_sup_coord = (Z_ind_sup * col_w).dot(self.evd_.V[:,:ncp])
             ind_sup_coord.columns = self.eig_.index[:ncp]
             #convert to ordered dictionary
-            ind_sup_ = OrderedDict(coord=ind_sup_coord)
+            ind_sup_ = {"coord":ind_sup_coord}
             #convert to namedtuple
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
@@ -418,19 +427,19 @@ class DSTATIS(BaseEstimator,TransformerMixin):
     
     def fit_transform(self,X,y=None):
         """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
         
         y : None
             y is ignored.
         
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, n_components)
+        X_new : DataFrame of shape (n_samples, n_components)
             Transformed values.
         """
         self.fit(X)
@@ -438,19 +447,19 @@ class DSTATIS(BaseEstimator,TransformerMixin):
     
     def transform(self,X):
         """
-        Apply dimensionality reduction to ``X``.
+        Apply dimensionality reduction to X.
 
-        ``X`` is projected on the first principal components previously extracted from a training set.
+        X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            New data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
 
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, ncp)
-            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        X_new : DataFrame of shape (n_samples, ncp)
+            Projection of ``X`` in the first principal components, where ``n_samples`` is the number of samples and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes
@@ -482,7 +491,7 @@ class DSTATIS(BaseEstimator,TransformerMixin):
 
         #standardization
         Z = (((Xcod - self.call_.center.loc[y.values,:].values)/self.call_.scale.loc[y.values,:].values) - self.call_.z_center)/self.call_.z_scale
-        #coordinates for supplementary individuals
-        coord = (Z * self.call_.col_w).dot(self.svd_.V[:,:self.svd_.ncp])
-        coord.columns = self.eig_.index[:self.svd_.ncp]
+        #coordinates for new individuals
+        coord = (Z * self.call_.col_w).dot(self.evd_.V[:,:self.evd_.ncp])
+        coord.columns = self.eig_.index[:self.evd_.ncp]
         return coord

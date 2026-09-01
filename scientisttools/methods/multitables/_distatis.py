@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from numpy import array, ones, ndarray, sum, reshape, linalg, real, diff, insert, c_, cumsum, sqrt,nan
-from collections import namedtuple, OrderedDict
-from functools import reduce
+from collections import namedtuple
 from pandas import DataFrame, Series, concat
 from scipy.spatial.distance import pdist,squareform
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -11,6 +10,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..onetable._pcoa import PCoA 
 from ..functions.get_sup_label import get_sup_label
 from ..functions.cov2corr import cov2corr
+from ..functions.concat_empty import concat_empty
 from ..functions.utils import check_is_all_numeric_dtype, check_is_dataframe
 
 class DISTATIS(BaseEstimator,TransformerMixin):
@@ -18,7 +18,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
     Analysis of Multiple Distance Matrices (DISTATIS)
 
     Performs the Analysis of Multiple Distance Matrices (DISTATIS) in the sense of `Abdi, H. and al <https://personal.utdallas.edu/~herve/abdi-distatis2005.pdf>`_, which is a 3-Way Multidimensional Scaling (MDS) on the STATIS optimization procedure.
-    :class:`scientisttools.DISTATIS` is a generalization of classical multidimensional scaling (PCoA) whose goal is to analyze a single distance matrix.
+    :class:`~scientisttools.DISTATIS` is a generalization of classical multidimensional scaling (PCoA) whose goal is to analyze a single distance matrix.
 
     Parameters
     ----------
@@ -29,7 +29,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         The number of variables in each group.
 
     name_group : list, tuple, default = None
-        The name of the groups. If ``None``, the group are named Gr1, Gr2 and so on.
+        The name of the groups. If None, the group are named Gr1, Gr2 and so on.
 
     option : str, default = "lambda1"
         A string for the weightings of the variables.
@@ -59,34 +59,35 @@ class DISTATIS(BaseEstimator,TransformerMixin):
     ind_sup : int, str, list, tuple or range, default = None
         The indexes or names of the supplementary individuals.
 
-    row_w : 1d array-like of shape (n_rows,), default = None
+    row_w : 1d array-like of shape (n_samples,), default = None
         An optional individuals weights. The weights are given only for the active individuals.
 
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
 
     Returns
     -------
     call_ : call
-        An object containing all the results for the summary called parameters, with the following attributes:
+        An object containing the summary called parameters, with the following attributes:
 
-        Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns)
+        Xtot : DataFrame of shape (n_samples + n_samples_sup, n_columns)
             Input data.
-        X : DataFrame of shape (n_rows, n_columns)
+        X : DataFrame of shape (n_samples, n_columns)
             Active data.
-        Scod : OrderedDict
+        Scod : dict
             The separate cross-product matrix.
         S : OrderedDict
             The separate normalized cross-product matrix.
-        Y : DataFrame of shape (n_rows*n_rows, n_groups)
+        Y : DataFrame of shape (n_samples*n_samples, n_groups)
             The complete data matrix where each column is a vec for the normalized cross-product matrix.
-        Z : DataFrame of shape (n_rows, n_rows)
+        Z : DataFrame of shape (n_samples, n_samples)
             The compromise matrix.
         alpha : Series of shape (n_groups,)
             The weight of the each group after separate analyses.
         beta : Series of shape (n_groups,)
             The weight of each group in compromise space.
-        row_w : Series of shape (n_rows,)
+        row_w : Series of shape (n_samples,)
             The weights of the individuals.
         ncp : int
             The number of components kepted.
@@ -97,17 +98,20 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         ind_sup : None, list
             The names of the supplementary individuals.
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     evd_ : evdResult
         An object containing all the results for the eigen values decomposition, with the following attributes:
 
-        V : 2D array-like of shape (n_samples, maxcp)
-            Eigen vectors.
-
-        d : 1D array-like of shape (maxcp,)
-            Eigen values.
+        V : 2D array-like of shape (n_samples, rank)
+            The eigen vectors.
+        d : 1D array-like of shape (rank,)
+            The eigen values.
+        rank : int
+            The maximum number of components.
+        ncp : int
+            The number of components kepted.
 
     group_ : group
         An object containing all the results for the groups, with the following attributes:
@@ -116,9 +120,9 @@ class DISTATIS(BaseEstimator,TransformerMixin):
             The trace \emph{RV} coefficients.
         RV : DataFrame of shape (n_groups,n_groups)
             The \emph{RV} coefficients.
-        eig : DataFrame of shape (n_groups, 4)
+        eig : DataFrame of shape (rank_rv, 4)
             The eigen values of the RV matrix.
-        coord : DataFrame of shape (n_groups, n_groups)
+        coord : DataFrame of shape (n_groups, rank_rv)
             The coordinates of the groups.
         contrib : DataFrame of shape (n_groups, n_groups)
             The relative contributions of the groups.
@@ -138,22 +142,22 @@ class DISTATIS(BaseEstimator,TransformerMixin):
             The square cosinus of the individuals.
         dist2 : Series of shape (n_samples,)
             The square euclidean distance of the individuals.
-        coord_partiel : coord_partiel
-            An object containing all the partiel coordinates of the individuals.
+        coord_partiel : DataFrame of shape (n_samples*n_groups, ncp)
+            The partiel coordinates of the individuals.
 
-    ind_sup_ : ind_sup
+    ind_sup_ : ind_sup, optional
         An object containing all the results for the individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_rows_sup, ncp)
+        coord : DataFrame of shape (n_samples_sup, ncp)
             The coordinates of the supplementary individuals.
-        cos2 : DataFrame of shape (n_rows_sup, ncp)
+        cos2 : DataFrame of shape (n_samples_sup, ncp)
             The square cosinus of the supplementary individuals.
-        dist2 : Series of shape (n_rows_sup,)
+        dist2 : Series of shape (n_samples_sup,)
             The square euclidean distance of the supplementary individuals.
-        coord_partiel : coord_partiel
-            An object containing all the partiel coordinates of the supplementary individuals.
+        coord_partiel : DataFrame of shape (n_samples_sup*n_groups, ncp)
+            The partiel coordinates of the supplementary individuals.
 
-    separate_analyses_ : OrderedDict
+    separate_analyses_ : dict
         The results for the separate principal coordinates analysis.
 
     References
@@ -172,12 +176,9 @@ class DISTATIS(BaseEstimator,TransformerMixin):
 
     See Also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet.
+    sprintf : Print the analysis results.
+    summary : Printing summaries of general factor analysis model.
 
     Examples
     --------
@@ -194,7 +195,16 @@ class DISTATIS(BaseEstimator,TransformerMixin):
     >>> clf.fit(wine.data.iloc[:,2:29])
     """
     def __init__(
-            self, ncp=5, group=None, name_group=None, option="lambda1",metric = "precomputed", metric_params=None, row_w=None, ind_sup=None, tol = 1e-7
+            self, 
+            ncp = 5, 
+            group = None, 
+            name_group = None, 
+            option = "lambda1",
+            metric = "precomputed", 
+            metric_params = None, 
+            row_w = None, 
+            ind_sup = None, 
+            tol = 1e-7
     ):
         self.ncp = ncp
         self.group = group
@@ -207,16 +217,16 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` in the number of samples and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -227,9 +237,9 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         #check if group is None
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group is None:
-            raise ValueError("'group' must be assigned.")
+            raise ValueError("group must be assigned.")
         elif not isinstance(self.group, (list,tuple,ndarray,Series)):
-            raise ValueError("'group' must be a 1d array-like with the number of variables in each group")
+            raise ValueError("group must be a 1d array-like with the number of variables in each group")
         else:
             group = [int(x) for x in self.group]
 
@@ -247,7 +257,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         #check if option is valid
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not (self.option in ("lambda1","inertia","uniform")):
-            raise ValueError("'option' must be one of 'lambda1', 'inertia', 'uniform'")
+            raise ValueError("option must be one of 'lambda1', 'inertia', 'uniform'")
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if all values are numerics - all columns are continuous
@@ -263,30 +273,30 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         Xtot = X.copy()
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #drop supplementary individuals
+        # drop supplementary individuals
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #drop supplementary individuals
         if self.ind_sup is not None: 
             X_ind_sup, X = X.loc[ind_sup_label,:], X.drop(index=ind_sup_label)
     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #assigned group name
+        # assigned group name
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set nmber of rows
         n_rows = X.shape[0]
         if self.name_group is None:
             name_group = [f"Gr{x+1}" for x in range(len(group))]
         elif not isinstance(self.name_group,(list,tuple)):
-            raise TypeError("'name_group' must be a list or a tuple with name of group")
+            raise TypeError("name_group must be a list or a tuple with name of group")
         else:
-            name_group = [x for x in self.name_group]
+            name_group = [f"{x}" for x in self.name_group]
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #assigned group name to label
+        # assigned group name to label
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_dict, k = OrderedDict(), 0
+        group_dict, k = {}, 0
         for i, g in zip(range(len(group)),name_group):
-            group_dict[g] = list(X.columns[k:(k+group[i])])
+            group_dict[g] = X.columns[k:(k+group[i])]
             k += group[i]
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -296,9 +306,9 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         if self.row_w is None:
             row_w = Series(ones(n_rows)/n_rows,index=X.index,name="weight")
         elif not isinstance(self.row_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'row_w' must be a 1d array-like of individuals weights.")
+            raise TypeError("row_w must be a 1d array-like of individuals weights.")
         elif len(self.row_w) != n_rows:
-            raise ValueError(f"'row_w' must be a 1d array-like of shape ({n_rows},).")
+            raise ValueError(f"row_w must be a 1d array-like of shape ({n_rows},).")
         else:
             row_w = Series(array(self.row_w)/sum(self.row_w),index=X.index,name="weight")
 
@@ -306,7 +316,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         #separate principal coordinates analysis (PCoA)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate principal coordinates analysis (PCoA)
-        model = OrderedDict()
+        model = {}
         for g, cols in group_dict.items():
             model[g] = PCoA(ncp=self.ncp,metric=self.metric,metric_params=self.metric_params,row_w=self.row_w,tol=self.tol).fit(X[cols])
 
@@ -316,7 +326,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #cross-product matrices
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        Scod = OrderedDict({g : model[g].call_.S for g in name_group})
+        Scod = {g : model[g].call_.S for g in name_group}
         #set groups weights
         if self.option == "lambda1":
             alpha = Series([1/model[g].eig_.iloc[0,0] for g in name_group],index=name_group,name="alpha")
@@ -326,7 +336,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
             alpha = Series(ones(len(name_group)),index=name_group,name="alpha")
 
         #normalized cross-product matrices
-        S = OrderedDict({g : alpha[g]*Scod[g] for g in name_group})
+        S = {g : alpha[g]*Scod[g] for g in name_group}
 
         #vec of each normalized cross-matrix
         Y = concat((DataFrame(reshape(S[g],shape=(-1,1),order="F"),columns=[g]) for g in name_group),axis=1)
@@ -344,32 +354,38 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         rv_rank = sum(rv_evdvals/rv_evdvals[0] > self.tol)
         #update with rank
         rv_eigvals, rv_eigvects = rv_evdvals[:rv_rank], rv_evdvects[:,:rv_rank]
+        # convert to dictionary
+        rv_evd_ = {"V" : rv_eigvects,"d" : rv_eigvals, "vs" : sqrt(rv_eigvals),"rank" : rv_rank}
 
         #RV eigen values informations
         rv_eigdiff, rv_eigprop = insert(-diff(rv_eigvals),len(rv_eigvals)-1,nan), 100*rv_eigvals/sum(rv_eigvals)
         #convert to DataFrame
-        rv_eig = DataFrame(c_[rv_eigvals,rv_eigdiff,rv_eigprop,cumsum(rv_eigprop)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],index = [f"Dim{x+1}" for x in range(rv_rank)])
+        rv_eig = DataFrame(c_[rv_eigvals,rv_eigdiff,rv_eigprop,cumsum(rv_eigprop)],
+                           columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],
+                           index = [f"Dim{x+1}" for x in range(rv_rank)])
 
-        #coordinates of the group
+        # coordinates of the group
         group_coord = DataFrame(rv_eigvects*sqrt(rv_eigvals),index=name_group,columns=rv_eig.index)
-        #squared euclidean distance
+        # squared euclidean distance
         group_sqdist = (group_coord**2).sum(axis=1)
-        #cos2 of the group
+        # cos2 of the group
         group_cos2 = ((group_coord**2).T/group_sqdist).T
-        #contributions of the group
+        # contributions of the group
         group_ctr = (group_coord**2)/rv_eigvals
-        #convert to ordered dictionary
-        group_ = OrderedDict(traceRV=traceRV,RV=RV,eig=rv_eig,evd=namedtuple("evdResult",["V","d"])(rv_eigvects,rv_eigvals),coord=group_coord,contrib=group_ctr,cos2=group_cos2,dist2=group_sqdist)
+        
+        #convert to dictionary
+        group_ = {"traceRV":traceRV,"RV":RV,"eig":rv_eig,"evd":namedtuple("evdResult",rv_evd_.keys())(*rv_evd_.values()),
+                  "coord":group_coord,"contrib":group_ctr,"cos2":group_cos2,"dist2":group_sqdist}
         #convert to namedtuple
         self.group_ = namedtuple("group",group_.keys())(*group_.values())
     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #compromise matrix
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #beta
+        # beta
         beta = Series(rv_eigvects[:,0]/sum(rv_eigvects[:,0]),index=name_group,name="beta")
-        #compromise matrix - weighted s
-        Z = reduce(lambda x, y : x + y , [beta[g]*S[g] for g in name_group])
+        # compromise matrix - weighted s
+        Z = DataFrame(sum([beta[g]*S[g] for g in name_group],axis=0),index=X.index,columns=X.index)
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #eigen vales decomposition (EVD)
@@ -393,9 +409,10 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         #convert to namedtuple
         self.evd_ = namedtuple("evdResult",["V","d","rank","ncp"])(eigvects,eigvals,rank,ncp)
 
-        #call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,Scod=Scod,S=S,Y=Y,Z=Z,alpha=alpha,beta=beta,row_w=row_w,ncp=ncp,group=group,name_group=name_group,ind_sup=ind_sup_label)
-        #convert to namedtuple
+        # convert to dictionary
+        call_ = {"Xtot":Xtot,"X":X,"Scod":Scod,"S":S,"Y":Y,"Z":Z,"alpha":alpha,"beta":beta,
+                 "row_w":row_w,"ncp":ncp,"group":group,"name_group":name_group,"ind_sup":ind_sup_label}
+        # convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -404,33 +421,38 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         #proportion and difference
         eigdiff, eigprop = insert(-diff(eigvals),len(eigvals)-1,nan), 100*eigvals/sum(eigvals)
         #convert to DataFrame
-        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],index = ["Dim"+str(x+1) for x in range(rank)])
+        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],
+                              columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],
+                              index = [f"Dim{x+1}" for x in range(rank)])
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for individuals: coordinates, partiel coordinates, contributions, squared euclidean distance and squared cosinus
+        # statistics for individuals: coordinates, partiel coordinates, contributions, squared euclidean distance and squared cosinus
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #coordinates of the individuals in compromise space
+        # coordinates of the individuals in compromise space
         ind_coord = DataFrame(eigvects[:,:ncp]*sqrt(eigvals[:ncp]),index=Z.index,columns=self.eig_.index[:ncp])
-        #partiel coordinares of the individuals
-        ind_coord_partiel = OrderedDict({g : DataFrame(S[g].values.dot(eigvects[:,:ncp]/sqrt(eigvals[:ncp])),index=Z.index,columns=self.eig_.index[:ncp]) for g in name_group})
-        #convert to namedtuple
-        ind_coord_partiel = namedtuple("coord_partiel",ind_coord_partiel.keys())(*ind_coord_partiel.values())
+        # partiel coordinates of the individuals
+        ind_coord_partiel = None
+        for g in name_group:
+            coord =  DataFrame(S[g].to_numpy().dot(eigvects[:,:ncp]/sqrt(eigvals[:ncp])),columns=self.eig_.index[:ncp])
+            coord.index = [f"{x}.{g}" for x in Z.index]
+            ind_coord_partiel = concat_empty(ind_coord_partiel,coord,axis=0)
+        
         #squared euclidean distance of the individuals
         ind_sqdist = Series(((eigvects*sqrt(eigvals))**2).sum(axis=1),index=Z.index,name="Sq. Dist.")
         #cos2 of the individuals
         ind_cos2 = ((ind_coord**2).T/ind_sqdist).T
         #contributions of the individuals
         ind_ctr = (ind_coord**2)/eigvals[:ncp]
-        #convert to ordered dictionary
-        ind_ = OrderedDict(coord=ind_coord,coord_partiel=ind_coord_partiel,contrib=ind_ctr,cos2=ind_cos2,dist2=ind_sqdist)
+        #convert to dictionary
+        ind_ = {"coord":ind_coord, "coord_partiel":ind_coord_partiel, "contrib":ind_ctr, "cos2":ind_cos2, "dist2":ind_sqdist}
         #convert to namedtuple
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #statistics for supplementary individuals: coordinates, partiel coordinates, square euclidean distance and square cosinus
+        # statistics for supplementary individuals: coordinates, partiel coordinates, square euclidean distance and square cosinus
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
-            Scod_sup = OrderedDict()
+            Scod_sup = {}
             for g, cols in group_dict.items():
                 if self.metric == "precomputed":
                     dist_sup = X_ind_sup[cols]
@@ -446,98 +468,101 @@ class DISTATIS(BaseEstimator,TransformerMixin):
                 B = (-0.5*(((D_sup.T - d1_sup).T - model[g].call_.d2) + model[g].call_.d3))
                 Scod_sup[g] = B
             
-            #multiply by alpha
-            S_sup = OrderedDict({g : alpha[g]*Scod_sup[g] for g in name_group})
-            #multiply by beta and get the sum
-            Z_sup = reduce(lambda x, y : x + y, [beta[g]*S_sup[g] for g in name_group])
-
-            #coordinates of the supplementary individuals
-            ind_sup_coord = DataFrame(Z_sup.values.dot(eigvects[:,:ncp]/sqrt(eigvals[:ncp])),index=ind_sup_label,columns=self.eig_.index[:ncp])
-            #partial coordinates of the supplementary individuals
-            ind_sup_coord_partiel = OrderedDict({g : DataFrame(S_sup[g].values.dot(eigvects[:,:ncp]/sqrt(eigvals[:ncp])),index=ind_sup_label,columns=self.eig_.index[:ncp]) for g in name_group})
-            #convert to namedtuple
-            ind_sup_coord_partiel = namedtuple("coord_partiel",ind_sup_coord_partiel.keys())(*ind_sup_coord_partiel.values())
-            #squared euclidean distance of the spplementary individuals
-            ind_sup_sqdist = Series(((Z_sup.values.dot(eigvects/sqrt(eigvals)))**2).sum(axis=1),index=ind_sup_label,name="Sq. Dist.")
-            #cos2 of the supplementary individuals
+            # multiply by alpha
+            S_sup = {g : alpha[g]*Scod_sup[g] for g in name_group}
+            # multiply by beta and get the sum
+            Z_sup = DataFrame(sum([beta[g]*S_sup[g] for g in name_group],axis=0),index=ind_sup_label,columns=X.index)
+            
+            # coordinates of the supplementary individuals
+            ind_sup_coord = DataFrame(Z_sup.to_numpy().dot(eigvects[:,:ncp]/sqrt(eigvals[:ncp])),index=ind_sup_label,columns=self.eig_.index[:ncp])
+            # squared euclidean distance of the supplementary individuals
+            ind_sup_sqdist = Series(((Z_sup.to_numpy().dot(eigvects/sqrt(eigvals)))**2).sum(axis=1),index=ind_sup_label,name="Sq. Dist.")
+            # cos2 of the supplementary individuals
             ind_sup_cos2 = ((ind_sup_coord**2).T/ind_sup_sqdist).T
-            #convert to ordered dictionary
-            ind_sup_ = OrderedDict(coord=ind_sup_coord,coord_partiel=ind_sup_coord_partiel,cos2=ind_sup_cos2,dist2=ind_sup_sqdist)
+            # partial coordinates of the supplementary individuals
+            ind_sup_coord_partiel = None
+            for g in name_group:
+                coord_partiel = DataFrame(S_sup[g].to_numpy().dot(eigvects[:,:ncp]/sqrt(eigvals[:ncp])),columns=self.eig_.index[:ncp])
+                coord_partiel.index = [f"{x}.{g}" for x in ind_sup_label]
+                ind_sup_coord_partiel = concat_empty(ind_sup_coord_partiel,coord_partiel,axis=0)
+            # convert to dictionary
+            ind_sup_ = {"coord":ind_sup_coord, "cos2":ind_sup_cos2, "dist2":ind_sup_sqdist, "coord_partiel":ind_sup_coord_partiel}
             #convert to namedtuple
             self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
         return self
 
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, n_components)
+        X_new : DataFrame of shape (n_samples, n_components)
             Transformed values.
         """
         self.fit(X)
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to ``X``.
+        """Apply dimensionality reduction to X.
 
-        ``X`` is projected on the first principal components previously extracted from a training set.
+        X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            New data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, ncp)
-            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        X_new : DataFrame of shape (n_samples, ncp)
+            Projection of X in the first principal components, where ``n_samples`` is the number of samples 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if the estimator is fitted by verifying the presence of fitted attributes
+        # check if the estimator is fitted by verifying the presence of fitted attributes
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         check_is_fitted(self)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if X is an object of class pd.DataFrame
+        # check if X is an object of class pd.DataFrame
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         check_is_dataframe(X)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #set index name as None
+        # set index name as None
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         X.index.name = None
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #drop level if ndim greater than 1 and reset columns name
+        # drop level if ndim greater than 1 and reset columns name
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if X.columns.nlevels > 1:
             X.columns = X.columns.droplevel()
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #check if X contains original columns
+        # check if X contains original columns
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not set(self.call_.X.columns).issubset(X.columns): 
             raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
         X = X[self.call_.X.columns]
 
-
+        # separate principal coordinates analysis (PCoA) for each group
         model = self.separate_analyses_
-        name_group = list(self.group_.coord.index)
-        group_dict = OrderedDict({g : list(model[g].call_.X.columns) for g in name_group})
+        name_group = self.group_.coord.index
+        group_dict = {g : model[g].call_.X.columns for g in name_group}
 
-        Scod = OrderedDict()
+        Scod = {}
         for g, cols in group_dict.items():
             if self.metric == "precomputed":
                 dist =  X[cols]
@@ -545,20 +570,17 @@ class DISTATIS(BaseEstimator,TransformerMixin):
             else:
                 n_rows_sup = X.shape[0]
                 dist = DataFrame(squareform(pdist(concat((X[cols],model[g].call_.X),axis=0),metric=self.metric,**(self.metric_params if self.metric_params is not None else {})))[:n_rows_sup,n_rows_sup:],
-                                    index=X.index,columns=model[g].call_.X.index)
+                                 index=X.index,columns=model[g].call_.X.index)
             
-            #square distance matrix
+            # square distance matrix
             D = dist**2
-            #double centering
+            # double centering
             d1 = D.sum(axis=1)
             B = (-0.5*(((D.T - d1).T - model[g].call_.d2) + model[g].call_.d3))
             Scod[g] = B
         
-        #multiply by alpha
-        S = OrderedDict({g : self.call_.alpha[g]*Scod[g] for g in name_group})
-        #multiply by beta and get the sum
-        Z = reduce(lambda x, y : x + y, [self.call_.beta[g]*S[g] for g in name_group])
-
-        #coordinates of the new rows
-        coord = DataFrame(Z.values.dot(self.evd_.V[:,:self.evd_.ncp]/sqrt(self.evd_.d[:self.evd_.ncp])),index=X.index,columns=self.eig_.index[:self.evd_.ncp])
+        # multiply by alpha and beta and get the sum
+        Z = sum([self.call_.alpha[g]*self.call_.beta[g]*Scod[g] for g in name_group],axis=0)
+        # coordinates of the new rows
+        coord = DataFrame(Z.dot(self.evd_.V[:,:self.evd_.ncp]/sqrt(self.evd_.d[:self.evd_.ncp])),index=X.index,columns=self.eig_.index[:self.evd_.ncp])
         return coord

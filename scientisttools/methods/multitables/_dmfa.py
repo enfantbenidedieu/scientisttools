@@ -1,33 +1,35 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, array, ndarray, outer, diag, sum, dot, sqrt, linalg, empty
+from numpy import ones, repeat, array, ndarray, outer, diag, sum, dot, sqrt, linalg, empty
 from pandas import DataFrame, Series, concat, CategoricalDtype
-from itertools import chain, repeat
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 #intern functions
 from ..functions.preprocessing import preprocessing
 from ..functions.get_sup_label import get_sup_label
+from ..functions.concat_empty import concat_empty
 from ..functions.statistics import wmean, wstd, wcorr, func_groupby
 from ..functions.gfa import gFA
 from ..functions.func_eta2 import func_eta2
 from ..functions.func_predict import func_predict
+from ..functions.spca import sPCA
+from ..functions.rvstats import RVstats
 from ..functions.utils import check_is_bool, is_all_numeric_dtype, is_all_object_or_category_dtype, check_is_dataframe
 from ..others._disjunctive import disjunctive
 from ..others._splitmix import splitmix
-from ..others._splitgroup import splitgroup, RVstats
 
 class DMFA(BaseEstimator,TransformerMixin):
     """
     Dual Multiple Factor Analysis (DMFA)
     
     Performs Dual Multiple Factor Analysis (DMFA) in the sense of `Pagès and Le Dien <https://hal.science/hal-00704553v1>`_ with supplementary individuals and/or supplementary variables (continuous and/or categorical).
-
+    Missing values on continuous variables are replaced by the column mean. Missing values on categorical variables are replaced by the most frequent categories in columns.
+    
     Parameters
     ----------
     scale_unit : bool, default = True
-        If ``True``, then the data are scaled to unit variance.
+        If True, then the data are scaled to unit variance.
 
     ncp : int, default = 5
         The number of dimensions kept in the results.
@@ -35,8 +37,8 @@ class DMFA(BaseEstimator,TransformerMixin):
     group : int, str
         The indexe or name of the categorical variable which allows to make the group of individuals.
 
-    row_w : 1d array-like of shape (n_rows,), default = None
-        An optional rows weights. The weights are given only for the active rows.
+    row_w : 1d array-like of shape (n_samples,), default = None
+        An optional individuals weights. The weights are given only for the active rows.
 
     col_w : 1d array-like of shape (n_columns,), default = None
         An optional columns weights. The weights are given only for the active columns.
@@ -45,33 +47,34 @@ class DMFA(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary individuals.
 
     sup_var : int, str, list, tuple or range, default = None 
-        The indexes or names of the supplementary variables (quantitative and/or qualitative).
+        The indexes or names of the supplementary variables (continuous and/or categorical).
     
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
 
     Returns
     -------
     call_ : call
-        An object with the following attributes:
+        An object containing the summary called parameters, with the following attributes:
 
-        Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns + n_columns_sup + n_quanti_sup + n_quali_sup)
+        Xtot : DataFrame of shape (n_samples + n_samples_sup, n_columns + n_columns_sup)
             Input data.
-        X : DataFrame of shape (n_rows, n_columns)
+        X : DataFrame of shape (n_samples, n_columns)
             Active data.
-        x : DataFrame of shape (n_rows, n_columns - 1)
-            The Data
-        y : Series of shape (n_rows,)
+        x : DataFrame of shape (n_samples, n_columns - 1)
+            The Data.
+        y : Series of shape (n_samples,)
             The vector of factors associated with group structure
-        Xcod : DataFrame of shape (n_rows, n_columns)
+        Xcod : DataFrame of shape (n_samples, n_columns)
             Recoded data.
-        dummies : DataFrame of shape (n_rows, n_levels)
+        dummies : DataFrame of shape (n_samples, n_levels)
             Disjunctive table.
         M : DataFrame of shape (n_groups, n_levels)
             The 1-proportion of levels associated to each group.
-        Zcod : DataFrame of shape (n_rows, n_columns)
+        Zcod : DataFrame of shape (n_samples, n_columns)
             The concatenated standardized data
-        Z : DataFrame of shape (n_rows, n_columns) 
+        Z : DataFrame of shape (n_samples, n_columns) 
             Standardized data.
         center : DataFrame of shape (n_groups, n_columns)
             The concatenated variables weighted average.
@@ -83,7 +86,7 @@ class DMFA(BaseEstimator,TransformerMixin):
             The weighted standard deviation of concatenate standardized data.
         ncp : int, default = 5
             The number of dimensions kept in the results.
-        row_w : Series of shape (n_rows,) or (n_groups,)
+        row_w : Series of shape (n_samples,)
             The rows weights.
         var_w : Series of shape (n_columns,)
             The variables weights.
@@ -96,85 +99,84 @@ class DMFA(BaseEstimator,TransformerMixin):
         sup_var : None, list
             The names of the supplementary variables (continuous and/or categorical).
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     group_ : group
         An object containing all the results for the groups, with the following attributes:
 
-        eig : DataFrame of shape (maxcp_rv, 4)
-            The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
-
-        coord : DataFrame of shape (n_groups, n_groups)
+        coord : DataFrame of shape (n_groups, ncp)
             The coordinates of the groups.
-
-        coord_n : DataFrame of shape (n_groups, n_groups)
+        coord_n : DataFrame of shape (n_groups, ncp)
             The normalied coordinates of the groups.
-
+        contrib : DataFrame of shape (n_groups, ncp)
+            The relative contributions of the groups.
         cos2 : DataFrame of shape (n_groups, n_groups)
             The sqared cosinus of the groups.
-
         traceRV : DataFrame of shape (n_groups, n_groups)
             The trace RV between groups.
-
         RV : DataFrame of shape (n_groups, n_groups)
             The RV coefficient between groups.
+        eig : DataFrame of shape (rank_rv, 4)
+            The eigenvalues of \emph{Rv} matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     ind_ : ind
         An object containing all the results for the active individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_rows,ncp)
+        coord : DataFrame of shape (n_samples, ncp)
             The coordinates of the individuals.
-        cos2 : DataFrame of shape (n_rows, ncp)
+        cos2 : DataFrame of shape (n_samples, ncp)
             Thesquared cosinus of the individuals.
-        contrib : DataFrame of shape (n_rows, ncp) 
+        contrib : DataFrame of shape (n_samples, ncp) 
             The relative contributions of the individuals.
-        infos : DataFrame of shape (n_rows, 4)
+        infos : DataFrame of shape (n_samples, 4)
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the individuals.
 
-    ind_sup_ : ind_sup
+    ind_sup_ : ind_sup, optional
         An object containing all the results for the supplementary individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_rows_plus, ncp)
+        coord : DataFrame of shape (n_samples_plus, ncp)
             The coordinates of the supplementary individuals.
-        cos2 : DataFrame of shape (n_rows_plus, ncp)
+        cos2 : DataFrame of shape (n_samples_plus, ncp)
             The squared cosinus of the supplementary individuals.
-        dist2 : Series of shape (n_rows_plus,)
+        dist2 : Series of shape (n_samples_plus,)
             The squared distance to origin of the supplementary individuals.
 
-    levels_sup_ : levels_sup 
+    levels_sup_ : levels_sup, optional
         An object containing all the results for the supplementary levels, with the following attributes:
 
-        coord : DataFrame of shape (n_levels, ncp)
+        coord : DataFrame of shape (n_levels_sup, ncp)
             The coordinates of the supplementary levels.
-        cos2 : DataFrame of shape (n_levels, ncp)
+        cos2 : DataFrame of shape (n_levels_sup, ncp)
             The squared cosinus of the supplementary levels.
-        dist2 : Series of shape (n_levels,)
+        dist2 : Series of shape (n_levels_sup,)
             The squared distance to origin of the supplementary levels.
-        vtest : DataFrame of shape (n_levels, ncp)
+        vtest : DataFrame of shape (n_levels_sup, ncp)
             The value-test (which is a criterion with a Normal distribution) of the supplementary levels.
         
-    quali_var_sup_ : quali_var_sup 
+    quali_var_sup_ : quali_var_sup, optional
         An object containing all the results for the supplementary qualitative variables, with the following attributes:
 
-        coord : DataFrame of shape (n_levels, ncp)
-            The coordinates of the supplementary qualitative variables. The squared correlation ratio of the supplementary qualitative variables, which is the square correlation coefficient between a qualitative variable and a dimension
+        coord : DataFrame of shape (n_quali_var_sup, ncp)
+            The coordinates of the supplementary qualitative variables. 
+            The squared correlation ratio of the supplementary qualitative variables, 
+            which is the square correlation coefficient between a qualitative variable and a dimension
 
     quanti_var_ : quanti_var
         An object containing all the results for the active variables, with the following attributes:
 
-        coord : DataFrame of shape (n_columns, ncp)
+        coord : DataFrame of shape (n_quanti_var, ncp)
             The coordinates of the variables.
-        cos2 : DataFrame of shape (n_columns, ncp)
+        cos2 : DataFrame of shape (n_quanti_var, ncp)
             The squared cosinus of the variables.
-        contrib : DataFrame of shape (n_columns, ncp)
+        contrib : DataFrame of shape (n_quanti_var, ncp)
             The relative contributions of the variables.
-        infos : DataFrame of shape (n_columns, 4)
+        infos : DataFrame of shape (n_quanti_var, 4)
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) of the variables.
-        coord_partiel : coord_partiel
-            An object containing the partiel coordinates of the variables for each group.
+        coord_partiel : DataFrame of shape (n_quanti_var*n_groups,ncp)
+            The partiel coordinates of the variables in each group.
 
-    quanti_var_sup_ : quanti_var_sup
+    quanti_var_sup_ : quanti_var_sup, optional
         An object containing all the results for the supplementary quantitative variables, with the following attributes:
         
         coord : DataFrame of shape (n_quanti_var_sup, ncp)
@@ -183,17 +185,19 @@ class DMFA(BaseEstimator,TransformerMixin):
             The squared cosinus of the supplementary quantitative variables.
         dist2 : Series of shape (n_quanti_var_sup,)
             The squared distance to origin of the supplementary quantitative variables.
-        coord_partiel : coord_partiel
-            An object containing the partiel coordinates of the supplementary qantitative variables for each group.
+        coord_partiel : DataFrame of shape (n_quanti_var_sup*n_groups, ncp)
+            The partiel coordinates of the supplementary quantitative variables in each group.
 
     svd_ : svd
         An object containing all the results for the generalized singular value decomposition (GSVD), with the following attributes:
         
-        vs : 1d numpy array of shape (maxcp,)
+        vs : 1d numpy array of shape (rank,)
             The singular values.
-        U : 2d numpy array of shape (n_rows, ncp) or (n_groups, ncp)
+        d : 1d numpy array of shape (rank,)
+            The eigen values.
+        U : 2d numpy array of shape (n_samples, rank)
             The left singular vectors.
-        V : 2d numpy array of shape (n_columns, ncp)
+        V : 2d numpy array of shape (n_columns, rank)
             The right singular vectors.
         rank : int
             The maximum number of components.
@@ -202,20 +206,17 @@ class DMFA(BaseEstimator,TransformerMixin):
     
     References
     ----------
-    [1] Escofier B, Pagès J (2023), Analyses Factorielles Simples et Multiples. 5ed, Dunod
+    [1] Escofier B, Pagès J -2008). `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. 4ed, Dunod, 2008.
+    
+    [2] Lê, S., & Pagès, J. (2010). DMFA: Dual Multiple Factor Analysis. \emph{Communications in Statistics - Theory and Methods}, 39(3), 483-492. https://doi.org/10.1080/03610920903140114
+    
+    [3] Abascal, E., de Rada, V. D., Lautre, I. G., & Landaluce, M. I. (2013). Extending dual multiple factor analysis to categorical tables. \emph{Journal of Applied Statistics}, 40(2), 415-428. https://doi.org/10.1080/02664763.2012.745836
 
-    [2] Lê, S. & Pagès J. (2003). Deux extensions de l'Analyse Factorielle Multiple, thèse de doctorat.
-
-    [3] Lê, S. & Pagès J. (2010). DMFA: dual multiple factor analysis. Communications in Statistics - Theory and Methods, 2010, 39 (3), pp.483-492. ⟨10.1080/03610920903140114⟩. ⟨hal-00704553⟩
-
-    See Also
+    See also
     --------
-    :class:`scientisttools.save`
-        Print results for general factor analysis model in an Excel sheet.
-    :class:`scientisttools.sprintf`
-        Print the analysis results.
-    :class:`scientisttools.summary`
-        Printing summaries of general factor analysis model.
+    save : Print results for general factor analysis model in an Excel sheet.
+    sprintf : Print the analysis results.
+    summary : Printing summaries of general factor analysis model.
 
     Examples
     --------
@@ -226,7 +227,15 @@ class DMFA(BaseEstimator,TransformerMixin):
     DMFA(group=4)
     """
     def __init__(
-            self, scale_unit = True, ncp=5,  group = None, row_w = None, col_w = None, ind_sup = None, sup_var = None, tol = 1e-7
+            self, 
+            scale_unit = True, 
+            ncp = 5, 
+            group = None, 
+            row_w = None, 
+            col_w = None, 
+            ind_sup = None, 
+            sup_var = None, 
+            tol = 1e-7
     ):  
         self.scale_unit = scale_unit
         self.ncp = ncp
@@ -238,16 +247,16 @@ class DMFA(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to ``X``
+        """Fit the model to X
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` in the number of samples and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored
 
         Returns
         -------
@@ -263,13 +272,13 @@ class DMFA(BaseEstimator,TransformerMixin):
         #check if group is None
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group is None:
-            raise ValueError("'group' must be assigned.")
+            raise ValueError("group must be assigned.")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #group validation
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not isinstance(self.group,(int,str)):
-            raise TypeError("'group' must be either an objet of type int or str")
+            raise TypeError("group must be either an objet of type int or str")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #preprocessing
@@ -277,11 +286,13 @@ class DMFA(BaseEstimator,TransformerMixin):
         X = preprocessing(X=X)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #get labels
+        # get labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_label, ind_sup_label, sup_var_label = get_sup_label(X=X, indexes=self.group, axis=1), get_sup_label(X=X,indexes=self.ind_sup,axis=0), get_sup_label(X=X,indexes=self.sup_var,axis=1)
+        group_label = get_sup_label(X=X, indexes=self.group, axis=1) 
+        ind_sup_label = get_sup_label(X=X, indexes=self.ind_sup, axis=0)
+        sup_var_label = get_sup_label(X=X, indexes=self.sup_var, axis=1)
 
-        #make a copy of the original data
+        # make a copy of the original data
         Xtot = X.copy()
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -307,12 +318,14 @@ class DMFA(BaseEstimator,TransformerMixin):
         if not (is_all_numeric_dtype(x) or is_all_object_or_category_dtype(x)):
             raise TypeError("Not applied to mixed data") 
 
-        #unique element in y
-        uq_classe = sorted(list(y.unique()))
+        #unique element in y - name pf group
+        name_group = sorted(y.unique())
         #convert y to categorical data type
-        y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
-
-        #number of rows and number of columns
+        y = y.astype(CategoricalDtype(categories=name_group,ordered=True))
+        #group index
+        group_dict = {k : y[y==k].index for k in name_group}
+             
+        # number of rows and number of columns
         n_rows, n_vars = x.shape
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -322,9 +335,9 @@ class DMFA(BaseEstimator,TransformerMixin):
         if self.row_w is None:
             row_w = Series(ones(n_rows)/n_rows,index=x.index,name="weight")
         elif not isinstance(self.row_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'row_w' must be a 1d array-like of individuals weights.")
+            raise TypeError("row_w must be a 1d array-like of individuals weights.")
         elif len(self.row_w) != n_rows:
-            raise ValueError(f"'row_w' must be a 1d array-like of shape ({n_rows},).")
+            raise ValueError(f"row_w must be a 1d array-like of shape ({n_rows},).")
         else:
             row_w = Series(array(self.row_w)/sum(self.row_w),index=x.index,name="weight")
 
@@ -332,25 +345,27 @@ class DMFA(BaseEstimator,TransformerMixin):
         if self.col_w is None:
             var_w = Series(ones(n_vars),index=x.columns,name="weight")
         elif not isinstance(self.col_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'col_w' must be a 1d array-like of variables weights.")
+            raise TypeError("col_w must be a 1d array-like of variables weights.")
         elif len(self.col_w) != n_vars:
-            raise ValueError(f"'col_w' must be a 1d array-like of shape ({n_vars},).")
+            raise ValueError(f"col_w must be a 1d array-like of shape ({n_vars},).")
         else:
             var_w = Series(array(self.col_w),index=x.columns,name="weight")
 
-        #group index
-        group_dict = OrderedDict({k : list(y[y==k].index) for k in uq_classe})
-     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set variables xcod - reorder 
         Xcod, col_w, dummies, M = x.copy(), var_w.copy(), None, None
         if is_all_object_or_category_dtype(x):
+            # disjunctive table
             dummies = disjunctive(x)
-            M = concat(((1 - ((dummies.loc[rows,:].T * row_w[rows]/sum(row_w[rows])).sum(axis=1))).to_frame(g) for g, rows in group_dict.items()),axis=1).T    
+            # transformation of the indicator variables
+            M = concat(((1 - ((dummies.loc[r,:].T * row_w[r]/sum(row_w[r])).sum(axis=1))).to_frame(g) for g, r in group_dict.items()),axis=1).T
+            # recode data   
             Xcod = dummies*M.loc[y.values,:].values
-            col_w = Series([x*y for x,y in zip(ones(dummies.shape[1]),list(chain(*[repeat(i,k) for i, k in zip(var_w,[x[j].nunique() for j in x.columns])])))],index=dummies.columns,name="weight")
+            # variable categories weights
+            col_w = Series(repeat(var_w.to_numpy(),x.nunique().to_numpy()),index=dummies.columns,name="weight")
+            
         #set number of columns
         n_cols = Xcod.shape[1]
         
@@ -358,7 +373,7 @@ class DMFA(BaseEstimator,TransformerMixin):
         #separate general factor analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #run separate general factor analysis
-        model = splitgroup(X=Xcod,y=y,scale_unit=self.scale_unit,ncp=self.ncp,row_w=row_w,col_w=col_w)
+        model = sPCA(X=Xcod,y=y,scale_unit=self.scale_unit,ncp=self.ncp,row_w=row_w,col_w=col_w)
             
         #store separate analysis
         self.separate_analyses_ = model
@@ -367,12 +382,13 @@ class DMFA(BaseEstimator,TransformerMixin):
         #extract elements
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #scale_unitd data
-        Zcod = concat((model[g].call_.Z for g in uq_classe),axis=0).loc[y.index,:]
+        Zcod = concat((model[g].call_.Z for g in name_group),axis=0).loc[y.index,:]
         #weighted average
-        center, scale = concat((model[g].call_.center.to_frame(g) for g in uq_classe),axis=1).T, concat((model[g].call_.scale.to_frame(g) for g in uq_classe),axis=1).T
+        center = concat((model[g].call_.center.to_frame(g) for g in name_group),axis=1).T
+        scale  = concat((model[g].call_.scale.to_frame(g) for g in name_group),axis=1).T
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #standardization according to normed principal components analysis
+        # standardization according to normed principal components analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #compute weighted average and standard deviation
         z_center, z_scale = wmean(X=Zcod,w=row_w), wstd(X=Zcod,w=row_w)
@@ -384,40 +400,48 @@ class DMFA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         fit_ = gFA(X=Z,ncp=self.ncp,row_w=row_w,col_w=col_w,tol=self.tol)
         #extract elements
-        self.svd_, self.eig_, self.quanti_var_ = fit_.svd, fit_.eig, namedtuple("quanti_var",fit_.col.keys())(*fit_.col.values())
+        self.svd_, self.eig_, quanti_var_ = fit_.svd, fit_.eig, fit_.col
         #number of components kepted
         ncp = self.svd_.ncp
 
         #Store call informations
-        call_ = OrderedDict(Xtot=Xtot,X=X,x=x,y=y,Xcod=Xcod,dummies=dummies,M=M,Zcod=Zcod,Z=Z,center=center,scale=scale,z_center=z_center,z_scale=z_scale,row_w=row_w,var_w=var_w,col_w=col_w,
-                            ncp=ncp,group=group_label,ind_sup=ind_sup_label,sup_var=sup_var_label)
+        call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"Zcod":Zcod,"Z":Z,
+                 "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"row_w":row_w,"var_w":var_w,"col_w":col_w,
+                 "ncp":ncp,"group":group_label,"name_group":name_group,"ind_sup":ind_sup_label,"sup_var":sup_var_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #individuals informations: coordinates, cos2
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #convert to ordered dictionary - reorderd index
-        ind_ = OrderedDict({k : fit_.row[k].loc[y.index,:] for k in list(fit_.row.keys())}) 
+        #convert to dictionary - reorderd index
+        ind_ = {k : fit_.row[k].loc[y.index,:] for k in list(fit_.row.keys())}
         #convert to namedtuple
         self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #variables informations: partiel coordinates
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #partiel coordinates for quantitative variables
-        var_partiel = OrderedDict()
-        for g, rows in group_dict.items():
-            coord = wcorr(concat((model[g].call_.Z,self.ind_.coord.loc[rows,:]),axis=1),w=model[g].call_.row_w).iloc[:n_cols,n_cols:]
-            coord.columns = self.eig_.index[:ncp]
-            var_partiel[g] = coord
+        # partiel coordinates for quantitative variables
+        quanti_var_coord_partiel = None
+        for g, r in group_dict.items():
+            coord_partiel = wcorr(concat((Z.loc[r,:],self.ind_.coord.loc[r,:]),axis=1),w=model[g].call_.row_w).iloc[:n_cols,n_cols:]
+            # set index and columns
+            coord_partiel.index, coord_partiel.columns = [f"{x}.{g}" for x in coord_partiel.index], self.eig_.index[:ncp]
+            # concatenate
+            quanti_var_coord_partiel = concat_empty(quanti_var_coord_partiel,coord_partiel,axis=0)
+        # add to dictionary
+        quanti_var_["coord_partiel"] = quanti_var_coord_partiel
+        # convert to namedtuple
+        self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #group informations : coordinates, cos2
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #coordinates of the groups
-        group_coord, group_eigvals, sum_sqeigvals = DataFrame(index=uq_classe,columns=self.eig_.index[:ncp]).astype(float), empty((len(uq_classe),),dtype=float), empty((len(uq_classe),),dtype=float)
-        for i, g in enumerate(uq_classe):
+        group_coord = DataFrame(index=name_group,columns=self.eig_.index[:ncp]).astype("float") 
+        group_eigvals, sum_sqeigvals = empty((len(name_group),),dtype=float), empty((len(name_group),),dtype=float)
+        for i, g in enumerate(name_group):
             V = model[g].call_.R if self.scale_unit else model[g].call_.V
             evd = linalg.svd(V,hermitian=True)
             group_eigvals[i], sum_sqeigvals[i] = evd[1][0], sum(evd[1]**2)
@@ -426,14 +450,14 @@ class DMFA(BaseEstimator,TransformerMixin):
         #normalized coordinates and cos2 of the groups
         group_coord_n, group_sqcos = (group_coord.T/group_eigvals).T, 100*((group_coord**2).T/sum_sqeigvals).T
         #group contributions
-        group_ctr = concat((self.ind_.contrib.loc[rows,:].sum(axis=0).to_frame(g) for g, rows in group_dict.items()),axis=1).T
+        group_ctr = concat((self.ind_.contrib.loc[r,:].sum(axis=0).to_frame(g) for g, r in group_dict.items()),axis=1).T
 
         #convert to ordered dictionary
-        group_ = OrderedDict(coord=group_coord,coord_n=group_coord_n,contrib=group_ctr,cos2=group_sqcos)
+        group_ = {"coord":group_coord,"coord_n":group_coord_n,"contrib":group_ctr,"cos2":group_sqcos}
         #RV statistics
         rvstats = RVstats(model=model,tol=self.tol)
         #update group_ informations
-        group_ = OrderedDict({**group_, **OrderedDict({k : rvstats[k] for k in ("traceRV","RV","eig")})})
+        group_ = {**group_, **{k : rvstats[k] for k in ("traceRV","RV","eig")}}
         #store all group informations
         self.group_ = namedtuple("group",group_.keys())(*group_.values()) 
 
@@ -461,9 +485,11 @@ class DMFA(BaseEstimator,TransformerMixin):
         if self.sup_var is not None:
             #split X_sup_var
             split_X_sup_var = splitmix(X=X_sup_var)
-            X_quanti_var_sup, X_quali_var_sup, n_quanti_var_sup, n_quali_var_sup = split_X_sup_var.quanti, split_X_sup_var.quali, split_X_sup_var.k1, split_X_sup_var.k2
+            # extract elements
+            X_quanti_var_sup, X_quali_var_sup = split_X_sup_var.quanti, split_X_sup_var.quali
+            n_quanti_var_sup, n_quali_var_sup = split_X_sup_var.k1, split_X_sup_var.k2
 
-            #statistics for supplementary quantitative variables
+            #statistics for supplementary continuous variables
             if n_quanti_var_sup > 0:
                 #conditional weighted average
                 center_sup = func_groupby(X=X_quanti_var_sup,by=y,func="mean",w=row_w)
@@ -472,27 +498,33 @@ class DMFA(BaseEstimator,TransformerMixin):
                     scale_sup = func_groupby(X=X_quanti_var_sup,by=y,func="std",w=row_w,ddof=1)
                 else:
                     scale_sup = DataFrame(ones((center_sup.shape[0],n_quanti_var_sup)),columns=X_quanti_var_sup.columns,index=center.index)
+                    
                 #standardization: z_ikl = (x_ikl - m_kl)/s_kl
                 Zcod_quanti_var_sup = (X_quanti_var_sup - center_sup.loc[y.values,:].values)/scale_sup.loc[y.values,:].values
                 #standardization: z_ik = (x_ik - m_k)/s_k
                 z_quanti_var_sup_center, z_quanti_var_sup_scale = wmean(X=Zcod_quanti_var_sup,w=row_w), wstd(X=Zcod_quanti_var_sup,w=row_w)
                 Z_quanti_var_sup = (Zcod_quanti_var_sup - z_quanti_var_sup_center)/z_quanti_var_sup_scale
-                #statistics for supplementary quantitative variables
+                #statistics for supplementary continuous variables
                 quanti_var_sup_ = func_predict(X=Z_quanti_var_sup,Y=fit_.svd.U[:,:ncp],w=row_w,axis=1)
-    
-                #partiel coordinates for supplementary quantitative variables
-                for g, rows in group_dict.items():
-                    coord = wcorr(concat((Z_quanti_var_sup.loc[rows,:],self.ind_.coord.loc[rows,:]),axis=1),w=model[g].call_.row_w).iloc[:n_quanti_var_sup,n_quanti_var_sup:]
-                    coord.columns = self.eig_.index[:ncp]
-                    var_partiel[g] = concat((var_partiel[g],coord),axis=0)
+                #partiel coordinates for supplementary continuous variables
+                quanti_var_sup_coord_partiel = None
+                for g, r in group_dict.items():
+                    coord_partiel = wcorr(concat((Z_quanti_var_sup.loc[r,:],self.ind_.coord.loc[r,:]),
+                                                 axis=1),w=model[g].call_.row_w).iloc[:n_quanti_var_sup,n_quanti_var_sup:]
+                    # set index and columns
+                    coord_partiel.index, coord_partiel.columns = [f"{x}.{g}" for x in coord_partiel.index], self.eig_.index[:ncp]
+                    # concatenate
+                    quanti_var_sup_coord_partiel = concat_empty(quanti_var_sup_coord_partiel,coord_partiel,axis=0)
+                # add to dictionary
+                quanti_var_sup_["coord_partiel"] = quanti_var_sup_coord_partiel
                 #convert to namedtuple
                 self.quanti_var_sup_ = namedtuple("quanti_var_sup",quanti_var_sup_.keys())(*quanti_var_sup_.values())
-
+    
             #statistics for supplementary qualitative variables/levels
             if n_quali_var_sup > 0:
                 #create new qualitative columns
                 X_quali_var_sup_new = concat((concat((X_quali_var_sup[x],y),axis=1).apply(lambda x: ''.join(x),axis=1) for x in X_quali_var_sup.columns),axis=1)
-                X_quali_var_sup_new.columns = [f"{x}_{group_label[0]}" for x in X_quali_var_sup.columns]
+                X_quali_var_sup_new.columns = [f"{x}.{group_label[0]}" for x in X_quali_var_sup.columns]
                 #concatenate
                 X_quali_var_sup = concat((X_quali_var_sup,X_quali_var_sup_new),axis=1)
                 #compute conditional weighted average
@@ -510,50 +542,48 @@ class DMFA(BaseEstimator,TransformerMixin):
                 #coordinates for the supplementary qualitative variables - Eta-squared
                 quali_var_sup_coord = func_eta2(X=self.ind_.coord,by=X_quali_var_sup,w=row_w,excl=None)
                 #convert to ordered dictionary
-                quali_var_sup_ = OrderedDict(coord=quali_var_sup_coord)
+                quali_var_sup_ = {"coord":quali_var_sup_coord}
                 #convert to namedtuple
                 self.quali_var_sup_ = namedtuple("quali_var_sup",quali_var_sup_.keys())(*quali_var_sup_.values())
-
-        # convert to namedtuple
-        self.var_partiel_ = namedtuple("var_partiel",var_partiel.keys())(*var_partiel.values())
 
         return self
     
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with ``X`` and apply the dimensionality reduction on ``X``
+        """Fit the model with X and apply the dimensionality reduction on X.
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            Training data, where ``n_samples`` is the number of rows 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, n_components)
+        X_new : DataFrame of shape (n_samples, ncp)
             Transformed values.
         """
         self.fit(X)
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to ``X``.
+        """Apply dimensionality reduction to X.
 
-        ``X`` is projected on the first principal components previously extracted from a training set.
+        X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
-        X : DataFrame of shape (n_rows, n_columns)
-            New data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+        X : DataFrame of shape (n_samples, n_columns)
+            New data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, ncp)
-            Projection of ``X`` in the first principal components, where ``n_rows`` is the number of rows and ``ncp`` is the number of the components.
+        X_new : DataFrame of shape (n_samples, ncp)
+            Projection of X in the first principal components, where ``n_samples`` is the number of rows 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes
