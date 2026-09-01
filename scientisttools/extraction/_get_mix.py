@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-def get_mix_ind(
-        obj
-):
+def get_mix_ind(obj):
     """
     Extract the results for individuals - FAMD/PCAmix/MPCA
     
@@ -19,14 +17,21 @@ def get_mix_ind(
     result : ind
         An object containing all the results for the individuals, with the following attributes:
 
-        coord : DataFrame of shape (n_samples, n_components)
+        coord : DataFrame of shape (n_samples, ncp)
             The coordinates for the individuals.
-        cos2 : DataFrame of shape (n_samples, n_components)
+        cos2 : DataFrame of shape (n_samples, ncp)
             The squared cosinus for the individuals.
-        contrib : DataFrame of shape (n_samples, n_components)
+        contrib : DataFrame of shape (n_samples, ncp)
             The relative contributions for the individuals.
         infos : DataFrame of shape (n_samples, 4)
             Additionals informations (weight, squared distance to origin, inertia and percentage of inertia) for the individuals.
+            
+    See Also
+    --------
+    get_mix : Extract the results for individuals/variables - FAMD/PCAmix/MPCA
+    get_mix_quanti_var : Extract the results for quantitative variables - FAMD/PCAmix/MPCA.
+    get_mix_quali_var : Extract the results for variables categories - FAMD/PCAmix/MPCA.
+    get_mix_var : Extract the results for variables - FAMD/PCAmix/MPCA.
 
     Examples
     --------
@@ -37,17 +42,15 @@ def get_mix_ind(
     FAMD(ind_sup=range(38,45),sup_var=range(12,16))
     >>> #extract results for individuals
     >>> ind = get_mix_ind(clf)
-    >>> ind.coord.head() #coordinates of individuals
-    >>> ind.cos2.head() #cos2 of individuals
+    >>> ind.coord.head()   #coordinates of individuals
+    >>> ind.cos2.head()    #cos2 of individuals
     >>> ind.contrib.head() #contributions of individuals
     """
     if not (obj.__class__.__name__ in ("FAMD","PCAmix","MPCA")):
-        raise ValueError("'obj' must be an object of class FAMD, PCAmix, MPCA")
+        raise ValueError("obj must be an object of class FAMD, PCAmix, MPCA")
     return obj.ind_
     
-def get_mix_quanti_var(
-        obj
-):
+def get_mix_quanti_var(obj):
     """
     Extract the results for quantitative variables - FAMD/PCAmix/MPCA
     
@@ -64,12 +67,19 @@ def get_mix_quanti_var(
     result : quanti_var
         An object containing the results for the continuous variables, with the following attributes:
 
-        coord : DataFrame of shape (n_quanti, n_components)
+        coord : DataFrame of shape (n_quanti_var, ncp)
             The coordinates for the quantitative variables.
-        cos2 : DataFrame of shape (n_quanti, n_components)
+        cos2 : DataFrame of shape (n_quanti_var, ncp)
             The squared cosinus for the quantitative variables.
-        contrib : DataFrame of shape (n_quanti, n_components)
+        contrib : DataFrame of shape (n_quanti_var, ncp)
             The relative contributions for the quantitative variables.
+            
+    See Also
+    --------
+    get_mix : Extract the results for individuals/variables - FAMD/PCAmix/MPCA
+    get_mix_ind : Extract the results for individuals - FAMD/PCAmix/MPCA.
+    get_mix_quali_var : Extract the results for variables categories - FAMD/PCAmix/MPCA.
+    get_mix_var : Extract the results for variables - FAMD/PCAmix/MPCA.
 
     Examples
     --------
@@ -80,19 +90,17 @@ def get_mix_quanti_var(
     FAMD(ind_sup=range(38,45),sup_var=range(12,16))
     >>> #extract results for quantitatives variables
     >>> quanti_var = get_mix_quanti_var(clf)
-    >>> quanti_var.coord #coordinates of quantitative variables
-    >>> quanti_var.cos2 #cos2 of quantitative variables
-    >>> quanti_var.contrib #contribution of quantitative variables
+    >>> quanti_var.coord.head()   #coordinates of quantitative variables
+    >>> quanti_var.cos2.head()    #cos2 of quantitative variables
+    >>> quanti_var.contrib.head() #contribution of quantitative variables
     """
     if not (obj.__class__.__name__ in ("FAMD","PCAmix","MPCA")):
-        raise ValueError("'obj' must be an object of class FAMD, PCAmix, MPCA")
+        raise ValueError("obj must be an object of class FAMD, PCAmix, MPCA")
     return obj.quanti_var_
     
-def get_mix_quali_var(
-        obj
-):
+def get_mix_quali_var(obj):
     """
-    Extract the results for qualitative variables/levels - FAMD/PCAmix/MPCA
+    Extract the results for variables categories - FAMD/PCAmix/MPCA
     
     Extract all the results (coordinates, squared cosinus and relative contributions) for categorical variables/levels from Factor Analysis of Mixed Data (FAMD),
     Principal Component Analysis of Mixed Data (PCAmix) and Mixed Principal Component Analysis (MPCA) outputs.
@@ -105,18 +113,25 @@ def get_mix_quali_var(
     Returns
     -------
     result : quali_var
-        An object containing the results for the qualitative variables/levels, with the following attributes:
+        An object containing the results for the variables categories, with the following attributes:
 
-        coord : DataFrame of shape (n_levels, n_components)
+        coord : DataFrame of shape (n_levels, ncp)
             The coordinates for the levels.
-        cos2 : DataFrame of shape (n_levels, n_components)
+        cos2 : DataFrame of shape (n_levels, ncp)
             The squared cosinus for the levels.
-        contrib : DataFrame of shape (n_levels, n_components)
+        contrib : DataFrame of shape (n_levels, ncp)
             The relative contributions for the levels.
-        vtest : DataFrame of shape (n_levels, n_components)
+        vtest : DataFrame of shape (n_levels, ncp)
             The value-test for the levels.
         dist2 : Series of shape (n_levels,)
             The squared distance to origin for the levels.
+            
+    See Also
+    --------
+    get_mix : Extract the results for individuals/variables - FAMD/PCAmix/MPCA
+    get_mix_ind : Extract the results for individuals - FAMD/PCAmix/MPCA.
+    get_mix_quanti_var : Extract the results for quantitative variables - FAMD/PCAmix/MPCA.
+    get_mix_var : Extract the results for variables - FAMD/PCAmix/MPCA.
 
     Examples
     --------
@@ -126,20 +141,18 @@ def get_mix_quali_var(
     >>> clf.fit(autos2005)
     FAMD(ind_sup=range(38,45),sup_var=range(12,16))
     >>> #extract results for qualitatives variables
-    >>> quali_var = get_mix_quali_var()
-    >>> quali_var.coord.head() #coordinates of levels
-    >>> quali_var.cos2.head() #cos2 of levels
+    >>> quali_var = get_mix_quali_var(clf)
+    >>> quali_var.coord.head()   #coordinates of levels
+    >>> quali_var.cos2.head()    #cos2 of levels
     >>> quali_var.contrib.head() #contribution of levels
-    >>> quali_var.vtest.head() #value-test of levels
-    >>> quali_var.dist2.head() #dist2 of levels
+    >>> quali_var.vtest.head()   #value-test of levels
+    >>> quali_var.dist2.head()   #dist2 of levels
     """
     if not (obj.__class__.__name__ in ("FAMD","PCAmix","MPCA")):
-        raise ValueError("'obj' must be an object of class FAMD, PCAmix, MPCA")
+        raise ValueError("obj must be an object of class FAMD, PCAmix, MPCA")
     return obj.quali_var_
     
-def get_mix_var(
-        obj
-):
+def get_mix_var(obj):
     """
     Extract the results for variables - FAMD/PCAmix/MPCA
     
@@ -156,12 +169,19 @@ def get_mix_var(
     result : var
         An object containing the results for the active variables, with the following attributes:
 
-        coord : DataFrame of shape (n_columns, n_components)
+        coord : DataFrame of shape (n_columns, ncp)
             The coordinates for the variables,
-        cos2 : DataFrame of shape (n_columns, n_components)
+        cos2 : DataFrame of shape (n_columns, ncp)
             The squared cosinus for the variables,
-        contrib : DataFrame of shape (n_columns, n_components)
+        contrib : DataFrame of shape (n_columns, ncp)
             The relative contributions for the variables.
+            
+    See Also
+    --------
+    get_mix : Extract the results for individuals/variables - FAMD/PCAmix/MPCA
+    get_mix_ind : Extract the results for individuals - FAMD/PCAmix/MPCA.
+    get_mix_quanti_var : Extract the results for quantitative variables - FAMD/PCAmix/MPCA.
+    get_mix_quali_var : Extract the results for variables categories - FAMD/PCAmix/MPCA.
 
     Examples
     --------
@@ -172,28 +192,20 @@ def get_mix_var(
     FAMD(ind_sup=range(38,45),sup_var=range(12,16))
     >>> #extract results for variables
     >>> var = get_mix_var(clf)
-    >>> var.coord.head() #coordinates of variables
-    >>> var.cos2.head() #cos2 of variables
+    >>> var.coord.head()   #coordinates of variables
+    >>> var.cos2.head()    #cos2 of variables
     >>> var.contrib.head() #contribution of variables
     """
     if not (obj.__class__.__name__ in ("FAMD","PCAmix","MPCA")):
-        raise ValueError("'obj' must be an object of class FAMD, PCAmix, MPCA")
+        raise ValueError("obj must be an object of class FAMD, PCAmix, MPCA")
     return obj.var_
 
-def get_mix(
-        obj, element = "ind"
-):
+def get_mix(obj, element = "ind"):
     """
-    Extract the results for individuals and variables - FAMD/PCAmix/MPCA
+    Extract the results for individuals/variables - FAMD/PCAmix/MPCA
     
     Extract all the results (coordinates, squared cosine and relative contributions) for the individuals and variables from Factor Analysis of Mixed Data (FAMD), 
     Principal Component Analysis of Mixed Data (PCAmix) and Mixed Principal Component Analysis (MPCA) outputs.
-
-        * :class:`~scientisttools.get_mix`: Extract the results for variables and individuals
-        * :class:`~scientisttools.get_mix_ind`: Extract the results for individuals only
-        * :class:`~scientisttools.get_mix_var`: Extract the results for variables only
-        * :class:`~scientisttools.get_mix_quali_var`: Extract the results for qualitative variables/levels only
-        * :class:`~scientisttools.get_mix_quanti_var`: Extract the results for quantitative variables only
 
     Parameters
     ----------
@@ -202,22 +214,23 @@ def get_mix(
 
     element : {"ind","var","quali_var","quanti_var"}, default = "ind"
         The element to subset from the output. Possible values are: 
+        
+        * "ind" for individuals
+        * "var" for variables
+        * "quali_var" for variables categories
+        * "quanti_var" for quantitative variables
 
     Returns
     -------
     result : ind/quanti_var/quali_var/var
         An object containing the results for the active individuals and variables.
 
-    See also
+    See Also
     --------
-    :class:`~scientisttools.get_mix_ind`
-        Extract the results for individuals - FAMD/PCAmix/MPCA.
-    :class:`~scientisttools.get_mix_quanti_var`
-        Extract the results for quantitative variables - FAMD/PCAmix/MPCA.
-    :class:`~scientisttools.get_mix_quali_var`
-        Extract the results for qualitative variables/levels - FAMD/PCAmix/MPCA.
-    :class:`~scientisttools.get_mix_var`
-        Extract the results for variables - FAMD/PCAmix/MPCA.
+    get_mix_ind : Extract the results for individuals - FAMD/PCAmix/MPCA.
+    get_mix_quanti_var : Extract the results for quantitative variables - FAMD/PCAmix/MPCA.
+    get_mix_quali_var : Extract the results for variables categories - FAMD/PCAmix/MPCA.
+    get_mix_var : Extract the results for variables - FAMD/PCAmix/MPCA.
 
     Examples
     --------
@@ -228,24 +241,24 @@ def get_mix(
     FAMD(ind_sup=range(38,45),sup_var=range(12,16))
     >>> #extract results for individuals
     >>> ind = get_mix(clf, "ind")
-    >>> ind.coord.head() #coordinates of individuals
-    >>> ind.cos2.head() #cos2 of individuals
+    >>> ind.coord.head()   #coordinates of individuals
+    >>> ind.cos2.head()    #cos2 of individuals
     >>> ind.contrib.head() #contributions of individuals
     >>> #extract results for quantitatives variables
     >>> quanti_var = get_mix(clf, "quanti_var")
-    >>> quanti_var.coord.head() #coordinates of quantitative variables
-    >>> quanti_var.cos2.head() #cos2 of quantitative variables
+    >>> quanti_var.coord.head()   #coordinates of quantitative variables
+    >>> quanti_var.cos2.head()    #cos2 of quantitative variables
     >>> quanti_var.contrib.head() #contribution of quantitative variables
     >>> #extract results for qualitatives variables
     >>> quali_var = get_mix(clf, "quali_var")
-    >>> quali_var.coord.head() #coordinates of categories/variables
-    >>> quali_var.cos2.head() #cos2 of categories/variables
+    >>> quali_var.coord.head()   #coordinates of categories/variables
+    >>> quali_var.cos2.head()    #cos2 of categories/variables
     >>> quali_var.contrib.head() #contribution of categories/variables
-    >>> quali_var.vtest.head() #value-test of categories/variables
+    >>> quali_var.vtest.head()   #value-test of categories/variables
     >>> #extract results for variables
     >>> var = get_mix(clf, "var")
-    >>> var.coord.head() #coordinates of variables
-    >>> var.cos2.head() #cos2 of cvariables
+    >>> var.coord.head()   #coordinates of variables
+    >>> var.cos2.head()    #cos2 of cvariables
     >>> var.contrib.head() #contribution of variables
     """
     if element == "ind":
@@ -257,4 +270,4 @@ def get_mix(
     elif element == "quali_var":
         return get_mix_quali_var(obj)
     else:
-        raise ValueError("'element' should be one of 'ind', 'ind_sup', 'quanti_var', 'quali_var', 'var'")
+        raise ValueError("element should be one of 'ind', 'quanti_var', 'quali_var', 'var'")
