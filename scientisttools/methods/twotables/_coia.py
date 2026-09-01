@@ -193,10 +193,10 @@ class COIA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Dolédec, S. and Chessel, D. (1994) Co-inertia analysis: an alternative method for studying species-environment relationships. Freshwater Biology, 31, 277-294.
+    [1] Dolédec, S. and Chessel, D. (1994). `Co-inertia analysis: an alternative method for studying species-environment relationships <https://www.researchgate.net/publication/228011497_Co-inertia_analysis_an_alternative_method_for_studying_species-environment_relationships>`_. Freshwater Biology, 31, 277-294.
 
-    [2] Dray, S., Chessel, D. and J. Thioulouse (2003) Co-inertia analysis and the linking of the ecological data tables. Ecology, 84, 11, 3078-3089.
-    
+    [2] Stéphane Dray, Daniel Chessel, Jean Thioulouse. Co-inertia analysis and the linking of ecological tables. Ecology, 2003, 84 (11), pp.3078-3089. ⟨10.1890/03-0178⟩. ⟨`hal-00427392 <https://univ-lyon1.hal.science/hal-00427392/>`_⟩
+
     See Also
     --------
     save : Print results for general factor analysis model in an Excel sheet
@@ -208,31 +208,29 @@ class COIA(BaseEstimator,TransformerMixin):
     >>> from scientisttools.datasets import decathlon, wine, poison, mortality, doubs, autos2005
     >>> from scientisttools import COIA
     >>> #co-inertia between two PCA
-    >>> wine2 = wine.data.iloc[:,10:29]
-    >>> clf = COIA(group=(10,9),type_group=("s","s"),name_group=("olfag","gust"))
-    >>> clf.fit(wine2)
-    COIA(group=(10,9),name_group=("olfag","gust"),type_group=("s","s"))
-    >>>
+    >>> clf = COIA(group=(10,9),type_group=("s","s"),name_group=("odor.after.shaking","taste"))
+    >>> clf.fit(wine.data.iloc[:,10:29])
+    COIA(group=(10,9),name_group=("odor.after.shaking","taste"),type_group=("s","s"))
+    
     >>> #co-inertia between two MCA
-    >>> poison2 = poison.data.iloc[:,4:15]
     >>> clf = COIA(group=(5,6),type_group=("n","n"),name_group=("symptom","eat"))
-    >>> clf.fit(poison2)
+    >>> clf.fit(poison.data.iloc[:,4:15])
     COIA(group=(5,6),name_group=("symptom","eat"),type_group=("n","n"))
-    >>>
+    
     >>> #co-inertia between PCA and MCA
     >>> clf = COIA(group=(9,3),type_group=("s","n"),ind_sup=range(38,45))
     >>> clf.fit(autos2005.data.iloc[:,:12])
     COIA(group=(9,3),ind_sup=range(38,45),type_group=("s","n"))
-    >>>
+    
     >>> #co-inertia between two contingency tables
-    >>> clf = COIA(group=(9,9),type_group=("f","f"),name_group=("y1979","y2006"))
+    >>> clf = COIA(group=mortality.group,type_group=("f","f"),name_group=mortality.name)
     >>> clf.fit(mortality.data)
     COIA(group=(9,9),name_group=("y1979","y2006"),type_group=("f","f"))
-    >>>
+    
     >>> #co-inertia between a contingency table and PCA
-    >>> clf = COIA(group=(27,11),type_group=("f","s"),name_group=("species","environmental"))
-    >>> clf.fit(doubs)
-    COIA(group=(27,11),name_group=("species","environmental"),type_group=("f","s"))
+    >>> clf = COIA(group=(27,11),type_group=("f","s"),name_group=doubs.name)
+    >>> clf.fit(doubs.data)
+    COIA(group=(27,11),name_group=("Fish Species","Environmental"),type_group=("f","s"))
     """
     def __init__(
             self, 
@@ -658,8 +656,7 @@ class COIA(BaseEstimator,TransformerMixin):
         return self  
     
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
@@ -679,8 +676,7 @@ class COIA(BaseEstimator,TransformerMixin):
         return self.ind_.coord_partiel
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to X.
+        """Apply dimensionality reduction to X.
 
         X is projected on the first principal components previously extracted from a training set.
 

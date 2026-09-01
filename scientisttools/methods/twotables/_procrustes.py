@@ -41,9 +41,11 @@ class Procrustes(BaseEstimator,TransformerMixin):
 
         Xtot : DataFrame of shape (n_rows, n_columns)
             Input data.
-        X : DataFrame of shape (n_rows, n_xcolumns)
+        X : DataFrame of shape (n_rows, n_columns)
+            Active data.
+        X1 : DataFrame of shape (n_rows, n_xcolumns)
             First group data.
-        Y : DataFrame of shape (n_rows, n_ycolumns)
+        X2 : DataFrame of shape (n_rows, n_ycolumns)
             Second group data.
         Z1 : DataFrame of shape (n_rows, n_xcolumns)
             First group standardized data.
@@ -77,7 +79,7 @@ class Procrustes(BaseEstimator,TransformerMixin):
     quanti_var_ : quanti_var
         An object containing all the results of the continuous variables, with the following attributes:
 
-        coord : DataFrame of shape (n_xcolumns, ncp)
+        coord : DataFrame of shape (n_columns, ncp)
             The coordinates of the continuous variables.
         alpha : DataFrame of shape (1,2)
             Scaling of target to X and Y.
@@ -122,6 +124,7 @@ class Procrustes(BaseEstimator,TransformerMixin):
     >>> clf = Procrustes(scale_norm=True,group=(10,9),ncp=9)
     >>> clf.fit(X=wine2)
     Procrustes(group=(10,9),ncp=9,scale_norm=True)
+    
     >>> # Procrustean Analysis between two PCA
     >>> from pandas import concat
     >>> clf1 = PCA()
@@ -213,7 +216,7 @@ class Procrustes(BaseEstimator,TransformerMixin):
         elif len(self.name_group) != 2:
             raise ValueError("name_group must be a 1d array-like with lenght 2.")
         else:
-            name_group = [x for x in self.name_group]
+            name_group = [f"{x}" for x in self.name_group]
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # set individuals and variables weights
@@ -278,7 +281,7 @@ class Procrustes(BaseEstimator,TransformerMixin):
         ncp = self.svd_.ncp
 
         #call informations
-        call_ = {"Xtot": X, "X": X1, "Y": X2, "Z1": Z1, "Z2": Z2, "Z": Z, "center": center, "norm": norm, 
+        call_ = {"Xtot": X, "X" : X, "X1": X1, "X2": X2, "Z1": Z1, "Z2": Z2, "Z": Z, "center": center, "norm": norm, 
                  "ind_w": ind_w, "var_w": var_w, "row_w": row_w, "col_w": col_w, "ncp": ncp, 
                  "group": group, "name_group": name_group}
         #convert to namedtuple
@@ -307,7 +310,7 @@ class Procrustes(BaseEstimator,TransformerMixin):
         # coordinates for the rows on X and Y group
         ind_xcoord, ind_ycoord = Z1.dot(self.svd_.U[:,:ncp]), Z2.dot(self.svd_.V[:,:ncp])
         # set index and columns names
-        ind_xcoord.columns, ind_ycoord.columns = [f"Dim{x+1}" for x in range(ncp)], [f"Dim{x+1}" for x in range(ncp)]
+        ind_xcoord.columns, ind_ycoord.columns = self.eig_.index[:ncp], self.eig_.index[:ncp]
         ind_xcoord.index, ind_ycoord.index = [f"{x}.{name_group[0]}" for x in Z1.index], [f"{x}.{name_group[1]}" for x in Z2.index]
         # concatenate
         ind_coord_partiel = concat((ind_xcoord,ind_ycoord),axis=0)
@@ -323,14 +326,33 @@ class Procrustes(BaseEstimator,TransformerMixin):
         xalpha = sum(self.svd_.vs)/(wvar(X=Z2,w=ind_w)*n_rows).sum() if self.scale_norm else 1
         yalpha = sum(self.svd_.vs)/(wvar(X=Z1,w=ind_w)*n_rows).sum() if self.scale_norm else 1
         # loadings for the columns
-        quanti_var_xcoord = DataFrame(self.svd_.U[:,:ncp],columns=ind_xcoord.columns[:ncp],index=Z1.columns)
-        quanti_var_ycoord = DataFrame(self.svd_.V[:,:ncp],columns=ind_xcoord.columns[:ncp],index=Z2.columns)
+        quanti_var_xcoord = DataFrame(self.svd_.U[:,:ncp],columns=self.eig_.index[:ncp],index=Z1.columns)
+        quanti_var_ycoord = DataFrame(self.svd_.V[:,:ncp],columns=self.eig_.index[:ncp],index=Z2.columns)
         # concatenate
-        quanti_var_coord = concat((quanti_var_xcoord,quanti_var_ycoord),axis=0)
         alpha = DataFrame([[xalpha,yalpha]],columns=name_group,index=["alpha"])
         # convert to ordered dictionary
-        quanti_var_ = {"coord": quanti_var_coord, "alpha": alpha}
+        quanti_var_ = {"xcoord": quanti_var_xcoord, "ycoord" : quanti_var_ycoord, "alpha": alpha}
         # convert to namedtuple
         self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
    
         return self
+    
+    def fit_transform(self,X,y=None):
+        """Fit the model with X and apply the dimensionality reduction on X
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            Training data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
+        
+        y : None
+            y is ignored.
+        
+        Returns
+        -------
+        X_new : DataFrame of shape (2*n_rows, ncp)
+            Transformed values.
+        """
+        self.fit(X)
+        return self.ind_.coord_partiel

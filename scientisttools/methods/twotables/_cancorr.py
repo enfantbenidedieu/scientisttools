@@ -3,6 +3,7 @@ from numpy import ndarray, ones, array,insert,diff,nan,sum,c_,cumsum
 from pandas import Series, DataFrame, concat
 from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 #interns functions
 from ..functions.preprocessing import preprocessing
@@ -10,7 +11,7 @@ from ..functions.get_sup_label import get_sup_label
 from ..functions.gensvd import gensvd
 from ..functions.statistics import wmean, wstd, wcorr, wcov
 from ..functions.cancor_test import lrtest, pillai_test, hotelling_test,roy_test
-from ..functions.utils import check_is_bool, check_is_all_numeric_dtype
+from ..functions.utils import check_is_bool, check_is_all_numeric_dtype, check_is_dataframe
 
 class CANCORR(BaseEstimator,TransformerMixin):
     """
@@ -24,7 +25,7 @@ class CANCORR(BaseEstimator,TransformerMixin):
     scale_unit : bool, default = True
         If True, then the data are scaled to unit variance.
 
-    ncp : int, default = 5
+    ncp : int, default = 2
         The number of dimensions kept in the results.
 
     group : list, tuple
@@ -33,33 +34,21 @@ class CANCORR(BaseEstimator,TransformerMixin):
     name_group : list, tuple, default = None
         The name of the groups. If None, the group are named X and Y.
 
-    prefix_group : list, tuple, default = None
-        The prefix of the groups. If None, the group are prefixed Xcan, Ycan.
-
     row_w : 1d array-like of shape (n_rows,), default = None
         An optional rows weights. The weights are given only for the active rows.
 
-    Returns
-    -------
-    cancoef_ : cancoef
-        An object with the following attributes
-
-        X : DataFrame of shape (n_xcolumns, ncp)
-            Raw canonical coefficients for X.
-        Y : DataFrame of shape (n_ycolumns, ncp)
-            Raw canonical coefficients for Y.
-        
-    cancorr_ : DataFrame of shape (ncp, 2)
-        Canonical correlation.
-
+    Attributes
+    ----------
     call_ : call 
-        An object with the following attributes:
+        An object containing the summary called parameters with the following attributes:
 
-        Xtot : DataFrame of shape (n_rows, n_columns)
-            Input data;
-        X : DataFrame of shape (n_rows, n_xcolumns)
+        Xtot : DataFrame of shape (n_rows + n_rows_sup, n_columns)
+            Input data.
+        X : DataFrame of shape (n_rows, n_columns)
+            Active data.
+        X1 : DataFrame of shape (n_rows, n_xcolumns)
             First group data.
-        Y : DataFrame of shape (n_rows, n_ycolumns)
+        X2 : DataFrame of shape (n_rows, n_ycolumns)
             Second group data.
         Z : DataFrame of shape (n_rows, n_columns)
             Standardized data.
@@ -75,8 +64,12 @@ class CANCORR(BaseEstimator,TransformerMixin):
             The number of variables in each group.
         name_group : list
             The name of the groups.
-        prefix_group : list
-            The prefix of the groups.
+            
+    cancoef_ : DataFrame of shape (n_columns, ncp)
+        Raw canonical coefficients for X and Y
+    
+    cancorr_ : DataFrame of shape (rank, 2)
+        Canonical correlation.
 
     corr_ : corr
         An object with the following attributes:
@@ -101,18 +94,14 @@ class CANCORR(BaseEstimator,TransformerMixin):
     ind_ : ind
         An object containing the results for the individuals with the following attributes:
 
-        X : DataFrame of shape (n_rows, ncp)
-            Individuals scores for X.
-        Y : DataFrame of shape (n_rows, ncp)
-            Individuals scores for Y.
+        coord_partiel : DataFrame of shape (2*n_rows, ncp)
+            Individuals scores for X and Y.
 
     ind_sup_ : ind_sup, optional
         An object containing the resuts for the supplementary individuals with the following attributes:
 
-        X : DataFrame of shape (n_rows_sup, ncp)
-            Supplementary individuals scores for X.
-        Y : DataFrame of shape (n_rows_sup, ncp)
-            Supplementary individuals scores for Y.
+        coord_partiel : DataFrame of shape (2*n_rows_sup, ncp)
+            Supplementary individuals scores for X and Y.
 
     manova_ : manova
         An object with the following attributes:
@@ -150,23 +139,16 @@ class CANCORR(BaseEstimator,TransformerMixin):
                 Roy's test statistic.
 
     quanti_var_ : quanti_var
-        An object with the following attributes:
+        An object containing the resuts for the quantitative variables with the following attributes:
 
-        X : X
-            An object with the following attributes
-
-            xscores : DataFrame of shape (n_xcolumns, ncp)
-                Correlation between X and X scores. 
-            yscores : DataFrame of shape (n_xcolumns, ncp)
-                Correlation between X and Y scores. 
-
-        Y : Y
-            An object with the following attributes
-
-            xscores : DataFrame of shape (n_ycolumns, ncp)
-                Correlation between Y and X scores. 
-            yscores : DataFrame of shape (n_ycolumns, ncp)
-                Correlation between Y and Y scores. 
+        xxcoord : DataFrame of shape (n_xcolumns, ncp)
+            Correlations Between X and Their Canonical Variables.
+        yycoord : DataFrame of shape (n_ycolumns, ncp)
+            Correlations Between Y and Their Canonical Variables.
+        xycoord : DataFrame of shape (n_xcolumns, ncp)
+            Correlations Between X and The Canonical Variables of Y.
+        yxcoord : DataFrame of shape (n_ycolumns, ncp)
+            Correlations Between Y and The Canonical Variables of X.
 
     sscp_ : sscp
         An object with the following attributes:
@@ -200,17 +182,16 @@ class CANCORR(BaseEstimator,TransformerMixin):
     --------
     >>> from scientisttools.datasets import fitnessclub
     >>> from scientisttools import CANCORR
-    >>> clf = CANCORR(scale_unit=False,ncp=3,group=(3,3),name_group=("Physiological","Exercises"))
-    >>> clf.fit(fitnessclub)
-    CANCORR(group=(3,3),name_group=("Physiological","Exercises"),ncp=3,scale_unit=False)
+    >>> clf = CANCORR(ncp=3,group=fitnessclub.group,name_group=fitnessclub.name)
+    >>> clf.fit(fitnessclub.data)
+    CANCORR(group=(3,3),name_group=("Physiological Measurements","Exercises"),ncp=3)
     """
     def __init__(
             self, 
             scale_unit = False, 
-            ncp = None, 
+            ncp = 2, 
             group = None, 
             name_group = None, 
-            prefix_group = None, 
             row_w = None, 
             ind_sup = None
     ):
@@ -218,7 +199,6 @@ class CANCORR(BaseEstimator,TransformerMixin):
         self.ncp = ncp
         self.group = group
         self.name_group = name_group
-        self.prefix_group = prefix_group
         self.row_w = row_w
         self.ind_sup = ind_sup
 
@@ -267,18 +247,6 @@ class CANCORR(BaseEstimator,TransformerMixin):
             raise ValueError("name_group must be a 1d array-like of shape (2,).")
         else: 
             name_group = [f"{x}" for x in self.name_group]
-
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #assigned group prefix
-        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        if self.prefix_group is None: 
-            prefix_group = ["Xcan","Ycan"]
-        elif not isinstance(self.prefix_group,(list,tuple,ndarray,Series)): 
-            raise TypeError("prefix_group must be a 1d array-like with prefix of group")
-        elif len(self.prefix_group) != 2: 
-            raise ValueError("prefix_group must be a 1d array-like of shape (2,).")
-        else: 
-            prefix_group = [f"{x}" for x in self.prefix_group]
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #preprocessing
@@ -354,8 +322,8 @@ class CANCORR(BaseEstimator,TransformerMixin):
             ncp = int(min(self.ncp, rank))
 
         #set call_ informations
-        call_  = {"Xtot":Xtot,"X":X1,"Y":X2,"Z":Z,"row_w":row_w,"center":center,"scale":scale,"ncp":ncp,"group":group,
-                  "name_group":name_group,"prefix_group":prefix_group,"ind_sup":ind_sup_label}
+        call_  = {"Xtot":Xtot,"X": X, "X2":X1, "X2":X2,"Z":Z,"row_w":row_w,"center":center,"scale":scale,"ncp":ncp,"group":group,
+                  "name_group":name_group,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -415,54 +383,52 @@ class CANCORR(BaseEstimator,TransformerMixin):
         # raw canonical coefficients
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # raw canonical coefficients
-        xcancoef = DataFrame(gensvd_.xcoef[:,:ncp],index=X1.columns,columns=[f"{prefix_group[0]}{x+1}" for x in range(ncp)])
-        ycancoef = DataFrame(gensvd_.ycoef[:,:ncp],index=X2.columns,columns=[f"{prefix_group[1]}{x+1}" for x in range(ncp)])
+        xcancoef = DataFrame(gensvd_.xcoef[:,:ncp],index=X1.columns,columns=self.eig_.index[:ncp])
+        ycancoef = DataFrame(gensvd_.ycoef[:,:ncp],index=X2.columns,columns=self.eig_.index[:ncp])
         # add to model attributes
-        self.cancoef_ = namedtuple("cancoef",name_group)(xcancoef,ycancoef)
+        self.cancoef_ = concat((xcancoef,ycancoef),axis=0)
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # statistics for individuals - canonical scores 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # scores for the individuals in X and Y
-        ind_xscores = Z.iloc[:,:n_xcols].dot(xcancoef)
-        ind_yscores = Z.iloc[:,n_xcols:].dot(ycancoef)
-        # set index
-        ind_xscores.index = [f"{x}.{name_group[0]}" for x in ind_xscores.index]
-        ind_yscores.index = [f"{x}.{name_group[1]}" for x in ind_yscores.index]
-        # concatenate
-        ind_scores = concat((ind_xscores,ind_yscores),axis=0)
-        # convert to dictionary
-        ind_ = {"scores":ind_scores}
-        # add to model attributes
-        self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
+        ind_xcoord = Z.iloc[:,:n_xcols].dot(xcancoef)
+        ind_ycoord = Z.iloc[:,n_xcols:].dot(ycancoef)
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # statistics for variables
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # compute correlation
-        corr_X_xscores = wcorr(concat((X1,ind_xscores),axis=1), w=row_w).iloc[:n_xcols,n_xcols:]
-        corr_X_yscores = wcorr(concat((X1,ind_yscores),axis=1), w=row_w).iloc[:n_xcols,n_xcols:]
-        corr_Y_xscores = wcorr(concat((X2,ind_xscores),axis=1), w=row_w).iloc[:n_ycols,n_ycols:]
-        corr_Y_yscores  = wcorr(concat((X2,ind_yscores),axis=1), w=row_w).iloc[:n_ycols,n_ycols:]
-        # set index
-        
-        # convert to namedtuple
-        X_scores = namedtuple(name_group[0],["xscores","yscores"])(corr_X_xscores,corr_X_yscores)
-        Y_scores = namedtuple(name_group[1],["xscores","yscores"])(corr_Y_xscores,corr_Y_yscores)
+        corr_X_xcoord = wcorr(concat((X1,ind_xcoord),axis=1), w=row_w).iloc[:n_xcols,n_xcols:]
+        corr_X_ycoord = wcorr(concat((X1,ind_ycoord),axis=1), w=row_w).iloc[:n_xcols,n_xcols:]
+        corr_Y_xcoord = wcorr(concat((X2,ind_xcoord),axis=1), w=row_w).iloc[:n_ycols,n_ycols:]
+        corr_Y_ycoord = wcorr(concat((X2,ind_ycoord),axis=1), w=row_w).iloc[:n_ycols,n_ycols:]
+        # convert to dictionary
+        quanti_var_ = {"xxcoord":corr_X_xcoord, "yycoord" : corr_Y_ycoord, "xycoord" : corr_X_ycoord, "yxcoord" : corr_Y_xcoord}
         # add to model attribute
-        self.quanti_var_ = namedtuple("quanti_var",name_group)(X_scores,Y_scores)
-
+        self.quanti_var_ = namedtuple("quanti_var",quanti_var_.keys())(*quanti_var_.values())
+        
+        # set index
+        ind_xcoord.index = [f"{x}.{name_group[0]}" for x in Z.index]
+        ind_ycoord.index = [f"{x}.{name_group[1]}" for x in Z.index]
+        # concatenate
+        ind_coord_partiel = concat((ind_xcoord,ind_ycoord),axis=0)
+        # convert to dictionary
+        ind_ = {"coord_partiel":ind_coord_partiel}
+        # add to model attributes
+        self.ind_ = namedtuple("ind",ind_.keys())(*ind_.values())
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #multivariate statistics 
+        # multivariate statistics 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #multivariate statistics and F approximations
+        # multivariate statistics and F approximations
         wilks = lrtest(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
         pillai  = pillai_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
         hotelling = hotelling_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
         roy =  roy_test(rho=rho,n_samples=n_rows,n_xcols=n_xcols,n_ycols=n_ycols)
-        #convert to ordered dictionary
+        # convert to ordered dictionary
         manova_ = {"wilks":wilks,"pillai":pillai,"hotelling":hotelling,"roy":roy}
-        #add to model attributes
+        # add to model attributes
         self.manova_ = namedtuple("manova",manova_.keys())(*manova_.values())
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -472,9 +438,101 @@ class CANCORR(BaseEstimator,TransformerMixin):
             # standardization : z_ik = (x_ik - m_k)/s_k
             Z_ind_sup = (X_ind_sup - center)/scale
             # scores for supplementary individuals in X and Y
-            ind_sup_xscores = Z_ind_sup.iloc[:,:n_xcols].dot(xcancoef)
-            ind_sup_yscores = Z_ind_sup.iloc[:,n_xcols:].dot(ycancoef)
+            ind_sup_xcoord = Z_ind_sup.iloc[:,:n_xcols].dot(xcancoef)
+            ind_sup_ycoord = Z_ind_sup.iloc[:,n_xcols:].dot(ycancoef)
+            # set index
+            ind_sup_xcoord.index = [f"{x}.{name_group[0]}" for x in ind_sup_label]
+            ind_sup_ycoord.index = [f"{x}.{name_group[1]}" for x in ind_sup_label]
+            # concatenate
+            ind_sup_coord_partiel = concat((ind_sup_xcoord,ind_sup_ycoord),axis=0)
+            # convert to dictionary
+            ind_sup_ = {"coord_partiel":ind_sup_coord_partiel}
             # add to model attributes
-            self.ind_sup_ = namedtuple("ind",name_group)(ind_sup_xscores,ind_sup_yscores)
+            self.ind_sup_ = namedtuple("ind_sup",ind_sup_.keys())(*ind_sup_.values())
 
         return self
+    
+    def fit_transform(self,X,y=None):
+        """Fit the model with X and apply the dimensionality reduction on X
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            Training data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
+        
+        y : Ignored
+            Ignored.
+        
+        Returns
+        -------
+        X_new : DataFrame of shape (2*n_rows, ncp)
+            Transformed values.
+        """
+        self.fit(X)
+        return self.ind_.coord_partiel
+    
+    def transform(self,X):
+        """
+        Apply dimensionality reduction to X
+
+        X is projected on the first principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            New data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
+
+        Returns
+        -------
+        X_new : DataFrame of shape (2*n_rows, ncp)
+            Projection of X in the first principal components, where ``n_rows`` is the number of rows 
+            and ``ncp`` is the number of the components.
+        """
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if the estimator is fitted by verifying the presence of fitted attributes
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_fitted(self)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X is an object of class pd.DataFrame
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_dataframe(X)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set index name as None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        X.index.name = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X contains original columns
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not set(self.call_.X.columns).issubset(X.columns): 
+            raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
+        X = X[self.call_.X.columns]
+        
+        # extract active elements
+        n_xcols = self.call_.group[0]
+        name_group = self.call_.name_group
+        
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #standardization: z_ik = (x_ik - m_k)/s_k
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        Z = (X - self.call_.center)/self.call_.scale
+
+        # scores for new individuals in X and Y
+        xcoord = Z.iloc[:,:n_xcols].dot(self.cancoef_.iloc[:n_xcols,:])
+        ycoord = Z.iloc[:,n_xcols:].dot(self.cancoef_.iloc[n_xcols:,:])
+        # set index
+        xcoord.index = [f"{x}.{name_group[0]}" for x in X.index]
+        ycoord.index = [f"{x}.{name_group[1]}" for x in X.index]
+        # concatenate
+        coord = concat((xcoord,ycoord),axis=0)
+        return coord

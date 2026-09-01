@@ -225,8 +225,7 @@ class PCAiv(BaseEstimator,TransformerMixin):
         return self
     
     def fit_transform(self,obj,y):
-        """
-        Fit the model with obj and apply the dimensionality reduction on obj
+        """Fit the model with obj and apply the dimensionality reduction on obj
 
         Parameters
         ----------

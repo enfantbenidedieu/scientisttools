@@ -79,9 +79,9 @@ class CCA(BaseEstimator,TransformerMixin):
         coord : coord
             An object with the following attributes:
 
-            CCA : DataFrame of shape (n_rows, ncp)
+            CCA : DataFrame of shape (n_cols, ncp)
                 The CCA columns coordinates.
-            CA : DataFrame of shape (n_rows, ncp)
+            CA : DataFrame of shape (n_cols, ncp)
                 The CA columns coordinates.
 
     eig_ : eig
@@ -149,7 +149,7 @@ class CCA(BaseEstimator,TransformerMixin):
     >>> from scientisttools.datasets dune
     >>> from scientisttools import CCA
     >>> clf = CCA(ncp=2,env=range(5),scaling=1)
-    >>> clf.fit(dunedata)
+    >>> clf.fit(dune)
     CCA(env=range(5),ncp=2,scaling=1)
     """
     def __init__(
