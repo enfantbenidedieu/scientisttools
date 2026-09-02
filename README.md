@@ -12,42 +12,85 @@
 
 </div>
 
-# scientisttools : Exploratory Multivariate Data Analysis with Python
+# scientisttools : Multivariate Exploratory Data Analysis with Python
 
-scientisttools is a python package dedicated to multivariate Exploratory Data Analysis, clustering analysis and multidimensional scaling.
+# Contents
 
-## Why use scientisttools?
+**1. [Overview](#overview)**
+
+**2. [Installation](#installation)**
+
+* [2.1 Global environmen](#genv)
+* [2.2 Virtual environment](#venv)
+* [2.3 Version](#version)
+* [2.4 Dependencies](#dependencies)
+
+**3. [Example](#example)**
+
+**4. [Documentation](#doc)**
+
+**5. [About us](#about_us)**
+
+* [5.1 Authors](#authors)
+* [5.2 Feedbacks](#authors)
+* [5.3 Citing scientisttools](#citing)
+
+## Overview <a name="overview"></a>
+
+scientisttools is a python package dedicated to multivariate exploratory data analysis, clustering analysis and multidimensional scaling.
 
 scientisttools provides functions for :
 
 1. **Generalized Factor Analysis (GFA) :** 
-    * Principal Component Analysis (PCA)
-    * Principal Component Analysis with partial correlation matrix (PartialPCA)
-    * Factor Analysis (FactorAnalysis)
-        * Iterative and Non Iterative Principal Factor Analysis
-        * Harris Component Analysis
-    * Correspondence Analysis (CA)
-    * Multiple and Specific Multiple Correspondence Analysis (MCA)
-    * Factor Analysis of Mixed Data (FAMD)
-    * Mixed Principal Component Analysis (MPCA)
-    * Principal Component Analysis of Mixed Data (PCAMIX)
-    * Canonical Correlation Analysis (CANCORR)
-    * Multiple Factor Analysis (MFA)
-    * Multiple Factor Analysis for qualitatives/categoricals variables (MFAQUAL)
-    * Multiple Factor Analysis of Mixed Data (MFAMD)
-    * Multiple Factor Analysis of Mixed group (MFAMIX)
-    * Multiple Factor Analysis of Contingence Tables (MFACT)
+
+    1. **One table**
+
+        * Correspondence Analysis (CA) and its derivatives (DCA, nsCA, CAiv, CAoiv, bcCA, wcCA)
+        * Factor Analysis (FA)
+            * Iterative and Non Iterative Principal Factor Analysis
+            * Harris Component Analysis
+        * Factor Analysis of Mixed Data (FAMD)
+        * Varimax rotation in Factor Analysis (FArot)
+        * Multiple Correspondenca Analysis (MCA) and its derivatives (speMCA, MCAiv, MCAoiv, bcMCA, wcMCA)
+        * Mixed Principal Component Analysis (MPCA)
+        * Principal Component Analysis (PCA) and its derivatives (Partial PCA, PCAiv, PCAoiv, bcPCA, wcPCA)
+        * Principal Component Analysis of Mixed Data (PCAmix) and its derivatives (PCAmixiv, PCAmixoiv, bcPCAmix, wcPCAmix)
+        * Varimax rotation in Principal Component Analysis (PCArot)
+
+    2. **Two tables**
+
+        * Between-class/Within-class Analysis (BWCA)
+        * Canonical Correlation Analysis (CANCORR)
+        * Canonical Correspondence Analysis (CCA)
+        * CO-Inertia Analysis (COIA)
+        * Principal Component Analysis with (orthogonal) instrumental variables (PCAiv)
+        * Procrustes Analysis (Procrustes)
+
+    3. **Multi tables**
+
+        * Between Group Comparison (BGC)
+        * Dual Common Component and Specific Weights Analysis (DCCSWA)
+        * Dual Generalized Procrustean Analysis (DGPA)
+        * Analysis of Multiple Distance Matrices (DISTATIS)
+        * Dual Multiple Factor Analysis (DMFA)
+        * Dual Statis (DSTATIS)
+        * Flury's Common Principal Component Analysis (FCPCA)
+        * Internal Correspondence Analysis (ICA)
+        * Multiple CO-Inertia Analysis (MCOIA)
+        * Multiple Factor Analysis (MFA)
+        * Multiple-group Principal Component Analysis (mgPCA)
+        * Structuration de Tableaux A Trois Indices de la Statistique (STATIS)
 
 2. **Classification - clustering :**
+    * Categorical Variables Hierachical Clustering on Principal Components (CatVARHCPC)
+    * Categorical Variables K-Means clustering on Principal Components (CatVARKMeansPC)
     * Hierarchical Clustering on Principal Component (HCPC)
-    * Variables Hierarchical Clustering Analysis (VARHCA)
-    * Variables Hierarchical Clustering Analysis on Principal Components (VARHCPC)
-    * Categorical Variables Hierarchical Clustering Analysis (CATVARHCA)
-
+    * K-Means Clustering on Principal Components (KMeansPC)
+    * Variables Agglomerative Hierachical Clustering on Principal Components (VARHCPC)
+    * Variables K-Means Clustering on Principal Components (VARKMeansPC)
+    
 3. **Multidimensional scaling :**
-    * Scaling by MAjorizing a COmplicated Function (SMACOF)
-    * Classical Multidimensional Scaling (CMDSCALE)
-    * Metric and Non - Metric Multidimensional Scaling (MDS)
+    * Principal Coordinates Analysis (PCoA)
 
 4. In some methods, it allowed to add supplementary informations such as supplementary individuals and/or variables.
 5. It provides a geometrical point of view, a lot of graphical outputs.
@@ -57,161 +100,127 @@ Those statistical methods can be used in two ways :
 * as descriptive methods ("datamining approach")
 * as reduction methods in scikit-learn pipelines ("machine learning approach")
 
-Notebooks are availabled.
+## Installation <a name="installation"></a>
 
-## Installation
+### Global environment <a name="genv"></a>
 
-### Dependencies
+You can directly install scientisttools using pip :
 
-scientisttools requires 
-
-```python
-Python >=3.10
-numpy >=1.26.4
-matplotlib >=3.8.4
-scikit-learn >=1.2.2
-pandas >=2.2.2
-polars >=0.19.2
-mapply >=0.1.21
-plotnine >=0.10.1
-pingouin >=0.5.4
-scientistmetrics >=0.0.4
-```
-
-### User installation
-
-You can install scientisttools using pip :
-
-```python
+```bash
 pip install scientisttools
 ```
 
-Tutorials are available
+or set a virtual environment.
 
-## Examples : Principal component analysis
+### Virtual environment <a name="venv"></a>
+
+Install the 64-bit version of Python 3, for instance from the [official website](https://www.python.org/). Now create a [virtual environment (venv)](https://docs.python.org/3/tutorial/venv.html) and install scientisttools.
+
+The virtual environment is optional but strongly recommended, in order to avoid potential conflicts with other packages.
+
+```bash
+PS C:\> python -m venv scientisttools-env # create virtual env
+PS C:\> scientisttools-env\Scripts\activate  # activate
+PS C:\> pip install -U scientisttools  # install scientisttools
+```
+
+### Version <a name="version"></a>
+
+In order to check your installation, you can use.
+
+```python
+>>> import scientisttools
+>>> print(scientisttools.__version__)
+0.2.0
+```
+
+Using an isolated environment such as *pip venv* or *conda* makes it possible to install a specific version of scientisttools with pip and conda and its dependencies independently of any previously installed Python packages.
+
+You should always remember to activate the environment of your choice prior to running any Python command whenever you start a new terminal session.
+
+### Dependencies <a name="dependencies"></a>
+
+scientisttools is compatible with python version which supports both dependencies :
+
+| Packages          |  Version |
+| :---------------- | :------: |
+
+
+## Example <a name="example"></a>
 
 1. **Loading data**
 
 ```python
-# Load wine dataset
->>> from scientisttools import load_wine
->>> wine = load_wine()
->>> wine.info()
+>>> from scientisttools.datasets import decathlon
+>>> data = decathlon.data
 ```
-```
-<class 'pandas.core.frame.DataFrame'>
-Index: 21 entries, 2EL  to T2  
-Data columns (total 31 columns):
- #   Column                         Non-Null Count  Dtype   
----  ------                         --------------  -----   
- 0   Label                          21 non-null     category
- 1   Soil                           21 non-null     category
- 2   Odor.Intensity.before.shaking  21 non-null     float64 
- 3   Aroma.quality.before.shaking   21 non-null     float64 
- 4   Fruity.before.shaking          21 non-null     float64 
- 5   Flower.before.shaking          21 non-null     float64 
- 6   Spice.before.shaking           21 non-null     float64 
- 7   Visual.intensity               21 non-null     float64 
- 8   Nuance                         21 non-null     float64 
- 9   Surface.feeling                21 non-null     float64 
- 10  Odor.Intensity                 21 non-null     float64 
- 11  Quality.of.odour               21 non-null     float64 
- 12  Fruity                         21 non-null     float64 
- 13  Flower                         21 non-null     float64 
- 14  Spice                          21 non-null     float64 
- 15  Plante                         21 non-null     float64 
- 16  Phenolic                       21 non-null     float64 
- 17  Aroma.intensity                21 non-null     float64 
- 18  Aroma.persistency              21 non-null     float64 
- 19  Aroma.quality                  21 non-null     float64 
- 20  Attack.intensity               21 non-null     float64 
- 21  Acidity                        21 non-null     float64 
- 22  Astringency                    21 non-null     float64 
- 23  Alcohol                        21 non-null     float64 
- 24  Balance                        21 non-null     float64 
- 25  Smooth                         21 non-null     float64 
- 26  Bitterness                     21 non-null     float64 
- 27  Intensity                      21 non-null     float64 
- 28  Harmony                        21 non-null     float64 
- 29  Overall.quality                21 non-null     float64 
- 30  Typical                        21 non-null     float64 
-dtypes: category(2), float64(29)
-memory usage: 5.3+ KB
-```
-
 
 2. **Principal component analysis**
 
 ```python
 >>> from scientisttools import PCA
->>> res_pca = PCA(standardize=True,n_components=5,ind_sup=list(range(15,21)),quanti_sup=[29,30],quali_sup=[0,1],parallelize=True)
->>> res_pca.fit(wine)
+>>> clf = PCA(ind_sup=range(41,46),sup_var=(10,11,12))
+>>> clf.fit(data)
+PCA(ncp=2,ind_sup=range(41,46),sup_var=(10,11,12))
 ```
 
-3. **Extract and visualize eigenvalues/varainces:**
-
-```python
->>> from scientisttools import get_eig
->>> eig = get_eig(res_pca)
->>> eig.head(6)
-```
-
-```
-	eigenvalue	difference	proportion	cumulative
-Dim.1	14.740851	11.804968	54.595746	54.595746
-Dim.2	2.935884	0.644286	10.873643	65.469389
-Dim.3	2.291597	0.569027	8.487397	73.956786
-Dim.4	1.722570	0.178368	6.379889	80.336675
-Dim.5	1.544202	0.439988	5.719266	86.055941
-Dim.6	1.104214	0.355298	4.089681	90.145621
-```
+3. **Visualize eigenvalues/varainces:**
 
 ```python
 >>> from scientisttools import fviz_screeplot
->>> print(fviz_screeplot(res_pca))
+>>> print(fviz_screeplot(clf))
 ```
 <center>
-    <img src="./figures/screeplot.png" alt="centered image"/>
+    <img src="./figures/fviz_screeplot.png" alt="centered image"/>
 </center>
 
 4. **Extract and visualize results for individuals**
 
 ```python
->>> # Extract the results for individuals
+>>> # extract the results for individuals
 >>> from scientisttools import get_pca_ind
->>> ind = get_pca_ind(res_pca)
->>> ind.keys()
-```
-
-```
-dict_keys(['coord', 'cos2', 'contrib', 'infos'])
-```
-
-```python
->>> # Factor coordinates for individuals
->>> ind["coord"].head(6)
-```
-```
-           Dim.1	  Dim.2	     Dim.3	    Dim.4	    Dim.5
-2EL	   -0.697060  -2.852968	  0.169384	 0.942456	 0.957457
-1CHA   -4.802838  -4.236054	 -0.969634	 0.164637	 0.288523
-1FON   -2.577287  -0.184102	 -1.879038	-2.541729	-0.390677
-1VAU  -10.582720   2.180724	  1.691468	-0.624785	 0.968510
-1DAM	4.906159   0.147573	  0.864068	-0.138473	 2.525392
-2BOU	1.746737   0.926421	 -1.281174	-1.113625	-1.805437
+>>> ind = get_pca_ind(clf)
+>>> ind._fields
+... ('coord', 'cos2', 'contrib', 'infos')
 ```
 
 ```python
 >>> # Individuals factor map
 >>> from scientisttools import fviz_pca_ind
->>> print(fviz_pca_ind(res_pca))
+>>> p = fviz_pca_ind(clf)
+>>> print(p.show())
 ```
 
 <center>
-    <img src="./figures/indplot.png" alt="centered image"/>
+    <img src="./docs/source/_static/fviz_pca_ind.png" alt="centered image"/>
 </center>
 
+## Documentation <a name="doc"></a>
 
-## Author(s)
+The official documentation is hosted on [https://scientisttools.readthedocs.io](https://scientisttools.readthedocs.io).
 
-Duvérier DJIFACK ZEBAZE ([djifacklab@gmail.com](djifacklab@gmail.com))
+## About Us <a name="about_us"></a>
+
+### Authors <a name="authors"></a>
+
+scientisttools is developed and maintained by [Duvérier DJIFACK ZEBAZE](https://www.linkedin.com/in/duv%C3%A9rier-djifack-z-030097118/), the founder 
+of djifacklab (*Djifack Laboratory of Mathematics, Statistics and Economics books and packages production using Python Programming Language*).
+
+The djifacklab laboratory maintains others python librairies such as [discrimintools](https://pypi.org/project/discrimintools/), [scientistmetrics](https://pypi.org/project/scientistmetrics/), [scientistshiny](https://pypi.org/project/scientistshiny/), [scientisttseries](https://pypi.org/project/scientistshiny/) and [ggcorrplot]( https://pypi.org/project/ggcorrplot/).
+
+### Feedbacks <a name="feedbacks"></a>
+
+If you have found scientisttools useful in your work, research, or company, please let us know by writing to email [djifacklab@gmail.com](mailto:djifacklab@gmail.com).
+
+### Citing scientisttools <a name="citing"></a>
+
+If scientisttools has been significant in your research, and you would like to acknowledge the project in your academic publication, we suggest citing it using the following *BibTeX format*:
+
+```
+@misc{DJIFACK ZEBAZE_2023, 
+    url = {https://github.com/enfantbenidedieu/scientisttools}, 
+    title = {scientisttools: Multivariate Exploratory Data Analysis with Python}
+    author = {DJIFACK ZEBAZE, Duvérier}, 
+    year = {2023}
+}
+``` 
