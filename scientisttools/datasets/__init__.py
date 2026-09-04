@@ -23,15 +23,15 @@ DATASETS_DIR = pathlib.Path(__file__).parent / "data"
 #------------------------------------------ ardeche dataset ----------------------------------------------------- 
 ardeche = {
     "data" : read_excel(DATASETS_DIR/"ardeche.xlsx",index_col=0,header=0),
-    "col_group" : (5,6,6,6,6,6),
-    "row_group" : (11,3,13,16),
-    "name_col_group" : ("Jul82","Aug82","Nov82","Feb83","Apr83","Jul83"),
-    "name_row_group" : ("Ephemeroptera","Plecoptera","Coleoptera","Trichoptera")
+    "col_group" : [5,6,6,6,6,6],
+    "row_group" : [11,3,13,16],
+    "name_col_group" : ["Jul82","Aug82","Nov82","Feb83","Apr83","Jul83"],
+    "name_row_group" : ["Ephemeroptera","Plecoptera","Coleoptera","Trichoptera"]
 }
 __doc__ = """
 Ardeche Dataset
 
-Faua table with double (row and column) partitioning.
+Fauna table with double (row and column) partitioning.
 This data set gives information about species of benthic macroinvertebrates in different sites and dates.
 
 Returns
@@ -41,13 +41,13 @@ ardeche : Dataset
 
     data : DataFrame of shape (43,35)
         Fauna Table with double (row and column) partitioning : 43 species (rows) and 35 samples (columns)
-    col_group : tuple, default = (5,6,6,6,6,6)
+    col_group : list, default = [5,6,6,6,6,6]
         The number of columns in each column group. Its containing the repartition of samples for the 6 dates. july 1982, august 1982, november 1982, february 1983, april 1983 and july 1983.
-    row_group : tuple, default = (11,3,13,16)
+    row_group : list, default = [11,3,13,16]
         The number of rows in each row group. Its containing the repartition of species in the 4 groups defining the species order. Ephemeroptera, Plecoptera, Coleoptera, Trichoptera
-    name_col_group : tuple, default = ("Jul82","Aug82","Nov82","Feb83","Apr83","Jul83")
+    name_col_group : list, default = ["Jul82","Aug82","Nov82","Feb83","Apr83","Jul83"]
         The name of the columns groups. 
-    name_col_group : tuple, default = ("Ephemeroptera","Plecoptera","Coleoptera","Trichoptera")
+    name_col_group : list, default = ["Ephemeroptera","Plecoptera","Coleoptera","Trichoptera"]
         The name of the rows groups.
 
 References
@@ -65,7 +65,7 @@ CA()
 >>> #internal correspondence analysis (ICA)
 >>> clf = ICA(row_group=ardeche.row_group, name_row_group=ardeche.name_row_group, col_group=ardeche.col_group, name_col_group=ardeche.name_col_group)
 >>> clf.fit(ardeche.data)
-ICA(row_group=(11,3,13,16),name_row_group=("Ephemeroptera","Plecoptera","Coleoptera","Trichoptera"),col_group=(5,6,6,6,6,6),name_col_group=("Jul82","Aug82","Nov82","Feb83","Apr83","Jul83"))
+ICA(row_group=[11,3,13,16],name_row_group=["Ephemeroptera","Plecoptera","Coleoptera","Trichoptera"],col_group=[5,6,6,6,6,6],name_col_group=["Jul82","Aug82","Nov82","Feb83","Apr83","Jul83"])
 """
 ardeche = namedtupledocstring(__doc__,"ardeche",ardeche.keys())(*ardeche.values())
 
@@ -164,6 +164,20 @@ Examples
 PCA(ind_sup=(18,19),partial=0,sup_var=(6,7,8))
 """
 autos2006 = namedtupledocstring(__doc__, "autos2006",autos2006.keys())(*autos2006.values())
+
+#------------------------------------------ autosfa dataset -----------------------------------------------------
+autosfa = read_excel(DATASETS_DIR/"autosfa.xlsx",sheet_name="Feuil1",index_col=0,header=0)
+autosfa.__doc__ = """
+Autos Factor Analysis Dataset
+
+Examples
+--------
+>>> from scientisttools.datasets import autosfa
+>>> from scientisttools import FA
+>>> clf = FA(ncp=2)
+>>> clf.fit(autosfa)
+FA(ncp=2)
+"""
 
 #------------------------------------------ autosmds dataset ----------------------------------------------------- 
 autosmds = {
@@ -307,8 +321,8 @@ data = DataFrame(
 data.insert(0, "Oak type", [1, 2, 2, 2, 1, 1])
 burgundywines = {
     "data" : data,
-    "group" : (1,3,4,3),
-    "name" : ("type","expert1","expert2","expert3") 
+    "group" : [1,3,4,3],
+    "name" : ["Type","Expert 1","Expert 2","Expert 3"]
 }
 __doc__ = """
 Burgundy Wines Dataset
@@ -320,16 +334,16 @@ burgundywines : Dataset
 
     data: DataFrame of shape (6,11)
         Overall dataset.
-    group: tuple
-        Number of variables in each group.
-    name: list
-        Name of the groups.
+    group: list, default = [1,3,4,3]
+        The number of variables in each group.
+    name: list, default = ["Type","Expert 1","Expert 2","Expert 3"]
+        The name of the groups.
 
 References
 ----------
-[1] https://personal.utdallas.edu/~herve/Abdi-MCA2007-pretty.pdf
+[1] Abdi, H., & Valentin, D. (2007). `Multiple correspondence analysis <https://personal.utdallas.edu/~herve/Abdi-MCA2007-pretty.pdf>`_. In N.J. Salkind (Ed.): Encyclopedia of Measurement and Statistics. Thousand Oaks (CA): Sage. pp. 651-657.
 
-[2] https://personal.utdallas.edu/~herve/Abdi-MFA2007-pretty.pdf
+[2] Abdi, H., & Valentin, D. (2007). `Multiple factor analysis <https://personal.utdallas.edu/~herve/Abdi-MFA2007-pretty.pdf>`. In N.J. Salkind (Ed.): Encyclopedia of Measurement and Statistics. Thousand Oaks (CA): Sage. pp. 657-663
 
 Examples
 --------
@@ -337,7 +351,7 @@ Examples
 >>> from scientisttools import MFA
 >>> clf = MFA(group=burgundywines.group,name_group=burgundywines.name,group_type=("s","s","s","s"),num_group_sup=0)
 >>> clf.fit(wines)
-MFA(group=(1,3,4,3),name_group=("type","expert1","expert2","expert3"),group_type=("s","s","s","s"),num_group_sup=0)
+MFA(group=[1,3,4,3],name_group=["Type","Expert 1","Expert 2","Expert 3"],group_type=("s","s","s","s"),num_group_sup=0)
 """
 
 #------------------------------------------ canines dataset ----------------------------------------------------- 
@@ -467,9 +481,9 @@ decathlon : decathlon
         Input data for actifs elements.
     ind_sup: DataFrame of shape (5,10)
         Input data for supplementary individuals dataset.
-    sup_var: DataFrame of shape (41, 2)
+    sup_var: DataFrame of shape (41, 3)
         Input data for supplementary variables.
-    data: DataFrame of shape (46,12)
+    data: DataFrame of shape (46,13)
         Overall dataset
 
 Examples
@@ -487,8 +501,8 @@ decathlon2 = {
     "actif" : read_excel(DATASETS_DIR/"decathlon2.xlsx",sheet_name="Sheet1",index_col=0,header=0),
     "ind_sup" : read_excel(DATASETS_DIR/"decathlon2.xlsx",sheet_name="Sheet2",index_col=0,header=0),
     "data" : read_excel(DATASETS_DIR/"decathlon2.xlsx",sheet_name="Sheet3",index_col=0,header=0),
-    "group" : (4,6),
-    "name" : ("Speed","Strenght")
+    "group" : [4,6],
+    "name" : ["Speed","Strenght"]
 }
 __doc__ = """
 Performance in decathlon (data)
@@ -508,9 +522,9 @@ decathon2 : Dataset
         Input data for supplementary individuals dataset.
     data: DataFrame of shape (46,10)
         Overall dataset
-    group : tuple, default = (4,6)
+    group : list, default = [4,6]
         The number of variables in each group
-    name : tuple, default = ("Speed","Strenght")
+    name : list, default = ["Speed","Strenght"]
         The name of the groups.
 
 Examples
@@ -519,15 +533,15 @@ Examples
 >>> from scientisttools import DISTATIS
 >>> clf = DISTATIS(group=decathlon2.group,name_group=decatlon2.name,ind_sup=range(41,46))
 >>> clf.fit(decathlon.data)
-DISTATIS(group=(4,6),ind_sup=range(41,46),name_group=("Speed","Strenght"))
+DISTATIS(group=[4,6],ind_sup=range(41,46),name_group=["Speed","Strenght"])
 """
 decathlon2 = namedtupledocstring(__doc__,"decathlon2",decathlon2.keys())(*decathlon2.values())
 
 #------------------------------------------ distalgo dataset ----------------------------------------------------- 
 distalgo = {
     "data" : read_excel(DATASETS_DIR/"distalgo.xlsx",index_col=0,header=0),
-    "group" : (6,6,6,6),
-    "name" : ("Pixels","Measures","Ratings","Pairwise") 
+    "group" : [6,6,6,6],
+    "name" : ["Pixels","Measures","Ratings","Pairwise"]
 }
 __doc__ = """
 Four computer algorithms evaluate the similarity of six faces for DISTATIS analysis
@@ -542,22 +556,22 @@ distalgo : Dataset
     
     data : DataFrame of shape (6,24)
         Overall dataset.
-    group : tuple, default = (6,6,6,6)
+    group : list, default = [6,6,6,6]
         The number of columns in each group. 
-    name : tuple, default = ("Pixels","Measures","Ratings","Pairwise")
+    name : list, default = ["Pixels","Measures","Ratings","Pairwise"]
         The name of the columns groups.
 
 References
 ----------
-[1] Abdi, H., Valentin, D., O'Toole, A.J., & Edelman, B. (2005). DISTATIS: The analysis of multiple distance matrices. Proceedings of the IEEE Computer Society: International Conference on Computer Vision and Pattern Recognition. (San Diego, CA, USA). pp. 42–47.
+[1] Abdi, H., & Valentin, D. (2007). `DISTATIS: The analysis of multiple distance matrices <https://personal.utdallas.edu/~herve/Abdi-DISTATIS2007-pretty.pdf>`_. In N.J. Salkind (Ed.): Encyclopedia of Measurement and Statistics. Thousand Oaks (CA): Sage. pp. 284-290
 
 Examples
 --------
 >>> from scientisttools.datasets import distalgo
 >>> from scientisttools import DISTATIS
->>> clf = DISTATIS(group=distalgo.group,name_group=distalgo.names)
->>> clf.fit(distalgo)
-DISTATIS(group=(6,6,6,6),name_group=("Pixels","Measures","Ratings","Pairwise"))
+>>> clf = DISTATIS(group=distalgo.group,name_group=distalgo.name)
+>>> clf.fit(distalgo.data)
+DISTATIS(group=[6,6,6,6],name_group=["Pixels","Measures","Ratings","Pairwise"])
 """
 distalgo = namedtupledocstring(__doc__,"distalgo",distalgo.keys())(*distalgo.values())
 
@@ -566,8 +580,8 @@ doubs = {
     "fish" : read_excel(DATASETS_DIR/"doubs.xlsx",sheet_name="Feuil1",index_col=0,header=0),
     "env" : read_excel(DATASETS_DIR/"doubs.xlsx",sheet_name="Feuil2",index_col=0,header=0),
     "data" : read_excel(DATASETS_DIR/"doubs.xlsx",sheet_name="Feuil3",index_col=0,header=0),
-    "group" : (27,11),
-    "name" : ("Fish Species","Environmental")
+    "group" : [27,11],
+    "name" : ["Fish Species","Environmental"]
 }
 __doc__ = """
 Pair of Ecological Tables
@@ -625,9 +639,9 @@ doubs : Dataset
         * bdo - biological demand for oxygen (mg/l * 10).
     data : DataFrame of shape (30,38)
         Overall dataset.
-    group : tuple, default = (27,11)
+    group : list, default = [27,11]
         The number of columns in each group. 
-    name : tuple, default = ("Fish Species","Environmental")
+    name : list, default = ["Fish Species","Environmental"]
         The name of the columns groups.
 
 References
@@ -638,9 +652,9 @@ Examples
 --------
 >>> from scientisttools.datasets import doubs
 >>> from scientisttools import COIA
->>> clf = COIA(group=(27,11),type_group=("f","s"),name_group=doubs.name)
+>>> clf = COIA(group=doubs.group,type_group=("f","s"),name_group=doubs.name)
 >>> clf.fit(doubs.data)
-COIA(group=(27,11),type_group=("f","s"),name_group=("Fish Species","Environmental"))
+COIA(group=[27,11],type_group=("f","s"),name_group=["Fish Species","Environmental"])
 """
 doubs = namedtupledocstring(__doc__,"doubs",doubs.keys())(*doubs.values())
 
@@ -677,9 +691,8 @@ CA(col_sup=range(3,7))
 #------------------------------------------ fitnessclub dataset ----------------------------------------------------- 
 fitnessclub = {
     "data" : read_excel(DATASETS_DIR/"fitnessclub.xlsx",sheet_name="Feuil1",header=0,index_col=None),
-    "group" : (3,3),
-    "name" : ("Physiological Measurements","Exercises"),
-    "prefix" : ("Physiological","Exercises")
+    "group" : [3,3],
+    "name" : ["Physiological Measurements","Exercises"]
 }
 __doc__ = """
 Fitness Club Dataset
@@ -693,29 +706,28 @@ fitnessclub : Dataset
     
     data : DataFrame of shape (20,6)
         Overall dataset.
-    group : tuple, default = (3,3)
+    group : list, default = [3,3]
         The number of columns in each group. 
-    name : tuple, default = ("Physiological Measurements","Exercises")
+    name : list, default = ["Physiological Measurements","Exercises"]
         The name of the columns groups.
-    prefix : tuple, default = ("Physiological","Exercises")
-        The prefix name of the columns groups.
 
 Examples
 --------
 >>> from scientisttools.datasets import fitnessclub
 >>> from scientisttools import CANCORR
->>> clf = CANCORR(scale_unit=True,ncp=3,group=fitnessclub.group,name_group=fitnessclub.group,prefix_name=fitnessclub.prefix)
+>>> clf = CANCORR(scale_unit=True,ncp=3,group=fitnessclub.group,name_group=fitnessclub.name)
 >>> clf.fit(fitnessclub.data)
-CANCORR(group=(3,3),name_group=("Physiological Measurements","Exercises"),ncp=3,prefix_name=("Physiological","Exercises"),scale_unit=True)
+CANCORR(group=[3,3],name_group=["Physiological Measurements","Exercises"],ncp=3,scale_unit=True)
 """
+fitnessclub = namedtupledocstring(__doc__,"fitnessclub",fitnessclub.keys())(*fitnessclub.values())
 
 #------------------------------------------ friday87 dataset -----------------------------------------------------
 friday87 = {
-    "fau" : read_excel(DATASETS_DIR/"friday87.xlsx",sheet_name="Feuil1",index_col=0),
+    "data" : read_excel(DATASETS_DIR/"friday87.xlsx",sheet_name="Feuil1",index_col=0),
     "mil" : read_excel(DATASETS_DIR/"friday87.xlsx",sheet_name="Feuil2",index_col=0),
-    "data" : read_excel(DATASETS_DIR/"friday87.xlsx",sheet_name="Feuil3",index_col=0),
-    "group" : (11,7,13,4,13,22,4,3,8,6),
-    "name" : ("Hemiptera","Odonata","Trichoptera","Ephemeroptera","Coleoptera","Diptera","Hydracarina","Malacostraca","Mollusca","Oligochaeta")
+    "faumil" : read_excel(DATASETS_DIR/"friday87.xlsx",sheet_name="Feuil3",index_col=0),
+    "group" : [11,7,13,4,13,22,4,3,8,6],
+    "name" : ["Hemiptera","Odonata","Trichoptera","Ephemeroptera","Coleoptera","Diptera","Hydracarina","Malacostraca","Mollusca","Oligochaeta"]
 }
 __doc__ = """
 Faunistic K-tables dataset
@@ -727,7 +739,7 @@ Returns
 friday87 : Dataset
     An object with the following attributes:
     
-    fau : DataFrame of shape (16,91)
+    data : DataFrame of shape (16,91)
         Faunistic table with :math:`16` sites and :math:`91` species grouped as follows:
         
         * Hemiptera: 11 columns
@@ -742,27 +754,30 @@ friday87 : Dataset
         * Oligochaeta: 6 columns
     mil : DataFrame of shape (16,11)
         Environmental variables.
-    data : DataFrame of shape (16,102)
+    faumil : DataFrame of shape (16,102)
         Overall dataset.
-    group : tuple, default = (11,7,13,4,13,22,4,3,8,6)
+    group : list, default = [11,7,13,4,13,22,4,3,8,6]
         The number of columns in each group (number of species per group). 
-    name : tuple, default = ("Hemiptera","Odonata","Trichoptera","Ephemeroptera","Coleoptera","Diptera","Hydracarina","Malacostraca","Mollusca","Oligochaeta")
+    name : list, default = ["Hemiptera","Odonata","Trichoptera","Ephemeroptera","Coleoptera","Diptera","Hydracarina","Malacostraca","Mollusca","Oligochaeta"]
         The name of the columns groups (each group of species).
 References
 ----------
-[1] Friday, L.E. (1987) The diversity of macroinvertebrate and macrophyte communities in ponds, Freshwater Biology, 18, 87-104.
+[1] Friday, L.E. (1987). The diversity of macroinvertebrate and macrophyte communities in ponds. Freshwater Biology, 18, 87-104.
 
 Examples
 --------
 >>> from scientisttools.datasets import friday87
 >>> from scientisttools import MFA, CCA
 >>> # multiple factor analysis (MFA)
->>> clf = MFA(group=friday87.group,group_type=("f","f","f","f","f","f","f","f","f","f"),name_group=friday87.name)
->>> clf.fit(friday87.fau)
-MFA(group=(11,7,13,4,13,22,4,3,8,6),group_type=("f","f","f","f","f","f","f","f","f","f"),name_group=("Hemiptera","Odonata","Trichoptera","Ephemeroptera","Coleoptera","Diptera","Hydracarina","Malacostraca","Mollusca","Oligochaeta"))
+>>> clf = MFA(group=friday87.group,group_type=["f","f","f","f","f","f","f","f","f","f"],name_group=friday87.name)
+>>> clf.fit(friday87.data)
+MFA(group=[11,7,13,4,13,22,4,3,8,6],
+... group_type=["f","f","f","f","f","f","f","f","f","f"],
+... name_group=["Hemiptera","Odonata","Trichoptera","Ephemeroptera","Coleoptera","Diptera","Hydracarina","Malacostraca","Mollusca","Oligochaeta"],
+... num_group_sup=10)
 >>> # canonical correspondence analysis (CCA)
 >>> clf = CCA(env=range(91,102))
->>> clf.fit(friday87.data)
+>>> clf.fit(friday87.faumil)
 CCA(env=range(91,102))
 """
 friday87 = namedtupledocstring(__doc__,"friday87",friday87.keys())(*friday87.values())
@@ -790,8 +805,8 @@ gironde = {
     "services": read_r(DATASETS_DIR/"gironde_services.rda")["services"],
     "environment": read_r(DATASETS_DIR/"gironde_environment.rda")["environment"],
     "data" : read_r(DATASETS_DIR/"gironde.rda")["gironde"],
-    "group" : (9,5,9,4),
-    "name" : ("employment","housing","services","environment")
+    "group" : [9,5,9,4],
+    "name" : ["employment","housing","services","environment"]
 }
 __doc__ = """
 Gironde Dataset
@@ -805,7 +820,7 @@ Examples
 >>> data = gironde.data.iloc[:20,:]
 >>> clf = MFA(group=gironde.group,group_type=("s","m","n","s"),name_group=gironde.name)
 >>> clf.fit(data)
-MFA(group=(9,5,9,4),group_type=("s","m","n","s"),name_group=("employment","housing","services","environment"))
+MFA(group=[9,5,9,4],group_type=("s","m","n","s"),name_group=["employment","housing","services","environment"])
 """
 gironde = namedtupledocstring(__doc__,"gironde",gironde.keys())(*gironde.values())
 
@@ -907,9 +922,8 @@ PCA(sup_var=13)
 #------------------------------------------ jobs dataset -----------------------------------------------------
 jobs = {
     "data" : read_excel(DATASETS_DIR/"jobs.xlsx",index_col=None,header=0),
-    "group" : (3,3),
-    "name" : ("Satisfaction Areas","Job Characteristics"),
-    "prefix" : ("Satisfaction","Characteristics")
+    "group" : [3,3],
+    "name" : ["Satisfaction Areas","Job Characteristics"]
 }
 __doc__ = """
 Jobs Dataset
@@ -933,20 +947,18 @@ jobs : Dataset
     
     data : DataFrame of shape (20,24)
         Overall dataset.
-    group : tuple, default = (3,3)
+    group : list, default = [3,3]
         The number of columns in each group. 
-    name : tuple, default = ("Satisfaction Areas","Job Characteristics")
+    name : list, default = ["Satisfaction Areas","Job Characteristics"]
         The name of the columns groups.
-    prefix : tuple, default = ("Satisfaction","Characteristics")
-        The prefix name of the columns groups.
 
 Examples
 --------
 >>> from scientisttools.datasets import jobs
 >>> from scientisttools import CANCORR
->>> clf = CANCORR(scale_unit=False,ncp=3,group=jobs.group,name_group=jobs.name,prefix_group=jobs.prefix)
+>>> clf = CANCORR(scale_unit=False,ncp=3,group=jobs.group,name_group=jobs.name)
 >>> clf.fit(jobs.data)
-CANCORR(group=(3,3),name_group=("Satisfaction Areas","Job Characteristics"),ncp=3,prefix_group=("Satisfaction","Characteristics"),scale_unit=False)
+CANCORR(group=(3,3),name_group=["Satisfaction Areas","Job Characteristics],ncp=3,scale_unit=False)
 """
 jobs = namedtupledocstring(__doc__,"jobs",jobs.keys())(*jobs.values())
 
@@ -1037,8 +1049,8 @@ meaudret = namedtupledocstring(__doc__,"meaudret",meaudret.keys())(*meaudret.val
 #------------------------------------------ mortality dataset -----------------------------------------------------  
 mortality = {
     "data" : read_r(DATASETS_DIR/"mortality.rda")["mortality"],
-    "group" : (9,9),
-    "name" : ("y1979","y2006")
+    "group" : [9,9],
+    "name" : ["y1979","y2006"]
 }
 __doc__ = """
 Mortality Dataset
@@ -1055,9 +1067,9 @@ mortality : Dataset
     
     data : DataFrame of shape (62,18)
         Overall dataset.
-    group : tuple, default = (9,9)
+    group : list, default = [9,9]
         The number of columns in each group.
-    name : tuple, default = ("y1979","y2006")
+    name : list, default = ["y1979","y2006"]
         The name of each group.
 
 Examples
@@ -1066,7 +1078,7 @@ Examples
 >>> from scientisttools import MFA
 >>> clf = MFA(group=mortality.group,group_type=("f","f"),name_group=mortality.name)
 >>> clf.fit(mortality.data)
-MFA(group=(9,9),group_type=("f","f"),name_group=("y1979","y2006"))
+MFA(group=[9,9],group_type=("f","f"),name_group=["y1979","y2006"])
 """
 mortality = namedtupledocstring(__doc__,"mortality",mortality.keys())(*mortality.values())
 
@@ -1171,8 +1183,8 @@ poison = {
     "actif" : read_excel(DATASETS_DIR/"poison.xlsx",sheet_name="Feuil1",index_col=0,header=0),
     "sup_var" : read_excel(DATASETS_DIR/"poison.xlsx",sheet_name="Feuil2",index_col=0,header=0),
     "data" : read_excel(DATASETS_DIR/"poison.xlsx",sheet_name="Feuil3",index_col=0,header=0),
-    "group" : (2,2,5,6),
-    "name" : ("desc","desc2","symptom","eat")
+    "group" : [2,2,5,6],
+    "name" : ["desc","desc2","symptom","eat"]
 }
 __doc__ = """
 Poison Dataset
@@ -1192,9 +1204,9 @@ poison : Dataset
         Supplementary variables.
     data : DataFrame of shape (55,15)
         Overall dataset.
-    group : tuple, default = (2,2,5,6)
+    group : list, default = [2,2,5,6]
         The number of columns in each group. 
-    name_group : tuple, default = ("desc","desc2","symptom","eat")
+    name_group : list, default = ["desc","desc2","symptom","eat"]
         The name of the columns groups.
 
 References
@@ -1212,7 +1224,7 @@ MCA(sup_var=range(4))
 >>> # multiple factor analysis (MFA)
 >>> clf = MFA(group=poison.group,group_type=("s","n","n","n"),name_group=poison.name,num_group_sup=(0,1))
 >>> clf.fit(poison.data)
-MFA(group=(2,2,5,6),group_type=("s","n","n","n"),name_group=("desc","desc2","symptom","eat"),num_group_sup=(0,1))
+MFA(group=[2,2,5,6],group_type=("s","n","n","n"),name_group=["desc","desc2","symptom","eat"],num_group_sup=(0,1))
 """
 poison = namedtupledocstring(__doc__,"poison",poison.keys())(*poison.values())
 
@@ -1249,8 +1261,8 @@ PCA()
 #------------------------------------------ qtevie dataset -----------------------------------------------------
 qtevie = {
     "data" : read_csv(DATASETS_DIR/"qtevie.csv",encoding="ISO-8859-1",header=0,sep=";",index_col=0),
-    "group" : (5,5,3,6,3,1),
-    "name" : ("Bien-être matériel","Emploi","Satisfaction","Santé et sécurité","Enseignement","Région")
+    "group" : [5,5,3,6,3,1],
+    "name" : ["Bien-être matériel","Emploi","Satisfaction","Santé et sécurité","Enseignement","Région"]
 }
 __doc__ = """
 Qualité de vie Dataset
@@ -1270,9 +1282,9 @@ qtevie : Dataset
     
     data : DataFrame of shape ()
         Overall dataset.
-    group : tuple, default = (5,5,3,6,3,1)
+    group : list, default = [5,5,3,6,3,1]
         The number of columns in each group.
-    name : tuple, default = ("Bien-être matériel","Emploi","Satisfaction","Santé et sécurité","Enseignement","Région")
+    name : list, default = ["Bien-être matériel","Emploi","Satisfaction","Santé et sécurité","Enseignement","Région"]
         The name of each group.
 
 Source
@@ -1285,7 +1297,7 @@ Examples
 >>> from scientisttools import MFA
 >>> clf = MFA(group=qtevie.group,name_group=qtevie.name,group_type=("s","s","s","s","s","n"),num_group_sup=5)
 >>> clf.fit(qtevie.data)
-MFA(group=(5,5,3,6,3,1),name_group=("Bien-être matériel","Emploi","Satisfaction","Santé et sécurité","Enseignement","Région"),group_type=("s","s","s","s","s","n"),num_group_sup=5)
+MFA(group=[5,5,3,6,3,1],name_group=["Bien-être matériel","Emploi","Satisfaction","Santé et sécurité","Enseignement","Région"],group_type=("s","s","s","s","s","n"),num_group_sup=5)
 """ 
 qtevie = namedtupledocstring(__doc__,"qtevie",qtevie.keys())(*qtevie.values())
 
@@ -1341,9 +1353,8 @@ CA(iv=range(51,58))
 #------------------------------------------ sales dataset -----------------------------------------------------
 sales = {
     "data" : read_csv(DATASETS_DIR/"sales.csv"),
-    "group" : (3,4),
-    "name" : ("Sales Performance","Test Scores"),
-    "prefix" : ("sales","scores")
+    "group" : [3,4],
+    "name" : ["sales.performance","test.scores"]
 }
 __doc__ = """
 Sales Data
@@ -1369,20 +1380,18 @@ sales : Dataset
     
     data: DataFrame of shape (15,12)
         Overall dataset.
-    group: tuple, default = (3,4)
+    group: list, default = [3,4]
         The number of columns in each group. 
-    name: tuple, default = ("sales.performance","test.scores")
+    name: list, default = ["sales.performance","test.scores"]
         The name of the columns groups.
-    prefix: tuple, default = ("sales","scores")
-        The prefix name of the columns groups.
 
 Examples
 --------
 >>> from scientisttools.datasets import sales
 >>> from scientisttools import CANCORR
->>> clf = CANCORR(scale_unit=False,ncp=3,group=sales.group,name_group=sales.name,prefix_group=sales.prefix)
+>>> clf = CANCORR(scale_unit=False,ncp=3,group=sales.group,name_group=sales.name)
 >>> clf.fit(sales.data)
-CANCORR(scale_unit=False,ncp=3,group=(3,4),name_group=("Sales Performance","Test Scores"),prefix_group=("sales","scores"))
+CANCORR(scale_unit=False,ncp=3,group=[3,4],name_group=["sales.Performance","test.scores"])
 """
 sales = namedtupledocstring(__doc__,"sales",sales.keys())(*sales.values())
 
@@ -1519,10 +1528,13 @@ McNeil, D. R. (1977) Interactive Data Analysis. New York: Wiley.
 Examples
 --------
 >>> from scientisttools.datasets import usarrests
->>> from scientisttools import PCA
->>> clf = PCA()
+>>> from scientisttools import PCA, HCPC
+>>> clf = PCA(ncp=3)
 >>> clf.fit(usarrests)
 PCA()
+>>> clf2 = HCPC(ncl=4)
+>>> clf2.fit(clf)
+HCPC(ncl=4)
 """
 
 #------------------------------------------ uscrime dataset ----------------------------------------------------- 
@@ -1624,8 +1636,8 @@ MCA(sup_var=0)
 #------------------------------------------ wine dataset ----------------------------------------------------- 
 wine = {
     "data" : read_r(DATASETS_DIR/"wine.rda")["wine"],
-    "group" : (2,5,3,10,9,2),
-    "name" : ("origin","odor","visual","odor.after.shaking","taste","overall")
+    "group" : [2,5,3,10,9,2],
+    "name" : ["origin","odor","visual","odor.after.shaking","taste","overall"]
 }
 __doc__ = """
 Wine Dataset
@@ -1643,9 +1655,9 @@ wine : Dataset
 
     data : DataFrame of shape (21,31)
         Wine dataset.
-    group : tuple, default = (2,5,3,10,9,2)
+    group : list, default = [2,5,3,10,9,2]
         The number of columns in each group. 
-    name : tuple, default = ("origin","odor","visual","odor.after.shaking","taste","overall")
+    name : list, default = ["origin","odor","visual","odor.after.shaking","taste","overall"]
         The name of the columns groups.
 
 References
@@ -1658,7 +1670,7 @@ Examples
 >>> from scientisttools import MFA
 >>> clf = MFA(group=wine.group,group_type=("n","s","s","s","s","s"),name_group=wine.name,num_group_sup=(0,5))
 >>> clf.fit(wine.data)
-MFA(group=(2,5,3,10,9,2),group_type=("n","s","s","s","s","s"),name_group=("origin","odor","visual","odor.after.shaking","taste","overall"),num_group_sup=(0,5))
+MFA(group=[2,5,3,10,9,2],group_type=("n","s","s","s","s","s"),name_group=["origin","odor","visual","odor.after.shaking","taste","overall"],num_group_sup=(0,5))
 """
 wine = namedtupledocstring(__doc__,"wine",wine.keys())(*wine.values())
 
@@ -1700,6 +1712,7 @@ __all__ = [
     "autos1990",
     "autos2005",
     "autos2006",
+    "autosfa",
     "autosmds",
     "autosmds2",
     "beer",
