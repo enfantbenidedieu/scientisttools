@@ -47,7 +47,7 @@ class FA(BaseEstimator,TransformerMixin):
     min_error : float, default = 1e-3
         iterate until the change in communalities is less than min_error.
 
-    max_iter : int, default = 50
+    max_iter : int, default = 0
         Maximum number of iterations for convergence.
 
     warn_message : bool, default = True
