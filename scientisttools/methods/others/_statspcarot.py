@@ -125,4 +125,4 @@ def statsPCArot(obj):
     others_ = {"vaccounted": vaccounted, "explained_variance": explained_variance}
     #convert to namedtuple
     others_ = namedtuple("others",others_.keys())(*others_.values())
-    return namedtuple("statsPCArotResult",["corr_","others_"])(corr_,others_)
+    return namedtuple("statsPCArotResult",["corr","others"])(corr_,others_)

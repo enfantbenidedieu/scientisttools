@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from pandas import Series
 
 # intern function
 from ..functions.concat_empty import concat_empty
@@ -62,15 +63,23 @@ def reconst(obj,
                 G = concat_empty(G,obj.levels_.coord,axis=0)
     elif obj.__class__.__name__ == "CA":
         F, G = obj.row_.coord, obj.col_.coord
+        
+    # extract 
+    F, G = F.iloc[:,:ncp], G.iloc[:,:ncp]
+    # convert to DataFrame if Series
+    if isinstance(F,Series):
+        F = F.to_frame()
+    if isinstance(G,Series):
+        G = G.to_frame()
 
     # initial step : z_ik
     hatX = F.dot((G/obj.svd_.vs[:ncp]).T)
     if obj.__class__.__name__ == "PCA":
         return ((hatX * obj.call_.scale)/obj.call_.col_w) + obj.call_.center
     elif obj.__class__.__name__ == "CA":
-        return (((hatX + 1).T * obj.call_.row_m).T * obj.call_.col_m) * obj.call_.total
+        return ((((hatX + 1).T * obj.call_.row_m).T * obj.call_.col_m) * obj.call_.total).astype("int")
     elif obj.__class__.__name__ == "MCA":
         hatX = (hatX + 1) * obj.call_.dummies.mean(axis=0)
-        return (hatX > (obj.call_.X.shape[1]/obj.call_.dummies.shape[1])).astype(int)
+        return (hatX > (obj.call_.X.shape[1]/obj.call_.dummies.shape[1])).astype("int")
     else:
         return (((hatX + obj.call_.z_center)*obj.call_.scale)/obj.call_.col_w) + obj.call_.center

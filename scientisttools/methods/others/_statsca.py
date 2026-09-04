@@ -29,7 +29,7 @@ def statsCA(obj):
             association : DataFrame of shape (6, 2)
                 The degree of association between two nominal variables ("cramer", "tschuprow", "pearson").
 
-        residual : residual
+        residuals : residuals
             An object with the following attributes:
 
             resid : DataFrame of shape (n_rows, n_columns) 

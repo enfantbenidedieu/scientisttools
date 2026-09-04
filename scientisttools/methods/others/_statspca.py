@@ -131,4 +131,4 @@ def statsPCA(obj):
     others_ = {"threshold": eig_th, "bartlett": bartlett, "broken": broken, "msa": kaisermsa(X=obj.call_.X,w=obj.call_.ind_w)}
     #convert to namedtuple
     others_ = namedtuple("others",others_.keys())(*others_.values())
-    return namedtuple("statsPCAResult",["corr_","others_"])(corr_,others_)
+    return namedtuple("statsPCAResult",["corr","others"])(corr_,others_)

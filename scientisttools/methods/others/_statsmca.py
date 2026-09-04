@@ -98,4 +98,4 @@ def statsMCA(obj ):
                        index=["Kaiser critical values"])
     #convert to namedtuple
     others_ = namedtuple("others",["inertia","kaiser"])(inertia,kaiser)
-    return namedtuple("statsMCAResult",["correction_","others_"])(correction_,others_)
+    return namedtuple("statsMCAResult",["correction","others"])(correction_,others_)

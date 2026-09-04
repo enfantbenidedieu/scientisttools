@@ -124,4 +124,4 @@ def statsFA(obj):
     others_ = { "vaccounted": vaccounted, "explained_variance": explained_variance, "communalities": communalities, "inertia": inertia }
     #convert to namedtuple
     others_ = namedtuple("others",others_.keys())(*others_.values())
-    return namedtuple("statsFAResult",["corr_","others_"])(corr_,others_)
+    return namedtuple("statsFAResult",["corr","others"])(corr_,others_)
