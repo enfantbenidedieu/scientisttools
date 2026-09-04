@@ -28,7 +28,7 @@ class CA(BaseEstimator,TransformerMixin):
     Parameters
     ----------
     symmetric : bool, default = True
-        If True, then we performns symmetric Correspondence Analysis (CA, DCA, bcCA, wcCA, bcDCA, wcDCA), else non-symmetric Correspondence Analysis (nsCA, bcnsCA, wcnsCA).
+        If True, performns symmetric Correspondence Analysis (CA, DCA, bcCA, wcCA, bcDCA, wcDCA), else non-symmetric Correspondence Analysis (nsCA, bcnsCA, wcnsCA).
     
     ref : int, str, default = None
         The indexe or name of the reference distribution. Only for Detrended Correspondence Analysis (DCA).
