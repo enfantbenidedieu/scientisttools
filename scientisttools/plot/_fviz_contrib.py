@@ -26,13 +26,13 @@ def fviz_contrib(obj,
     Visualize the contributions of row/columns elements
     
     This function can be used to visualize the contribution of rows/columns from the results of Principal Component Analysis (PCA), 
-    Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), 
+    Factor Analysis (FA), Correspondence Analysis (CA), Multiple Correspondence Analysis (MCA), Factor Analysis of Mixed Data (FAMD), 
     Principal Component Analysis of Mixed Data (PCAmix), Mixed Principal Component Analysis (MPCA), and Multiple Factor Analysis (MFA) functions.     
         
     Parameters
     ----------
     obj : class
-        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.CA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, 
+        An object of class :class:`~scientisttools.PCA`, :class:`~scientisttools.FA`, :class:`~scientisttools.CA`, :class:`~scientisttools.MCA`, :class:`~scientisttools.FAMD`, 
         :class:`~scientisttools.PCAmix`, :class:`~scientisttools.MPCA`, :class:`~scientisttools.MFA`
 
     choice : {"row","col","ind","quanti_var","levels","quali_var","freq","group","partial_axes"}, default = "ind"
@@ -120,8 +120,8 @@ def fviz_contrib(obj,
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid class
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    if not (obj.__class__.__name__ in ("PCA","CA","MCA","FAMD","PCAmix","MPCA","MFA","DMFA")):
-        raise TypeError("obj must be an object of class PCA, CA, MCA, FAMD, PCAmix, MPCA, MFA, DMFA")    
+    if not (obj.__class__.__name__ in ("PCA","FA","CA","MCA","FAMD","PCAmix","MPCA","MFA","DMFA")):
+        raise TypeError("obj must be an object of class PCA, FA, CA, MCA, FAMD, PCAmix, MPCA, MFA, DMFA")    
     
     #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # check if valid element
