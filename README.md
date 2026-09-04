@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="./figures/scientisttools.svg" height=300></img>
+    <img src="./docs/source/_static/scientisttools.svg" height=300></img>
 </p>
 
 <div align="center">
@@ -46,9 +46,7 @@ scientisttools provides functions for :
     1. **One table**
 
         * Correspondence Analysis (CA) and its derivatives (DCA, nsCA, CAiv, CAoiv, bcCA, wcCA)
-        * Factor Analysis (FA)
-            * Iterative and Non Iterative Principal Factor Analysis
-            * Harris Component Analysis
+        * Factor Analysis (FA) : Iterative and Non Iterative Principal Factor Analysis (IPFA & NIPFA), Harris Component Analysis (HCA)
         * Factor Analysis of Mixed Data (FAMD)
         * Varimax rotation in Factor Analysis (FArot)
         * Multiple Correspondenca Analysis (MCA) and its derivatives (speMCA, MCAiv, MCAoiv, bcMCA, wcMCA)
@@ -144,7 +142,16 @@ scientisttools is compatible with python version which supports both dependencie
 
 | Packages          |  Version |
 | :---------------- | :------: |
-
+| numpy             | 1.21     |
+| pandas            | 1.4      |
+| scikit-learn      | 1.2      |
+| statsmodels       | 0.14.6   |
+| plotnine          | 0.10.1   |
+| openpyxl          | 3.1.5    |
+| adjustText        | 0.8.2    |
+| pyreadr           | 0.5.4    |
+| mizani            | 0.14.4   |
+| tabulate          | 0.9.0    |
 
 ## Example <a name="example"></a>
 
@@ -168,31 +175,53 @@ PCA(ncp=2,ind_sup=range(41,46),sup_var=(10,11,12))
 
 ```python
 >>> from scientisttools import fviz_screeplot
->>> print(fviz_screeplot(clf))
+>>> p = fviz_screeplot(clf)
+>>> print(p.show())
 ```
 <center>
-    <img src="./figures/fviz_screeplot.png" alt="centered image"/>
+    <img src="./docs/source/_static/fviz_screeplot_pca.png" alt="centered image"/>
 </center>
 
 4. **Extract and visualize results for individuals**
 
 ```python
 >>> # extract the results for individuals
->>> from scientisttools import get_pca_ind
->>> ind = get_pca_ind(clf)
+>>> from scientisttools import get_pca
+>>> ind = get_pca(clf,"ind")
 >>> ind._fields
 ... ('coord', 'cos2', 'contrib', 'infos')
 ```
 
 ```python
 >>> # Individuals factor map
->>> from scientisttools import fviz_pca_ind
->>> p = fviz_pca_ind(clf)
+>>> from scientisttools import fviz_pca
+>>> p = fviz_pca(clf,choice="ind",repel=True)
 >>> print(p.show())
 ```
 
 <center>
     <img src="./docs/source/_static/fviz_pca_ind.png" alt="centered image"/>
+</center>
+
+5. **Extract and visualize results for variables**
+
+```python
+>>> # extract the results for variables
+>>> from scientisttools import get_pca
+>>> quanti_var = get_pca(clf,"var")
+>>> quanti_var._fields
+... ('coord', 'cos2', 'contrib', 'infos')
+```
+
+```python
+>>> # variables factor map (=correlation circle)
+>>> from scientisttools import fviz_pca
+>>> p = fviz_pca(clf,choice="var",repel=True)
+>>> print(p.show())
+```
+
+<center>
+    <img src="./docs/source/_static/fviz_pca_var.png" alt="centered image"/>
 </center>
 
 ## Documentation <a name="doc"></a>
