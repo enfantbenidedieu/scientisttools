@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, c_,array
+from numpy import ones,average, c_,array
 from pandas import DataFrame, Series, concat
 from scipy.cluster.hierarchy import linkage, cut_tree
 from scipy.spatial.distance import pdist, squareform
@@ -9,7 +9,6 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 
 #interns functions
-from ..functions.statistics import func_groupby
 from ..others._auto_cut_tree import auto_cut_tree
 from ..others._catdes import catdes
 
@@ -22,7 +21,7 @@ class HCPC(BaseEstimator,TransformerMixin):
     Parameters
     ----------
     ncl : int, default =  3
-        If a (positive) integer, the tree is cut with ncl clusters. if None, the tree is automatically cut.
+        If a (positive) integer, the tree is cut with ncl clusters. If None, the tree is automatically cut.
 
     consol : bool, default = False
         If True, a k-means consolidation is performed after agglomerative hierarchical clustering.
@@ -305,10 +304,15 @@ class HCPC(BaseEstimator,TransformerMixin):
 
         # assign cluster to each individual
         cluster = Series((cut_tree(Z,n_clusters=ncl)+1).reshape(-1,), index = D.index, name = "cluster", dtype="category")
-        # coordinates for the clusters - cluster centers
-        cluster_coord = func_groupby(X=D,by=cluster,func="mean",w=obj.call_.row_w)
+        # unique cluster
+        uq_cluster = sorted(cluster.unique())
+        # coordinates of cluster centers
+        cluster_coord = DataFrame(index=uq_cluster,columns=D.columns).astype("float")
+        for i in uq_cluster:
+            ix = cluster[cluster==i].index
+            cluster_coord.loc[i,:] = average(a=D.loc[ix,:],axis=0,weights=obj.call_.row_w.loc[ix])
         cluster_coord.index = cluster_coord.index.astype("category")
-
+        
         # original data (continuous and/or categorical) without supplementary individuals
         X = obj.call_.Xtot
         #drop the supplementary individuals

@@ -262,7 +262,7 @@ class CatVARHCPC(BaseEstimator,TransformerMixin):
         cluster = Series((cut_tree(Z,n_clusters=ncl)+1).reshape(-1, ), index = D.index, name = "cluster", dtype="category")
         # unique cluster
         uq_cluster = sorted(cluster.unique())
-        # coordinates of the clusters - cluster centers
+        # coordinates of cluster centers
         cluster_coord = DataFrame(index=uq_cluster,columns=X.columns).astype("float")
         for i in uq_cluster:
             ix = cluster[cluster==i].index

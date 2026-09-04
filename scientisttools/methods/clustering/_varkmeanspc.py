@@ -176,7 +176,7 @@ class VARKMeansPC(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # statistics for clusters
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # coordinates of the clusters - cluster centers
+        # coordinates of cluster centers
         cluster_coord = DataFrame(km.cluster_centers_,index=list(range(1,ncl+1)),columns=km.feature_names_in_)
         cluster_coord.index = cluster_coord.index.astype("category")
         #convert to ordered dictionary
