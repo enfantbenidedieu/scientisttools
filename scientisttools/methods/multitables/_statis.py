@@ -53,9 +53,9 @@ class STATIS(BaseEstimator,TransformerMixin):
     option : str, default = "lambda1"
         A string for the weightings of the variables.
 
-        * 'inertia': weighting of group :math:`k` by the inverse of the total inertia of the group :math:`k`.
-        * 'lambda1': weighting of group :math:`k` by the inverse of the first eigenvalue of the :math:`k`analysis.
-        * 'uniform': uniform weighting of groups.
+        * "inertia": weighting of group :math:`k` by the inverse of the total inertia of the group :math:`k`
+        * "lambda1": weighting of group :math:`k` by the first eigenvalue of the group :math:`k`
+        * "uniform": uniform weighting of groups
     
     row_w : 1d array-like of shape (n_rows,), default = None
         An optional individuals weights. The weights are given only for the active individuals.
@@ -152,9 +152,9 @@ class STATIS(BaseEstimator,TransformerMixin):
         An object containing all the results for the groups, with the following attributes:
 
         Lg : DataFrame of shape (n_groups, n_groups)
-            The trace \emph{Lg} coefficients.
+            The trace *Lg* coefficients.
         RV : DataFrame of shape (n_groups,n_groups)
-            The \emph{RV} coefficients.
+            The *RV* coefficients.
         coord : DataFrame of shape (n_groups, n_groups)
             The coordinates of the groups.
         contrib : DataFrame of shape (n_groups, n_groups)
@@ -166,14 +166,14 @@ class STATIS(BaseEstimator,TransformerMixin):
         correlation : DataFrame of shape (n_groups, n_groups)
             The correlations between each group and each factor.
         eig : DataFrame of shape (n_groups, 4)
-            The eigen values of the RV matrix.
+            The eigen values of the *RV* matrix.
         evd : evdResult
-            The eigen values decomposition of \emph{RV}, with the following attributes:
+            The eigen values decomposition of *RV*, with the following attributes:
 
             V : 2D numpy array of shape (n_groups, n_groups)
-                The eigenvectors of the \emph{RV} matrix.
+                The eigenvectors of the *RV* matrix.
             d : 1d numpy array of shape (n_groups,)
-                The eigenvalues of the \emph{RV} matrix.
+                The eigenvalues of the *RV* matrix.
     
     ind_ : ind
         An object containing all the results for the active individuals, with the following attributes:
@@ -292,10 +292,10 @@ class STATIS(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Lavit, C. (1988), *nalyse conjointe de tableaux quantitatifs*, Masson, Paris.
-
-    [2] Lavit, C., Escoufier, Y., Sabatier, R. and Traissac, P. (1994) The ACT (Statis method). \\emph{Computational Statistics and Data Analysis}, 18, 97--119.
-
+    [1] C. Lavit (1988). `Analyse conjointe de tableaux quantitatifs <https://belinrae.inrae.fr/index.php?lvl=notice_display&id=6486>`_. Masson.
+    
+    [2] C. Lavit, Y. Escoufier, R. Sabatier and P. Traissac (1994). `The ACT (STATIS method) <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/pleins_textes_7/b_fdi_51-52/010019147.pdf>`_. *Computational Statistics & Data Analysis*, 18, 97-117.
+    
     See also
     --------
     save : Print results for general factor analysis model in an Excel sheet.
@@ -309,19 +309,19 @@ class STATIS(BaseEstimator,TransformerMixin):
     >>> # STATIS
     >>> clf = STATIS(group=wine.group,type_group=("n","s","s","s","s","s"),name_group=wine.name,num_group_sup=(0,5))
     >>> clf.fit(wine.data)
-    STATIS(group=wine.group,type_group=("n","s","s","s","s","s"),name_group=wine.name,num_group_sup=(0,5))
-    >>> # Example with groups of categrical variables
+    STATIS(group=[2,5,3,10,9,2],group_type=("n","s","s","s","s","s"),name_group=["origin","odor","visual","odor.after.shaking","taste","overall"],num_group_sup=(0,5))
+    >>> # Example with groups of categorical variables
     >>> clf = STATIS(group=poison.group,type_group=("s","n","n","n"),name_group=poison.name,num_group_sup=(0,1))
     >>> clf.fit(poison.data)
-    STATIS(group=(2,2,5,6),name_group=("desc","desc2","symptom","eat"),num_group_sup=(0,1),type_group=("s","n","n","n"))
+    STATIS(group=[2,2,5,6],name_group=["desc","desc2","symptom","eat"],num_group_sup=(0,1),type_group=("s","n","n","n"))
     >>> # Example with groups of mixed variables
-    >>> clf = STATIS(group=gironde.group,type_group=("s","m","n","s"),name_group=gironde.name)
-    >>> clf.fit(gironde.data.iloc[:20,:])
-    STATIS(group=(9,5,9,4),type_group=("s","m","n","s"),name_group=("employment","housing","services","environment"))
+    >>> clf = STATIS(group=gironde.group,type_group=("s","m","n","s"),name_group=gironde.name,ind_sup=(20,21,22,23,24))
+    >>> clf.fit(gironde.data.iloc[:25,:])
+    STATIS(group=[9,5,9,4],type_group=("s","m","n","s"),name_group=["employment","housing","services","environment"])
     >>> # Example with groups of frequency tables
     >>> clf = STATIS(group=mortality.group,type_group=("f","f"),name_group=mortality.name)
     >>> clf.fit(mortality.data)
-    STATIS(group=(9,9),name_group=("y1958","y2006"),type_group=("f","f"))
+    STATIS(group=[9,9],name_group=["y1958","y2006"],type_group=("f","f"))
     """
     def __init__(
             self, 

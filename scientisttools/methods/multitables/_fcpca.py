@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, array, ndarray, linalg, diag, sum, identity, empty
+from numpy import ones, repeat, array, ndarray, linalg, diag, sum, identity, empty
 from pandas import DataFrame, Series, concat, CategoricalDtype
-from itertools import chain, repeat
 from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -42,7 +41,8 @@ class FCPCA(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary individuals.
     
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
 
     Returns
     -------
@@ -87,6 +87,8 @@ class FCPCA(BaseEstimator,TransformerMixin):
             The columns weights.
         group : list
             The name of the group variables used to make the group of individuals.
+        name_group : list
+            The name of groups.
         ind_sup : None, list
             The names of the supplementary individuals.
 
@@ -107,23 +109,17 @@ class FCPCA(BaseEstimator,TransformerMixin):
         An object containing all the results for the groups, with the following attributes:
 
         eig : DataFrame of shape (maxcp_rv, 4)
-            The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
-
+            The eigenvalue of *RV* matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
         coord : DataFrame of shape (n_groups, n_groups)
             The coordinates of the groups.
-
         traceRV : DataFrame of shape (n_groups, n_groups)
-            The trace RV between groups.
-
+            The trace *RV* between groups.
         RV : DataFrame of shape (n_groups, n_groups)
-            The RV coefficient between groups.
-
+            The *RV* coefficient between groups.
         infos : DataFrame of shape (n_groups, 3)
             Additionals informations (weight, inertia and percentage of inertia) of the groups.
-
         lambd : DataFrame of shape (n_groups, ncp)
             The specific variances of groups.
-
         expl_var : DataFrame of shape (n_groups, ncp)
             Percentages of total variance recovered associated with each dimension.
 
@@ -150,11 +146,11 @@ class FCPCA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Flury, B. N., & Gautschi, W. (1986). An algorithm for simultaneous orthogonal transformation of several positive definite symmetric matrices to nearly diagonal form. SIAM Journal on Scientific and Statistical Computing, 7(1), 169-184.
+    [1] Flury, B. N., & Gautschi, W. (1986). `An algorithm for simultaneous orthogonal transformation of several positive definite symmetric matrices to nearly diagonal form <https://epubs.siam.org/doi/10.1137/0907013>`_. *SIAM Journal on Scientific and Statistical Computing*, 7(1), 169-184.
 
-    [2] B. N. Flury (1984). Common principal components in k groups. Journal of the American Statistical Association, 79, 892-898.
+    [2] B. N. Flury (1984). `Common principal components in :math:`K` groups <https://three-mode.leidenuniv.nl/pdf/f/flury1984jasa.pdf>`_. *Journal of the American Statistical Association*, **79**, 892-898.
 
-    [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). General overview of methods of analysis of multi-group datasets, Revue des Nouvelles Technologies de l'Information, 25, 108-123.
+    [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `General overview of methods of analysis of multi-group datasets <https://editions-rnti.fr/?inprocid=1001883>`_, *Revue des Nouvelles Technologies de l'Information*, **25**, 108-123.
     
     See also
     --------
@@ -164,14 +160,26 @@ class FCPCA(BaseEstimator,TransformerMixin):
 
     Examples
     --------
-    >>> from scientisttools.datasets import iris
+    >>> from scientisttools.datasets import iris, housevotes84
     >>> from scientisttools import FCPCA
-    >>> clf = FCPCA(group=4)
-    >>> clf.fit(D)
-    FCPCA(group=4)
+    >>> # Flury's Common Principal Component Analysis (FCPCA) with continuous variables.
+    >>> clf = FCPCA(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> clf.fit(iris)
+    FCPCA(group=4,ind_sup=[0, 1, 2, 50, 51, 52, 100, 101, 102])
+    >>> # Flury's Common Principal Component Analysis (FCPCA) with categorical variables
+    >>> clf = FCPCA(group=0,ind_sup=range(400,435))
+    >>> clf.fit(housevotes84)
+    FCPCA(group=0,ind_sup=range(400,435))
     """
     def __init__(
-            self, scale_unit = True, ncp = 5,  group = None, row_w = None, col_w = None, ind_sup = None, tol = 1e-7
+            self, 
+            scale_unit = True, 
+            ncp = 5,  
+            group = None, 
+            row_w = None, 
+            col_w = None, 
+            ind_sup = None, 
+            tol = 1e-7
     ):
         self.scale_unit = scale_unit
         self.ncp = ncp
@@ -182,16 +190,16 @@ class FCPCA(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to X
+        """Fit the model to X
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` in the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -207,13 +215,13 @@ class FCPCA(BaseEstimator,TransformerMixin):
         #check if group is None
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group is None:
-            raise ValueError("'group' must be assigned.")
+            raise ValueError("group must be assigned.")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #group validation
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not isinstance(self.group,(int,str)):
-            raise TypeError("'group' must be either an objet of type int or str")
+            raise TypeError("group must be either an objet of type int or str")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #preprocessing
@@ -223,7 +231,8 @@ class FCPCA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #get labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_label, ind_sup_label = get_sup_label(X=X, indexes=self.group, axis=1), get_sup_label(X=X,indexes=self.ind_sup,axis=0)
+        group_label = get_sup_label(X=X, indexes=self.group, axis=1)
+        ind_sup_label = get_sup_label(X=X,indexes=self.ind_sup,axis=0)
 
         #make a copy of the original data
         Xtot = X.copy()
@@ -246,9 +255,9 @@ class FCPCA(BaseEstimator,TransformerMixin):
             raise TypeError("Not applied to mixed data") 
 
         #unique element in y
-        uq_classe = sorted(y.unique().tolist())
+        name_group = sorted(y.unique().tolist())
         #convert y to categorical data type
-        y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
+        y = y.astype(CategoricalDtype(categories=name_group,ordered=True))
 
         #number of rows and number of columns
         n_rows, n_vars = x.shape
@@ -260,9 +269,9 @@ class FCPCA(BaseEstimator,TransformerMixin):
         if self.row_w is None:
             row_w = Series(ones(n_rows)/n_rows,index=x.index,name="weight")
         elif not isinstance(self.row_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'row_w' must be a 1d array-like of individuals weights.")
+            raise TypeError("row_w must be a 1d array-like of individuals weights.")
         elif len(self.row_w) != n_rows:
-            raise ValueError(f"'row_w' must be a 1d array-like of shape ({n_rows},).")
+            raise ValueError(f"row_w must be a 1d array-like of shape ({n_rows},).")
         else:
             row_w = Series(array(self.row_w)/sum(self.row_w),index=x.index,name="weight")
 
@@ -270,14 +279,14 @@ class FCPCA(BaseEstimator,TransformerMixin):
         if self.col_w is None:
             var_w = Series(ones(n_vars),index=x.columns,name="weight")
         elif not isinstance(self.col_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'col_w' must be a 1d array-like of variables weights.")
+            raise TypeError("col_w must be a 1d array-like of variables weights.")
         elif len(self.col_w) != n_vars:
-            raise ValueError(f"'col_w' must be a 1d array-like of shape ({n_vars},).")
+            raise ValueError(f"col_w must be a 1d array-like of shape ({n_vars},).")
         else:
             var_w = Series(array(self.col_w),index=x.columns,name="weight")
 
         #group index
-        group_dict = {k : list(y[y==k].index) for k in uq_classe}
+        group_dict = {k : list(y[y==k].index) for k in name_group}
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
@@ -285,14 +294,15 @@ class FCPCA(BaseEstimator,TransformerMixin):
         #set variables xcod - reorder 
         Xcod, col_w, dummies, M = x.copy(), var_w.copy(), None, None
         if is_all_object_or_category_dtype(x):
+            # disjunctive table
             dummies = disjunctive(x)
-            M = concat(((1 - ((dummies.loc[rows,:].T * row_w[rows]/sum(row_w[rows])).sum(axis=1))).to_frame(g) for g, rows in group_dict.items()),axis=1).T    
+            # transformation of the indicator variables
+            M = concat(((1 - ((dummies.loc[r,:].T * row_w[r]/sum(row_w[r])).sum(axis=1))).to_frame(g) for g, r in group_dict.items()),axis=1).T
+            # recode data   
             Xcod = dummies*M.loc[y.values,:].values
-            # extend variables
-            mvar_w = list(chain(*[repeat(i,k) for i, k in zip(var_w,[x[j].nunique() for j in x.columns])]))
             # variable categories weights
-            col_w = Series([x*y for x,y in zip(ones(dummies.shape[1]),mvar_w)],index=dummies.columns,name="weight")
-
+            col_w = Series(repeat(var_w.to_numpy(),x.nunique().to_numpy()),index=dummies.columns,name="weight")
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -345,7 +355,7 @@ class FCPCA(BaseEstimator,TransformerMixin):
                         B[:,[j1,j2]] = H.dot(Q)
                 i +=1
             return B
-        Vb = {g : model[g].call_.Vb for g in uq_classe}
+        Vb = {g : model[g].call_.Vb for g in name_group}
         #common loading
         V = FGalgorithm(V=Vb,max_iter=15)
 
@@ -355,14 +365,14 @@ class FCPCA(BaseEstimator,TransformerMixin):
         if self.ncp is None:
             ncp = rank
         elif self.ncp < 1: 
-            raise ValueError("'ncp' must be equal or greater than 1.")
+            raise ValueError("ncp must be strictly positive.")
         else: 
             ncp = int(min(self.ncp,rank))
 
         #Store call informations
         call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"Zcod":Zcod,"Z":Z,
                  "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"row_w":row_w,"var_w":var_w,"col_w":col_w,
-                 "ncp":ncp,"group":group_label,"ind_sup":ind_sup_label}
+                 "ncp":ncp,"group":group_label,"name_group":name_group,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -383,11 +393,11 @@ class FCPCA(BaseEstimator,TransformerMixin):
         #lambda - specific variances of group
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #lambda - specific variances of group
-        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.quanti_var_.coord.columns[:ncp]).to_frame(g) for g in uq_classe),axis=1).T
-        #add to group
-        group_["lambd"] = lambd
+        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.quanti_var_.coord.columns[:ncp]).to_frame(g) for g in name_group),axis=1).T
         #explained variance
-        group_["expl_var"] = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in uq_classe),axis=1).T
+        expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in name_group),axis=1).T
+        # update dictionary
+        group_ = {**group_, **{"lambd":lambd,"expl_var":expl_var}}
         #store all group informations
         self.group_ = namedtuple("group",group_.keys())(*group_.values())
 
@@ -426,13 +436,13 @@ class FCPCA(BaseEstimator,TransformerMixin):
         return self
     
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
         
         y : None
             y is ignored.
@@ -446,20 +456,21 @@ class FCPCA(BaseEstimator,TransformerMixin):
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to X.
+        """Apply dimensionality reduction to X.
 
         X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            New data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            New data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
         X_new : DataFrame of shape (n_samples, ncp)
-            Projection of ``X`` in the first principal components, where ``n_samples`` is the number of samples and ``ncp`` is the number of the components.
+            Projection of X in the first principal components, where ``n_samples`` is the number of samples 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes

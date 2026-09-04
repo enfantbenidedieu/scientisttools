@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, array, ndarray, linalg,insert, diff,nan, cumsum, c_, diag, sum,sqrt
+from numpy import ones, repeat, array, ndarray, linalg,insert, diff,nan, cumsum, c_, diag, sum,sqrt
 from pandas import DataFrame, Series, concat, CategoricalDtype
-from itertools import chain, repeat
 from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -88,6 +87,8 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             The columns weights.
         group : list
             The name of the group variables used to make the group of individuals.
+        name_group : list
+            The name of groups.
         ind_sup : None, list
             The names of the supplementary individuals.
 
@@ -112,23 +113,17 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         An object containing all the results for the groups, with the following attributes:
 
         eig : DataFrame of shape (maxcp_rv, 4)
-            The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
-
+            The eigenvalue of *RV* matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
         coord : DataFrame of shape (n_groups, n_groups)
             The coordinates of the groups.
-
         traceRV : DataFrame of shape (n_groups, n_groups)
-            The trace RV between groups.
-
+            The trace *RV* between groups.
         RV : DataFrame of shape (n_groups, n_groups)
-            The RV coefficient between groups.
-
+            The *RV* coefficient between groups.
         infos : DataFrame of shape (n_groups, 3)
             Additionals informations (weight, inertia and percentage of inertia) of the groups.
-
         lambd : DataFrame of shape (n_groups, ncp)
             The specific variances of groups.
-
         expl_var : DataFrame of shape (n_groups, ncp)
             Percentages of total variance recovered associated with each dimension.
 
@@ -155,11 +150,11 @@ class DSTATIS(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] C. Lavit (1988). Analyse conjointe de tableaux quantitatifs. Masson.
+    [1] C. Lavit (1988). `Analyse conjointe de tableaux quantitatifs <https://belinrae.inrae.fr/index.php?lvl=notice_display&id=6486>`_. Masson.
 
-    [2] C. Lavit, Y. Escoufier, R. Sabatier and P. Traissac (1994). The ACT (STATIS method). Computational Statistics & Data Analysis, 18, 97-117.
+    [2] C. Lavit, Y. Escoufier, R. Sabatier and P. Traissac (1994). `The ACT (STATIS method) <https://horizon.documentation.ird.fr/exl-doc/pleins_textes/pleins_textes_7/b_fdi_51-52/010019147.pdf>`_. *Computational Statistics & Data Analysis*, 18, 97-117.
 
-    [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). General overview of methods of analysis of multi-group datasets, Revue des Nouvelles Technologies de l'Information, 25, 108-123.
+    [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `General overview of methods of analysis of multi-group datasets <https://editions-rnti.fr/?inprocid=1001883>`_, *Revue des Nouvelles Technologies de l'Information*, 25, 108-123.
     
     See also
     --------
@@ -169,14 +164,26 @@ class DSTATIS(BaseEstimator,TransformerMixin):
 
     Examples
     --------
-    >>> from scientisttools.datasets import iris
+    >>> from scientisttools.datasets import iris, housevotes84
     >>> from scientisttools import DSTATIS
-    >>> clf = DSTATIS(group=4)
-    >>> clf.fit(D)
-    DSTATIS(group=4)
+    >>> # dual statis (DSTATIS) with continuous variables.
+    >>> clf = DSTATIS(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> clf.fit(iris)
+    DSTATIS(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> # dual statis (DSTATIS) with categorical variables
+    >>> clf = DSTATIS(group=0,ind_sup=range(400,435))
+    >>> clf.fit(housevotes84)
+    DSTATIS(group=0,ind_sup=range(400,435))
     """
     def __init__(
-            self, scale_unit = True, ncp = 5,  group = None, row_w = None, col_w = None, ind_sup = None, tol = 1e-7
+            self, 
+            scale_unit = True, 
+            ncp = 5,  
+            group = None, 
+            row_w = None, 
+            col_w = None, 
+            ind_sup = None, 
+            tol = 1e-7
     ):
         self.scale_unit = scale_unit
         self.ncp = ncp
@@ -187,16 +194,16 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to X
+        """Fit the model to X
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` in the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -212,13 +219,13 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         #check if group is None
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group is None:
-            raise ValueError("'group' must be assigned.")
+            raise ValueError("group must be assigned.")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #group validation
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if not isinstance(self.group,(int,str)):
-            raise TypeError("'group' must be either an objet of type int or str")
+            raise TypeError("group must be either an objet of type int or str")
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #preprocessing
@@ -228,7 +235,8 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #get labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_label, ind_sup_label = get_sup_label(X=X, indexes=self.group, axis=1), get_sup_label(X=X,indexes=self.ind_sup,axis=0)
+        group_label = get_sup_label(X=X, indexes=self.group, axis=1)
+        ind_sup_label =get_sup_label(X=X,indexes=self.ind_sup,axis=0)
 
         #make a copy of the original data
         Xtot = X.copy()
@@ -251,9 +259,9 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             raise TypeError("Not applied to mixed data") 
 
         #unique element in y
-        uq_classe = sorted(y.unique().tolist())
+        name_group = sorted(y.unique().tolist())
         #convert y to categorical data type
-        y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
+        y = y.astype(CategoricalDtype(categories=name_group,ordered=True))
 
         #number of rows and number of columns
         n_rows, n_vars = x.shape
@@ -282,7 +290,7 @@ class DSTATIS(BaseEstimator,TransformerMixin):
             var_w = Series(array(self.col_w),index=x.columns,name="weight")
 
         #group index
-        group_dict = {k : y[y==k].index.tolist()for k in uq_classe}
+        group_dict = {k : y[y==k].index.tolist()for k in name_group}
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
@@ -290,14 +298,15 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         #set variables xcod - reorder 
         Xcod, col_w, dummies, M = x.copy(), var_w.copy(), None, None
         if is_all_object_or_category_dtype(x):
+            # disjunctive table
             dummies = disjunctive(x)
-            M = concat(((1 - ((dummies.loc[rows,:].T * row_w[rows]/sum(row_w[rows])).sum(axis=1))).to_frame(g) for g, rows in group_dict.items()),axis=1).T    
-            Xcod = dummies*M.loc[y.values,:].values
-            # extend variables weights
-            mvar_w = list(chain(*[repeat(i,k) for i, k in zip(var_w,[x[j].nunique() for j in x.columns])]))
-            # variable categories weights
-            col_w = Series([x*y for x,y in zip(ones(dummies.shape[1]),mvar_w)],index=dummies.columns,name="weight")
-
+            # transformation of the indicator variables
+            M = concat(((1 - ((dummies.loc[r,:].T * row_w[r]/sum(row_w[r])).sum(axis=1))).to_frame(g) for g, r in group_dict.items()),axis=1).T
+            # recode data
+            Xcod = dummies*M.loc[y.to_numpy(),:].to_numpy()
+            # columns weights for variable categories
+            col_w = Series(repeat(var_w.to_numpy(),x.nunique().to_numpy()),index=dummies.columns,name="weight")
+        
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -331,7 +340,7 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         group_ = RVstats(model=model,tol=self.tol)
 
         #compromise variance covariance matrice
-        W = DataFrame(sum([group_["infos"].loc[g,"Weight"]*model[g].call_.Vb for g in uq_classe],axis=0),columns=Z.columns,index=Z.columns)
+        W = DataFrame(sum([group_["infos"].loc[g,"Weight"]*model[g].call_.Vb for g in name_group],axis=0),columns=Z.columns,index=Z.columns)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #Singular Values Decomposition
@@ -345,14 +354,14 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         if self.ncp is None:
             ncp = rank
         elif self.ncp < 1: 
-            raise ValueError("'ncp' must be equal or greater than 1.")
+            raise TypeError("ncp must be strictly positive")
         else: 
             ncp = int(min(self.ncp,rank))
 
         #Store call informations
         call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"Zcod":Zcod,"Z":Z,"W":W,
                  "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"row_w":row_w,"var_w":var_w,"col_w":col_w,
-                 "ncp":ncp,"group":group_label,"ind_sup":ind_sup_label}
+                 "ncp":ncp,"group":group_label,"name_group":name_group,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -383,11 +392,11 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         #lambda - specific variances of group
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #lambda - specific variances of group
-        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in uq_classe),axis=1).T
+        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in name_group),axis=1).T
         #add to group
         group_["lambd"] = lambd
         #explained variance
-        group_["expl_var"] = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in uq_classe),axis=1).T
+        group_["expl_var"] = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in name_group),axis=1).T
         #store all group informations
         self.group_ = namedtuple("group",group_.keys())(*group_.values())
 
@@ -432,7 +441,8 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
         
         y : None
             y is ignored.
@@ -446,20 +456,21 @@ class DSTATIS(BaseEstimator,TransformerMixin):
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to X.
+        """Apply dimensionality reduction to X.
 
         X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            New data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            New data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
         X_new : DataFrame of shape (n_samples, ncp)
-            Projection of ``X`` in the first principal components, where ``n_samples`` is the number of samples and ``ncp`` is the number of the components.
+            Projection of X in the first principal components, where ``n_samples`` is the number of samples 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes

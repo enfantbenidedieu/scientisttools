@@ -94,6 +94,8 @@ class DMFA(BaseEstimator,TransformerMixin):
             The columns weights.
         group : list
             The name of the group variables used to make the group of individuals.
+        name_group : list
+            The name of groups.
         ind_sup : None, list
             The names of the supplementary individuals.
         sup_var : None, list
@@ -114,11 +116,11 @@ class DMFA(BaseEstimator,TransformerMixin):
         cos2 : DataFrame of shape (n_groups, n_groups)
             The sqared cosinus of the groups.
         traceRV : DataFrame of shape (n_groups, n_groups)
-            The trace RV between groups.
+            The trace *RV* between groups.
         RV : DataFrame of shape (n_groups, n_groups)
-            The RV coefficient between groups.
+            The *RV* coefficient between groups.
         eig : DataFrame of shape (rank_rv, 4)
-            The eigenvalues of \emph{Rv} matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
+            The eigenvalues of the *RV* matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     ind_ : ind
         An object containing all the results for the active individuals, with the following attributes:
@@ -206,11 +208,11 @@ class DMFA(BaseEstimator,TransformerMixin):
     
     References
     ----------
-    [1] Escofier B, Pagès J -2008). `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. 4ed, Dunod, 2008.
+    [1] Escofier B, Pagès J. (2008). `Analyses Factorielles Simples et Multiples <https://cdn-cms.f-static.com/uploads/1460418/normal_5b9ba5dc15394.pdf>`_. 4ed, Dunod, 2008.
     
-    [2] Lê, S., & Pagès, J. (2010). DMFA: Dual Multiple Factor Analysis. \emph{Communications in Statistics - Theory and Methods}, 39(3), 483-492. https://doi.org/10.1080/03610920903140114
+    [2] Lê, S., & Pagès, J. (2010). DMFA: Dual Multiple Factor Analysis. *Communications in Statistics - Theory and Methods*, 39(3), 483-492. https://doi.org/10.1080/03610920903140114
     
-    [3] Abascal, E., de Rada, V. D., Lautre, I. G., & Landaluce, M. I. (2013). Extending dual multiple factor analysis to categorical tables. \emph{Journal of Applied Statistics}, 40(2), 415-428. https://doi.org/10.1080/02664763.2012.745836
+    [3] Abascal, E., de Rada, V. D., Lautre, I. G., & Landaluce, M. I. (2013). Extending dual multiple factor analysis to categorical tables. *Journal of Applied Statistics*, 40(2), 415-428. https://doi.org/10.1080/02664763.2012.745836
 
     See also
     --------
@@ -220,11 +222,16 @@ class DMFA(BaseEstimator,TransformerMixin):
 
     Examples
     --------
-    >>> from scientisttools.datasets import iris
+    >>> from scientisttools.datasets import iris, housevotes84
     >>> from scientisttools import DMFA
-    >>> clf = DMFA(group=4)
-    >>> clf.fit(D)
-    DMFA(group=4)
+    >>> # dual multiple factor analysis with continuous variables.
+    >>> clf = DMFA(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> clf.fit(iris)
+    DMFA(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> # dual multiple factor analysis with categorical variables
+    >>> clf = DMFA(group=0,ind_sup=range(400,435))
+    >>> clf.fit(housevotes84)
+    DMFA(group=0,ind_sup=range(400,435))
     """
     def __init__(
             self, 

@@ -92,6 +92,8 @@ class DCCSWA(BaseEstimator,TransformerMixin):
             The columns weights.
         group : list
             The name of the group variables used to make the group of individuals.
+        name_group : list
+            The name of groups.
         ind_sup : None, list
             The names of the supplementary individuals.
             
@@ -110,11 +112,11 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         An object containing all the results for the groups, with the following attributes:
 
         traceRV : DataFrame of shape (n_groups, n_groups)
-            The trace RV between groups.
+            The trace *RV* between groups.
         RV : DataFrame of shape (n_groups, n_groups)
-            The RV coefficient between groups.
+            The *RV* coefficient between groups.
         eig : DataFrame of shape (rank_rv, 4)
-            The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
+            The eigenvalue of *RV* matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
         coord : DataFrame of shape (n_groups, n_groups)
             The coordinates of the groups.
         infos : DataFrame of shape (n_groups, 3)
@@ -147,9 +149,9 @@ class DCCSWA(BaseEstimator,TransformerMixin):
     
     References
     ----------
-    [1] E. M. Qannari, P. Courcoux, and E. Vigneau (2001). Common components and specific weights analysis performed on preference data. \emph{Food Quality and Preference}, 12(5-7), 365-368. `https://doi.org/10.1016/S0950-3293(01)00026-X <https://doi.org/10.1016/S0950-3293(01)00026-X>`_
+    [1] E. M. Qannari, P. Courcoux, and E. Vigneau (2001). `Common components and specific weights analysis performed on preference data <https://www.sciencedirect.com/science/article/abs/pii/S095032930100026X>`_. *Food Quality and Preference*, 12(5-7), 365-368. `https://doi.org/10.1016/S0950-3293(01)00026-X <https://doi.org/10.1016/S0950-3293(01)00026-X>`_
     
-    [2] A. Eslami (2013). Multivariate data analysis of multi-group datasets: application to biology. University  of Rennes I.
+    [2] A. Eslami (2013). Multivariate data analysis of multi-group datasets: application to biology. University of Rennes I.
 
     See also
     --------
@@ -200,7 +202,7 @@ class DCCSWA(BaseEstimator,TransformerMixin):
             and ``n_columns`` is the number of columns.
 
         y : Ignored
-            Ignored
+            Ignored.
 
         Returns
         -------
@@ -255,9 +257,9 @@ class DCCSWA(BaseEstimator,TransformerMixin):
             raise TypeError("Not applied to mixed data") 
 
         #unique element in y
-        uq_classe = sorted(y.unique())
+        name_group = sorted(y.unique())
         #convert y to categorical data type
-        y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
+        y = y.astype(CategoricalDtype(categories=name_group,ordered=True))
 
         #number of rows and number of columns
         n_rows, n_vars = x.shape
@@ -286,7 +288,7 @@ class DCCSWA(BaseEstimator,TransformerMixin):
             var_w = Series(array(self.col_w),index=x.columns,name="weight")
 
         #group index
-        group_dict = {k : y[y==k].index for k in uq_classe}
+        group_dict = {k : y[y==k].index for k in name_group}
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
@@ -308,7 +310,7 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         
         # set number of components of separate principal component analysis
         if self.sncp is None: 
-            sncp = int(min(len(uq_classe) - 1, n_cols))
+            sncp = int(min(len(name_group) - 1, n_cols))
         elif not isinstance(self.sncp,int):
             raise TypeError("sncp must be an integer") 
         elif self.sncp < 1: 
@@ -346,11 +348,11 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         #groups informations
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ## Total variance of all dataset sum(Vm*Vm)
-        inertia = sum([(model[g].call_.Vb**2).sum(axis=0).sum() for g in uq_classe])
+        inertia = sum([(model[g].call_.Vb**2).sum(axis=0).sum() for g in name_group])
 
         #set number of components
         if self.ncp is None:
-            ncp = int(min(len(uq_classe)-1,n_cols))
+            ncp = int(min(len(name_group)-1,n_cols))
         elif not isinstance(self.ncp,int):
             raise TypeError("ncp must be an integer")
         elif self.ncp < 1: 
@@ -361,7 +363,7 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         # Store call informations
         call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"Zcod":Zcod,"Z":Z,
                  "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"ncp":ncp,
-                 "row_w":row_w,"var_w":var_w,"col_w":col_w,"group":group_label,"ind_sup":ind_sup_label}
+                 "row_w":row_w,"var_w":var_w,"col_w":col_w,"group":group_label,"name_group":name_group,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -369,23 +371,23 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         #iterative algorithm - computation of matrix of common loading (V) and saliences (group contributions)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #make a copy
-        Ztab, covtab = {g : model[g].call_.Z for g in uq_classe}, {g : model[g].call_.Vb for g in uq_classe}
+        Ztab, covtab = {g : model[g].call_.Z for g in name_group}, {g : model[g].call_.Vb for g in name_group}
 
         #initialization
-        group_ctr = DataFrame(index=uq_classe,columns=[f"Dim{x+1}" for x in range(ncp)]).astype("float")
+        group_ctr = DataFrame(index=name_group,columns=[f"Dim{x+1}" for x in range(ncp)]).astype("float")
         V, proportion = empty((n_cols,ncp),dtype=float), empty((ncp,),dtype=float)
         for i in range(ncp):
             #initialization
-            ctr, threshold, max_iter, I0 = ones((len(uq_classe),)), 1e-10, 1e+6, inertia
+            ctr, threshold, max_iter, I0 = ones((len(name_group),)), 1e-10, 1e+6, inertia
             while max_iter > threshold:
                 # compromise variance covariance matrice
-                W = sum([ctr[i]*covtab[g] for i, g in enumerate(uq_classe)],axis=0)
+                W = sum([ctr[i]*covtab[g] for i, g in enumerate(name_group)],axis=0)
                 #singular values decomposition
                 v = linalg.svd(W,hermitian=True)[0][:,0]
                 #update ctr
-                ctr = array([v.T.dot(covtab[g]).dot(v) for g in uq_classe])
+                ctr = array([v.T.dot(covtab[g]).dot(v) for g in name_group])
                 #criterion
-                d0 = sum([(covtab[g] - ctr[i]*outer(v,v)).sum(axis=0).sum()**2 for i, g in enumerate(uq_classe)])
+                d0 = sum([(covtab[g] - ctr[i]*outer(v,v)).sum(axis=0).sum()**2 for i, g in enumerate(name_group)])
                 #update
                 max_iter = I0 - d0
                 I0 = d0
@@ -394,8 +396,8 @@ class DCCSWA(BaseEstimator,TransformerMixin):
 
             #update
             delta = identity(n_cols) - outer(v,v) 
-            Ztab = {g : Ztab[g].dot(delta) for g in uq_classe}
-            covtab = {g : Ztab[g].T.dot(Ztab[g]) for g in uq_classe}
+            Ztab = {g : Ztab[g].dot(delta) for g in name_group}
+            covtab = {g : Ztab[g].T.dot(Ztab[g]) for g in name_group}
         
         #convert to DataFrame
         self.explained_variance_ = DataFrame(c_[proportion,cumsum(proportion)],columns=["Proportion (%)","Cumulative (%)"],index = group_ctr.columns) 
@@ -408,9 +410,9 @@ class DCCSWA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         group_ = RVstats(model=model,tol=self.tol)
         # lambda - specific variances of group
-        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=group_ctr.columns).to_frame(g) for g in uq_classe),axis=1).T
+        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=group_ctr.columns).to_frame(g) for g in name_group),axis=1).T
         # explained variance
-        expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in uq_classe),axis=1).T
+        expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in name_group),axis=1).T
         # update dictionary
         group_ = {**group_, **{"lambd":lambd,"expl_var":expl_var}}
         #store all group informations

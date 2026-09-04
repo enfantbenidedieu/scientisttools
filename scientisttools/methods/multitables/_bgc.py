@@ -30,7 +30,7 @@ class BGC(BaseEstimator,TransformerMixin):
 
     sncp : int, default = None
         The number of dimensions kept in separate principal component analysis (sPCA). If None, then sncp is equal 
-        to :math:`min(K-1,p)` where p is the number of columns and K the number of groups.
+        to :math:`\\min(K-1,p)` where :math:`p` is the number of columns and :math:`K` the number of groups.
 
     group : int, str
         The indexe or name of the categorical variable which allows to make the group of individuals.
@@ -93,6 +93,8 @@ class BGC(BaseEstimator,TransformerMixin):
             The columns weights.
         group : list
             The name of the group variables used to make the group of individuals.
+        name_group : list
+            The name of groups.
         ind_sup : None, list, default = None
             The names of the supplementary individuals.
 
@@ -117,11 +119,11 @@ class BGC(BaseEstimator,TransformerMixin):
         An object containing all the results for the groups, with the following attributes:
 
         traceRV : DataFrame of shape (n_groups, n_groups)
-            The trace RV between groups.
+            The trace *RV* between groups.
         RV : DataFrame of shape (n_groups, n_groups)
-            The RV coefficient between groups.
+            The *RV* coefficient between groups.
         eig : DataFrame of shape (rank_rv, 4)
-            The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
+            The eigenvalue of *RV* matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
         coord : DataFrame of shape (n_groups, n_groups)
             The coordinates of the groups.
         infos : DataFrame of shape (n_groups, 3)
@@ -165,19 +167,19 @@ class BGC(BaseEstimator,TransformerMixin):
     save : Print results for general factor analysis model in an Excel sheet.
     sprintf : Print the analysis results.
     summary : Printing summaries of general factor analysis model.
-
+    
     Examples
     --------
     >>> from scientisttools.datasets import iris, housevotes84
     >>> from scientisttools import BGC
     >>> # between group comparison with continuous variables.
-    >>> clf = BGC(group=4,scale_unit=True,ncp=2,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> clf = BGC(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
     >>> clf.fit(iris)
-    BGC(group=4,ind_sup=[0,1,2,50,51,52,100,101,102],ncp=2,scale_unit=True)
+    BGC(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
     >>> # between group comparison with categorical variables
-    >>> clf = BGC(scale_unit=False,ncp=2,group=0,ind_sup=range(400,435))
+    >>> clf = BGC(group=0,ind_sup=range(400,435))
     >>> clf.fit(housevotes84)
-    BGC(group=0,ind_sup=range(400,435),ncp=2,scale_unit=False)
+    BGC(group=0,ind_sup=range(400,435))
     """
     def __init__(
             self, 
@@ -412,9 +414,9 @@ class BGC(BaseEstimator,TransformerMixin):
         lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in name_group),axis=1).T
         # explained variance
         expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in name_group),axis=1).T
-        # add to dictionary
-        group_ = {**group_, **{"lambd":lambd,"expl_var":expl_var}}
-        #store all group informations
+        # update dictionary
+        group_ = {**group_, **{"lambd":lambd, "expl_var":expl_var}}
+        # store all group informations
         self.group_ = namedtuple("group",group_.keys())(*group_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -120,7 +120,7 @@ class ICA(BaseEstimator,TransformerMixin):
         weight : Series of shape (n_col_sup_groups,)
             Weight for the supplementary columns groups.
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     row_ : row
@@ -172,16 +172,16 @@ class ICA(BaseEstimator,TransformerMixin):
     svd_ : svd
         An object containing all the results for the generalized singular value decomposition (GSVD) with the following attributes:
         
-        vs : 1d numpy array of shape (maxcp,)
+        vs : 1d numpy array of shape (rank,)
             The singular values.
-        U : 2d numpy array of shape (n_rows, ncp)
+        U : 2d numpy array of shape (n_rows, rank)
             The left singular vectors.
-        V : 2d numpy array of shape (n_columns, ncp)
+        V : 2d numpy array of shape (n_columns, rank)
             The right singular vectors.
     
     References
     ----------
-    [1] Cazes, P., Chessel, D., and Dolédec, S. (1988) `L'analyse des correspondances internes d'un tableau partitionné : son usage en hydrobiologie <https://www.numdam.org/item/RSA_1988__36_1_39_0.pdf>`. Revue de Statistique Appliquée, 36, 39-54.
+    [1] Cazes, P., Chessel, D., and Dolédec, S. (1988) `L'analyse des correspondances internes d'un tableau partitionné : son usage en hydrobiologie <https://www.numdam.org/item/RSA_1988__36_1_39_0.pdf>`. *Revue de Statistique Appliquée*, **36**, 39-54.
     
     See Also
     --------
@@ -195,9 +195,17 @@ class ICA(BaseEstimator,TransformerMixin):
     >>> from scientisttools import ICA
     >>> clf = ICA(row_group=ardeche.row_group,name_row_group=ardeche.name_row_group,col_group=ardeche.col_group,name_col_group=ardeche.name_col_group)
     >>> clf.fit(ardeche.data)
+    ICA(row_group=[11,3,13,16],name_row_group=["Ephemeroptera","Plecoptera","Coleoptera","Trichoptera"],col_group=[5,6,6,6,6,6],name_col_group=["Jul82","Aug82","Nov82","Feb83","Apr83","Jul83"])
     """
     def __init__(
-        self, ncp = 5, row_group = None, name_row_group = None, col_group = None, name_col_group = None, num_row_group_sup = None, num_col_group_sup = None
+        self, 
+        ncp = 5, 
+        row_group = None, 
+        name_row_group = None, 
+        col_group = None, 
+        name_col_group = None, 
+        num_row_group_sup = None, 
+        num_col_group_sup = None
     ):
         self.ncp = ncp
         self.row_group = row_group
@@ -217,8 +225,8 @@ class ICA(BaseEstimator,TransformerMixin):
             and ``n_columns`` is the number of columns.
             X is a contingency table containing absolute frequencies.
 
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
@@ -241,17 +249,17 @@ class ICA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set number of elements in rows group
         if self.row_group is None:
-            raise ValueError("'row_group' must be assigned.")
+            raise ValueError("row_group must be assigned.")
         elif (not isinstance(self.row_group, (list,tuple,Series))) or (isinstance(self.row_group,ndarray) and self.row_group.ndim != 1):
-            raise ValueError("'row_group' must be a 1d array-like with the number of rows in each row group")
+            raise ValueError("row_group must be a 1d array-like with the number of rows in each row group")
         else:
             row_group = [int(x) for x in self.row_group]
 
         #set number of elements in columns group
         if self.col_group is None:
-            raise ValueError("'col_group' must be assigned.")
+            raise ValueError("col_group must be assigned.")
         elif (not isinstance(self.col_group, (list,tuple,Series))) or (isinstance(self.col_group,ndarray) and self.col_group.ndim != 1):
-            raise ValueError("'col_group' must be a 1d array-like with the number of columns in each column group")
+            raise ValueError("col_group must be a 1d array-like with the number of columns in each column group")
         else:
             col_group = [int(x) for x in self.col_group]
 
@@ -270,14 +278,14 @@ class ICA(BaseEstimator,TransformerMixin):
         if self.name_row_group is None:
             name_row_group = [f"RowGr{x+1}" for x in range(len(row_group))]
         elif (not isinstance(self.name_row_group,(list,tuple,Series))) or (isinstance(self.name_row_group,ndarray) and self.name_row_group.ndim != 1):
-            raise TypeError("'name_row_group' must be a 1d array-like with names of rows group")
+            raise TypeError("name_row_group must be a 1d array-like with names of rows group")
         else:
             name_row_group = [x for x in self.name_row_group]
 
         if self.name_col_group is None:
             name_col_group = [f"ColGr{x+1}" for x in range(len(col_group))]
         elif (not isinstance(self.name_col_group,(list,tuple,Series))) or (isinstance(self.name_col_group,ndarray) and self.name_col_group.ndim != 1):
-            raise TypeError("'name_col_group' must be a 1d array-like with names of columns group")
+            raise TypeError("name_col_group must be a 1d array-like with names of columns group")
         else:
             name_col_group = [x for x in self.name_col_group]
 

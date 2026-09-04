@@ -30,7 +30,7 @@ class DGPA(BaseEstimator,TransformerMixin):
         
     sncp : int, default = None
         The number of dimensions kept in separate principal component analysis (sPCA). If None, then sncp is equal 
-        to :math:`min(K-1,p)` where p is the number of columns and K the number of groups.
+        to :math:`\\min(K-1,p)` where :math:`p` is the number of columns and :math:`K` the number of groups.
 
     group : int, str
         The indexe or name of the categorical variable which allows to make the group of individuals.
@@ -93,6 +93,8 @@ class DGPA(BaseEstimator,TransformerMixin):
             The columns weights.
         group : list
             The name of the group variables used to make the group of individuals.
+        name_group : list
+            The name of groups.
         ind_sup : None, list
             The names of the supplementary individuals.
 
@@ -117,11 +119,11 @@ class DGPA(BaseEstimator,TransformerMixin):
         An object containing all the results for the groups, with the following attributes:
 
         traceRV : DataFrame of shape (n_groups, n_groups)
-            The trace RV between groups.
+            The trace *RV* between groups.
         RV : DataFrame of shape (n_groups, n_groups)
-            The RV coefficient between groups.
+            The *RV* coefficient between groups.
         eig : DataFrame of shape (rank_rv, 4)
-            The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
+            The eigenvalue of *RV* matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
         coord : DataFrame of shape (n_groups, rank_rv)
             The coordinates of the groups.
         infos : DataFrame of shape (n_groups, 3)
@@ -154,11 +156,11 @@ class DGPA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] J. Gower (1975). Generalized procrustes analysis. \emph{Psychometrika}, 40(1), 3-51.
+    [1] J. Gower (1975). `Generalized procrustes analysis <https://link.springer.com/article/10.1007/BF02291478>`_. *Psychometrika*, 40(1), 3-51.
 
-    [2] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `General overview of methods of analysis of multi-group datasets <https://editions-rnti.fr/render_pdf.php?p=1001883>`_, \emph{Revue des Nouvelles Technologies de l'Information}, 25, 108-123.
+    [2] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `General overview of methods of analysis of multi-group datasets <https://editions-rnti.fr/render_pdf.php?p=1001883>`_, *Revue des Nouvelles Technologies de l'Information*, 25, 108-123.
         
-    [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `Analyses factorielles de donnees structurees en groupes d'individus <https://www.numdam.org/item/JSFS_2013__154_3_44_0.pdf>`_,\emph{Journal de la Societe Francaise de Statistique}, 154(3), 44-57.
+    [3] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `Analyses factorielles de donnees structurees en groupes d'individus <https://www.numdam.org/item/JSFS_2013__154_3_44_0.pdf>`_, *Journal de la Societe Francaise de Statistique*, 154(3), 44-57.
     
     See also
     --------
@@ -168,11 +170,16 @@ class DGPA(BaseEstimator,TransformerMixin):
 
     Examples
     --------
-    >>> from scientisttools.datasets import iris
+    >>> from scientisttools.datasets import iris, housevotes84
     >>> from scientisttools import DGPA
-    >>> clf = DGPA(group=4)
+    >>> # dual generalized procrustes analysis with continuous variables.
+    >>> clf = DGPA(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
     >>> clf.fit(iris)
-    DGPA(group=4)
+    DGPA(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> # dual generalized procrustes analysis with categorical variables
+    >>> clf = DGPA(group=0,ind_sup=range(400,435))
+    >>> clf.fit(housevotes84)
+    DGPA(group=0,ind_sup=range(400,435))
     """
     def __init__(
             self, 
@@ -260,11 +267,11 @@ class DGPA(BaseEstimator,TransformerMixin):
             raise TypeError("Not applied to mixed data") 
 
         #unique element in y
-        uq_classe = sorted(y.unique())
+        name_group = sorted(y.unique())
         #convert y to categorical data type
-        y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
+        y = y.astype(CategoricalDtype(categories=name_group,ordered=True))
         #group index
-        group_dict = {k : y[y==k].index for k in uq_classe}
+        group_dict = {k : y[y==k].index for k in name_group}
 
         #number of rows and number of columns
         n_rows, n_vars = x.shape
@@ -312,7 +319,7 @@ class DGPA(BaseEstimator,TransformerMixin):
         
         # set number of components in separate principal component analysis
         if self.sncp is None:
-            sncp = int(min(n_cols,len(uq_classe)-1))
+            sncp = int(min(n_cols,len(name_group)-1))
         elif self.sncp < 1: 
             raise ValueError("sncp must be strictly positive")
         else: 
@@ -331,12 +338,12 @@ class DGPA(BaseEstimator,TransformerMixin):
         #extract elements
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #scale_unitd data
-        Zcod = concat((model[g].call_.Z for g in uq_classe),axis=0,ignore_index=False).loc[y.index,:]
+        Zcod = concat((model[g].call_.Z for g in name_group),axis=0,ignore_index=False).loc[y.index,:]
         #weighted average and weieghted standard deviation
-        center = concat((model[g].call_.center.to_frame(g) for g in uq_classe),axis=1).T
-        scale = concat((model[g].call_.scale.to_frame(g) for g in uq_classe),axis=1).T
+        center = concat((model[g].call_.center.to_frame(g) for g in name_group),axis=1).T
+        scale = concat((model[g].call_.scale.to_frame(g) for g in name_group),axis=1).T
         #number of rows in each groups
-        nb_rows = Series([len(group_dict[g]) for g in uq_classe],index=uq_classe)
+        nb_rows = Series([len(group_dict[g]) for g in name_group],index=name_group)
         #max number of rows
         maxnrows = max(nb_rows)
 
@@ -369,7 +376,7 @@ class DGPA(BaseEstimator,TransformerMixin):
         
         # Transposed dataset and divided by sqrt(n_m)
         tab = {}
-        for g in uq_classe:
+        for g in name_group:
             Z_g, nrows_g =  model[g].call_.Z/sqrt(nb_rows[g]), nb_rows[g]
             if nrows_g < maxnrows:
                 difrows = maxnrows - nrows_g
@@ -377,17 +384,17 @@ class DGPA(BaseEstimator,TransformerMixin):
             tab[g] = Z_g.T
 
         #Initialize
-        C0, I0 = tab[uq_classe[0]].to_numpy(), sum([sum(diag(model[g].call_.Vb)) for g in uq_classe])
+        C0, I0 = tab[name_group[0]].to_numpy(), sum([sum(diag(model[g].call_.Vb)) for g in name_group])
         max_iter, threshold = 10, 1e-10
         while max_iter > threshold:
             C = zeros((n_cols,maxnrows))
-            for g in uq_classe:
+            for g in name_group:
                 Hg = procrustes(tab[g],C0)[0]
                 C += tab[g].to_numpy().dot(Hg)
 
-            C = C/len(uq_classe)
+            C = C/len(name_group)
             #update criterion
-            d0 = sum([procrustes(tab[g],C)[1] for g in uq_classe])
+            d0 = sum([procrustes(tab[g],C)[1] for g in name_group])
             max_iter = I0 - d0
             I0 = d0
             C0 = C
@@ -411,7 +418,7 @@ class DGPA(BaseEstimator,TransformerMixin):
         # store call informations
         call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"C":C,"Zcod":Zcod,"Z":Z,
                  "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"row_w":row_w,
-                 "var_w":var_w,"col_w":col_w,"ncp":ncp,"sncp":sncp,"group":group_label,"ind_sup":ind_sup_label}
+                 "var_w":var_w,"col_w":col_w,"ncp":ncp,"sncp":sncp,"group":group_label,"name_group":name_group,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
 
@@ -444,9 +451,9 @@ class DGPA(BaseEstimator,TransformerMixin):
         group_ = RVstats(model=model,tol=self.tol)
         # variance of each loading (lambd = V'*(Σ_m)*V)
         lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),
-                                index=self.eig_.index[:ncp]).to_frame(g) for g in uq_classe),axis=1).T
+                                index=self.eig_.index[:ncp]).to_frame(g) for g in name_group),axis=1).T
         #explained variance
-        expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in uq_classe),axis=1).T
+        expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in name_group),axis=1).T
         # update dictionary
         group_ = {**group_,**{"lambd":lambd,"expl_var":expl_var}}
         #store all group informations

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from numpy import ones, array, ndarray, diag, sum, sqrt, linalg, insert, diff, nan, cumsum, c_
+from numpy import ones, repeat, array, ndarray, diag, sum, sqrt, linalg, insert, diff, nan, cumsum, c_
 from pandas import DataFrame, Series, concat, CategoricalDtype
-from itertools import chain, repeat
 from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
@@ -43,7 +42,8 @@ class mgPCA(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary individuals.
 
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than ``-tol*lambda1`` where ``lambda1`` is the largest eigenvalue.
 
     Returns
     -------
@@ -91,7 +91,7 @@ class mgPCA(BaseEstimator,TransformerMixin):
         ind_sup : None, list
             The names of the supplementary individuals.
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     svd_ : svdResult
@@ -111,7 +111,7 @@ class mgPCA(BaseEstimator,TransformerMixin):
     group_ : group
         An object containing all the results for the groups, with the following attributes:
 
-        eig : DataFrame of shape (maxcp_rv, 4)
+        eig : DataFrame of shape (rank_rv, 4)
             The eigenvalue of RV matrix, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
         coord : DataFrame of shape (n_groups, n_groups)
@@ -158,10 +158,10 @@ class mgPCA(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). General overview of methods of analysis of multi-group datasets, \emph{Revue des Nouvelles Technologies de l'Information}, 25, 108-123.
+    [1] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `General overview of methods of analysis of multi-group datasets <https://editions-rnti.fr/render_pdf.php?p=1001883>`_, *Revue des Nouvelles Technologies de l'Information*, 25, 108-123.
+            
+    [2] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). `Analyses factorielles de donnees structurees en groupes d'individus <https://www.numdam.org/item/JSFS_2013__154_3_44_0.pdf>`_, *Journal de la Societe Francaise de Statistique*, 154(3), 44-57.
     
-    [2] A. Eslami, E. M. Qannari, A. Kohler and S. Bougeard (2013). Analyses factorielles de donnces structurces en groupes d'individus,\emph{Journal de la Societe Francaise de Statistique}, 154(3), 44-57.
-
     See also
     --------
     save : Print results for general factor analysis model in an Excel sheet.
@@ -170,12 +170,16 @@ class mgPCA(BaseEstimator,TransformerMixin):
 
     Examples
     --------
-    >>> from scientisttools.datasets import iris
+    >>> from scientisttools.datasets import iris, housevotes84
     >>> from scientisttools import mgPCA
-    >>> clf = mgPCA(group=4)
-    >>> clf.fit(D)
-    mgPCA(group=4)
-    
+    >>> # Multiple-group Principal Component Analysis (mgPCA) with continuous variables.
+    >>> clf = mgPCA(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> clf.fit(iris)
+    mgPCA(group=4,ind_sup=[0,1,2,50,51,52,100,101,102])
+    >>> # Multiple-group Principal Component Analysis (mgPCA) with categorical variables
+    >>> clf = mgPCA(group=0,ind_sup=range(400,435))
+    >>> clf.fit(housevotes84)
+    mgPCA(group=0,ind_sup=range(400,435))
     """
     def __init__(
             self, 
@@ -196,16 +200,16 @@ class mgPCA(BaseEstimator,TransformerMixin):
         self.tol = tol
 
     def fit(self,X,y=None):
-        """
-        Fit the model to X
+        """Fit the model to X
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` in the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -237,7 +241,8 @@ class mgPCA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #get labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        group_label, ind_sup_label = get_sup_label(X=X, indexes=self.group, axis=1), get_sup_label(X=X,indexes=self.ind_sup,axis=0)
+        group_label = get_sup_label(X=X, indexes=self.group, axis=1)
+        ind_sup_label = get_sup_label(X=X,indexes=self.ind_sup,axis=0)
 
         #make a copy of the original data
         Xtot = X.copy()
@@ -260,9 +265,9 @@ class mgPCA(BaseEstimator,TransformerMixin):
             raise TypeError("Not applied to mixed data") 
 
         #unique element in y
-        uq_classe = sorted(y.unique())
+        name_group = sorted(y.unique())
         #convert y to categorical data type
-        y = y.astype(CategoricalDtype(categories=uq_classe,ordered=True))
+        y = y.astype(CategoricalDtype(categories=name_group,ordered=True))
 
         #number of rows and number of columns
         n_rows, n_vars = x.shape
@@ -274,9 +279,9 @@ class mgPCA(BaseEstimator,TransformerMixin):
         if self.row_w is None:
             row_w = Series(ones(n_rows)/n_rows,index=x.index,name="weight")
         elif not isinstance(self.row_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'row_w' must be a 1d array-like of individuals weights.")
+            raise TypeError("row_w must be a 1d array-like of individuals weights.")
         elif len(self.row_w) != n_rows:
-            raise ValueError(f"'row_w' must be a 1d array-like of shape ({n_rows},).")
+            raise ValueError(f"row_w must be a 1d array-like of shape ({n_rows},).")
         else:
             row_w = Series(array(self.row_w)/sum(self.row_w),index=x.index,name="weight")
 
@@ -284,14 +289,14 @@ class mgPCA(BaseEstimator,TransformerMixin):
         if self.col_w is None:
             var_w = Series(ones(n_vars),index=x.columns,name="weight")
         elif not isinstance(self.col_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'col_w' must be a 1d array-like of variables weights.")
+            raise TypeError("col_w must be a 1d array-like of variables weights.")
         elif len(self.col_w) != n_vars:
-            raise ValueError(f"'col_w' must be a 1d array-like of shape ({n_vars},).")
+            raise ValueError(f"col_w must be a 1d array-like of shape ({n_vars},).")
         else:
             var_w = Series(array(self.col_w),index=x.columns,name="weight")
 
         #group index
-        group_dict = {k : y[y==k].index for k in uq_classe}
+        group_dict = {k : y[y==k].index for k in name_group}
      
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
@@ -299,13 +304,14 @@ class mgPCA(BaseEstimator,TransformerMixin):
         #set variables xcod - reorder 
         Xcod, col_w, dummies, M = x.copy(), var_w.copy(), None, None
         if is_all_object_or_category_dtype(x):
+            # disjunctive table
             dummies = disjunctive(x)
-            M = concat(((1 - ((dummies.loc[r,:].T * row_w[r]/sum(row_w[r])).sum(axis=1))).to_frame(g) for g, r in group_dict.items()),axis=1).T    
+            # transformation of the indicator variables
+            M = concat(((1 - ((dummies.loc[r,:].T * row_w[r]/sum(row_w[r])).sum(axis=1))).to_frame(g) for g, r in group_dict.items()),axis=1).T  
+            # recode data  
             Xcod = dummies*M.loc[y.to_numpy(),:].to_numpy()
-            # extend variables weights
-            mvar_w = list(chain(*[repeat(i,k) for i, k in zip(var_w,[x[j].nunique() for j in x.columns])]))
-            # variable categories weights
-            col_w = Series([x*y for x,y in zip(ones(dummies.shape[1]),mvar_w)],index=dummies.columns,name="weight")
+            # columns weights for variable categories
+            col_w = Series(repeat(var_w.to_numpy(),x.nunique().to_numpy()),index=dummies.columns,name="weight")
     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #separate general factor analysis
@@ -320,21 +326,21 @@ class mgPCA(BaseEstimator,TransformerMixin):
         #extract elements
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #scale_unitd data
-        Zcod = concat((model[g].call_.Z for g in uq_classe),axis=0).loc[y.index,:]
+        Zcod = concat((model[g].call_.Z for g in name_group),axis=0).loc[y.index,:]
         #weighted average
-        center = concat((model[g].call_.center.to_frame(g) for g in uq_classe),axis=1).T
-        scale = concat((model[g].call_.scale.to_frame(g) for g in uq_classe),axis=1).T
+        center = concat((model[g].call_.center.to_frame(g) for g in name_group),axis=1).T
+        scale = concat((model[g].call_.scale.to_frame(g) for g in name_group),axis=1).T
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #standardization according to normed principal components analysis
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #compute weighted average and standard deviation
+        # compute weighted average and standard deviation
         z_center, z_scale = wmean(X=Zcod,w=row_w), wstd(X=Zcod,w=row_w)
-        #standardization : z_ik = (x_ik - m_k)/s_k
+        # standardization : z_ik = (x_ik - m_k)/s_k
         Z = (Zcod - z_center)/z_scale
 
         # within variance-covariance matrix (compromise matrix)
-        W = DataFrame(sum([(model[g].call_.Z.shape[0]*model[g].call_.Vb)/n_rows for g in uq_classe],axis=0),index=Z.columns,columns=Z.columns)
+        W = DataFrame(sum([(model[g].call_.Z.shape[0]*model[g].call_.Vb)/n_rows for g in name_group],axis=0),index=Z.columns,columns=Z.columns)
 
         #eigen values decomposition (singular values decomposition of hermitian matrix)
         evd = linalg.svd(W,hermitian=True)
@@ -344,14 +350,14 @@ class mgPCA(BaseEstimator,TransformerMixin):
         #set number of components
         if self.ncp is None:
             ncp = rank
-        elif self.ncp < 1: 
-            raise ValueError("'ncp' must be equal or greater than 1.")
+        elif self.ncp < 1:
+            raise ValueError("ncp must be strictly positive.")
         else: 
             ncp = int(min(self.ncp,rank))
 
         #Store call informations
         call_ = {"Xtot":Xtot,"X":X,"x":x,"y":y,"Xcod":Xcod,"dummies":dummies,"M":M,"Zcod":Zcod,"Z":Z,"W":W,
-                 "group":group_label,"group_dict":group_dict,"row_w":row_w,"var_w":var_w,"col_w":col_w,
+                 "group":group_label,"name_group":name_group,"group_dict":group_dict,"row_w":row_w,"var_w":var_w,"col_w":col_w,
                  "center":center,"scale":scale,"z_center":z_center,"z_scale":z_scale,"ncp":ncp,"ind_sup":ind_sup_label}
         #convert to namedtuple
         self.call_ = namedtuple("call",call_.keys())(*call_.values())
@@ -365,7 +371,9 @@ class mgPCA(BaseEstimator,TransformerMixin):
         eigvals = evd[1][:rank]
         difference, proportion = insert(-diff(eigvals),len(eigvals)-1,nan), 100*eigvals/sum(eigvals)
         #convert to DataFrame
-        self.eig_ = DataFrame(c_[eigvals,difference,proportion,cumsum(proportion)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],index = [f"Dim{x+1}" for x in range(rank)])  
+        self.eig_ = DataFrame(c_[eigvals,difference,proportion,cumsum(proportion)],
+                              columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],
+                              index = [f"Dim{x+1}" for x in range(rank)]) 
      
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for variables in compromises spaces
@@ -383,7 +391,7 @@ class mgPCA(BaseEstimator,TransformerMixin):
         group_ = RVstats(model=model,tol=self.tol)
         #partiel inertia
         partiel_inertia = None
-        for g in uq_classe:
+        for g in name_group:
             sqvs = diag(evd[0].T.dot(model[g].call_.Vb).dot(evd[0]))
             eigrank = sum(sqvs/sqvs[0] > self.tol)
             eig = sqvs[:eigrank]
@@ -393,14 +401,13 @@ class mgPCA(BaseEstimator,TransformerMixin):
             inertia.index = [f"Dim{x+1}.{g}" for x in range(eigrank)]
             # concatenate
             partiel_inertia = concat_empty(partiel_inertia,inertia,axis=0)
-        group_["partiel_inertia"] = partiel_inertia
-        #lambda - specific variances of group
-        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in uq_classe),axis=1).T
-        #add to group
-        group_["lambd"] = lambd
-        #explained variance
-        group_["expl_var"] = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in uq_classe),axis=1).T
-        #store all group informations
+        # lambda - specific variances of group
+        lambd =  concat((Series(diag(self.evd_.V[:,:ncp].T.dot(model[g].call_.Vb).dot(self.evd_.V[:,:ncp])),index=self.eig_.index[:ncp]).to_frame(g) for g in name_group),axis=1).T
+        # explained variance
+        expl_var = concat((100*lambd.loc[g,:]/sum(diag(model[g].call_.Vb)) for g in name_group),axis=1).T
+        # update dictionary
+        group_ = {**group_,**{"partiel_inertia":partiel_inertia,"lambd":lambd,"expl_var":expl_var}}
+        # store all group informations
         self.group_ = namedtuple("group",group_.keys())(*group_.values())
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -438,16 +445,16 @@ class mgPCA(BaseEstimator,TransformerMixin):
         return self
     
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
@@ -458,20 +465,21 @@ class mgPCA(BaseEstimator,TransformerMixin):
         return self.ind_.coord
     
     def transform(self,X):
-        """
-        Apply dimensionality reduction to X.
+        """Apply dimensionality reduction to X
 
         X is projected on the first principal components previously extracted from a training set.
 
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            New data, where ``n_samples`` is the number of samples and ``n_columns`` is the number of columns.
+            New data, where ``n_samples`` is the number of samples 
+            and ``n_columns`` is the number of columns.
 
         Returns
         -------
         X_new : DataFrame of shape (n_samples, ncp)
-            Projection of X in the first principal components, where ``n_samples`` is the number of samples and ``ncp`` is the number of the components.
+            Projection of X in the first principal components, where ``n_samples`` is the number of samples 
+            and ``ncp`` is the number of the components.
         """
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #check if the estimator is fitted by verifying the presence of fitted attributes

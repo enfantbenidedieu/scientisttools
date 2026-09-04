@@ -18,7 +18,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
     Analysis of Multiple Distance Matrices (DISTATIS)
 
     Performs the Analysis of Multiple Distance Matrices (DISTATIS) in the sense of `Abdi, H. and al <https://personal.utdallas.edu/~herve/abdi-distatis2005.pdf>`_, which is a 3-Way Multidimensional Scaling (MDS) on the STATIS optimization procedure.
-    :class:`~scientisttools.DISTATIS` is a generalization of classical multidimensional scaling (PCoA) whose goal is to analyze a single distance matrix.
+    DISTATIS is a generalization of classical multidimensional scaling (PCoA) whose goal is to analyze a single distance matrix.
 
     Parameters
     ----------
@@ -34,21 +34,21 @@ class DISTATIS(BaseEstimator,TransformerMixin):
     option : str, default = "lambda1"
         A string for the weightings of the variables.
 
-        * 'inertia': weighting of group :math:`k` by the inverse of the total inertia of the group :math:`k`.
-        * 'lambda1': weighting of group :math:`k` by the first eigen value of the group
-        * 'uniform': weighting of group :math: by one.
+        * "inertia": weighting of group :math:`k` by the inverse of the total inertia of the group :math:`k`
+        * "lambda1": weighting of group :math:`k` by the first eigenvalue of the group :math:`k`
+        * "uniform": uniform weighting of groups
 
-    metric :  str or callablse, default = 'euclidean'
+    metric :  str or callablse, default = "euclidean"
         Metric touse for dissimilarity computation. Default is "euclidean".
 
-        If metric is a string, it must be one of the options allowed by
-        `scipy.spatial.distance.pdist` for its metric parameter, or a metric
+        * If metric is a string, it must be one of the options allowed by
+        :func:`scipy.spatial.distance.pdist` for its metric parameter, or a metric
         listed in :func:`sklearn.metrics.pairwise.distance_metrics`
 
-        If metric is "precomputed", X is assumed to be a distance matrix and
+        * If metric is "precomputed", X is assumed to be a distance matrix and
         must be square during fit.
 
-        If metric is a callable function, it takes two arrays representing 1D
+        * If metric is a callable function, it takes two arrays representing 1D
         vectors as inputs and must return one value indicating the distance
         between those vectors. This works for Scipy's metrics, but is less
         efficient than passing the metric name as a string.
@@ -117,11 +117,11 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         An object containing all the results for the groups, with the following attributes:
 
         traceRV : DataFrame of shape (n_groups, n_groups)
-            The trace \emph{RV} coefficients.
+            The trace *RV* coefficients.
         RV : DataFrame of shape (n_groups,n_groups)
-            The \emph{RV} coefficients.
+            The *RV* coefficients.
         eig : DataFrame of shape (rank_rv, 4)
-            The eigen values of the RV matrix.
+            The eigen values of the *RV* matrix.
         coord : DataFrame of shape (n_groups, rank_rv)
             The coordinates of the groups.
         contrib : DataFrame of shape (n_groups, n_groups)
@@ -162,17 +162,17 @@ class DISTATIS(BaseEstimator,TransformerMixin):
 
     References
     ----------
-    [1] Abdi, H., Valentin, D., O'Toole, A.J., & Edelman, B. (2005). DISTATIS: The analysis of multiple distance matrices. Proceedings of the IEEE Computer Society: International Conference on Computer Vision and Pattern Recognition. (San Diego, CA, USA). pp. 42-47.
+    [1] Abdi, H., Valentin, D., O'Toole, A.J., & Edelman, B. (2005). `DISTATIS: The analysis of multiple distance matrices <https://personal.utdallas.edu/~herve/abdi-distatis2005.pdf>`_. *Proceedings of the IEEE Computer Society: International Conference on Computer Vision and Pattern Recognition*. (San Diego, CA, USA). pp. 42-47.
 
-    [2] Abdi, H., Valentin, D., Chollet, S., & Chrea, C. (2007). Analyzing assessors and products in sorting tasks: DISTATIS, theory and applications. Food Quality and Preference, 18, 627-640.
+    [2] Abdi, H., Valentin, D., Chollet, S., & Chrea, C. (2007). `Analyzing assessors and products in sorting tasks: DISTATIS, theory and applications <https://personal.utdallas.edu/~herve/Abdi-AVCC07_Pretty-tmp.pdf>`_. *Food Quality and Preference*, **18**, 627-640.
 
-    [3] Abdi, H., Dunlop, J.P., & Williams, L.J. (2009). How to compute reliability estimates and display confidence and tolerance intervals for pattern classifiers using the Bootstrap and 3-way multidimensional scaling (DISTATIS). NeuroImage, 45, 89-95.
+    [3] Abdi, H., Dunlop, J.P., & Williams, L.J. (2009). `How to compute reliability estimates and display confidence and tolerance intervals for pattern classifiers using the Bootstrap and 3-way multidimensional scaling (DISTATIS) <https://personal.utdallas.edu/~herve/abdi-adw09-tmp.pdf>`_. *NeuroImage*, **45**, 89-95.
 
-    [4] Abdi, H., Williams, L.J., Valentin, D., & Bennani-Dosse, M. (2012). STATIS and DISTATIS: Optimum multi-table principal component analysis and three way metric multidimensional scaling. Wiley Interdisciplinary Reviews: Computational Statistics, 4, 124-167. 
+    [4] Abdi, H., Williams, L.J., Valentin, D., & Bennani-Dosse, M. (2012). `STATIS and DISTATIS: Optimum multi-table principal component analysis and three way metric multidimensional scaling <https://personal.utdallas.edu/~herve/abdi_Wires_AWVB2012_Final.pdf>`_. *Wiley Interdisciplinary Reviews: Computational Statistics*, **4**, 124-167. 
 
-    [5] Abdi, H. (2007). RV coefficient and congruence coefficient. In N.J. Salkind (Ed.): Encyclopedia of Measurement and Statistics. Thousand Oaks (CA): Sage. pp. 849-853.
+    [5] Abdi, H. (2007). `RV coefficient and congruence coefficient <https://personal.utdallas.edu/~herve/Abdi-RV2007-pretty.pdf>_. In N.J. Salkind (Ed.): *Encyclopedia of Measurement and Statistics*. Thousand Oaks (CA): Sage. pp. 849-853.
 
-    [6] Abdi, H. (2010). Congruence: Congruence coefficient, RV coefficient, and Mantel Coefficient. In N.J. Salkind, D.M., Dougherty, & B. Frey (Eds.): Encyclopedia of Research Design. Thousand Oaks (CA): Sage. pp. 222-229.
+    [6] Abdi, H. (2010). `Congruence: Congruence coefficient, RV coefficient, and Mantel Coefficient <https://personal.utdallas.edu/~herve/abdi-congruence2010-pretty.pdf>`_. In N.J. Salkind, D.M., Dougherty, & B. Frey (Eds.): *Encyclopedia of Research Design*. Thousand Oaks (CA): Sage. pp. 222-229.
 
     See Also
     --------
@@ -222,7 +222,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         Parameters
         ----------
         X : DataFrame of shape (n_samples, n_columns)
-            Training data, where ``n_samples`` in the number of samples 
+            Training data, where ``n_samples`` is the number of samples 
             and ``n_columns`` is the number of columns.
 
         y : Ignored
@@ -402,7 +402,7 @@ class DISTATIS(BaseEstimator,TransformerMixin):
         if self.ncp is None:
             ncp = rank
         elif self.ncp < 1:
-            raise TypeError("ncp must be positive")
+            raise TypeError("ncp must be strictly positive")
         else:
             ncp = min(self.ncp,rank)
 

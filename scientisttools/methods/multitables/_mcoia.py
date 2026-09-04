@@ -4,6 +4,7 @@ from pandas import DataFrame, Series, concat
 from itertools import chain, repeat
 from collections import namedtuple
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 #interns functions
 from ..onetable._famd import FAMD
@@ -17,7 +18,7 @@ from ..functions.func_eta2 import func_eta2
 from ..functions.cov2corr import cov2corr
 from ..functions.func_coinertia import func_coinertia
 from ..functions.statistics import func_groupby, wmean
-from ..functions.utils import cols_dtypes
+from ..functions.utils import cols_dtypes, check_is_dataframe
 from ..others._splitmix import splitmix
 from ..others._disjunctive import disjunctive
 
@@ -45,14 +46,14 @@ class MCOIA(BaseEstimator,TransformerMixin):
         * "f" for frequency (from contingency tables)
 
     name_group : list, tuple, default = None
-        The name of the groups. If ``None``, the group are named Gr1, Gr2 and so on.
+        The name of the groups. If None, the group are named Gr1, Gr2 and so on.
 
     option : str, default = "lambda1"
         A string for the weightings of the variables.
 
-        * 'inertia': weighting of group :math:`k` by the inverse of the total inertia of the group :math:`k`.
-        * 'lambda1': weighting of group :math:`k` by the inverse of the first eigenvalue of the :math:`k`analysis.
-        * 'uniform': uniform weighting of groups.
+        * "inertia": weighting of group :math:`k` by the inverse of the total inertia of the group :math:`k`
+        * "lambda1": weighting of group :math:`k` by the first eigenvalue of the group :math:`k`
+        * "uniform": uniform weighting of groups
 
     row_w : 1d array-like of shape (n_rows,), default = None
         An optional rows weights. The weights are given only for the active rows.
@@ -64,7 +65,8 @@ class MCOIA(BaseEstimator,TransformerMixin):
         The indexes or names of the supplementary individuals.
 
     tol : float, default = 1e-7
-        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
+        A tolerance threshold to test whether the distance matrix is Euclidean : an eigenvalue is considered positive if it is larger 
+        than `-tol*lambda1` where `lambda1` is the largest eigenvalue.
 
     Returns
     -------
@@ -112,7 +114,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         ind_sup : None, list
             The names of the supplementary individuals.
 
-    eig_ : DataFrame of shape (maxcp, 4)
+    eig_ : DataFrame of shape (rank, 4)
         The eigenvalues, the difference between each eigenvalue, the percentage of variance and the cumulative percentage of variance.
 
     freq_ : freq, optional
@@ -127,9 +129,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
         lambd : DataFrame of shape (n_groups, ncp)
             All eigenvalues (computed on the separate analyses) after normalisation.
         coinertia : DataFrame of shape (n_groups, n_groups)
-            The trace \emph{coinertia} coefficients.
+            The trace *coinertia* coefficients.
         RV : DataFrame of shape (n_groups, n_groups)
-            The \emph{RV} coefficients.
+            The *RV* coefficients.
         cov2 : DataFrame of shape (n_groups, ncp)
             All pseudo eigenvalues (synthetic analysis).
     
@@ -138,16 +140,16 @@ class MCOIA(BaseEstimator,TransformerMixin):
 
         coord : DataFrame of shape (n_rows,ncp)
             The synthetic scores of the individuals.
-        coord_partiel : coord_partiel
-            An object containing the co-inertia coordinates of the individuals.
-        coord_partiel_n : coord_partiel_n
-            An object containing the co-inertia normed scores of the individuals.
-        
+        coord_partiel : DataFrame of shape (n_samples*n_groups,ncp)
+            The co-inertia coordinates of the individuals.
+        coord_partiel_n : DataFrame of shape (n_samples*n_groups,ncp)
+            The co-inertia normed scores of the individuals.
+
     ind_sup_ : ind_sup, optional
         An object containing all the results for the supplementary individuals, with the following attributes:
 
-        coord_partiel : coord_partiel
-            An object containing all the co-inertia coordinates for the supplementary individuals.
+        coord_partiel : DataFrame of shape (n_samples_sup*n_groups,ncp)
+            The co-inertia coordinates for the supplementary individuals.
 
     levels_ : levels_sup, optional
         An object containing all the results for the active levels, with the following attributes:
@@ -156,16 +158,16 @@ class MCOIA(BaseEstimator,TransformerMixin):
             The synthetic scores of the levels.
         vtest : DataFrame of shape (n_levels, ncp)
             The value-test (which is a criterion with a Normal distribution) of the levels.
-        coord_partiel : coord_partiel
-            An object containing the co-inertia coordinates of the levels.
+        coord_partiel : DataFrame of shape (n_levels*n_groups, ncp)
+            The co-inertia coordinates of the levels.
 
     quali_var_ : quali_var, optional
         An object containing all the results for the active qualitative variables, with the following attributes:
 
         coord : DataFrame of shape (n_quali_var, ncp)
             The synthetic scores of the qualitative variables, which is eta2, the square correlation corefficient between a qualitative variable and a dimension.
-        coord_partiel : coord_partiel
-            An object containing the co-inertia coordinates for the qualitatve variables.
+        coord_partiel : DataFrame of shape (n_quali_var*n_groups, ncp)
+            The co-inertia coordinates for the qualitative variables.
 
     quanti_var_ : quanti_var, optional
         An object containing all the results for the active variables, with the following attributes:
@@ -173,17 +175,17 @@ class MCOIA(BaseEstimator,TransformerMixin):
         coord : DataFrame of shape (n_columns, ncp)
             The coordinates (onto synthetic scores) of the variables.
 
-    separate_analyses_ : OrderedDict
+    separate_analyses_ : dict
         The results for the separate analyses.
 
     svd_ : svd
         An object containing all the results for the generalized singular value decomposition (GSVD), with the following attributes:
         
-        vs : 1d numpy array of shape (maxcp,)
+        vs : 1d numpy array of shape (rank,)
             The singular values.
-        U : 2d numpy array of shape (n_rows, maxcp)
+        U : 2d numpy array of shape (n_rows, rank)
             The left singular vectors.
-        V : 2d numpy array of shape (n_columns, maxcp)
+        V : 2d numpy array of shape (n_columns, rank)
             The right singular vectors.
         rank : int
             The maximum number of components.
@@ -200,9 +202,21 @@ class MCOIA(BaseEstimator,TransformerMixin):
     --------
     >>> from scientisttools.datasets import wine
     >>> from scientisttools import MCOIA
-    >>> clf = MCOIA(group=wine.group,type_group=("n","s","s","s","s","s"),name_group=wine.name,num_group_sup=(0,5))
+    >>> clf = MCOIA(group=wine.group,type_group=("n","s","s","s","s","s"),name_group=wine.name)
     >>> clf.fit(wine.data)
-    MCOIA(group=wine.group,type_group=("n","s","s","s","s","s"),name_group=wine.name,num_group_sup=(0,5))
+    MCOIA(group=[2,5,3,10,9,2],type_group=("n","s","s","s","s","s"),name_group=["origin","odor","visual","odor.after.shaking","taste","overall"])
+    >>> # Example with groups of categorical variables
+    >>> clf = MCOIA(group=poison.group,type_group=("s","n","n","n"),name_group=poison.name)
+    >>> clf.fit(poison.data)
+    MCOIA(group=[2,2,5,6],name_group=["desc","desc2","symptom","eat"],type_group=("s","n","n","n"))
+    >>> # Example with groups of mixed variables
+    >>> clf = MCOIA(group=gironde.group,type_group=("s","m","n","s"),name_group=gironde.name,ind_sup=(20,21,22,23,24))
+    >>> clf.fit(gironde.data.iloc[:25,:])
+    MCOIA(group=[9,5,9,4],type_group=("s","m","n","s"),name_group=["employment","housing","services","environment"],ind_sup=(20,21,22,23,24))
+    >>> # Example with groups of frequency tables
+    >>> clf = MCOIA(group=mortality.group,type_group=("f","f"),name_group=mortality.name)
+    >>> clf.fit(mortality.data)
+    MCOIA(group=[9,9],name_group=["y1958","y2006"],type_group=("f","f"))
     """
     def __init__(
             self, 
@@ -229,16 +243,16 @@ class MCOIA(BaseEstimator,TransformerMixin):
         self.tol = tol
         
     def fit(self,X,y=None):
-        """
-        Fit the model to X
+        """Fit the model to X
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` in the number of samples and ``n_columns`` is the number of columns.
+            Training data, where ``n_rows`` in the number of samples 
+            and ``n_columns`` is the number of columns.
 
-        y : None
-            y is ignored
+        y : Ignored
+            Ignored.
 
         Returns
         -------
@@ -249,9 +263,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #check if group is None
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.group is None:
-            raise ValueError("'group' must be assigned.")
+            raise ValueError("group must be assigned.")
         elif not isinstance(self.group, (list,tuple,ndarray,Series)):
-            raise ValueError("'group' must be a 1d array-like with the number of variables in each group")
+            raise ValueError("group must be a 1d array-like with the number of variables in each group")
         else:
             group = [int(x) for x in self.group]
 
@@ -265,7 +279,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #check if type_group in not None
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.type_group is None:
-            raise ValueError("'type_group' must be assigned")
+            raise ValueError("type_group must be assigned")
         else:
             type_group = [str(x) for x in self.type_group]
 
@@ -290,7 +304,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         if self.name_group is None:
             name_group = [f"Gr{x+1}" for x in range(len(group))]
         elif not isinstance(self.name_group,(list,tuple)):
-            raise TypeError("'name_group' must be a list or a tuple with name of group")
+            raise TypeError("name_group must be a list or a tuple with name of group")
         else:
             name_group = [x for x in self.name_group]
 
@@ -376,7 +390,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
             X_ind_sup, X = X.loc[ind_sup_label,:], X.drop(index=ind_sup_label)
         
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #multiple CO-inertia analysis (MCOA)
+        #multiple CO-inertia analysis (MCOiA)
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #set number of samples and columns
         n_rows, n_vars = X.shape
@@ -388,9 +402,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
         if self.row_w is None:
             ind_w = Series(ones(n_rows)/n_rows,index=X.index,name="weight")
         elif not isinstance(self.row_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'row_w' must be a 1d array-like of individuals weights.")
+            raise TypeError("row_w must be a 1d array-like of individuals weights.")
         elif len(self.row_w) != n_rows:
-            raise ValueError(f"'row_w' must be a 1d array-like of shape ({n_rows},).")
+            raise ValueError(f"row_w must be a 1d array-like of shape ({n_rows},).")
         else:
             ind_w = Series(array(self.row_w)/sum(self.row_w),index=X.index,name="weight")
 
@@ -398,9 +412,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
         if self.col_w is None:
             var_w = Series(ones(n_vars),index=X.columns,name="weight")
         elif not isinstance(self.col_w,(list,tuple,ndarray,Series)):
-            raise TypeError("'col_w' must be a 1d array-like of variables weights.")
+            raise TypeError("col_w must be a 1d array-like of variables weights.")
         elif len(self.col_w) != n_vars:
-            raise ValueError(f"'col_w' must be a 1d array-like of shape ({n_vars},).")
+            raise ValueError(f"col_w must be a 1d array-like of shape ({n_vars},).")
         else:
             var_w = Series(array(self.col_w),index=X.columns,name="weight")
 
@@ -529,9 +543,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
         if self.ncp is None:
             ncp = rank
         elif not isinstance(self.ncp,int):
-            raise TypeError("'ncp' must be an integer.")
+            raise TypeError("ncp must be an integer.")
         elif self.ncp < 1:
-            raise ValueError("'ncp' must be equal or greater than 1.")
+            raise ValueError("ncp must be strictly positive.")
         else:
             ncp = min(self.ncp,rank)
 
@@ -551,7 +565,9 @@ class MCOIA(BaseEstimator,TransformerMixin):
         eigvals = self.svd_.vs**2
         eigdiff, eigprop = insert(-diff(eigvals),len(eigvals)-1,nan), 100*eigvals/sum(eigvals)
         #convert to DataFrame
-        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],index = [f"Dim{x+1}" for x in range(len(eigvals))])
+        self.eig_ = DataFrame(c_[eigvals,eigdiff,eigprop,cumsum(eigprop)],
+                              columns=["Eigenvalue","Difference","Proportion (%)","Cumulative (%)"],
+                              index = [f"Dim{x+1}" for x in range(len(eigvals))])
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #individuals co-inertia informations: synthetic scores, partial scores and partial normed scores
@@ -716,7 +732,7 @@ class MCOIA(BaseEstimator,TransformerMixin):
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if self.ind_sup is not None:
             #Data preparation
-            Z_ind_sup = DataFrame(index=ind_sup_label,columns=Z.columns).astype(float)
+            Z_ind_sup = DataFrame(index=ind_sup_label,columns=Z.columns).astype("float")
             for g, cols in group_dict.items():
                 if self.type_group[name_group.index(g)] in ("c","s"):
                     Z_ind_sup[cols] = (X_ind_sup[cols] - model[g].call_.center)/model[g].call_.scale
@@ -727,7 +743,8 @@ class MCOIA(BaseEstimator,TransformerMixin):
                 elif self.type_group[name_group.index(g)] == "m":
                     #split X
                     split_Xcols_ind_sup = splitmix(X_ind_sup[cols])
-                    Xcols_ind_sup_quanti, Xcols_ind_sup_quali, n_ind_sup_quanti, n_ind_sup_quali = split_Xcols_ind_sup.quanti, split_Xcols_ind_sup.quali, split_Xcols_ind_sup.k1, split_Xcols_ind_sup.k2
+                    Xcols_ind_sup_quanti, Xcols_ind_sup_quali = split_Xcols_ind_sup.quanti, split_Xcols_ind_sup.quali
+                    n_ind_sup_quanti, n_ind_sup_quali  =  split_Xcols_ind_sup.k1, split_Xcols_ind_sup.k2
                     #initialization
                     Xcols_ind_sup = None
                     if n_ind_sup_quanti > 0:
@@ -773,21 +790,146 @@ class MCOIA(BaseEstimator,TransformerMixin):
         return self
     
     def fit_transform(self,X,y=None):
-        """
-        Fit the model with X and apply the dimensionality reduction on X
+        """Fit the model with X and apply the dimensionality reduction on X
 
         Parameters
         ----------
         X : DataFrame of shape (n_rows, n_columns)
-            Training data, where ``n_rows`` is the number of rows and ``n_columns`` is the number of columns.
+            Training data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
         
-        y : None
-            y is ignored.
+        y : Ignored
+            Ignored.
         
         Returns
         -------
-        X_new : DataFrame of shape (n_rows, n_components)
+        X_new : DataFrame of shape (n_rows*n_groups, n_components)
             Transformed values.
         """
         self.fit(X)
-        return self.ind_.coord
+        return self.ind_.coord_partiel
+    
+    def transform(self,X):
+        """Apply dimensionality reduction to X.
+
+        X is projected on the first principal components previously extracted from a training set.
+
+        Parameters
+        ----------
+        X : DataFrame of shape (n_rows, n_columns)
+            New data, where ``n_rows`` is the number of rows 
+            and ``n_columns`` is the number of columns.
+
+        Returns
+        -------
+        X_new : DataFrame of shape (n_rows*n_groups, ncp)
+            Partial coordinates of new data.
+        """
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # check if the estimator is fitted by verifying the presence of fitted attributes
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_fitted(self)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # check if X is an object of class pd.DataFrame
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        check_is_dataframe(X)
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # set index name as None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        X.index.name = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #check if X contains original columns
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not set(self.call_.X.columns).issubset(X.columns): 
+            raise ValueError("The names of the columns is not the same as the ones in the active columns of the {} result".format(self.__class__.__name__))
+        X = X[self.call_.X.columns]
+
+        model = self.separate_analyses_
+        # active group
+        name_group = self.group_.coord.index
+        group_dict = {g : model[g].call_.X.columns for g in name_group}
+    
+        #Data preparation
+        Zcod = DataFrame(index=X.index,columns=self.call_.Z.columns).astype("float")
+        for g, cols in group_dict.items():
+            if self.type_group[self.call_.name_group.index(g)] in ("c","s"):
+                Zcod[cols] = (X[cols] - model[g].call_.center)/model[g].call_.scale
+            elif self.type_group[self.call_.name_group.index(g)] == "n":
+                dummies_cols = model[g].call_.dummies.columns
+                dummies = disjunctive(X[cols],cols=dummies_cols)
+                Zcod[dummies_cols] = (dummies - model[g].call_.center)/model[g].call_.scale
+            elif self.type_group[self.call_.name_group.index(g)] == "m":
+                #split X
+                split_Xcols = splitmix(X[cols])
+                # extract elements
+                Xcols_quanti, Xcols_quali = split_Xcols.quanti, split_Xcols.quali
+                n_quanti, n_quali  = split_Xcols.k1, split_Xcols.k2
+                
+                #initialization
+                Xcols = None
+                # continous variables
+                if n_quanti > 0:
+                    if model[g].call_.k1 != n_quanti:
+                        raise TypeError("The number of continuous variables must be the same")
+                    Xcols = concat_empty(Xcols,Xcols_quanti,axis=1)
+                    
+                # categorical variables
+                if n_quali > 0:
+                    if model[g].call_.k2 != n_quali:
+                        raise TypeError("The number of categorical variables must be the same")
+                    Xcols = concat_empty(Xcols,disjunctive(X=Xcols_quali,cols=model[g].call_.dummies.columns),axis=1)
+                
+                # standardizato
+                Zcod[Xcols.columns] = (Xcols - model[g].call_.center)/model[g].call_.scale 
+
+        #which type_group is f
+        num_group_freq = where(array(self.type_group) == "f")[0] if any(x == "f" for x in self.type_group) else None
+        if num_group_freq is not None:
+            if self.call_.num_group_sup is None:
+                name_group_freq = [g for i, g in enumerate(self.call_.name_group) if i in num_group_freq] 
+            else: 
+                name_group_freq = [g for i, g in enumerate(self.call_.name_group) if i in num_group_freq and not i in self.call_.num_group_sup]
+            if len(name_group_freq) > 0:
+                group_freq_dict = {k : model[k].call_.X.columns for k in name_group_freq}
+                freq_cols = list(chain.from_iterable(group_freq_dict.values()))
+                #frequencies
+                P = X[freq_cols]/self.call_.total
+                #supplementary rows margin
+                row_m = P.sum(axis=1)
+                #construction of recoded table
+                for g, cols in group_freq_dict.items():
+                    #group rows margins
+                    row_m_g = P[cols].sum(axis=1)
+                    #normalize such sum is equal to 1
+                    B = row_m_g/sum(row_m_g)
+                    #recoded columns
+                    Zcod[cols] = (((P[cols]/model[g].call_.col_w).T - B)/row_m).T.replace([nan,inf,-inf], 1e-15)
+        
+        #standardize according to non normed PCA program
+        Z = Zcod - self.call_.z_center
+        
+        # extract active elements
+        model = self.separate_analyses_
+        columns_dict = {g : model[g].call_.Z.columns for g in name_group}
+        columns_index = {g : [self.call_.Zcod.columns.tolist().index(k) for k in cols] for g, cols in columns_dict.items()}
+        
+        # partial scores of the new individuals
+        coord_partiel = None
+        for g, cols in columns_dict.items():
+            nbcol = min(self.svd_.ncp,model[g].call_.ncp)
+            # partial coordinates
+            coord = (Z[cols] * sqrt(self.call_.col_w[cols])).dot((self.svd_.V[columns_index[g],:nbcol].T * model[g].call_.col_w.to_numpy()).T)
+            # set index and columns
+            coord.columns, coord.index = self.eig_.index[:nbcol], [f"{x}.{g}" for x in X.index]
+            # concatenate
+            coord_partiel = concat_empty(coord_partiel,coord,axis=0)
+        return coord_partiel
