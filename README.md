@@ -171,7 +171,7 @@ scientisttools is compatible with python version which supports both dependencie
 PCA(ncp=2,ind_sup=range(41,46),sup_var=(10,11,12))
 ```
 
-3. **Visualize eigenvalues/varainces:**
+3. **Visualize eigenvalues/variances:**
 
 ```python
 >>> from scientisttools import fviz_screeplot
