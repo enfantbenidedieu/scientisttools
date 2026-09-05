@@ -1,0 +1,11 @@
+Sphinx==8.2.3
+myst-parser==4.0.1
+pydata-sphinx-theme==0.16.1
+sphinx-autodoc-typehints==3.5.2
+sphinx_design==0.6.1
+sphinx-copybutton==0.5.2
+sphinxcontrib-email==0.3.6
+nbsphinx==0.9.8
+docutils==0.20.1
+ipykernel==7.1.0
+ipython==9.8.0
