@@ -17,13 +17,11 @@ extensions = [
     "sphinx_design",            # Grilles, cartes, boutons, cards
     "sphinx.ext.autodoc",       # Auto-doc Python
     'sphinx.ext.mathjax',       # for math equation - latext style
-    #"sphinx.ext.napoleon",      # Docstrings Google/NumPy
     "sphinx_autodoc_typehints", # Automatically add the types
     "sphinx.ext.viewcode",      # Add links to highlighted source code
     'sphinx.ext.autosummary',   # autosummary functions and class
     "numpydoc",
     'sphinx.ext.duration',
-    #"sphinx.ext.linkcode",
     'sphinx.ext.doctest',
     "sphinxcontrib.email",       # for mail
     "nbsphinx"                   # to add ipynb file
