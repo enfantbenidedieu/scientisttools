@@ -1,7 +1,7 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath("../../../scientisttools"))
+# utile pour le male html, mais pas utile pour readthedocs
+# import os
+# import sys
+# sys.path.insert(0, os.path.abspath("../../../scientisttools"))
 
 project = 'scientisttools'
 copyright = '2026, Duvérier DJIFACK ZEBAZE'
