@@ -6,7 +6,7 @@
 project = 'scientisttools'
 copyright = '2026, Duvérier DJIFACK ZEBAZE'
 author = 'Duvérier DJIFACK ZEBAZE'
-release = '0.2.0'
+release = '0.2.0.post1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
