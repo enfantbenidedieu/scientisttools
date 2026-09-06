@@ -47,10 +47,10 @@ scientisttools provides functions for :
 
         * Correspondence Analysis (CA) and its derivatives (DCA, nsCA, CAiv, CAoiv, bcCA, wcCA)
         * Factor Analysis (FA) : Iterative and Non Iterative Principal Factor Analysis (IPFA & NIPFA), Harris Component Analysis (HCA)
-        * Factor Analysis of Mixed Data (FAMD)
+        * Factor Analysis of Mixed Data (FAMD) and its derivatives (FAMDiv, FAMDoiv, bcFAMD, wcFAMD)
         * Varimax rotation in Factor Analysis (FArot)
-        * Multiple Correspondenca Analysis (MCA) and its derivatives (speMCA, MCAiv, MCAoiv, bcMCA, wcMCA)
-        * Mixed Principal Component Analysis (MPCA)
+        * Multiple Correspondence Analysis (MCA) and its derivatives (speMCA, MCAiv, MCAoiv, bcMCA, wcMCA)
+        * Mixed Principal Component Analysis (MPCA) and its derivatives (speMCA, MCAiv, MCAoiv, bcMCA, wcMCA)
         * Principal Component Analysis (PCA) and its derivatives (Partial PCA, PCAiv, PCAoiv, bcPCA, wcPCA)
         * Principal Component Analysis of Mixed Data (PCAmix) and its derivatives (PCAmixiv, PCAmixoiv, bcPCAmix, wcPCAmix)
         * Varimax rotation in Principal Component Analysis (PCArot)
@@ -129,7 +129,7 @@ In order to check your installation, you can use.
 ```python
 >>> import scientisttools
 >>> print(scientisttools.__version__)
-0.2.0
+0.2.0post1
 ```
 
 Using an isolated environment such as *pip venv* or *conda* makes it possible to install a specific version of scientisttools with pip and conda and its dependencies independently of any previously installed Python packages.
@@ -193,7 +193,7 @@ PCA(ncp=2,ind_sup=range(41,46),sup_var=(10,11,12))
 ```
 
 ```python
->>> # Individuals factor map
+>>> # individuals factor map
 >>> from scientisttools import fviz_pca
 >>> p = fviz_pca(clf,choice="ind",repel=True)
 >>> print(p.show())
@@ -232,8 +232,7 @@ The official documentation is hosted on [https://scientisttools.readthedocs.io](
 
 ### Authors <a name="authors"></a>
 
-scientisttools is developed and maintained by [Duvérier DJIFACK ZEBAZE](https://www.linkedin.com/in/duv%C3%A9rier-djifack-z-030097118/), the founder 
-of djifacklab (*Djifack Laboratory of Mathematics, Statistics and Economics books and packages production using Python Programming Language*).
+scientisttools is developed and maintained by [Duvérier DJIFACK ZEBAZE](https://www.linkedin.com/in/duv%C3%A9rier-djifack-z-030097118/), the founder of djifacklab (*Djifack Laboratory of Mathematics, Statistics and Economics books and packages production using Python Programming Language*).
 
 The djifacklab laboratory maintains others python librairies such as [discrimintools](https://pypi.org/project/discrimintools/), [scientistmetrics](https://pypi.org/project/scientistmetrics/), [scientistshiny](https://pypi.org/project/scientistshiny/), [scientisttseries](https://pypi.org/project/scientistshiny/) and [ggcorrplot]( https://pypi.org/project/ggcorrplot/).
 
