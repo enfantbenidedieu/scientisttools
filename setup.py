@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 # Setting up
 setup(
     name = "scientisttools",
-    version = "0.2.0post1",
+    version = "0.2.0.post1",
     author = "Duverier DJIFACK ZEBAZE",
     author_email = "djifacklab@gmail.com",
     description = "Python library for multidimensional analysis, classification - clustering analysis and multidimensional analysis",
