@@ -30,7 +30,7 @@ In order to check your installation, you can use.
 
     >>> import scientisttools
     >>> print(scientisttools.__version__)
-    0.2.0
+    0.2.0post1
 
 Using an isolated environment such as pip venv or conda makes it possible to install a specific version of scientisttools with pip and conda and its dependencies independently of any previously installed Python packages.
 
