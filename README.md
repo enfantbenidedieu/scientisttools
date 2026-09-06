@@ -50,7 +50,7 @@ scientisttools provides functions for :
         * Factor Analysis of Mixed Data (FAMD) and its derivatives (FAMDiv, FAMDoiv, bcFAMD, wcFAMD)
         * Varimax rotation in Factor Analysis (FArot)
         * Multiple Correspondence Analysis (MCA) and its derivatives (speMCA, MCAiv, MCAoiv, bcMCA, wcMCA)
-        * Mixed Principal Component Analysis (MPCA) and its derivatives (speMCA, MCAiv, MCAoiv, bcMCA, wcMCA)
+        * Mixed Principal Component Analysis (MPCA) and its derivatives (MPCAiv, MPCAoiv, bcMPCA, wcMPCA)
         * Principal Component Analysis (PCA) and its derivatives (Partial PCA, PCAiv, PCAoiv, bcPCA, wcPCA)
         * Principal Component Analysis of Mixed Data (PCAmix) and its derivatives (PCAmixiv, PCAmixoiv, bcPCAmix, wcPCAmix)
         * Varimax rotation in Principal Component Analysis (PCArot)
