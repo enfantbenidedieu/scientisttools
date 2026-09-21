@@ -321,7 +321,7 @@ class PCA(BaseEstimator,TransformerMixin):
         group_label   = get_sup_label(X=X,indexes=self.group,axis=1)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        #get supplementary elements labels
+        # get supplementary elements labels
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ind_sup_label = get_sup_label(X=X,indexes=self.ind_sup,axis=0)
         sup_var_label = get_sup_label(X=X,indexes=self.sup_var,axis=1)
@@ -412,7 +412,7 @@ class PCA(BaseEstimator,TransformerMixin):
         # standardization: z_ik = (x_ik - m_k)/s_k
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #compute weighted average and weighted standard deviation
-        center= wmean(X=Xcod,w=ind_w)
+        center = wmean(X=Xcod,w=ind_w)
         if self.scale_unit:
             scale = wstd(X=Xcod,w=ind_w)
         else:

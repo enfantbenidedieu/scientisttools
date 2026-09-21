@@ -7,7 +7,7 @@ from sklearn.utils.validation import check_is_fitted
 
 #interns functions
 from ..functions.func_eta2 import func_eta2
-from ..functions.func_predict import predict_first_check
+from ..functions.utils import check_is_dataframe
 from ..others._varimax import varimax
 from ..others._disjunctive import disjunctive
 
@@ -220,7 +220,9 @@ class PCArot(TransformerMixin,BaseEstimator):
         ss_loadings = ((quanti_var_coord**2).T * obj.call_.col_w).sum(axis=1)
         proportion = 100*ss_loadings/n_cols
         #convert to DataFrame
-        self.eig_ = DataFrame(c_[ss_loadings,proportion,cumsum(proportion)],columns=["Eigenvalue","Proportion (%)","Cumulative (%)"],index = [f"Dim{x+1}" for x in range(ncp)])
+        self.eig_ = DataFrame(c_[ss_loadings,proportion,cumsum(proportion)],
+                              columns=["Eigenvalue","Proportion (%)","Cumulative (%)"],
+                              index = [f"Dim{x+1}" for x in range(ncp)])
     
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #statistics for individuals: coordinates
@@ -327,11 +329,29 @@ class PCArot(TransformerMixin,BaseEstimator):
         check_is_fitted(self)
 
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        # prediction input check
+        #check if X is an object of class pd.DataFrame
         #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        X = predict_first_check(self,X)
+        check_is_dataframe(X)
 
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #set index name as None
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        X.index.name = None
+
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # drop level if ndim greater than 1 and reset columns name
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if X.columns.nlevels > 1:
+            X.columns = X.columns.droplevel()
+            
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        # check if X contains axis columns
+        #---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        if not set(self.rotmat_.columns).issubset(X.columns): 
+            raise ValueError("The names of the columns is not the same as the ones in the rotation matrix columns of the {} result".format(self.__class__.__name__))
+        X = X[self.rotmat_.columns]
+            
         # apply transition relation
-        coord = X.iloc[:,:self.call_.ncp].dot(self.rotmat_.to_numpy())
+        coord = X.dot(self.rotmat_.to_numpy())
         coord.columns = self.eig_.index[:self.call_.ncp]
         return coord
