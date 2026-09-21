@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 # Setting up
 setup(
     name = "scientisttools",
-    version = "0.2.0.post1",
+    version = "0.2.0.post2",
     author = "Duverier DJIFACK ZEBAZE",
     author_email = "djifacklab@gmail.com",
     description = "Python library for multidimensional analysis, classification - clustering analysis and multidimensional analysis",
@@ -36,7 +36,7 @@ setup(
             "tabulate>=0.9.0"
         ],
     include_package_data = True,
-    package_data = {"": ["data/"]},
+    package_data = {"": ["data/*"]},
     keywords = "multidimensional analysis, clustering analysis, data visualization, statistical analysis, data science, machine learning",
     project_urls = {
         "Bug Reports": "https://github.com/enfantbenidedieu/scientisttools/issues",
