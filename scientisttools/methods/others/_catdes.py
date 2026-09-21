@@ -40,11 +40,11 @@ def catdes(X,
 
         test_chi2 : DataFrame
             The categorical variables which characterized the factor are listed in ascending order (from the one which characterized the most the factor to the one which significantly characterized with the proba proba
-        category : OrderedDict
+        category : dict
             Description of each category of the num_var by each category of all the categorical variables.
         quanti_var : DataFrame
             The global description of the num_var variable by the continuous variables with the square correlation coefficient and the p-value of the F-test in a one-way analysis of variance (assuming the hypothesis of homoscedsticity).
-        quanti : OrderedDict
+        quanti : dict
             The description of each category of the num_var variable by the continuous variables.
 
     References

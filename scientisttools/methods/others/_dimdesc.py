@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from pandas import Series,concat
-from collections import OrderedDict
 
 #intern functions
 from ._condes import condes
@@ -29,9 +28,9 @@ def dimdesc(obj,
     dimdesc : dimdescResult:
         An object with the following attributes:
 
-        quanti : OrderedDict
+        quanti : dict
             The description of the dimensions by the continuous variables. The variables are sorted.
-        quali : OrderedDict
+        quali : dict
             The description of the dimensions by the categorical variables
 
     References
@@ -86,7 +85,7 @@ def dimdesc(obj,
             ind_coord = ind_coord.iloc[:,axis]
             if isinstance(ind_coord,Series):
                 ind_coord = ind_coord.to_frame()
-        corrdim = OrderedDict()
+        corrdim = {}
         for idx in ind_coord.columns:
             X = concat((data,ind_coord[idx]),axis=1)
             corrdim[idx] = condes(X=X,num_var=idx,w=obj.call_.row_w,proba=proba)
